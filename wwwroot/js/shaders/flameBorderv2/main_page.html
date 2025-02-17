@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fire Shader</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            width: 100%;
+            height: 100%;
+        }
+        canvas {
+            display: block;
+			width: 100%;
+			height: 100%;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/3.4.1/gl-matrix-min.js"></script>
+</head>
+<body>
+    <canvas id="glCanvas"></canvas>
+    <script src="./code/flame_shader.js"></script>
+    <script src="./code/texture_shader.js"></script>
+    <script src="./code/shader_settings.js"></script>
+    <script src="./code/support_gl_functions.js"></script>
+    <script src="./code/support_gl_classes.js"></script>
+    <script src="./code/textures_data.js"></script>
+    <script src="./code/main.js"></script>
+</body>
+</html>
