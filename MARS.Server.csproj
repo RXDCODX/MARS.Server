@@ -9,7 +9,7 @@
     <DockerfileContext>..\..</DockerfileContext>
     <SpaRoot>..\mars.client</SpaRoot>
     <SpaProxyLaunchCommand>npm run dev</SpaProxyLaunchCommand>
-    <SpaProxyServerUrl>https://localhost:53912</SpaProxyServerUrl>
+    <SpaProxyServerUrl>http://localhost:53912</SpaProxyServerUrl>
     <WarningsAsErrors>CS0618</WarningsAsErrors>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>

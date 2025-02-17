@@ -9,7 +9,7 @@ namespace MARS.Server.DataBaseContext;
 
 public sealed class AppDbContext : DbContext
 {
-    private static readonly SemaphoreSlim Semaphore = new(1);
+    private static readonly object Locker = new();
     private static bool _isMigrated;
 
     public AppDbContext(DbContextOptions<AppDbContext> options)
@@ -17,21 +17,20 @@ public sealed class AppDbContext : DbContext
     {
         if (!_isMigrated)
         {
-            Semaphore.Wait();
-
-            if (!_isMigrated)
+            lock (Locker)
             {
-                IEnumerable<string> migrations = Database.GetPendingMigrations();
-
-                if (migrations.Any())
+                if (!_isMigrated)
                 {
-                    Database.Migrate();
+                    var migrations = Database.GetPendingMigrations();
+
+                    if (migrations.Any())
+                    {
+                        Database.Migrate();
+                    }
+
+                    _isMigrated = true;
                 }
-
-                _isMigrated = true;
             }
-
-            Semaphore.Release();
         }
     }
 

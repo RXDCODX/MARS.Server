@@ -2,44 +2,48 @@
   "profiles": {
     "http": {
       "commandName": "Project",
+      "launchBrowser": true,
+      "launchUrl": "/ui",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
         "ASPNETCORE_HOSTINGSTARTUPASSEMBLIES": "Microsoft.AspNetCore.SpaProxy",
         "ASPNETCORE_SPA_LAUNCH": "TRUE"
       },
       "dotnetRunMessages": true,
-      "launchBrowser": true,
       "applicationUrl": "http://localhost:9255"
     },
     "https": {
       "commandName": "Project",
+      "launchBrowser": true,
+      "launchUrl": "/ui",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
         "ASPNETCORE_HOSTINGSTARTUPASSEMBLIES": "Microsoft.AspNetCore.SpaProxy",
         "ASPNETCORE_SPA_LAUNCH": "TRUE"
       },
       "dotnetRunMessages": true,
-      "launchBrowser": true,
       "applicationUrl": "https://localhost:9256;http://localhost:9255"
     },
     "http (no spa)": {
       "commandName": "Project",
+      "launchBrowser": true,
+      "launchUrl": "/ui",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
         "ASPNETCORE_SPA_LAUNCH": "FALSE"
       },
       "dotnetRunMessages": true,
-      "launchBrowser": true,
       "applicationUrl": "http://localhost:9255"
     },
     "https (no spa)": {
       "commandName": "Project",
+      "launchBrowser": true,
+      "launchUrl": "/ui",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
         "ASPNETCORE_SPA_LAUNCH": "FALSE"
       },
       "dotnetRunMessages": true,
-      "launchBrowser": true,
       "applicationUrl": "https://localhost:9256;http://localhost:9255"
     },
     "Container (Dockerfile)": {

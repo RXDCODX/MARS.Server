@@ -14,8 +14,6 @@ using MARS.Server.Services.Twitch.Synthesizer;
 using MARS.Server.Services.Twitch.Synthesizer.Enitity;
 using MARS.Server.Services.WaifuRoll;
 using MARS.Server.Services.WaifuRoll.helpers;
-using Microsoft.AspNetCore.Http.Features;
-using Microsoft.AspNetCore.Server.Kestrel.Core;
 using NJsonSchema.Generation;
 
 namespace MARS.Server;
@@ -89,39 +87,22 @@ public class Program
 
         if (builder.Environment.IsProduction() && OperatingSystem.IsWindows())
         {
-            directory = Environment.GetEnvironmentVariable("ZYZ_SERVICE_PATH");
-            if (string.IsNullOrWhiteSpace(directory))
+            var servicePath = Environment.GetEnvironmentVariable(
+                "ZYZ_SERVICE_PATH",
+                EnvironmentVariableTarget.Machine
+            );
+            if (string.IsNullOrWhiteSpace(servicePath))
             {
                 throw new NullReferenceException();
             }
 
+            directory = servicePath;
             Environment.CurrentDirectory = directory;
         }
 
         /////////////////////////////////////////////////////////////////////////////////////////
 
         services.AddSingleton<IDbContextFactory<AppDbContext>>(contextFactory);
-
-        if (builder.Environment.IsDevelopment())
-        {
-            var contextOptionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
-
-            contextOptionsBuilder.UseQueryTrackingBehavior(QueryTrackingBehavior.TrackAll);
-            contextOptionsBuilder.EnableThreadSafetyChecks();
-            if (builder.Environment.IsDevelopment())
-            {
-                contextOptionsBuilder.EnableDetailedErrors();
-                contextOptionsBuilder.EnableSensitiveDataLogging();
-
-                contextOptionsBuilder.UseNpgsql(configuration.GetConnectionString("Dev_Path"));
-            }
-            else
-            {
-                contextOptionsBuilder.UseNpgsql(configuration.GetConnectionString("Prod_Path"));
-            }
-
-            services.AddSingleton(contextOptionsBuilder.Options);
-        }
 
         services.AddWindowsService(options =>
         {
@@ -196,19 +177,6 @@ public class Program
         services.Configure<VkConfiguration>(
             configuration.GetSection(AppBase.Base).GetSection(VkConfiguration.SectionName)
         );
-
-        services.Configure<FormOptions>(options =>
-        {
-            options.MultipartBodyLengthLimit = Int64.MaxValue; // Лимит для multipart/form-data запросов
-            options.ValueLengthLimit = Int32.MaxValue; // Лимит для отдельных значений формы
-            options.ValueCountLimit = Int32.MaxValue;
-            ; // Лимит на количество значений формы
-        });
-
-        services.Configure<KestrelServerOptions>(options =>
-        {
-            options.Limits.MaxRequestBodySize = Int64.MaxValue; // Лимит для всего тела запроса
-        });
 
         services.AddTwitchEvents(configuration, loggerFactory);
 
@@ -288,10 +256,6 @@ public class Program
         app.MapHub<TelegramusHub>("/telegramus");
 
         app.UseRouting();
-
-        app.UseHttpsRedirection();
-
-        app.UseAuthorization();
 
         app.MapControllers();
 

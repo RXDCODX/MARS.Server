@@ -1,49 +1,63 @@
 @echo off
-setlocal enabledelayedexpansion
+setlocal disabledelayedexpansion
+chcp 65001 >nul
 
-:: Проверка прав администратора
+:: РџСЂРѕРІРµСЂРєР° РїСЂР°РІ Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂР°
 net session >nul 2>&1
 if %errorlevel% neq 0 (
-    echo Этот скрипт требует запуска от имени администратора.
-    echo Запуск с повышенными правами...
+    echo Р­С‚РѕС‚ СЃРєСЂРёРїС‚ С‚СЂРµР±СѓРµС‚ Р·Р°РїСѓСЃРєР° РѕС‚ РёРјРµРЅРё Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂР°.
+    echo Р—Р°РїСѓСЃРє СЃ РїРѕРІС‹С€РµРЅРЅС‹РјРё РїСЂР°РІР°РјРё...
     PowerShell Start-Process '%~f0' -Verb RunAs
     exit /b
 )
 
-:: Получаем путь к текущей директории
+:: РџРѕР»СѓС‡Р°РµРј РїСѓС‚СЊ Рє С‚РµРєСѓС‰РµР№ РґРёСЂРµРєС‚РѕСЂРёРё
 set "currentDir=%~dp0"
 
-:: Проверяем наличие файла Telegramus.exe
-if not exist "%currentDir%Telegramus.exe" (
-    echo Файл Telegramus.exe не найден в текущей директории.
+:: РџСЂРѕРІРµСЂСЏРµРј РЅР°Р»РёС‡РёРµ С„Р°Р№Р»Р° MARS.Server.exe
+if not exist "%currentDir%MARS.Server.exe" (
+    echo Р¤Р°Р№Р» MARS.Server.exe РЅРµ РЅР°Р№РґРµРЅ РІ С‚РµРєСѓС‰РµР№ РґРёСЂРµРєС‚РѕСЂРёРё.
     pause
     exit /b 1
 )
 
-:: Проверяем, существует ли уже служба "!ZYZ"
+:: РџСЂРѕРІРµСЂСЏРµРј, СЃСѓС‰РµСЃС‚РІСѓРµС‚ Р»Рё СѓР¶Рµ СЃР»СѓР¶Р±Р° "!ZYZ"
 sc query "!ZYZ" >nul 2>&1
 if %errorlevel% equ 0 (
-    echo Служба "!ZYZ" уже существует.
+    echo РЎР»СѓР¶Р±Р° "!ZYZ" СѓР¶Рµ СЃСѓС‰РµСЃС‚РІСѓРµС‚.
     pause
     exit /b 1
 )
 
-:: Добавляем переменную окружения ZYZ_SERVICE_PATH
-echo Добавление переменной окружения ZYZ_SERVICE_PATH...
-setx ZYZ_SERVICE_PATH "%currentDir%" /M >nul 2>&1
+:: Р”РѕР±Р°РІР»СЏРµРј РїРµСЂРµРјРµРЅРЅСѓСЋ РѕРєСЂСѓР¶РµРЅРёСЏ ZYZ_SERVICE_PATH
+echo Р”РѕР±Р°РІР»РµРЅРёРµ РїРµСЂРµРјРµРЅРЅРѕР№ РѕРєСЂСѓР¶РµРЅРёСЏ ZYZ_SERVICE_PATH...
+setx /m ZYZ_SERVICE_PATH %currentDir% >nul 2>&1
 if %errorlevel% equ 0 (
-    echo Переменная окружения ZYZ_SERVICE_PATH успешно добавлена: %currentDir%
+    echo РџРµСЂРµРјРµРЅРЅР°СЏ РѕРєСЂСѓР¶РµРЅРёСЏ ZYZ_SERVICE_PATH СѓСЃРїРµС€РЅРѕ РґРѕР±Р°РІР»РµРЅР°: %currentDir%
 ) else (
-    echo Ошибка при добавлении переменной окружения ZYZ_SERVICE_PATH.
+    echo РћС€РёР±РєР° РїСЂРё РґРѕР±Р°РІР»РµРЅРёРё РїРµСЂРµРјРµРЅРЅРѕР№ РѕРєСЂСѓР¶РµРЅРёСЏ ZYZ_SERVICE_PATH.
+    pause
+    exit /b 1
 )
 
-:: Создаем службу "!ZYZ"
-echo Создание службы "!ZYZ"...
-sc create "!ZYZ" binPath= "%currentDir%Telegramus.exe" DisplayName= "!ZYZ" start= auto obj= "LocalSystem" description= "Telegramus служба"
+:: РЎРѕР·РґР°РµРј СЃР»СѓР¶Р±Сѓ "!ZYZ"
+echo РЎРѕР·РґР°РЅРёРµ СЃР»СѓР¶Р±С‹ "!ZYZ"...
+sc.exe create "!ZYZ" binPath= "%currentDir%MARS.Server.exe" start= delayed-auto
 if %errorlevel% equ 0 (
-    echo Служба "!ZYZ" успешно создана.
+    echo РЎР»СѓР¶Р±Р° "!ZYZ" СѓСЃРїРµС€РЅРѕ СЃРѕР·РґР°РЅР°.
 ) else (
-    echo Ошибка при создании службы "!ZYZ".
+    echo РћС€РёР±РєР° РїСЂРё СЃРѕР·РґР°РЅРёРё СЃР»СѓР¶Р±С‹ "!ZYZ".
+    pause
+    exit /b 1
+)
+
+:: Р—Р°РїСѓСЃРєР°РµРј СЃР»СѓР¶Р±Сѓ
+echo Р—Р°РїСѓСЃРє СЃР»СѓР¶Р±С‹ "!ZYZ"...
+sc.exe start "!ZYZ"
+if %errorlevel% equ 0 (
+    echo РЎР»СѓР¶Р±Р° "!ZYZ" СѓСЃРїРµС€РЅРѕ Р·Р°РїСѓС‰РµРЅР°.
+) else (
+    echo РћС€РёР±РєР° РїСЂРё Р·Р°РїСѓСЃРєРµ СЃР»СѓР¶Р±С‹ "!ZYZ".
     pause
     exit /b 1
 )

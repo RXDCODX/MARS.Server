@@ -1,41 +1,42 @@
 @echo off
-setlocal enabledelayedexpansion
+setlocal disabledelayedexpansion
+chcp 65001
 
-:: Проверка прав администратора
+:: РџСЂРѕРІРµСЂРєР° РїСЂР°РІ Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂР°
 net session >nul 2>&1
 if %errorlevel% neq 0 (
-    echo Этот скрипт требует запуска от имени администратора.
-    echo Запуск с повышенными правами...
+    echo Р­С‚РѕС‚ СЃРєСЂРёРїС‚ С‚СЂРµР±СѓРµС‚ Р·Р°РїСѓСЃРєР° РѕС‚ РёРјРµРЅРё Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂР°.
+    echo Р—Р°РїСѓСЃРє СЃ РїРѕРІС‹С€РµРЅРЅС‹РјРё РїСЂР°РІР°РјРё...
     PowerShell Start-Process '%~f0' -Verb RunAs
     exit /b
 )
 
-:: Проверяем, существует ли служба "!ZYZ"
+:: РџСЂРѕРІРµСЂСЏРµРј, СЃСѓС‰РµСЃС‚РІСѓРµС‚ Р»Рё СЃР»СѓР¶Р±Р° "!ZYZ"
 sc query "!ZYZ" >nul 2>&1
 if %errorlevel% neq 0 (
-    echo Служба "!ZYZ" не существует.
+    echo РЎР»СѓР¶Р±Р° "!ZYZ" РЅРµ СЃСѓС‰РµСЃС‚РІСѓРµС‚.
     pause
     exit /b 1
 )
 
-:: Удаляем службу "!ZYZ"
-echo Удаление службы "!ZYZ"...
+:: РЈРґР°Р»СЏРµРј СЃР»СѓР¶Р±Сѓ "!ZYZ"
+echo РЈРґР°Р»РµРЅРёРµ СЃР»СѓР¶Р±С‹ "!ZYZ"...
 sc delete "!ZYZ"
 if %errorlevel% equ 0 (
-    echo Служба "!ZYZ" успешно удалена.
+    echo РЎР»СѓР¶Р±Р° "!ZYZ" СѓСЃРїРµС€РЅРѕ СѓРґР°Р»РµРЅР°.
 ) else (
-    echo Ошибка при удалении службы "!ZYZ".
+    echo РћС€РёР±РєР° РїСЂРё СѓРґР°Р»РµРЅРёРё СЃР»СѓР¶Р±С‹ "!ZYZ".
     pause
     exit /b 1
 )
 
-:: Удаляем переменную окружения ZYZ_SERVICE_PATH
-echo Удаление переменной окружения ZYZ_SERVICE_PATH...
+:: РЈРґР°Р»СЏРµРј РїРµСЂРµРјРµРЅРЅСѓСЋ РѕРєСЂСѓР¶РµРЅРёСЏ ZYZ_SERVICE_PATH
+echo РЈРґР°Р»РµРЅРёРµ РїРµСЂРµРјРµРЅРЅРѕР№ РѕРєСЂСѓР¶РµРЅРёСЏ ZYZ_SERVICE_PATH...
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment" /v ZYZ_SERVICE_PATH /f >nul 2>&1
 if %errorlevel% equ 0 (
-    echo Переменная окружения ZYZ_SERVICE_PATH успешно удалена.
+    echo РџРµСЂРµРјРµРЅРЅР°СЏ РѕРєСЂСѓР¶РµРЅРёСЏ ZYZ_SERVICE_PATH СѓСЃРїРµС€РЅРѕ СѓРґР°Р»РµРЅР°.
 ) else (
-    echo Переменная окружения ZYZ_SERVICE_PATH не найдена или не была удалена.
+    echo РџРµСЂРµРјРµРЅРЅР°СЏ РѕРєСЂСѓР¶РµРЅРёСЏ ZYZ_SERVICE_PATH РЅРµ РЅР°Р№РґРµРЅР° РёР»Рё РЅРµ Р±С‹Р»Р° СѓРґР°Р»РµРЅР°.
 )
 
 pause
