@@ -1,6 +1,9 @@
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Hangfire;
+using Hangfire.PostgreSql;
+using Hangfire.PostgreSql.Factories;
 using MARS.Server.CustomLoggers.TelegramLogger;
 using MARS.Server.Services.Honkai;
 using MARS.Server.Services.PyroAlerts;
@@ -9,7 +12,6 @@ using MARS.Server.Services.Shikimori;
 using MARS.Server.Services.Shikimori.AuthCodeService;
 using MARS.Server.Services.TelegramBotService;
 using MARS.Server.Services.TelegramBotService.Commands;
-using MARS.Server.Services.Twitch.Rewards;
 using MARS.Server.Services.Twitch.Synthesizer;
 using MARS.Server.Services.Twitch.Synthesizer.Enitity;
 using MARS.Server.Services.WaifuRoll;
@@ -33,6 +35,10 @@ public class Program
             builder.Environment.IsProduction() != true
             && Environment.GetEnvironmentVariable("ASPNETCORE_SPA_LAUNCH") is "TRUE";
 
+        var dbConnectionString = builder.Environment.IsDevelopment()
+            ? configuration.GetConnectionString("Dev_Path")
+            : configuration.GetConnectionString("Prod_Path");
+
         var contextFactory = new AppDbContextFactory(
             builder.Environment,
             builder.Configuration,
@@ -44,13 +50,9 @@ public class Program
                 {
                     options.EnableDetailedErrors();
                     options.EnableSensitiveDataLogging();
+                }
 
-                    options.UseNpgsql(configuration.GetConnectionString("Dev_Path"));
-                }
-                else
-                {
-                    options.UseNpgsql(configuration.GetConnectionString("Prod_Path"));
-                }
+                options.UseNpgsql(dbConnectionString);
             }
         );
 
@@ -102,6 +104,30 @@ public class Program
 
         /////////////////////////////////////////////////////////////////////////////////////////
 
+
+        JobStorage.Current = new PostgreSqlStorage(
+            new NpgsqlConnectionFactory(dbConnectionString, new PostgreSqlStorageOptions())
+        );
+        services
+            .AddHangfire(op =>
+            {
+                op.UsePostgreSqlStorage(
+                    (bs) =>
+                    {
+                        bs.UseNpgsqlConnection(
+                            builder.Environment.IsDevelopment()
+                                ? configuration.GetConnectionString("Dev_Path")
+                                : configuration.GetConnectionString("Prod_Path")
+                        );
+                    }
+                );
+
+                op.SetDataCompatibilityLevel(CompatibilityLevel.Version_180);
+                op.UseSimpleAssemblyNameTypeSerializer();
+                op.UseRecommendedSerializerSettings();
+            })
+            .AddHangfireServer();
+
         services.AddSingleton<IDbContextFactory<AppDbContext>>(contextFactory);
 
         services.AddWindowsService(options =>
@@ -127,9 +153,11 @@ public class Program
         services.AddSingleton<PyroAlertsHandler>();
 
         services.AddSingleton<DailyMarkMarkNotificationsSerivce>();
-        services.AddHostedService(sp => sp.GetRequiredService<DailyMarkMarkNotificationsSerivce>());
-
-        services.AddSingleton<AnswersForTwitchRewards>();
+        RecurringJob.AddOrUpdate<DailyMarkMarkNotificationsSerivce>(
+            "daily-mark-up",
+            x => x.NotifyAsync(CancellationToken.None),
+            "0 */2 * * *"
+        );
 
         services.AddSingleton<ShikimoriAuthorizationHelpService>();
         services.AddSingleton<ShikimoriService>();
@@ -139,7 +167,11 @@ public class Program
 
         services.AddSingleton<RandomMemHandler>();
         services.AddSingleton<RandomMemeWorker>();
-        services.AddHostedService(sp => sp.GetRequiredService<RandomMemeWorker>());
+        RecurringJob.AddOrUpdate<RandomMemeWorker>(
+            "random-meme-worker",
+            (x) => x.Process(CancellationToken.None),
+            "*/30 * * * *"
+        );
 
         services.AddSingleton(
             (sp) => VoicerFactory.CreateVoicer(sp.GetRequiredService<ILogger<IVoicer>>())
@@ -225,9 +257,9 @@ public class Program
         services.AddCors(options =>
             options.AddPolicy(
                 "CorsPolicy",
-                builder =>
+                policyBuilder =>
                 {
-                    builder
+                    policyBuilder
                         .AllowAnyHeader()
                         .AllowAnyMethod()
                         .SetIsOriginAllowed(host => true)
@@ -258,6 +290,8 @@ public class Program
         app.UseRouting();
 
         app.MapControllers();
+
+        app.MapHangfireDashboard();
 
         if (isWithSpa)
         {

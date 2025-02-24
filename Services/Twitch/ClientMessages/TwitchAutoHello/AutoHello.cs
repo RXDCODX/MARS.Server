@@ -1,4 +1,5 @@
-﻿using MARS.Server.Services.Twitch.Rewards.TwitchWaifuRolls;
+﻿using Hangfire;
+using MARS.Server.Services.Twitch.Rewards.TwitchWaifuRolls;
 using MARS.Server.Services.WaifuRoll;
 using TwitchLib.Client.Events;
 
@@ -28,7 +29,9 @@ public class AutoHello(
 
                 if (!string.IsNullOrWhiteSpace(message))
                 {
-                    await client.SendMessageToPyrokxnezxzAsync(message, logger);
+                    BackgroundJob.Enqueue(
+                        () => client.SendMessageToPyrokxnezxzAsync(message, logger)
+                    );
                 }
             }
         });

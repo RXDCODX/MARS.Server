@@ -1,4 +1,6 @@
-﻿using Telegram.Bot.Types.Enums;
+﻿using System.Diagnostics;
+using Hangfire;
+using Telegram.Bot.Types.Enums;
 
 namespace MARS.Server.Services.PyroAlerts;
 
@@ -8,7 +10,12 @@ public class PyroAlertsHandler(
     IDbContextFactory<AppDbContext> factory
 ) : ITelegramusService
 {
-    public async Task HandAlert(ITelegramBotClient client, Update update)
+    public void HandAlert(ITelegramBotClient client, Update update)
+    {
+        BackgroundJob.Enqueue(() => Process(client, update));
+    }
+
+    private async Task Process(ITelegramBotClient client, Update update)
     {
         await using AppDbContext dbContext = await factory.CreateDbContextAsync();
         var whitelist = await dbContext.TelegramUsers.AsNoTracking().ToArrayAsync();

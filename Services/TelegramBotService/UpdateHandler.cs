@@ -1,3 +1,4 @@
+using Hangfire;
 using MARS.Server.Services.PyroAlerts;
 using MARS.Server.Services.RandomMem;
 using Telegram.Bot.Exceptions;
@@ -9,7 +10,8 @@ namespace MARS.Server.Services.TelegramBotService;
 
 public class UpdateHandler : IUpdateHandler
 {
-    public delegate Task TelegramUpdateDelegate(ITelegramBotClient client, Update update);
+    public delegate void TelegramUpdateDelegate(ITelegramBotClient client, Update update);
+    public event TelegramUpdateDelegate TelegramUpdate = (client, update) => { };
 
     private readonly ITelegramBotClient _botClient;
     private readonly Commands.Commands _commands;
@@ -38,22 +40,15 @@ public class UpdateHandler : IUpdateHandler
         });
     }
 
-    public async Task HandleUpdateAsync(
+    public Task HandleUpdateAsync(
         ITelegramBotClient _,
         Update update,
         CancellationToken cancellationToken
     )
     {
-        try
-        {
-            ResendMessage(update);
-        }
-        catch (Exception e)
-        {
-            _logger.LogWarning("�� ���� forward ��������. {0} # {1}", e.Message, e.StackTrace);
-        }
+        var id = BackgroundJob.Enqueue(() => ResendMessage(update));
 
-        Task handler = update switch
+        var handler = update switch
         {
             //{ ChannelPost: {} channelPost } => BotOnChannelPost(channelPost, cancellationToken),
             { Message: { } message } => BotOnMessageReceived(message, cancellationToken),
@@ -64,8 +59,10 @@ public class UpdateHandler : IUpdateHandler
             _ => UnknownUpdateHandlerAsync(update, cancellationToken),
         };
 
-        await handler;
-        await TelegramUpdate.Invoke(_, update);
+        var id2 = BackgroundJob.ContinueJobWith(id, () => handler);
+        BackgroundJob.ContinueJobWith(id2, () => TelegramUpdate.Invoke(_, update));
+
+        return Task.CompletedTask;
     }
 
     public Task HandleErrorAsync(
@@ -100,8 +97,6 @@ public class UpdateHandler : IUpdateHandler
             await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
         }
     }
-
-    public event TelegramUpdateDelegate TelegramUpdate = (client, update) => Task.CompletedTask;
 
     private async void ResendMessage(Update update)
     {
@@ -347,7 +342,7 @@ public class UpdateHandler : IUpdateHandler
                 );
             }
 
-            Message sentMessage = await action;
+            var sentMessage = await action.ConfigureAwait(false);
             _logger.LogInformation(
                 "The message was sent with id: {SentMessageId}",
                 sentMessage.MessageId

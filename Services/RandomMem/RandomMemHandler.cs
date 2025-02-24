@@ -1,4 +1,5 @@
-﻿using MARS.Server.Services.PyroAlerts;
+﻿using Hangfire;
+using MARS.Server.Services.PyroAlerts;
 using Telegram.Bot.Types.Enums;
 using File = System.IO.File;
 
@@ -19,7 +20,7 @@ public class RandomMemHandler(
     private string? LastMediaGroupId { get; set; }
     private bool IsGoldMediaGroup { get; set; }
 
-    public async Task HandMessage(ITelegramBotClient client, Update update)
+    public void HandMessage(ITelegramBotClient client, Update update)
     {
         if (update.Type == UpdateType.Message)
         {
@@ -28,7 +29,7 @@ public class RandomMemHandler(
             {
                 if (message.MediaGroupId == null)
                 {
-                    await Process(client, message);
+                    BackgroundJob.Enqueue(() => Process(client, message, false));
                     LastMediaGroupId = null;
                     IsGoldMediaGroup = false;
                 }
@@ -43,14 +44,14 @@ public class RandomMemHandler(
 
                     if (LastMediaGroupId == message.MediaGroupId)
                     {
-                        await Process(client, message, IsGoldMediaGroup);
+                        BackgroundJob.Enqueue(() => Process(client, message, IsGoldMediaGroup));
                     }
                 }
             }
         }
     }
 
-    private async Task Process(ITelegramBotClient client, Message message, bool isGold = false)
+    public async Task Process(ITelegramBotClient client, Message message, bool isGold = false)
     {
         var fileInfo = await helper.GetFilePath(client, message);
 

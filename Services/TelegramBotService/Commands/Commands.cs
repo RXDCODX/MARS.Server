@@ -14,7 +14,7 @@ public partial class Commands(
     IVoicer syntheziaVoicer,
     IHubContext<TelegramusHub, ITelegramusHub> alertsHub,
     HelloVideoWorker helloVideoWorker
-) : ITelegramusService
+)
 {
     public const string Template =
         "Не получилось получить комманды бота, сообщите об этой ошибке разработчику";

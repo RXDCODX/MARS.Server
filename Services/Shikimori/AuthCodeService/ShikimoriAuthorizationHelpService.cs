@@ -15,12 +15,6 @@ public class ShikimoriAuthorizationHelpService : ITelegramusService
         _shikiAuthUrl = _options.ShikimoriSite + "/oauth/token";
     }
 
-    public Task SaveToFileCode(ShikiAccessToken token)
-    {
-        var text = JsonConvert.SerializeObject(token);
-        return File.WriteAllTextAsync(text, _options.AuthFilePath);
-    }
-
     public async Task<ShikiAccessToken> GetCodeFromFile()
     {
         if (File.Exists(_options.AuthFilePath))
