@@ -62,11 +62,14 @@ public class DailyMarkMarkNotificationsSerivce(
                             const string query3 = """
                                 Время дневной отметки в Honkai:Star Rail, Zenless Zone Zero и Genshin Impact!
 
-                                Honkai:Star Rail: https://act.hoyolab.com/bbs/event/signin/hkrpg/index.html?act_id=e202303301540311
+                                Honkai:Star Rail:
+                                https://act.hoyolab.com/bbs/event/signin/hkrpg/index.html?act_id=e202303301540311
 
-                                Zenless Zone Zero: https://act.hoyolab.com/bbs/event/signin/zzz/e202406031448091.html?act_id=e202406031448091
+                                Zenless Zone Zero:
+                                https://act.hoyolab.com/bbs/event/signin/zzz/e202406031448091.html?act_id=e202406031448091
 
-                                Genshin Impact: https://act.hoyolab.com/ys/event/signin-sea-v3/index.html?act_id=e202102251931481&lang=ru-ru
+                                Genshin Impact:
+                                https://act.hoyolab.com/ys/event/signin-sea-v3/index.html?act_id=e202102251931481&lang=ru-ru
                                 """;
                             message = query3;
                         }
@@ -77,9 +80,11 @@ public class DailyMarkMarkNotificationsSerivce(
                             const string query3 = """
                                 Время дневной отметки в Honkai:Star Rail и Zenless Zone Zero!
 
-                                Honkai:Star Rail: https://act.hoyolab.com/bbs/event/signin/hkrpg/index.html?act_id=e202303301540311
+                                Honkai:Star Rail:
+                                https://act.hoyolab.com/bbs/event/signin/hkrpg/index.html?act_id=e202303301540311
 
-                                Zenless Zone Zero: https://act.hoyolab.com/bbs/event/signin/zzz/e202406031448091.html?act_id=e202406031448091
+                                Zenless Zone Zero:
+                                https://act.hoyolab.com/bbs/event/signin/zzz/e202406031448091.html?act_id=e202406031448091
                                 """;
                             message = query3;
                         }
@@ -90,9 +95,11 @@ public class DailyMarkMarkNotificationsSerivce(
                             const string query3 = """
                                 Время дневной отметки в Honkai:Star Rail и Genshin Impact!
 
-                                Honkai:Star Rail: https://act.hoyolab.com/bbs/event/signin/hkrpg/index.html?act_id=e202303301540311
+                                Honkai:Star Rail:
+                                https://act.hoyolab.com/bbs/event/signin/hkrpg/index.html?act_id=e202303301540311
 
-                                Genshin Impact: https://act.hoyolab.com/ys/event/signin-sea-v3/index.html?act_id=e202102251931481&lang=ru-ru
+                                Genshin Impact:
+                                https://act.hoyolab.com/ys/event/signin-sea-v3/index.html?act_id=e202102251931481&lang=ru-ru
                                 """;
                             message = query3;
                         }
@@ -104,9 +111,11 @@ public class DailyMarkMarkNotificationsSerivce(
                             const string query3 = """
                                 Время дневной отметки в Zenless Zone Zero и Genshin Impact!
 
-                                Zenless Zone Zero: https://act.hoyolab.com/bbs/event/signin/zzz/e202406031448091.html?act_id=e202406031448091
+                                Zenless Zone Zero:
+                                https://act.hoyolab.com/bbs/event/signin/zzz/e202406031448091.html?act_id=e202406031448091
 
-                                Genshin Impact: https://act.hoyolab.com/ys/event/signin-sea-v3/index.html?act_id=e202102251931481&lang=ru-ru
+                                Genshin Impact:
+                                https://act.hoyolab.com/ys/event/signin-sea-v3/index.html?act_id=e202102251931481&lang=ru-ru
                                 """;
                             message = query3;
                         }
