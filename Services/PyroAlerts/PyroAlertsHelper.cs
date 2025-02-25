@@ -1,17 +1,8 @@
-﻿using Microsoft.AspNetCore.Hosting.Server;
-using Microsoft.AspNetCore.Hosting.Server.Features;
+﻿namespace MARS.Server.Services.PyroAlerts;
 
-namespace MARS.Server.Services.PyroAlerts;
-
-public class PyroAlertsHelper(
-    IServer server,
-    ILogger<PyroAlertsHelper> logger,
-    IWebHostEnvironment environment
-) : ITelegramusService
+public class PyroAlertsHelper(ILogger<PyroAlertsHelper> logger, IWebHostEnvironment environment)
+    : ITelegramusService
 {
-    private readonly IServerAddressesFeature? _serverAddresses =
-        server.Features.Get<IServerAddressesFeature>();
-
     public string TelegramCache { get; } = Path.Combine(environment.WebRootPath, "TelegramCache");
 
     public async ValueTask<string> GetFilePhysPath(TGFile fileInfo)

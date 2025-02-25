@@ -1,4 +1,5 @@
-﻿using MARS.Server.Services.Twitch.Rewards.MiniGames.Subs;
+﻿using Hangfire;
+using MARS.Server.Services.Twitch.Rewards.MiniGames.Subs;
 using TwitchLib.Api.Helix.Models.Chat;
 using TwitchLib.EventSub.Websockets.Core.EventArgs.Stream;
 
@@ -66,7 +67,14 @@ public class TwitchRussianRoulete : BackgroundService
         return Task.CompletedTask;
     }
 
-    private async Task NewAlert(object sender, ChannelPointsCustomRewardRedemptionArgs args)
+    private Task NewAlert(object sender, ChannelPointsCustomRewardRedemptionArgs args)
+    {
+        BackgroundJob.Enqueue(() => Process(args));
+
+        return Task.CompletedTask;
+    }
+
+    public async Task Process(ChannelPointsCustomRewardRedemptionArgs args)
     {
         var cost = args.Notification.Payload.Event.Reward.Cost;
         var name = args.Notification.Payload.Event.UserName;

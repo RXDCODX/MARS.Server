@@ -1,4 +1,5 @@
-﻿using MARS.Server.Services.Twitch.FumoFriday;
+﻿using Hangfire;
+using MARS.Server.Services.Twitch.FumoFriday;
 using MARS.Server.Services.Twitch.Rewards.TwitchAlerts;
 using MARS.Server.Services.Twitch.Rewards.TwitchRandomMeme;
 using MARS.Server.Services.Twitch.Rewards.TwitchWaifuRolls;
@@ -72,7 +73,7 @@ public class UserAuthHelper(
 
                         if (!isRefreshed)
                         {
-                            NotifStreamerAboutAuth();
+                            BackgroundJob.Enqueue(() => NotifStreamerAboutAuth());
                         }
                     }
                 }
@@ -92,7 +93,7 @@ public class UserAuthHelper(
 
             if (string.IsNullOrWhiteSpace(tokenInfo?.AccessToken))
             {
-                NotifStreamerAboutAuth();
+                BackgroundJob.Enqueue(() => NotifStreamerAboutAuth());
             }
             else
             {

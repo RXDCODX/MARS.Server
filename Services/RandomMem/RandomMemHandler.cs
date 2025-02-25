@@ -29,7 +29,7 @@ public class RandomMemHandler(
             {
                 if (message.MediaGroupId == null)
                 {
-                    BackgroundJob.Enqueue(() => Process(client, message, false));
+                    BackgroundJob.Enqueue(() => DownloadFileWithAnswer(client, message, false));
                     LastMediaGroupId = null;
                     IsGoldMediaGroup = false;
                 }
@@ -44,14 +44,20 @@ public class RandomMemHandler(
 
                     if (LastMediaGroupId == message.MediaGroupId)
                     {
-                        BackgroundJob.Enqueue(() => Process(client, message, IsGoldMediaGroup));
+                        BackgroundJob.Enqueue(
+                            () => DownloadFileWithAnswer(client, message, IsGoldMediaGroup)
+                        );
                     }
                 }
             }
         }
     }
 
-    public async Task Process(ITelegramBotClient client, Message message, bool isGold = false)
+    public async Task DownloadFileWithAnswer(
+        ITelegramBotClient client,
+        Message message,
+        bool isGold = false
+    )
     {
         var fileInfo = await helper.GetFilePath(client, message);
 

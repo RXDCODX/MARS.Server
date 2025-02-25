@@ -4,20 +4,39 @@ using TwitchLib.Client.Events;
 
 namespace MARS.Server.Services.Twitch.FumoFriday;
 
-public class FumoFridayWorker(
-    IHubContext<TelegramusHub, ITelegramusHub> alertsHub,
-    IDbContextFactory<AppDbContext> dbContextFactory,
-    ILogger<FumoFridayWorker> logger,
-    IHostApplicationLifetime hostApplicationLifetime,
-    ITwitchClient twitchClient
-)
+public class FumoFridayWorker
 {
-    private readonly CancellationToken _cancellationToken =
-        hostApplicationLifetime.ApplicationStopping;
+    private readonly CancellationToken _cancellationToken;
 
     private readonly List<string> _users = new();
+    private readonly IHubContext<TelegramusHub, ITelegramusHub> _alertsHub;
+    private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
+    private readonly ILogger<FumoFridayWorker> _logger;
+    private readonly ITwitchClient _twitchClient;
+
+    public FumoFridayWorker(
+        IHubContext<TelegramusHub, ITelegramusHub> alertsHub,
+        IDbContextFactory<AppDbContext> dbContextFactory,
+        ILogger<FumoFridayWorker> logger,
+        IHostApplicationLifetime hostApplicationLifetime,
+        ITwitchClient twitchClient
+    )
+    {
+        _alertsHub = alertsHub;
+        _dbContextFactory = dbContextFactory;
+        _logger = logger;
+        _twitchClient = twitchClient;
+        _cancellationToken = hostApplicationLifetime.ApplicationStopping;
+
+        _twitchClient.OnMessageReceived += OnMessageReceived;
+    }
 
     public void OnMessageReceived(object? sender, OnMessageReceivedArgs e)
+    {
+        BackgroundJob.Enqueue(() => Process(e));
+    }
+
+    private async Task Process(OnMessageReceivedArgs e)
     {
         var name = e.ChatMessage.DisplayName;
         var id = e.ChatMessage.UserId;
@@ -25,13 +44,12 @@ public class FumoFridayWorker(
 
         if (!_users.Contains(id) && e.ChatMessage.Channel == TwitchExstension.Channel)
         {
-            BackgroundJob.Enqueue(() => Process(now, name, id, e));
+            return;
         }
-    }
 
-    private async Task Process(DateTimeOffset now, string name, string id, OnMessageReceivedArgs e)
-    {
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(_cancellationToken);
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync(
+            _cancellationToken
+        );
 
         var fumoUser = await dbContext.FumoUsers.FindAsync(id, _cancellationToken);
 
@@ -41,7 +59,9 @@ public class FumoFridayWorker(
             && now.DayOfWeek == DayOfWeek.Friday
         )
         {
-            await alertsHub.Clients.All.FumoFriday(name, e.ChatMessage.Color.ToString());
+            BackgroundJob.Enqueue(
+                () => _alertsHub.Clients.All.FumoFriday(name, e.ChatMessage.Color.ToString())
+            );
             _users.Add(id);
         }
     }
@@ -61,9 +81,9 @@ public class FumoFridayWorker(
             {
                 BackgroundJob.Enqueue(
                     () =>
-                        twitchClient.SendMessageToPyrokxnezxzAsync(
+                        _twitchClient.SendMessageToPyrokxnezxzAsync(
                             "Ты уже подписан на Fumo Friday",
-                            logger
+                            _logger
                         )
                 );
                 return Task.CompletedTask;
@@ -77,7 +97,9 @@ public class FumoFridayWorker(
 
     private async Task Process2(ChannelPointsCustomRewardRedemptionArgs args, string name)
     {
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(_cancellationToken);
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync(
+            _cancellationToken
+        );
         var id = args.Notification.Payload.Event.UserId;
         var now = DateTimeOffset.Now;
 
@@ -100,7 +122,7 @@ public class FumoFridayWorker(
 
             if (now.DayOfWeek == DayOfWeek.Friday)
             {
-                BackgroundJob.Enqueue(() => alertsHub.Clients.All.FumoFriday(name, null));
+                BackgroundJob.Enqueue(() => _alertsHub.Clients.All.FumoFriday(name, null));
                 _users.Add(id);
             }
         }
@@ -108,9 +130,9 @@ public class FumoFridayWorker(
         {
             BackgroundJob.Enqueue(
                 () =>
-                    twitchClient.SendMessageToPyrokxnezxzAsync(
+                    _twitchClient.SendMessageToPyrokxnezxzAsync(
                         $"@{name}, Ты уже счастливый фанат фум!",
-                        logger
+                        _logger
                     )
             );
         }

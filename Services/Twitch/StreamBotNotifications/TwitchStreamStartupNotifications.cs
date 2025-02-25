@@ -1,4 +1,5 @@
-﻿using MARS.Server.Services.PyroAlerts;
+﻿using Hangfire;
+using MARS.Server.Services.PyroAlerts;
 using TwitchLib.EventSub.Websockets.Core.EventArgs.Stream;
 
 namespace MARS.Server.Services.Twitch.StreamBotNotifications;
@@ -25,14 +26,19 @@ public class TwitchStreamStartupNotifications
 
     internal Task PubSubOnlineOnStreamUp(object sender, StreamOnlineArgs streamOnlineArgs)
     {
-        return _twitchClient.SendMessageToPyrokxnezxzAsync("Online", _logger);
+        BackgroundJob.Enqueue(() => _twitchClient.SendMessageToPyrokxnezxzAsync("Online", _logger));
+        return Task.CompletedTask;
     }
 
     internal Task PubSibOfflineStream(object sender, StreamOfflineArgs args)
     {
-        return _twitchClient.SendMessageToPyrokxnezxzAsync(
-            "Та куда стрим вырубил Stressed",
-            _logger
+        BackgroundJob.Enqueue(
+            () =>
+                _twitchClient.SendMessageToPyrokxnezxzAsync(
+                    "Та куда стрим вырубил Stressed",
+                    _logger
+                )
         );
+        return Task.CompletedTask;
     }
 }

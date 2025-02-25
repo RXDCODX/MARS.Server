@@ -9,9 +9,9 @@ public interface ITelegramusHub
 {
     public Task Alert(MediaDto info);
     public Task UpdateWaifuPrizes(ICollection<PrizeType> prizes);
-    public Task WaifuRoll(Waifu content, string? displayName, string? color = default);
-    public Task AddNewWaifu(Waifu content, string? displayName, string? color = default);
-    public Task MergeWaifu(Waifu content, string? displayName, string? color = default);
+    public Task WaifuRoll(Waifu content, string? displayName, string color = "white");
+    public Task AddNewWaifu(Waifu content, string? displayName, string color = "white");
+    public Task MergeWaifu(Waifu content, string? displayName, string color = "white");
     public Task FumoFriday(string displayName, string? color = null);
     public Task NewMessage(string id, ChatMessage message);
     public Task DeleteMessage(string id);

@@ -1,4 +1,5 @@
-﻿using MARS.Server.Services.RandomMem.Entity;
+﻿using Hangfire;
+using MARS.Server.Services.RandomMem.Entity;
 using TwitchLib.EventSub.Core.SubscriptionTypes.Channel;
 
 namespace MARS.Server.Services.Twitch.Rewards.TwitchRandomMeme;
@@ -29,7 +30,7 @@ public class RandomMeme
 
     public async Task RandomMemeHandler(object sender, ChannelPointsCustomRewardRedemptionArgs args)
     {
-        ChannelPointsCustomRewardRedemption? twEvent = args.Notification.Payload.Event;
+        var twEvent = args.Notification.Payload.Event;
         if (
             twEvent.BroadcasterUserId.Equals(
                 TwitchExstension.ChannelId,
@@ -41,12 +42,15 @@ public class RandomMeme
             {
                 case 9:
                 {
-                    MediaInfo? media = await GetMeme(twEvent.UserName);
+                    var media = await GetMeme(twEvent.UserName);
 
                     if (media is not null)
                     {
-                        await _hubContext.Clients.All.Alert(
-                            new MediaDto(media) { MediaInfo = media }
+                        BackgroundJob.Enqueue(
+                            () =>
+                                _hubContext.Clients.All.Alert(
+                                    new MediaDto(media) { MediaInfo = media }
+                                )
                         );
                     }
 
@@ -54,12 +58,15 @@ public class RandomMeme
                 }
                 case 10:
                 {
-                    MediaInfo? sound = await GetRandomSound(twEvent.UserName);
+                    var sound = await GetRandomSound(twEvent.UserName);
 
                     if (sound is not null)
                     {
-                        await _hubContext.Clients.All.Alert(
-                            new MediaDto(sound) { MediaInfo = sound }
+                        BackgroundJob.Enqueue(
+                            () =>
+                                _hubContext.Clients.All.Alert(
+                                    new MediaDto(sound) { MediaInfo = sound }
+                                )
                         );
                     }
 
@@ -67,12 +74,15 @@ public class RandomMeme
                 }
                 case 3:
                 {
-                    MediaInfo? sound = await GetHigemSound(twEvent.UserName);
+                    var sound = await GetHigemSound(twEvent.UserName);
 
                     if (sound is not null)
                     {
-                        await _hubContext.Clients.All.Alert(
-                            new MediaDto(sound) { MediaInfo = sound }
+                        BackgroundJob.Enqueue(
+                            () =>
+                                _hubContext.Clients.All.Alert(
+                                    new MediaDto(sound) { MediaInfo = sound }
+                                )
                         );
                     }
 
@@ -114,7 +124,8 @@ public class RandomMeme
 
         if (files.Length > 0)
         {
-            var filePath = files.MinBy(File.GetLastWriteTime);
+            Random.Shared.Shuffle(files);
+            var filePath = files[0];
 
             if (string.IsNullOrWhiteSpace(filePath))
             {

@@ -1,4 +1,5 @@
-﻿using MARS.Server.Services.Twitch.Rewards.MiniGames.Subs;
+﻿using Hangfire;
+using MARS.Server.Services.Twitch.Rewards.MiniGames.Subs;
 using TwitchLib.Client.Events;
 using TwitchLib.EventSub.Websockets.Core.EventArgs.Stream;
 
@@ -77,110 +78,102 @@ public class TwitchTrivia : BackgroundService
         return Task.CompletedTask;
     }
 
-    private async void NewMessage(object? sender, OnMessageReceivedArgs onMessageReceivedArgs)
+    private void NewMessage(object? sender, OnMessageReceivedArgs onMessageReceivedArgs)
     {
         if (!IsAppActive)
         {
             return;
         }
 
-        await Task.Run(
-            async () =>
+        BackgroundJob.Enqueue(() => Process(onMessageReceivedArgs));
+    }
+
+    public async Task Process(OnMessageReceivedArgs onMessageReceivedArgs)
+    {
+        var name = onMessageReceivedArgs.ChatMessage.Username;
+        var message = onMessageReceivedArgs.ChatMessage.Message;
+        var id = onMessageReceivedArgs.ChatMessage.UserId;
+
+        if (name == TwitchExstension.BotName || IsStop)
+        {
+            return;
+        }
+
+        //Стоп - слово
+        if (message == CommandForStop && name == "")
+        {
+            if (CurrentGame != null)
             {
-                var name = onMessageReceivedArgs.ChatMessage.Username;
-                var message = onMessageReceivedArgs.ChatMessage.Message;
-                var id = onMessageReceivedArgs.ChatMessage.UserId;
+                CurrentGame.Active = false;
+                await _client.SendMessageToPyrokxnezxzAsync("Остановка тривии", _logger);
+            }
+            else
+            {
+                await _client.SendMessageToPyrokxnezxzAsync("Тривия не была запущена", _logger);
+            }
 
-                if (name == TwitchExstension.BotName || IsStop)
+            return;
+        }
+
+        //травия ответы
+        if (
+            CurrentGame != null
+            && message.Equals(CurrentGame.Answer, StringComparison.OrdinalIgnoreCase)
+            && CurrentGame.Answer != ""
+        )
+        {
+            try
+            {
+                Waifu? waifu = null;
+                await using AppDbContext context = await _dbContextFactory.CreateDbContextAsync();
+
+                var host = await context.Hosts.FindAsync(id);
+
+                if (host is { IsPrivated: true } && message.Length == CurrentGame.Answer.Length)
                 {
-                    return;
+                    var isTextSimmetric =
+                        message.Length == CurrentGame.Answer.Length
+                        && message.Where((t, i) => CurrentGame.Answer[i].Equals(t)).Any();
+
+                    if (isTextSimmetric)
+                    {
+                        var chance = Random.Shared.Next(0, 101);
+                        if (chance < ChanceToBeSaved)
+                        {
+                            waifu = await context.Waifus.FindAsync(host.WaifuBrideId);
+                        }
+                    }
                 }
 
-                //Стоп - слово
-                if (message == CommandForStop && name == "")
+                await SemaphoreSlim.WaitAsync(TokenSource.Token);
+                if (!CurrentGame.AllLettersShowed && waifu != null)
                 {
-                    if (CurrentGame != null)
-                    {
-                        CurrentGame.Active = false;
-                        await _client.SendMessageToPyrokxnezxzAsync("Остановка тривии", _logger);
-                    }
-                    else
-                    {
-                        await _client.SendMessageToPyrokxnezxzAsync(
-                            "Тривия не была запущена",
-                            _logger
-                        );
-                    }
-
-                    return;
+                    CurrentGame.AllLettersShowed = true;
+                    var answer = CurrentGame.Answer;
+                    CurrentGame.Answer = "";
+                    await _client.SendMessageToPyrokxnezxzAsync(
+                        $"@{name}, твой супруг ({waifu.Name}) шепнул(-а) на ушко загаданное слово: {answer}",
+                        _logger
+                    );
+                }
+                else if (!CurrentGame.AllLettersShowed)
+                {
+                    CurrentGame.AllLettersShowed = true;
+                    var answer = CurrentGame.Answer;
+                    CurrentGame.Answer = "";
+                    await _client.SendMessageToPyrokxnezxzAsync(
+                        $"@{name} отгадал загаданное слово: {answer}",
+                        _logger
+                    );
                 }
 
-                //травия ответы
-                if (
-                    CurrentGame != null
-                    && message.Equals(CurrentGame.Answer, StringComparison.OrdinalIgnoreCase)
-                    && CurrentGame.Answer != ""
-                )
-                {
-                    try
-                    {
-                        Waifu? waifu = null;
-                        await using AppDbContext context =
-                            await _dbContextFactory.CreateDbContextAsync();
-
-                        var host = await context.Hosts.FindAsync(id);
-
-                        if (
-                            host is { IsPrivated: true }
-                            && message.Length == CurrentGame.Answer.Length
-                        )
-                        {
-                            var isTextSimmetric =
-                                message.Length == CurrentGame.Answer.Length
-                                && message.Where((t, i) => CurrentGame.Answer[i].Equals(t)).Any();
-
-                            if (isTextSimmetric)
-                            {
-                                var chance = Random.Shared.Next(0, 101);
-                                if (chance < ChanceToBeSaved)
-                                {
-                                    waifu = await context.Waifus.FindAsync(host.WaifuBrideId);
-                                }
-                            }
-                        }
-
-                        await SemaphoreSlim.WaitAsync(TokenSource.Token);
-                        if (!CurrentGame.AllLettersShowed && waifu != null)
-                        {
-                            CurrentGame.AllLettersShowed = true;
-                            var answer = CurrentGame.Answer;
-                            CurrentGame.Answer = "";
-                            await _client.SendMessageToPyrokxnezxzAsync(
-                                $"@{name}, твой супруг ({waifu.Name}) шепнул(-а) на ушко загаданное слово: {answer}",
-                                _logger
-                            );
-                        }
-                        else if (!CurrentGame.AllLettersShowed)
-                        {
-                            CurrentGame.AllLettersShowed = true;
-                            var answer = CurrentGame.Answer;
-                            CurrentGame.Answer = "";
-                            await _client.SendMessageToPyrokxnezxzAsync(
-                                $"@{name} отгадал загаданное слово: {answer}",
-                                _logger
-                            );
-                        }
-
-                        SemaphoreSlim.Release();
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogException(ex);
-                    }
-                }
-            },
-            TokenSource.Token
-        );
+                SemaphoreSlim.Release();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogException(ex);
+            }
+        }
     }
 
     private Task NewAlert(object? sender, ChannelPointsCustomRewardRedemptionArgs args)

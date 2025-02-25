@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using Hangfire;
 using MARS.Server.Services.Twitch.Synthesizer.Enitity;
 using TwitchLib.Client.Events;
 
@@ -11,13 +12,18 @@ public class SyntheziaQueueManager
 
     private bool _isAppReady;
 
-    public SyntheziaQueueManager(IVoicer voicer, IHostApplicationLifetime hostApplicationLifetime)
+    public SyntheziaQueueManager(
+        IVoicer voicer,
+        IHostApplicationLifetime hostApplicationLifetime,
+        ITwitchClient client
+    )
     {
         _voicer = voicer;
 
         hostApplicationLifetime.ApplicationStarted.Register(() =>
         {
             _isAppReady = true;
+            client.OnMessageReceived += HandMessageToVoice;
         });
     }
 
@@ -44,31 +50,28 @@ public class SyntheziaQueueManager
         } while (!_queue.IsEmpty);
     }
 
-    public async void HandMessageToVoice(object? sender, OnMessageReceivedArgs args)
+    public void HandMessageToVoice(object? sender, OnMessageReceivedArgs args)
     {
-        await Task.Run(async () =>
-        {
-            if (
-                args.ChatMessage.Channel.Equals(
-                    TwitchExstension.Channel,
-                    StringComparison.OrdinalIgnoreCase
-                )
-                && !TwitchExstension.BlackList.Any(e =>
-                    e.Equals(args.ChatMessage.Username, StringComparison.OrdinalIgnoreCase)
-                )
+        if (
+            args.ChatMessage.Channel.Equals(
+                TwitchExstension.Channel,
+                StringComparison.OrdinalIgnoreCase
             )
+            && !TwitchExstension.BlackList.Any(e =>
+                e.Equals(args.ChatMessage.Username, StringComparison.OrdinalIgnoreCase)
+            )
+        )
+        {
+            var message = new MessageToSynthezid
             {
-                var message = new MessageToSynthezid
-                {
-                    CreationDateTime = DateTimeOffset.Now,
-                    Guid = new Guid(),
-                    Message = args.ChatMessage.Message.ReplaceLinks().ReplaceTooLongWords(),
-                    Name = args.ChatMessage.Username,
-                };
+                CreationDateTime = DateTimeOffset.Now,
+                Guid = new Guid(),
+                Message = args.ChatMessage.Message.ReplaceLinks().ReplaceTooLongWords(),
+                Name = args.ChatMessage.Username,
+            };
 
-                _queue.Enqueue(message);
-                await ProcessMessages();
-            }
-        });
+            var eventId = BackgroundJob.Enqueue(() => _queue.Enqueue(message));
+            BackgroundJob.ContinueJobWith(eventId, () => ProcessMessages());
+        }
     }
 }
