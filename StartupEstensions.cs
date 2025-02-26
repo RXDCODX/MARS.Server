@@ -38,10 +38,7 @@ public static class StartupEstensions
 
         services.AddSingleton<ITwitchAPI>(twitchApi);
 
-        var credentials = new ConnectionCredentials(
-            TwitchExstension.BotName,
-            "7ebls4048aw0atuopgj7zh36xyvufp"
-        );
+        var credentials = new ConnectionCredentials(TwitchExstension.BotName, twitchConfig.OAuth);
 
         var client = new TwitchClient(default, default, factory.CreateLogger<TwitchClient>());
 
