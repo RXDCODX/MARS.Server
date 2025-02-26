@@ -36,7 +36,7 @@ public class FumoFridayWorker
         BackgroundJob.Enqueue(() => Process(e));
     }
 
-    private async Task Process(OnMessageReceivedArgs e)
+    public async Task Process(OnMessageReceivedArgs e)
     {
         var name = e.ChatMessage.DisplayName;
         var id = e.ChatMessage.UserId;
@@ -95,7 +95,7 @@ public class FumoFridayWorker
         return Task.CompletedTask;
     }
 
-    private async Task Process2(ChannelPointsCustomRewardRedemptionArgs args, string name)
+    public async Task Process2(ChannelPointsCustomRewardRedemptionArgs args, string name)
     {
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync(
             _cancellationToken

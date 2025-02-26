@@ -8,7 +8,8 @@ namespace MARS.Server.Services.RandomMem;
 public class RandomMemHandler(
     IWebHostEnvironment environment,
     PyroAlertsHelper helper,
-    ILogger<RandomMemHandler> logger
+    ILogger<RandomMemHandler> logger,
+    ITelegramBotClient client
 ) : ITelegramusService
 {
     public readonly string AlertsPath = Path.Combine(
@@ -20,7 +21,7 @@ public class RandomMemHandler(
     private string? LastMediaGroupId { get; set; }
     private bool IsGoldMediaGroup { get; set; }
 
-    public void HandMessage(ITelegramBotClient client, Update update)
+    public Task HandMessage(Update update)
     {
         if (update.Type == UpdateType.Message)
         {
@@ -29,7 +30,7 @@ public class RandomMemHandler(
             {
                 if (message.MediaGroupId == null)
                 {
-                    BackgroundJob.Enqueue(() => DownloadFileWithAnswer(client, message, false));
+                    BackgroundJob.Enqueue(() => DownloadFileWithAnswer(message, false));
                     LastMediaGroupId = null;
                     IsGoldMediaGroup = false;
                 }
@@ -45,19 +46,17 @@ public class RandomMemHandler(
                     if (LastMediaGroupId == message.MediaGroupId)
                     {
                         BackgroundJob.Enqueue(
-                            () => DownloadFileWithAnswer(client, message, IsGoldMediaGroup)
+                            () => DownloadFileWithAnswer(message, IsGoldMediaGroup)
                         );
                     }
                 }
             }
         }
+
+        return Task.CompletedTask;
     }
 
-    public async Task DownloadFileWithAnswer(
-        ITelegramBotClient client,
-        Message message,
-        bool isGold = false
-    )
+    public async Task DownloadFileWithAnswer(Message message, bool isGold = false)
     {
         var fileInfo = await helper.GetFilePath(client, message);
 

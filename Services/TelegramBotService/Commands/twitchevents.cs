@@ -4,7 +4,7 @@ namespace MARS.Server.Services.TelegramBotService.Commands;
 
 public partial class Commands
 {
-    [AdminAtribbute]
+    [Admin]
     public async Task<Message> OnTwitchEventsCommandReceived(
         ITelegramBotClient botClient,
         Message message,

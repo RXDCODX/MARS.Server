@@ -346,7 +346,7 @@ public class UserAuthHelper(
         return false;
     }
 
-    private async void NotifStreamerAboutAuth()
+    public async void NotifStreamerAboutAuth()
     {
         try
         {
