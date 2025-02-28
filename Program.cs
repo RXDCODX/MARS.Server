@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 using Hangfire;
 using Hangfire.PostgreSql;
 using Hangfire.PostgreSql.Factories;
+using Hangfire.Server;
 using MARS.Server.CustomLoggers.TelegramLogger;
 using MARS.Server.Services.Honkai;
 using MARS.Server.Services.PyroAlerts;
@@ -272,6 +273,16 @@ public class Program
         builder.Services.AddOpenApi();
 
         var app = builder.Build();
+
+        JobStorage.Current.GetConnection().RemoveTimedOutServers(TimeSpan.FromSeconds(15));
+        app.Services.GetRequiredService<IHostApplicationLifetime>()
+            .ApplicationStopping.Register(() =>
+            {
+                var hangfireServer = app.Services.GetRequiredService<IBackgroundProcessingServer>();
+                hangfireServer.SendStop();
+                hangfireServer.WaitForShutdown(TimeSpan.FromSeconds(10));
+                hangfireServer.Dispose();
+            });
 
         app.AddStaticFilesBrowser(directory);
         app.UseSwagger();

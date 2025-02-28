@@ -20,7 +20,7 @@ public static class TwitchExstension
         "moobot",
     ];
 
-    public static Task SendMessageToPyrokxnezxzAsync<T>(
+    public static Task SendMessageToMainTwitchAsync<T>(
         this ITwitchClient client,
         string message,
         ILogger<T>? logger = default

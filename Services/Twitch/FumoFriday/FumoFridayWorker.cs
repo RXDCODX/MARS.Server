@@ -81,7 +81,7 @@ public class FumoFridayWorker
             {
                 BackgroundJob.Enqueue(
                     () =>
-                        _twitchClient.SendMessageToPyrokxnezxzAsync(
+                        _twitchClient.SendMessageToMainTwitchAsync(
                             "Ты уже подписан на Fumo Friday",
                             _logger
                         )
@@ -130,7 +130,7 @@ public class FumoFridayWorker
         {
             BackgroundJob.Enqueue(
                 () =>
-                    _twitchClient.SendMessageToPyrokxnezxzAsync(
+                    _twitchClient.SendMessageToMainTwitchAsync(
                         $"@{name}, Ты уже счастливый фанат фум!",
                         _logger
                     )

@@ -10,8 +10,8 @@ public partial class Commands
         CancellationToken cancellationToken
     )
     {
-        const string usage = """
-            Создатель бота - https://www.twitch.tv/pyrokxnezxz
+        const string usage = $"""
+            Создатель бота - https://www.twitch.tv/{TwitchExstension.Channel}
             Бот используется как проводник медиафайлов с последующим отображением на стриме
             Больше инфы - /help, /whitelist, /commands
             """;

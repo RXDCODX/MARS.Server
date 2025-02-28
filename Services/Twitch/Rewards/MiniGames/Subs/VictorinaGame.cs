@@ -33,7 +33,7 @@ public class VictorinaGame
             _listLetters.Add(new VictorinaLetter { Letter = t, Showed = false });
         }
 
-        await _client.SendMessageToPyrokxnezxzAsync(
+        await _client.SendMessageToMainTwitchAsync(
             $"({Answer.Length} букв): {arrQuestion[0]}",
             _logger
         );
@@ -137,14 +137,14 @@ public class VictorinaGame
                 if (allLettersAreValid)
                 {
                     AllLettersShowed = true;
-                    await _client.SendMessageToPyrokxnezxzAsync(
+                    await _client.SendMessageToMainTwitchAsync(
                         $"Никто не отгадал! Ответ: {strHint}",
                         _logger
                     );
                 }
                 else
                 {
-                    await _client.SendMessageToPyrokxnezxzAsync($"Подсказка: {strHint}", _logger);
+                    await _client.SendMessageToMainTwitchAsync($"Подсказка: {strHint}", _logger);
                 }
 
                 _trivia.SemaphoreSlim.Release();

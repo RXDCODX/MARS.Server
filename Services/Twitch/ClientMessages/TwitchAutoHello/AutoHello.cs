@@ -30,7 +30,7 @@ public class AutoHello(
                 if (!string.IsNullOrWhiteSpace(message))
                 {
                     BackgroundJob.Enqueue(
-                        () => client.SendMessageToPyrokxnezxzAsync(message, logger)
+                        () => client.SendMessageToMainTwitchAsync(message, logger)
                     );
                 }
             }

@@ -46,7 +46,7 @@ public class RouleteGame
         if (numPlayers == 2)
         {
             var namesForMinigame = string.Join(", ", Players.Select(player => player.Name));
-            await _client.SendMessageToPyrokxnezxzAsync(
+            await _client.SendMessageToMainTwitchAsync(
                 $"Играется рулетка на двоих! Играют: {namesForMinigame}",
                 _logger
             );
@@ -61,7 +61,7 @@ public class RouleteGame
                     ", ",
                     alivePlayers.Select(player => player.Name)
                 );
-                await _client.SendMessageToPyrokxnezxzAsync(
+                await _client.SendMessageToMainTwitchAsync(
                     $"Русская рулетка - раунд {roundNum}! Играют: {alivePlayersNames}",
                     _logger
                 );
@@ -87,14 +87,14 @@ public class RouleteGame
                         e => e.ShikiId == host.WaifuBrideId,
                         _token
                     ) ?? throw new NullReferenceException("не найдена зарегестрированная жена");
-                await _client.SendMessageToPyrokxnezxzAsync(
+                await _client.SendMessageToMainTwitchAsync(
                     $"@{shotPlayer.Name}, твой супруг - {waifu.Name} спас тебя от неминуемой гибели!",
                     _logger
                 );
             }
             else
             {
-                await _client.SendMessageToPyrokxnezxzAsync(
+                await _client.SendMessageToMainTwitchAsync(
                     StaticContent.PlayerEliminated(shotPlayer.Name),
                     _logger
                 );
@@ -110,14 +110,14 @@ public class RouleteGame
         RouletePlayer winner = Players.First(e => e.IsAlive);
         if (Type == GameType.MiniGame)
         {
-            await _client.SendMessageToPyrokxnezxzAsync(
+            await _client.SendMessageToMainTwitchAsync(
                 $"Победитель: {winner.Name}. {StaticContent.GetMiniHistory(winner.Name)}",
                 _logger
             );
         }
         else
         {
-            await _client.SendMessageToPyrokxnezxzAsync(
+            await _client.SendMessageToMainTwitchAsync(
                 $"Поздравляем {winner.Name} с победой в игре!",
                 _logger
             );
@@ -145,13 +145,13 @@ public class RouleteGame
 
     private async Task AloneRoulette(string username, CancellationToken token)
     {
-        await _client.SendMessageToPyrokxnezxzAsync($"@{username}, я взвожу курок...", _logger);
+        await _client.SendMessageToMainTwitchAsync($"@{username}, я взвожу курок...", _logger);
         await Task.Delay(3000, token);
-        await _client.SendMessageToPyrokxnezxzAsync($"@{username}, 3", _logger);
+        await _client.SendMessageToMainTwitchAsync($"@{username}, 3", _logger);
         await Task.Delay(1000, token);
-        await _client.SendMessageToPyrokxnezxzAsync($"@{username}, 2", _logger);
+        await _client.SendMessageToMainTwitchAsync($"@{username}, 2", _logger);
         await Task.Delay(1000, token);
-        await _client.SendMessageToPyrokxnezxzAsync($"@{username}, 1", _logger);
+        await _client.SendMessageToMainTwitchAsync($"@{username}, 1", _logger);
         await Task.Delay(1000, token);
 
         var rnd = new Random();
@@ -159,37 +159,37 @@ public class RouleteGame
         switch (randomShoot)
         {
             case 1:
-                await _client.SendMessageToPyrokxnezxzAsync(
+                await _client.SendMessageToMainTwitchAsync(
                     $"@{username}, сегодня твой день.",
                     _logger
                 );
                 break;
             case 6:
-                await _client.SendMessageToPyrokxnezxzAsync(
+                await _client.SendMessageToMainTwitchAsync(
                     $"@{username}, осечка, но я не думаю, что в следующий раз тебе так повезет.",
                     _logger
                 );
                 break;
             case 3:
-                await _client.SendMessageToPyrokxnezxzAsync(
+                await _client.SendMessageToMainTwitchAsync(
                     $"@{username}, я медленно подвожу ствол к твоему виску. Ничего не происходит. Повезло. Или это просто осечка?",
                     _logger
                 );
                 break;
             case 4:
-                await _client.SendMessageToPyrokxnezxzAsync(
+                await _client.SendMessageToMainTwitchAsync(
                     $"@{username}, повезло. Не уверен, что ты рискнешь еще раз со мной сыграть в эту игру.",
                     _logger
                 );
                 break;
             case 5:
-                await _client.SendMessageToPyrokxnezxzAsync(
+                await _client.SendMessageToMainTwitchAsync(
                     $"@{username}, живой или мертвый ты пойдешь со мной. Но видимо не сегодня.",
                     _logger
                 );
                 break;
             case 2:
-                await _client.SendMessageToPyrokxnezxzAsync(
+                await _client.SendMessageToMainTwitchAsync(
                     $"@{username}, BANG! BANG! BANG!",
                     _logger
                 );

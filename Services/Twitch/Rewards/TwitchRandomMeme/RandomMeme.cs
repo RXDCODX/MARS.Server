@@ -1,33 +1,16 @@
 ﻿using Hangfire;
 using MARS.Server.Services.RandomMem.Entity;
-using TwitchLib.EventSub.Core.SubscriptionTypes.Channel;
 
 namespace MARS.Server.Services.Twitch.Rewards.TwitchRandomMeme;
 
-public class RandomMeme
+public class RandomMeme(
+    IHubContext<TelegramusHub, ITelegramusHub> hubContext,
+    IWebHostEnvironment webHostEnvironment,
+    ITwitchClient client,
+    ILogger<RandomMeme> logger,
+    IDbContextFactory<AppDbContext> dbContextFactory
+)
 {
-    private readonly ITwitchClient _client;
-    private readonly IHubContext<TelegramusHub, ITelegramusHub> _hubContext;
-    private readonly ILogger<RandomMeme> _logger;
-    private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
-
-    private readonly IWebHostEnvironment _webHostEnvironment;
-
-    public RandomMeme(
-        IHubContext<TelegramusHub, ITelegramusHub> hubContext,
-        IWebHostEnvironment webHostEnvironment,
-        ITwitchClient client,
-        ILogger<RandomMeme> logger,
-        IDbContextFactory<AppDbContext> dbContextFactory
-    )
-    {
-        _hubContext = hubContext;
-        _webHostEnvironment = webHostEnvironment;
-        _client = client;
-        _logger = logger;
-        _dbContextFactory = dbContextFactory;
-    }
-
     public async Task RandomMemeHandler(object sender, ChannelPointsCustomRewardRedemptionArgs args)
     {
         var twEvent = args.Notification.Payload.Event;
@@ -48,7 +31,7 @@ public class RandomMeme
                     {
                         BackgroundJob.Enqueue(
                             () =>
-                                _hubContext.Clients.All.Alert(
+                                hubContext.Clients.All.Alert(
                                     new MediaDto(media) { MediaInfo = media }
                                 )
                         );
@@ -64,23 +47,7 @@ public class RandomMeme
                     {
                         BackgroundJob.Enqueue(
                             () =>
-                                _hubContext.Clients.All.Alert(
-                                    new MediaDto(sound) { MediaInfo = sound }
-                                )
-                        );
-                    }
-
-                    break;
-                }
-                case 3:
-                {
-                    var sound = await GetHigemSound(twEvent.UserName);
-
-                    if (sound is not null)
-                    {
-                        BackgroundJob.Enqueue(
-                            () =>
-                                _hubContext.Clients.All.Alert(
+                                hubContext.Clients.All.Alert(
                                     new MediaDto(sound) { MediaInfo = sound }
                                 )
                         );
@@ -94,19 +61,13 @@ public class RandomMeme
 
     private Task<MediaInfo?> GetRandomSound(string? displayName)
     {
-        var path = Path.Combine(_webHostEnvironment.WebRootPath, "Alerts", "zvik");
+        var path = Path.Combine(webHostEnvironment.WebRootPath, "Alerts", "zvik");
         return GetAlert(path, displayName);
-    }
-
-    private Task<MediaInfo?> GetHigemSound(string? displayName)
-    {
-        var path = Path.Combine(_webHostEnvironment.WebRootPath, "Alerts", "zvik", "higem");
-        return GetAlert(path, displayName, true);
     }
 
     private Task<MediaInfo?> GetMeme(string? displayName)
     {
-        var path = Path.Combine(_webHostEnvironment.WebRootPath, "Alerts", "random_meme");
+        var path = Path.Combine(webHostEnvironment.WebRootPath, "Alerts", "random_meme");
         return GetAlert(path, displayName, true);
     }
 
@@ -129,7 +90,7 @@ public class RandomMeme
 
             if (string.IsNullOrWhiteSpace(filePath))
             {
-                await _client.SendMessageToPyrokxnezxzAsync("Не могу найти мем", _logger);
+                await client.SendMessageToMainTwitchAsync("Не могу найти мем", logger);
                 return null;
             }
 
@@ -177,7 +138,7 @@ public class RandomMeme
         CancellationToken stoppingToken
     )
     {
-        await using AppDbContext dbContext = await _dbContextFactory.CreateDbContextAsync(
+        await using AppDbContext dbContext = await dbContextFactory.CreateDbContextAsync(
             stoppingToken
         );
 

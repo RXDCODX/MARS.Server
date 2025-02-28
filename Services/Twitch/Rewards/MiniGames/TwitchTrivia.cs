@@ -105,11 +105,11 @@ public class TwitchTrivia : BackgroundService
             if (CurrentGame != null)
             {
                 CurrentGame.Active = false;
-                await _client.SendMessageToPyrokxnezxzAsync("Остановка тривии", _logger);
+                await _client.SendMessageToMainTwitchAsync("Остановка тривии", _logger);
             }
             else
             {
-                await _client.SendMessageToPyrokxnezxzAsync("Тривия не была запущена", _logger);
+                await _client.SendMessageToMainTwitchAsync("Тривия не была запущена", _logger);
             }
 
             return;
@@ -151,7 +151,7 @@ public class TwitchTrivia : BackgroundService
                     CurrentGame.AllLettersShowed = true;
                     var answer = CurrentGame.Answer;
                     CurrentGame.Answer = "";
-                    await _client.SendMessageToPyrokxnezxzAsync(
+                    await _client.SendMessageToMainTwitchAsync(
                         $"@{name}, твой супруг ({waifu.Name}) шепнул(-а) на ушко загаданное слово: {answer}",
                         _logger
                     );
@@ -161,7 +161,7 @@ public class TwitchTrivia : BackgroundService
                     CurrentGame.AllLettersShowed = true;
                     var answer = CurrentGame.Answer;
                     CurrentGame.Answer = "";
-                    await _client.SendMessageToPyrokxnezxzAsync(
+                    await _client.SendMessageToMainTwitchAsync(
                         $"@{name} отгадал загаданное слово: {answer}",
                         _logger
                     );
@@ -199,7 +199,7 @@ public class TwitchTrivia : BackgroundService
             else
             {
                 const string answer = "@{0}, викторина уже запущена!";
-                return _client.SendMessageToPyrokxnezxzAsync(
+                return _client.SendMessageToMainTwitchAsync(
                     string.Format(answer, args.Notification.Payload.Event.UserName),
                     _logger
                 );

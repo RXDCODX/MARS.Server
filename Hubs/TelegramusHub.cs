@@ -35,7 +35,7 @@ public class TelegramusHub(
 
     public Task TwitchMsg(string msg)
     {
-        return twitchClient.SendMessageToPyrokxnezxzAsync(msg, logger);
+        return twitchClient.SendMessageToMainTwitchAsync(msg, logger);
     }
 
     public async Task UpdateWaifuPrizesAsync()

@@ -74,7 +74,7 @@ public class AddNewWaifu : BackgroundService
                     );
 
                     BackgroundJob.Enqueue(
-                        () => _client.SendMessageToPyrokxnezxzAsync(message, _logger)
+                        () => _client.SendMessageToMainTwitchAsync(message, _logger)
                     );
                     return;
                 }
@@ -91,7 +91,7 @@ public class AddNewWaifu : BackgroundService
                     );
 
                     BackgroundJob.Enqueue(
-                        () => _client.SendMessageToPyrokxnezxzAsync(message, _logger)
+                        () => _client.SendMessageToMainTwitchAsync(message, _logger)
                     );
                     return;
                 }
@@ -107,7 +107,7 @@ public class AddNewWaifu : BackgroundService
                     );
 
                     BackgroundJob.Enqueue(
-                        () => _client.SendMessageToPyrokxnezxzAsync(message, _logger)
+                        () => _client.SendMessageToMainTwitchAsync(message, _logger)
                     );
                     return;
                 }
@@ -130,7 +130,7 @@ public class AddNewWaifu : BackgroundService
                     var message1 = message;
                     var eventId2 = BackgroundJob.ContinueJobWith(
                         eventId,
-                        () => _client.SendMessageToPyrokxnezxzAsync(message1, _logger)
+                        () => _client.SendMessageToMainTwitchAsync(message1, _logger)
                     );
 
                     var chance = Random.Shared.Next(0, 101);
@@ -178,7 +178,7 @@ public class AddNewWaifu : BackgroundService
                 );
 
                 BackgroundJob.Enqueue(
-                    () => _client.SendMessageToPyrokxnezxzAsync(resultMessage, _logger)
+                    () => _client.SendMessageToMainTwitchAsync(resultMessage, _logger)
                 );
             }
         }

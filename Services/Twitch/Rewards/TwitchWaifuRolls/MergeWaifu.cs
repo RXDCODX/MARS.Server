@@ -114,7 +114,7 @@ public class MergeWaifu : BackgroundService
                             );
 
                             BackgroundJob.Enqueue(
-                                () => _client.SendMessageToPyrokxnezxzAsync(message, _logger)
+                                () => _client.SendMessageToMainTwitchAsync(message, _logger)
                             );
                             return;
                         }
@@ -135,7 +135,7 @@ public class MergeWaifu : BackgroundService
                         );
 
                         BackgroundJob.Enqueue(
-                            () => _client.SendMessageToPyrokxnezxzAsync(message, _logger)
+                            () => _client.SendMessageToMainTwitchAsync(message, _logger)
                         );
                         return;
                     }
@@ -148,7 +148,7 @@ public class MergeWaifu : BackgroundService
                         );
 
                         BackgroundJob.Enqueue(
-                            () => _client.SendMessageToPyrokxnezxzAsync(message, _logger)
+                            () => _client.SendMessageToMainTwitchAsync(message, _logger)
                         );
                         return;
                     }
@@ -160,7 +160,7 @@ public class MergeWaifu : BackgroundService
                     tempLate
                 );
                 BackgroundJob.Enqueue(
-                    () => _client.SendMessageToPyrokxnezxzAsync(resultMessage, _logger)
+                    () => _client.SendMessageToMainTwitchAsync(resultMessage, _logger)
                 );
             }
         }

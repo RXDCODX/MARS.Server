@@ -80,7 +80,7 @@ public class RollWaifu
                     );
 
                     BackgroundJob.Enqueue(
-                        () => _client.SendMessageToPyrokxnezxzAsync(message, _logger)
+                        () => _client.SendMessageToMainTwitchAsync(message, _logger)
                     );
                 }
             }

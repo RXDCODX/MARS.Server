@@ -149,7 +149,7 @@ public class TwitchRussianRoulete : BackgroundService
                 return;
             }
 
-            await _client.SendMessageToPyrokxnezxzAsync(
+            await _client.SendMessageToMainTwitchAsync(
                 $"@{name}, ты был добавлен в русскую рулетку!",
                 _logger
             );

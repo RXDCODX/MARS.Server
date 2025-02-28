@@ -26,7 +26,7 @@ public class TwitchStreamStartupNotifications
 
     internal Task PubSubOnlineOnStreamUp(object sender, StreamOnlineArgs streamOnlineArgs)
     {
-        BackgroundJob.Enqueue(() => _twitchClient.SendMessageToPyrokxnezxzAsync("Online", _logger));
+        BackgroundJob.Enqueue(() => _twitchClient.SendMessageToMainTwitchAsync("Online", _logger));
         return Task.CompletedTask;
     }
 
@@ -34,7 +34,7 @@ public class TwitchStreamStartupNotifications
     {
         BackgroundJob.Enqueue(
             () =>
-                _twitchClient.SendMessageToPyrokxnezxzAsync(
+                _twitchClient.SendMessageToMainTwitchAsync(
                     "Та куда стрим вырубил Stressed",
                     _logger
                 )
