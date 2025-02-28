@@ -3,16 +3,25 @@ using TwitchLib.Client.Events;
 
 namespace MARS.Server.Services.Twitch.Rewards.TwitchAlerts;
 
-public class TwitchMediaAlerts(
-    IHubContext<TelegramusHub, ITelegramusHub> hubContext,
-    IDbContextFactory<AppDbContext> dbContextFactory
-)
+public class TwitchMediaAlerts
 {
+    private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
+    private readonly IHubContext<TelegramusHub, ITelegramusHub> _hubContext;
+
     private readonly ConcurrentDictionary<string, OnMessageReceivedArgs> _normalMessages = new();
     private readonly ConcurrentDictionary<
         string,
         ChannelPointsCustomRewardRedemptionArgs?
     > _pointsMessages = new();
+
+    public TwitchMediaAlerts(
+        IHubContext<TelegramusHub, ITelegramusHub> hubContext,
+        IDbContextFactory<AppDbContext> dbContextFactory
+    )
+    {
+        _hubContext = hubContext;
+        _dbContextFactory = dbContextFactory;
+    }
 
     private async Task GetAndSendAlert(string message)
     {
@@ -68,7 +77,7 @@ public class TwitchMediaAlerts(
                 }
             }
 
-            await using AppDbContext dbContext = await dbContextFactory.CreateDbContextAsync();
+            await using AppDbContext dbContext = await _dbContextFactory.CreateDbContextAsync();
             var mediaList = dbContext
                 .Alerts.AsNoTracking()
                 .AsEnumerable()
@@ -98,7 +107,7 @@ public class TwitchMediaAlerts(
                     argsCustomRewardArgs.Notification.Payload.Event.UserInput
                 );
 
-                await hubContext.Clients.All.Alert(new MediaDto { MediaInfo = mediaClone });
+                await _hubContext.Clients.All.Alert(new MediaDto { MediaInfo = mediaClone });
             }
         }
     }

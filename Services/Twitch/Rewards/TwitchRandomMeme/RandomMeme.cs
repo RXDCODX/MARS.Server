@@ -1,19 +1,35 @@
-﻿using Hangfire;
-using MARS.Server.Services.RandomMem.Entity;
+﻿using MARS.Server.Services.RandomMem.Entity;
+using TwitchLib.EventSub.Core.SubscriptionTypes.Channel;
 
 namespace MARS.Server.Services.Twitch.Rewards.TwitchRandomMeme;
 
-public class RandomMeme(
-    IHubContext<TelegramusHub, ITelegramusHub> hubContext,
-    IWebHostEnvironment webHostEnvironment,
-    ITwitchClient client,
-    ILogger<RandomMeme> logger,
-    IDbContextFactory<AppDbContext> dbContextFactory
-)
+public class RandomMeme
 {
+    private readonly ITwitchClient _client;
+    private readonly IHubContext<TelegramusHub, ITelegramusHub> _hubContext;
+    private readonly ILogger<RandomMeme> _logger;
+    private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
+
+    private readonly IWebHostEnvironment _webHostEnvironment;
+
+    public RandomMeme(
+        IHubContext<TelegramusHub, ITelegramusHub> hubContext,
+        IWebHostEnvironment webHostEnvironment,
+        ITwitchClient client,
+        ILogger<RandomMeme> logger,
+        IDbContextFactory<AppDbContext> dbContextFactory
+    )
+    {
+        _hubContext = hubContext;
+        _webHostEnvironment = webHostEnvironment;
+        _client = client;
+        _logger = logger;
+        _dbContextFactory = dbContextFactory;
+    }
+
     public async Task RandomMemeHandler(object sender, ChannelPointsCustomRewardRedemptionArgs args)
     {
-        var twEvent = args.Notification.Payload.Event;
+        ChannelPointsCustomRewardRedemption? twEvent = args.Notification.Payload.Event;
         if (
             twEvent.BroadcasterUserId.Equals(
                 TwitchExstension.ChannelId,
@@ -25,15 +41,12 @@ public class RandomMeme(
             {
                 case 9:
                 {
-                    var media = await GetMeme(twEvent.UserName);
+                    MediaInfo? media = await GetMeme(twEvent.UserName);
 
                     if (media is not null)
                     {
-                        BackgroundJob.Enqueue(
-                            () =>
-                                hubContext.Clients.All.Alert(
-                                    new MediaDto(media) { MediaInfo = media }
-                                )
+                        await _hubContext.Clients.All.Alert(
+                            new MediaDto(media) { MediaInfo = media }
                         );
                     }
 
@@ -41,15 +54,25 @@ public class RandomMeme(
                 }
                 case 10:
                 {
-                    var sound = await GetRandomSound(twEvent.UserName);
+                    MediaInfo? sound = await GetRandomSound(twEvent.UserName);
 
                     if (sound is not null)
                     {
-                        BackgroundJob.Enqueue(
-                            () =>
-                                hubContext.Clients.All.Alert(
-                                    new MediaDto(sound) { MediaInfo = sound }
-                                )
+                        await _hubContext.Clients.All.Alert(
+                            new MediaDto(sound) { MediaInfo = sound }
+                        );
+                    }
+
+                    break;
+                }
+                case 3:
+                {
+                    MediaInfo? sound = await GetHigemSound(twEvent.UserName);
+
+                    if (sound is not null)
+                    {
+                        await _hubContext.Clients.All.Alert(
+                            new MediaDto(sound) { MediaInfo = sound }
                         );
                     }
 
@@ -61,13 +84,19 @@ public class RandomMeme(
 
     private Task<MediaInfo?> GetRandomSound(string? displayName)
     {
-        var path = Path.Combine(webHostEnvironment.WebRootPath, "Alerts", "zvik");
+        var path = Path.Combine(_webHostEnvironment.WebRootPath, "Alerts", "zvik");
         return GetAlert(path, displayName);
+    }
+
+    private Task<MediaInfo?> GetHigemSound(string? displayName)
+    {
+        var path = Path.Combine(_webHostEnvironment.WebRootPath, "Alerts", "zvik", "higem");
+        return GetAlert(path, displayName, true);
     }
 
     private Task<MediaInfo?> GetMeme(string? displayName)
     {
-        var path = Path.Combine(webHostEnvironment.WebRootPath, "Alerts", "random_meme");
+        var path = Path.Combine(_webHostEnvironment.WebRootPath, "Alerts", "random_meme");
         return GetAlert(path, displayName, true);
     }
 
@@ -85,12 +114,11 @@ public class RandomMeme(
 
         if (files.Length > 0)
         {
-            Random.Shared.Shuffle(files);
-            var filePath = files[0];
+            var filePath = files.MinBy(File.GetLastWriteTime);
 
             if (string.IsNullOrWhiteSpace(filePath))
             {
-                await client.SendMessageToMainTwitchAsync("Не могу найти мем", logger);
+                await _client.SendMessageToMainTwitchAsync("Не могу найти мем", _logger);
                 return null;
             }
 
@@ -138,7 +166,7 @@ public class RandomMeme(
         CancellationToken stoppingToken
     )
     {
-        await using AppDbContext dbContext = await dbContextFactory.CreateDbContextAsync(
+        await using AppDbContext dbContext = await _dbContextFactory.CreateDbContextAsync(
             stoppingToken
         );
 

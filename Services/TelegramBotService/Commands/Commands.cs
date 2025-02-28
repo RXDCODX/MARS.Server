@@ -13,14 +13,13 @@ public partial class Commands(
     UserAuthHelper userAuthHelper,
     IVoicer syntheziaVoicer,
     IHubContext<TelegramusHub, ITelegramusHub> alertsHub,
-    HelloVideoWorker helloVideoWorker,
-    IHostApplicationLifetime applicationLifetime
-)
+    HelloVideoWorker helloVideoWorker
+) : ITelegramusService
 {
     public const string Template =
         "Не получилось получить комманды бота, сообщите об этой ошибке разработчику";
 
-    public async Task<Message> OnCommandsCommandReceived(
+    internal async Task<Message> OnUsageCommandReceived(
         ITelegramBotClient botClient,
         Message message,
         CancellationToken cancellationToken,
@@ -32,19 +31,15 @@ public partial class Commands(
 
         if (isAdminCall)
         {
-            methods = commands
-                .GetMethods(BindingFlags.DeclaredOnly | BindingFlags.Instance | BindingFlags.Public)
-                .Where(method => method.GetCustomAttribute<IgnoreAttribute>() == null)
-                .ToArray();
+            methods = commands.GetMethods(
+                BindingFlags.DeclaredOnly | BindingFlags.Instance | BindingFlags.Public
+            );
         }
         else
         {
             methods = commands
                 .GetMethods(BindingFlags.DeclaredOnly | BindingFlags.Instance | BindingFlags.Public)
-                .Where(method =>
-                    method.GetCustomAttribute<AdminAttribute>() == null
-                    && method.GetCustomAttribute<IgnoreAttribute>() == null
-                )
+                .Where(method => method.GetCustomAttribute<AdminAtribbute>() == null)
                 .ToArray();
         }
 
@@ -77,7 +72,6 @@ public partial class Commands(
         {
             MethodInfo method = methods[i];
             var length = method.Name.Length - template.Length;
-            Console.WriteLine(method.Name);
             var name = method.Name.Substring(2, length);
             commandNames[i] = "/" + name.ToLower();
         }

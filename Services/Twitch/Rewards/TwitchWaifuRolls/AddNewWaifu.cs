@@ -1,5 +1,4 @@
 ﻿using System.Text.RegularExpressions;
-using Hangfire;
 using MARS.Server.Services.Shikimori;
 using MARS.Server.Services.Shikimori.Entitys;
 using MARS.Server.Services.WaifuRoll;
@@ -73,9 +72,7 @@ public class AddNewWaifu : BackgroundService
                         template
                     );
 
-                    BackgroundJob.Enqueue(
-                        () => _client.SendMessageToMainTwitchAsync(message, _logger)
-                    );
+                    await _client.SendMessageToMainTwitchAsync(message, _logger);
                     return;
                 }
 
@@ -90,9 +87,7 @@ public class AddNewWaifu : BackgroundService
                         template
                     );
 
-                    BackgroundJob.Enqueue(
-                        () => _client.SendMessageToMainTwitchAsync(message, _logger)
-                    );
+                    await _client.SendMessageToMainTwitchAsync(message, _logger);
                     return;
                 }
 
@@ -106,9 +101,7 @@ public class AddNewWaifu : BackgroundService
                         template
                     );
 
-                    BackgroundJob.Enqueue(
-                        () => _client.SendMessageToMainTwitchAsync(message, _logger)
-                    );
+                    await _client.SendMessageToMainTwitchAsync(message, _logger);
                     return;
                 }
 
@@ -124,14 +117,8 @@ public class AddNewWaifu : BackgroundService
 
                     waifu.IsAdded = true;
 
-                    var eventId = BackgroundJob.Enqueue(
-                        () => _hubContext.Clients.All.AddNewWaifu(waifu, twEvent.UserName, "white")
-                    );
-                    var message1 = message;
-                    var eventId2 = BackgroundJob.ContinueJobWith(
-                        eventId,
-                        () => _client.SendMessageToMainTwitchAsync(message1, _logger)
-                    );
+                    await _hubContext.Clients.All.AddNewWaifu(waifu, twEvent.UserName);
+                    await _client.SendMessageToMainTwitchAsync(message, _logger);
 
                     var chance = Random.Shared.Next(0, 101);
                     if (chance < 3)
@@ -140,27 +127,17 @@ public class AddNewWaifu : BackgroundService
                         {
                             message =
                                 $"@{twEvent.UserName}! Поздравляю, ты получил VIP -статус за добавление персонажей!";
-
-                            var eventId3 = BackgroundJob.ContinueJobWith(
-                                eventId2,
-                                () =>
-                                    _api.Helix.Channels.AddChannelVIPAsync(
-                                        TwitchExstension.ChannelId,
-                                        args.Notification.Payload.Event.UserId,
-                                        _helper.Token.AccessToken
-                                    )
+                            await _api.Helix.Channels.AddChannelVIPAsync(
+                                TwitchExstension.ChannelId,
+                                args.Notification.Payload.Event.UserId,
+                                _helper.Token.AccessToken
                             );
-
-                            BackgroundJob.ContinueJobWith(
-                                eventId3,
-                                () =>
-                                    _api.Helix.Chat.SendChatAnnouncementAsync(
-                                        TwitchExstension.ChannelId,
-                                        TwitchExstension.ChannelId,
-                                        message,
-                                        AnnouncementColors.Primary,
-                                        _helper.Token.AccessToken
-                                    )
+                            await _api.Helix.Chat.SendChatAnnouncementAsync(
+                                TwitchExstension.ChannelId,
+                                TwitchExstension.ChannelId,
+                                message,
+                                AnnouncementColors.Primary,
+                                _helper.Token.AccessToken
                             );
                         }
                     }
@@ -176,10 +153,7 @@ public class AddNewWaifu : BackgroundService
                     null,
                     waifu
                 );
-
-                BackgroundJob.Enqueue(
-                    () => _client.SendMessageToMainTwitchAsync(resultMessage, _logger)
-                );
+                await _client.SendMessageToMainTwitchAsync(resultMessage, _logger);
             }
         }
     }

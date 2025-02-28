@@ -1,9 +1,5 @@
-using System.Diagnostics;
-using System.Reflection;
-using Hangfire;
 using MARS.Server.Services.PyroAlerts;
 using MARS.Server.Services.RandomMem;
-using MARS.Server.Services.TelegramBotService.Commands.Attribute;
 using Telegram.Bot.Exceptions;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types.Enums;
@@ -13,8 +9,7 @@ namespace MARS.Server.Services.TelegramBotService;
 
 public class UpdateHandler : IUpdateHandler
 {
-    public delegate Task TelegramUpdateDelegate(Update update);
-    public event TelegramUpdateDelegate TelegramUpdate = (update) => Task.CompletedTask;
+    public delegate Task TelegramUpdateDelegate(ITelegramBotClient client, Update update);
 
     private readonly ITelegramBotClient _botClient;
     private readonly Commands.Commands _commands;
@@ -49,9 +44,16 @@ public class UpdateHandler : IUpdateHandler
         CancellationToken cancellationToken
     )
     {
-        var id = BackgroundJob.Enqueue(() => ResendMessage(update));
+        try
+        {
+            ResendMessage(update);
+        }
+        catch (Exception e)
+        {
+            _logger.LogWarning("пїЅпїЅ пїЅпїЅпїЅпїЅ forward пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ. {0} # {1}", e.Message, e.StackTrace);
+        }
 
-        var handler = update switch
+        Task handler = update switch
         {
             //{ ChannelPost: {} channelPost } => BotOnChannelPost(channelPost, cancellationToken),
             { Message: { } message } => BotOnMessageReceived(message, cancellationToken),
@@ -63,7 +65,7 @@ public class UpdateHandler : IUpdateHandler
         };
 
         await handler;
-        await TelegramUpdate.Invoke(update);
+        await TelegramUpdate.Invoke(_, update);
     }
 
     public Task HandleErrorAsync(
@@ -99,7 +101,9 @@ public class UpdateHandler : IUpdateHandler
         }
     }
 
-    public async Task ResendMessage(Update update)
+    public event TelegramUpdateDelegate TelegramUpdate = (client, update) => Task.CompletedTask;
+
+    private async void ResendMessage(Update update)
     {
         foreach (var id in _options.AdminIdsArray)
         {
@@ -135,91 +139,220 @@ public class UpdateHandler : IUpdateHandler
     {
         _logger.LogInformation("Receive message type: {MessageType}", message.Type);
 
-        if (
-            message.Type != MessageType.Text
-            || message.Text is not { } messageText
-            || !messageText.StartsWith("/")
-        )
+        if (message.Type == MessageType.Text)
         {
-            return;
-        }
-
-        Task<Message>? action;
-
-        try
-        {
-            var command = messageText.Split(' ')[0];
-            var methodName = GetMethodName(command);
-
-            var method = _commands
-                .GetType()
-                .GetMethod(
-                    methodName,
-                    BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance
-                );
-            if (method == null)
+            if (message.Text is not { } messageText)
             {
-                action = ErrorCommand(_botClient, message, cancellationToken);
+                return;
+            }
+
+            if (!messageText.StartsWith("/"))
+            {
+                return;
+            }
+
+            Task<Message> action;
+
+            if (_options.AdminIdsArray.Any(e => e == message.Chat.Id))
+            {
+                action = messageText.Split(' ')[0] switch
+                {
+                    "/help" => _commands.OnHelpCommandReceived(
+                        _botClient,
+                        message,
+                        cancellationToken
+                    ),
+                    "/honkai" => _commands.OnHonkaiCommandReceived(
+                        _botClient,
+                        message,
+                        cancellationToken
+                    ),
+                    "/links" => _commands.OnLinksCommandReceived(
+                        _botClient,
+                        message,
+                        cancellationToken
+                    ),
+                    "/start" => _commands.OnStartCommandReceived(
+                        _botClient,
+                        message,
+                        cancellationToken
+                    ),
+                    "/whitelist" => _commands.OnWhiteListCommandReceived(
+                        _botClient,
+                        message,
+                        cancellationToken
+                    ),
+                    "/honkaiusers" => _commands.OnHonkaiUsersCommandReceived(
+                        _botClient,
+                        message,
+                        cancellationToken
+                    ),
+                    "/directory" => _commands.OnDirectoryCommandReceived(
+                        _botClient,
+                        message,
+                        cancellationToken
+                    ),
+                    "/raidhelp" => _commands.OnRaidHelpCommandReceived(
+                        _botClient,
+                        message,
+                        cancellationToken
+                    ),
+                    "/streamup" => _commands.OnStreamupCommandReceived(
+                        _botClient,
+                        message,
+                        cancellationToken
+                    ),
+                    "/catisa" => _commands.OnCatisaCommandReceived(
+                        _botClient,
+                        message,
+                        cancellationToken
+                    ),
+                    "/commands" => _commands.OnUsageCommandReceived(
+                        _botClient,
+                        message,
+                        cancellationToken,
+                        true
+                    ),
+                    "/twitchevents" => _commands.OnTwitchEventsCommandReceived(
+                        _botClient,
+                        message,
+                        cancellationToken
+                    ),
+                    "/tanya" => _commands.OnTanyaCommandReceived(
+                        _botClient,
+                        message,
+                        cancellationToken
+                    ),
+                    "/ttsvolume" => _commands.OnTTSVolumeCommandReceived(
+                        _botClient,
+                        message,
+                        cancellationToken
+                    ),
+                    "/zonezero" => _commands.OnZoneZeroCommandReceived(
+                        _botClient,
+                        message,
+                        cancellationToken
+                    ),
+                    "/twitchsubrec" => _commands.OnTwitchSubRecCommandReceived(
+                        _botClient,
+                        message,
+                        cancellationToken
+                    ),
+                    "/byebye" => _commands.OnByeByeCommandReceived(
+                        _botClient,
+                        message,
+                        cancellationToken
+                    ),
+                    "/fumo" => _commands.OnFumoCommandReceived(
+                        _botClient,
+                        message,
+                        cancellationToken
+                    ),
+                    "/hellovideo" => _commands.OnHelloVideoCommandReceived(
+                        _botClient,
+                        message,
+                        cancellationToken
+                    ),
+                    "/joinedtwitchchannels" => _commands.OnJoinedTwitchChannelsCommandReceived(
+                        _botClient,
+                        message,
+                        cancellationToken
+                    ),
+                    "/genshin" => _commands.OnGenshinCommandReceived(
+                        _botClient,
+                        message,
+                        cancellationToken
+                    ),
+                    _ => ErrorCommand(_botClient, message, cancellationToken),
+                };
             }
             else
             {
-                // Проверка, является ли метод административным
-                var isAdminMethod = method.GetCustomAttribute<AdminAttribute>() != null;
-                var isIgnore = method.GetCustomAttribute<IgnoreAttribute>() != null;
-                var isAdminUser = _options.AdminIdsArray.Any(e => e == message.Chat.Id);
-
-                if (isIgnore || (isAdminMethod && !isAdminUser))
+                action = messageText.Split(' ')[0] switch
                 {
-                    action = ErrorCommand(_botClient, message, cancellationToken);
-                }
-                else
-                {
-                    var parameters = new object[] { _botClient, message, cancellationToken };
-                    if (methodName == "OnCommandsCommandReceived" && isAdminUser)
-                    {
-                        parameters = new object[] { _botClient, message, cancellationToken, true };
-                    }
-
-                    action = (Task<Message>?)method.Invoke(_commands, parameters);
-                }
+                    "/help" => _commands.OnHelpCommandReceived(
+                        _botClient,
+                        message,
+                        cancellationToken
+                    ),
+                    "/honkai" => _commands.OnHonkaiCommandReceived(
+                        _botClient,
+                        message,
+                        cancellationToken
+                    ),
+                    "/links" => _commands.OnLinksCommandReceived(
+                        _botClient,
+                        message,
+                        cancellationToken
+                    ),
+                    "/start" => _commands.OnStartCommandReceived(
+                        _botClient,
+                        message,
+                        cancellationToken
+                    ),
+                    "/whitelist" => _commands.OnWhiteListCommandReceived(
+                        _botClient,
+                        message,
+                        cancellationToken
+                    ),
+                    "/honkaiusers" => _commands.OnHonkaiUsersCommandReceived(
+                        _botClient,
+                        message,
+                        cancellationToken
+                    ),
+                    "/raidhelp" => _commands.OnRaidHelpCommandReceived(
+                        _botClient,
+                        message,
+                        cancellationToken
+                    ),
+                    "/streamup" => _commands.OnStreamupCommandReceived(
+                        _botClient,
+                        message,
+                        cancellationToken
+                    ),
+                    "/commands" => _commands.OnUsageCommandReceived(
+                        _botClient,
+                        message,
+                        cancellationToken
+                    ),
+                    "/zonezero" => _commands.OnZoneZeroCommandReceived(
+                        _botClient,
+                        message,
+                        cancellationToken
+                    ),
+                    "/byebye" => _commands.OnByeByeCommandReceived(
+                        _botClient,
+                        message,
+                        cancellationToken
+                    ),
+                    "/genshin" => _commands.OnGenshinCommandReceived(
+                        _botClient,
+                        message,
+                        cancellationToken
+                    ),
+                    _ => ErrorCommand(_botClient, message, cancellationToken),
+                };
             }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error handling command");
-            action = ErrorCommand(_botClient, message, cancellationToken);
-        }
 
-        if (action != null)
-        {
-            var sentMessage = await action.ConfigureAwait(false);
+            static Task<Message> ErrorCommand(
+                ITelegramBotClient client,
+                Message message,
+                CancellationToken cancellationToken
+            )
+            {
+                return client.SendMessage(
+                    message.Chat.Id,
+                    Commands.Commands.Template,
+                    cancellationToken: cancellationToken
+                );
+            }
+
+            Message sentMessage = await action;
             _logger.LogInformation(
                 "The message was sent with id: {SentMessageId}",
                 sentMessage.MessageId
             );
         }
-    }
-
-    private string GetMethodName(string command)
-    {
-        // Преобразуем команду в имя метода, например, "/genshin" -> "OnGenshinCommandReceived"
-        return "On"
-            + command.Substring(1).First().ToString().ToUpper()
-            + command.Substring(2)
-            + "CommandReceived";
-    }
-
-    private Task<Message>? ErrorCommand(
-        ITelegramBotClient client,
-        Message message,
-        CancellationToken cancellationToken
-    )
-    {
-        return client.SendMessage(
-            message.Chat.Id,
-            Commands.Commands.Template,
-            cancellationToken: cancellationToken
-        );
     }
 
     #region Inline Mode

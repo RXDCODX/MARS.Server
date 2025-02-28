@@ -1,5 +1,4 @@
-﻿using Hangfire;
-using MARS.Server.Services.Twitch.Rewards.MiniGames.Subs;
+﻿using MARS.Server.Services.Twitch.Rewards.MiniGames.Subs;
 using TwitchLib.Client.Events;
 using TwitchLib.EventSub.Websockets.Core.EventArgs.Stream;
 
@@ -78,102 +77,110 @@ public class TwitchTrivia : BackgroundService
         return Task.CompletedTask;
     }
 
-    private void NewMessage(object? sender, OnMessageReceivedArgs onMessageReceivedArgs)
+    private async void NewMessage(object? sender, OnMessageReceivedArgs onMessageReceivedArgs)
     {
         if (!IsAppActive)
         {
             return;
         }
 
-        BackgroundJob.Enqueue(() => Process(onMessageReceivedArgs));
-    }
-
-    public async Task Process(OnMessageReceivedArgs onMessageReceivedArgs)
-    {
-        var name = onMessageReceivedArgs.ChatMessage.Username;
-        var message = onMessageReceivedArgs.ChatMessage.Message;
-        var id = onMessageReceivedArgs.ChatMessage.UserId;
-
-        if (name == TwitchExstension.BotName || IsStop)
-        {
-            return;
-        }
-
-        //Стоп - слово
-        if (message == CommandForStop && name == "")
-        {
-            if (CurrentGame != null)
+        await Task.Run(
+            async () =>
             {
-                CurrentGame.Active = false;
-                await _client.SendMessageToMainTwitchAsync("Остановка тривии", _logger);
-            }
-            else
-            {
-                await _client.SendMessageToMainTwitchAsync("Тривия не была запущена", _logger);
-            }
+                var name = onMessageReceivedArgs.ChatMessage.Username;
+                var message = onMessageReceivedArgs.ChatMessage.Message;
+                var id = onMessageReceivedArgs.ChatMessage.UserId;
 
-            return;
-        }
-
-        //травия ответы
-        if (
-            CurrentGame != null
-            && message.Equals(CurrentGame.Answer, StringComparison.OrdinalIgnoreCase)
-            && CurrentGame.Answer != ""
-        )
-        {
-            try
-            {
-                Waifu? waifu = null;
-                await using AppDbContext context = await _dbContextFactory.CreateDbContextAsync();
-
-                var host = await context.Hosts.FindAsync(id);
-
-                if (host is { IsPrivated: true } && message.Length == CurrentGame.Answer.Length)
+                if (name == TwitchExstension.BotName || IsStop)
                 {
-                    var isTextSimmetric =
-                        message.Length == CurrentGame.Answer.Length
-                        && message.Where((t, i) => CurrentGame.Answer[i].Equals(t)).Any();
+                    return;
+                }
 
-                    if (isTextSimmetric)
+                //Стоп - слово
+                if (message == CommandForStop && name == "")
+                {
+                    if (CurrentGame != null)
                     {
-                        var chance = Random.Shared.Next(0, 101);
-                        if (chance < ChanceToBeSaved)
+                        CurrentGame.Active = false;
+                        await _client.SendMessageToMainTwitchAsync("Остановка тривии", _logger);
+                    }
+                    else
+                    {
+                        await _client.SendMessageToMainTwitchAsync(
+                            "Тривия не была запущена",
+                            _logger
+                        );
+                    }
+
+                    return;
+                }
+
+                //травия ответы
+                if (
+                    CurrentGame != null
+                    && message.Equals(CurrentGame.Answer, StringComparison.OrdinalIgnoreCase)
+                    && CurrentGame.Answer != ""
+                )
+                {
+                    try
+                    {
+                        Waifu? waifu = null;
+                        await using AppDbContext context =
+                            await _dbContextFactory.CreateDbContextAsync();
+
+                        var host = await context.Hosts.FindAsync(id);
+
+                        if (
+                            host is { IsPrivated: true }
+                            && message.Length == CurrentGame.Answer.Length
+                        )
                         {
-                            waifu = await context.Waifus.FindAsync(host.WaifuBrideId);
+                            var isTextSimmetric =
+                                message.Length == CurrentGame.Answer.Length
+                                && message.Where((t, i) => CurrentGame.Answer[i].Equals(t)).Any();
+
+                            if (isTextSimmetric)
+                            {
+                                var chance = Random.Shared.Next(0, 101);
+                                if (chance < ChanceToBeSaved)
+                                {
+                                    waifu = await context.Waifus.FindAsync(host.WaifuBrideId);
+                                }
+                            }
                         }
+
+                        await SemaphoreSlim.WaitAsync(TokenSource.Token);
+                        if (!CurrentGame.AllLettersShowed && waifu != null)
+                        {
+                            CurrentGame.AllLettersShowed = true;
+                            var answer = CurrentGame.Answer;
+                            CurrentGame.Answer = "";
+                            await _client.SendMessageToMainTwitchAsync(
+                                $"@{name}, твой супруг ({waifu.Name}) шепнул(-а) на ушко загаданное слово: {answer}",
+                                _logger
+                            );
+                        }
+                        else if (!CurrentGame.AllLettersShowed)
+                        {
+                            CurrentGame.AllLettersShowed = true;
+                            var answer = CurrentGame.Answer;
+                            CurrentGame.Answer = "";
+                            await _client.SendMessageToMainTwitchAsync(
+                                $"@{name} отгадал загаданное слово: {answer}",
+                                _logger
+                            );
+                        }
+
+                        SemaphoreSlim.Release();
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogException(ex);
                     }
                 }
-
-                await SemaphoreSlim.WaitAsync(TokenSource.Token);
-                if (!CurrentGame.AllLettersShowed && waifu != null)
-                {
-                    CurrentGame.AllLettersShowed = true;
-                    var answer = CurrentGame.Answer;
-                    CurrentGame.Answer = "";
-                    await _client.SendMessageToMainTwitchAsync(
-                        $"@{name}, твой супруг ({waifu.Name}) шепнул(-а) на ушко загаданное слово: {answer}",
-                        _logger
-                    );
-                }
-                else if (!CurrentGame.AllLettersShowed)
-                {
-                    CurrentGame.AllLettersShowed = true;
-                    var answer = CurrentGame.Answer;
-                    CurrentGame.Answer = "";
-                    await _client.SendMessageToMainTwitchAsync(
-                        $"@{name} отгадал загаданное слово: {answer}",
-                        _logger
-                    );
-                }
-
-                SemaphoreSlim.Release();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogException(ex);
-            }
-        }
+            },
+            TokenSource.Token
+        );
     }
 
     private Task NewAlert(object? sender, ChannelPointsCustomRewardRedemptionArgs args)

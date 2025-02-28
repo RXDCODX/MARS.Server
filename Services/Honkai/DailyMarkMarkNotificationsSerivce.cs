@@ -1,5 +1,4 @@
-﻿using Hangfire;
-using Telegram.Bot.Exceptions;
+﻿using Telegram.Bot.Exceptions;
 
 namespace MARS.Server.Services.Honkai;
 
@@ -8,7 +7,7 @@ public class DailyMarkMarkNotificationsSerivce(
     ILogger<DailyMarkMarkNotificationsSerivce> logger,
     IWebHostEnvironment environment,
     IDbContextFactory<AppDbContext> factory
-) : ITelegramusService
+) : BackgroundService, ITelegramusService
 {
     private readonly ILogger _logger = logger;
 
@@ -28,7 +27,6 @@ public class DailyMarkMarkNotificationsSerivce(
         return await dbContext.SaveChangesAsync() != 0;
     }
 
-    [AutomaticRetry(OnlyOn = [typeof(ApiRequestException)], Attempts = 5)]
     public async Task NotifyAsync(CancellationToken stoppingToken)
     {
         try
@@ -178,5 +176,10 @@ public class DailyMarkMarkNotificationsSerivce(
         {
             _logger.LogCritical(e, "Ошибка сервиса напоминаний хонкай");
         }
+    }
+
+    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        return Task.CompletedTask;
     }
 }

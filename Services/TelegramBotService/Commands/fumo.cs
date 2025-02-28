@@ -2,7 +2,7 @@
 
 public partial class Commands
 {
-    [Admin]
+    [AdminAtribbute]
     public async Task<Message> OnFumoCommandReceived(
         ITelegramBotClient botClient,
         Message message,

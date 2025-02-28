@@ -1,10 +1,10 @@
-﻿using Hangfire;
-using TwitchLib.Client.Events;
+﻿using TwitchLib.Client.Events;
 
 namespace MARS.Server.Services.Twitch.HelloVideos;
 
 public class HelloVideoWorker(
     IDbContextFactory<AppDbContext> dbContextFactory,
+    ILogger<HelloVideoWorker> logger,
     IHostApplicationLifetime hostApplicationLifetime,
     IHubContext<TelegramusHub, ITelegramusHub> _hubContext
 )
@@ -12,53 +12,61 @@ public class HelloVideoWorker(
     private readonly CancellationToken _token = hostApplicationLifetime.ApplicationStopping;
     private readonly List<string> _users = new();
 
-    public void OnMessageReceived(object? sender, OnMessageReceivedArgs args)
+    public async void OnMessageReceived(object? sender, OnMessageReceivedArgs args)
     {
         if (args.ChatMessage.Channel != TwitchExstension.Channel)
         {
             return;
         }
 
-        BackgroundJob.Enqueue(() => Process(args));
-    }
-
-    public async Task Process(OnMessageReceivedArgs args)
-    {
-        var now = DateTimeOffset.Now;
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(_token);
-        var user = await dbContext.FumoUsers.FindAsync(args.ChatMessage.Id, _token);
-        var notifUser = await dbContext
-            .HelloVideosUsers.Include(e => e.MediaInfo)
-            .FirstOrDefaultAsync(e => e.TwitchId == args.ChatMessage.UserId, _token);
-
-        if (now.DayOfWeek == DayOfWeek.Friday && user != null)
-        {
-            return;
-        }
-
-        if (_users.Contains(args.ChatMessage.Id))
-        {
-            return;
-        }
-
-        if (notifUser != null)
-        {
-            if (notifUser.LastTimeNotif.Day != now.Day)
+        await Task.Factory.StartNew(
+            async () =>
             {
-                notifUser.LastTimeNotif = now;
-                await dbContext.SaveChangesAsync(_token);
+                try
+                {
+                    var now = DateTimeOffset.Now;
+                    await using var dbContext = await dbContextFactory.CreateDbContextAsync(_token);
+                    var user = await dbContext.FumoUsers.FindAsync(args.ChatMessage.Id, _token);
+                    var notifUser = await dbContext
+                        .HelloVideosUsers.Include(e => e.MediaInfo)
+                        .FirstOrDefaultAsync(e => e.TwitchId == args.ChatMessage.UserId, _token);
 
-                notifUser.MediaInfo.FixAlertText(
-                    args.ChatMessage.DisplayName,
-                    args.ChatMessage.Message
-                );
-                var mediaDto = new MediaDto() { MediaInfo = notifUser.MediaInfo };
+                    if (now.DayOfWeek == DayOfWeek.Friday && user != null)
+                    {
+                        return;
+                    }
 
-                await _hubContext.Clients.All.Alert(mediaDto);
-            }
+                    if (_users.Contains(args.ChatMessage.Id))
+                    {
+                        return;
+                    }
 
-            _users.Add(args.ChatMessage.Id);
-        }
+                    if (notifUser != null)
+                    {
+                        if (notifUser.LastTimeNotif.Day != now.Day)
+                        {
+                            notifUser.LastTimeNotif = now;
+                            await dbContext.SaveChangesAsync(_token);
+
+                            notifUser.MediaInfo.FixAlertText(
+                                args.ChatMessage.DisplayName,
+                                args.ChatMessage.Message
+                            );
+                            var mediaDto = new MediaDto() { MediaInfo = notifUser.MediaInfo };
+
+                            await _hubContext.Clients.All.Alert(mediaDto);
+                        }
+
+                        _users.Add(args.ChatMessage.Id);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    logger.LogException(ex);
+                }
+            },
+            _token
+        );
     }
 
     /// <summary>

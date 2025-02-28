@@ -1,5 +1,4 @@
 ﻿using System.Globalization;
-using Hangfire;
 using MARS.Server.Services.WaifuRoll;
 using TwitchLib.EventSub.Core.SubscriptionTypes.Channel;
 
@@ -50,18 +49,16 @@ public class RollWaifu
 
                 if (waifu is not null)
                 {
-                    BackgroundJob.Enqueue(
-                        () => _hubContext.Clients.All.WaifuRoll(waifu, twEvent.UserName, "white")
-                    );
+                    await _hubContext.Clients.All.WaifuRoll(waifu, twEvent.UserName);
                     return;
                 }
 
                 await using AppDbContext dbContext = await _factory.CreateDbContextAsync();
-                var hostRoolWaifu = await dbContext
+                Host? hostRoolWaifu = await dbContext
                     .Hosts.Include(host1 => host1.HostCoolDown)
                     .AsNoTracking()
                     .FirstOrDefaultAsync(e => e.TwitchId == twEvent.UserId);
-                var time = hostRoolWaifu?.HostCoolDown.Time;
+                DateTimeOffset? time = hostRoolWaifu?.HostCoolDown?.Time;
 
                 if (time != null)
                 {
@@ -78,10 +75,7 @@ public class RollWaifu
                         null,
                         waifu
                     );
-
-                    BackgroundJob.Enqueue(
-                        () => _client.SendMessageToMainTwitchAsync(message, _logger)
-                    );
+                    await _client.SendMessageToMainTwitchAsync(message, _logger);
                 }
             }
         }

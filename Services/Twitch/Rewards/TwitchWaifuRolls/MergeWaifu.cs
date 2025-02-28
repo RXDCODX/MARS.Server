@@ -1,5 +1,4 @@
-﻿using Hangfire;
-using MARS.Server.Services.WaifuRoll;
+﻿using MARS.Server.Services.WaifuRoll;
 using MARS.Server.Services.WaifuRoll.helpers;
 using TwitchLib.Api.Helix.Models.Chat;
 using TwitchLib.EventSub.Core.SubscriptionTypes.Channel;
@@ -79,26 +78,16 @@ public class MergeWaifu : BackgroundService
 
                                 waifu.IsMerged = true;
 
-                                BackgroundJob.Enqueue(
-                                    () =>
-                                        _hubContext.Clients.All.MergeWaifu(
-                                            waifu,
-                                            twEvent.UserName,
-                                            "white"
-                                        )
-                                );
+                                await _hubContext.Clients.All.MergeWaifu(waifu, twEvent.UserName);
 
                                 if (_helper.Token != null)
                                 {
-                                    BackgroundJob.Enqueue(
-                                        () =>
-                                            _api.Helix.Chat.SendChatAnnouncementAsync(
-                                                TwitchExstension.ChannelId,
-                                                TwitchExstension.ChannelId,
-                                                message,
-                                                AnnouncementColors.Primary,
-                                                _helper.Token.AccessToken
-                                            )
+                                    await _api.Helix.Chat.SendChatAnnouncementAsync(
+                                        TwitchExstension.ChannelId,
+                                        TwitchExstension.ChannelId,
+                                        message,
+                                        AnnouncementColors.Primary,
+                                        _helper.Token.AccessToken
                                     );
                                 }
 
@@ -112,10 +101,8 @@ public class MergeWaifu : BackgroundService
                                 twEvent.UserName,
                                 tempLate3
                             );
+                            await _client.SendMessageToMainTwitchAsync(message, _logger);
 
-                            BackgroundJob.Enqueue(
-                                () => _client.SendMessageToMainTwitchAsync(message, _logger)
-                            );
                             return;
                         }
                     }
@@ -133,10 +120,7 @@ public class MergeWaifu : BackgroundService
                             twEvent.UserName,
                             tempLate2
                         );
-
-                        BackgroundJob.Enqueue(
-                            () => _client.SendMessageToMainTwitchAsync(message, _logger)
-                        );
+                        await _client.SendMessageToMainTwitchAsync(message, _logger);
                         return;
                     }
                     else
@@ -146,10 +130,7 @@ public class MergeWaifu : BackgroundService
                             twEvent.UserName,
                             tempLate2
                         );
-
-                        BackgroundJob.Enqueue(
-                            () => _client.SendMessageToMainTwitchAsync(message, _logger)
-                        );
+                        await _client.SendMessageToMainTwitchAsync(message, _logger);
                         return;
                     }
                 }
@@ -159,9 +140,7 @@ public class MergeWaifu : BackgroundService
                     twEvent.UserName,
                     tempLate
                 );
-                BackgroundJob.Enqueue(
-                    () => _client.SendMessageToMainTwitchAsync(resultMessage, _logger)
-                );
+                await _client.SendMessageToMainTwitchAsync(resultMessage, _logger);
             }
         }
     }
