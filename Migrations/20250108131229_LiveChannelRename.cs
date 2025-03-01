@@ -1,5 +1,4 @@
-﻿using System;
-using Microsoft.EntityFrameworkCore.Migrations;
+﻿using Microsoft.EntityFrameworkCore.Migrations;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
@@ -49,7 +48,7 @@ public partial class LiveChannelRename : Migration
 
         migrationBuilder.InsertData(
             table: "LiveChannelState",
-            columns: new[]
+            new[]
             {
                 "Id",
                 "ActualPrefix",

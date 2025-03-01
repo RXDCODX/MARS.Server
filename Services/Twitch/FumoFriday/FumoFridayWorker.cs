@@ -3,18 +3,35 @@ using TwitchLib.Client.Events;
 
 namespace MARS.Server.Services.Twitch.FumoFriday;
 
-public class FumoFridayWorker(
-    IHubContext<TelegramusHub, ITelegramusHub> alertsHub,
-    IDbContextFactory<AppDbContext> dbContextFactory,
-    ILogger<FumoFridayWorker> logger,
-    IHostApplicationLifetime hostApplicationLifetime,
-    ITwitchClient twitchClient
-)
+public class FumoFridayWorker
 {
-    private readonly CancellationToken _cancellationToken =
-        hostApplicationLifetime.ApplicationStopping;
+    private readonly CancellationToken _cancellationToken;
 
     private readonly List<string> _users = new();
+    private readonly IHubContext<TelegramusHub, ITelegramusHub> _alertsHub;
+    private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
+    private readonly ILogger<FumoFridayWorker> _logger;
+    private readonly ITwitchClient _twitchClient;
+
+    public FumoFridayWorker(
+        IHubContext<TelegramusHub, ITelegramusHub> alertsHub,
+        IDbContextFactory<AppDbContext> dbContextFactory,
+        ILogger<FumoFridayWorker> logger,
+        IHostApplicationLifetime hostApplicationLifetime,
+        ITwitchClient twitchClient
+    )
+    {
+        _alertsHub = alertsHub;
+        _dbContextFactory = dbContextFactory;
+        _logger = logger;
+        _twitchClient = twitchClient;
+        _cancellationToken = hostApplicationLifetime.ApplicationStopping;
+
+        hostApplicationLifetime.ApplicationStarted.Register(() =>
+        {
+            twitchClient.OnMessageReceived += OnMessageReceived;
+        });
+    }
 
     public async void OnMessageReceived(object? sender, OnMessageReceivedArgs e)
     {
@@ -27,7 +44,7 @@ public class FumoFridayWorker(
             await Task.Factory.StartNew(
                 async () =>
                 {
-                    await using var dbContext = await dbContextFactory.CreateDbContextAsync(
+                    await using var dbContext = await _dbContextFactory.CreateDbContextAsync(
                         _cancellationToken
                     );
 
@@ -39,7 +56,7 @@ public class FumoFridayWorker(
                         && now.DayOfWeek == DayOfWeek.Friday
                     )
                     {
-                        await alertsHub.Clients.All.FumoFriday(
+                        await _alertsHub.Clients.All.FumoFriday(
                             name,
                             e.ChatMessage.Color.ToString()
                         );
@@ -70,16 +87,16 @@ public class FumoFridayWorker(
 
                     if (_users.Contains(name))
                     {
-                        await twitchClient.SendMessageToMainTwitchAsync(
+                        await _twitchClient.SendMessageToMainTwitchAsync(
                             "Ты уже подписан на Fumo Friday",
-                            logger
+                            _logger
                         );
                         return;
                     }
 
                     try
                     {
-                        await using var dbContext = await dbContextFactory.CreateDbContextAsync(
+                        await using var dbContext = await _dbContextFactory.CreateDbContextAsync(
                             _cancellationToken
                         );
                         var id = args.Notification.Payload.Event.UserId;
@@ -104,21 +121,21 @@ public class FumoFridayWorker(
 
                             if (now.DayOfWeek == DayOfWeek.Friday)
                             {
-                                await alertsHub.Clients.All.FumoFriday(name);
+                                await _alertsHub.Clients.All.FumoFriday(name);
                                 _users.Add(id);
                             }
                         }
                         else
                         {
-                            await twitchClient.SendMessageToMainTwitchAsync(
+                            await _twitchClient.SendMessageToMainTwitchAsync(
                                 $"@{name}, Ты уже счастливый фанат фум!",
-                                logger
+                                _logger
                             );
                         }
                     }
                     catch (Exception ex)
                     {
-                        logger.LogException(ex);
+                        _logger.LogException(ex);
                     }
                 }
             },

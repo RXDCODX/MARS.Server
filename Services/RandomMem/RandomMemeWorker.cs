@@ -1,15 +1,12 @@
-using MARS.Server.Services.RandomMem.Entity;
+﻿using MARS.Server.Services.RandomMem.Entity;
 
 namespace MARS.Server.Services.RandomMem;
 
 public class RandomMemeWorker(
-    ILogger<RandomMemeWorker> logger,
     IDbContextFactory<AppDbContext> contextFactory,
     RandomMemHandler randomMemHandler
 ) : BackgroundService
 {
-    private readonly ILogger<RandomMemeWorker> _logger = logger;
-
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         //TODO: добавить миграцию
@@ -18,15 +15,13 @@ public class RandomMemeWorker(
             {
                 while (!stoppingToken.IsCancellationRequested)
                 {
-                    await using AppDbContext dbContext = await contextFactory.CreateDbContextAsync(
+                    await using var dbContext = await contextFactory.CreateDbContextAsync(
                         stoppingToken
                     );
                     var files = Directory
                         .GetFiles(randomMemHandler.AlertsPath, "*", SearchOption.AllDirectories)
                         .ToHashSet();
-                    var orders = await dbContext
-                        .RandomMemeOrder.AsNoTracking()
-                        .ToListAsync(stoppingToken);
+                    var orders = await dbContext.RandomMemeOrder.ToListAsync(stoppingToken);
 
                     var fileNamesInDb = orders.Select(o => o.FilePath).ToHashSet();
 
@@ -43,18 +38,78 @@ public class RandomMemeWorker(
                         );
                     }
 
-                    // Добавляем новые файлы в конец очереди и пересчитываем их VideoOrder.Order
-                    var newFiles = files.Except(fileNamesInDb).ToList();
+                    // Ставим тип мема для файлов без типа
+                    var memeTypes = await dbContext
+                        .RandomMemeType.AsNoTracking()
+                        .OrderByDescending(e => e.FolderPath.Length)
+                        .ToArrayAsync(cancellationToken: stoppingToken);
+
+                    foreach (var memeOrder in orders.Where(e => e.MemeTypeId is null))
+                    {
+                        foreach (var memeType in memeTypes)
+                        {
+                            if (
+                                !memeOrder.FilePath.Contains(
+                                    memeType.FolderPath,
+                                    StringComparison.OrdinalIgnoreCase
+                                )
+                            )
+                                continue;
+                            memeOrder.MemeTypeId = memeType.Id;
+                            break;
+                        }
+                    }
+
+                    // Добавляем новые файлы в конец очереди и пересчитываем их MemeOrder.Order
+                    var newFiles = files.Except(fileNamesInDb).ToArray();
                     if (newFiles.Any())
                     {
-                        var maxOrder = orders.Any() ? orders.Max(o => o.Order) : 0;
-                        var newOrders = newFiles
-                            .Select(
-                                (file, index) =>
-                                    new VideoOrder { FilePath = file, Order = maxOrder + index + 1 }
+                        foreach (var type in memeTypes)
+                        {
+                            var typedOrders = orders
+                                .Where(e => e.MemeTypeId == type.Id)
+                                .OrderBy(e => e.Order)
+                                .ToArray();
+
+                            var typedNewFiles = newFiles
+                                .Where(e =>
+                                    e.Contains(type.FolderPath, StringComparison.OrdinalIgnoreCase)
+                                )
+                                .ToArray();
+
+                            newFiles = newFiles.Except(typedNewFiles).ToArray();
+
+                            var counter = 1;
+
+                            foreach (var typedOrder in typedOrders)
+                            {
+                                typedOrder.Order = counter;
+                                checked
+                                {
+                                    counter++;
+                                }
+                            }
+
+                            var newOrders = typedNewFiles
+                                .Select(
+                                    (file, index) =>
+                                        new MemeOrder
+                                        {
+                                            FilePath = file,
+                                            Order = counter + index,
+                                            MemeTypeId = type.Id,
+                                        }
+                                )
+                                .ToList();
+                            dbContext.RandomMemeOrder.AddRange(newOrders);
+                        }
+
+                        var cunter = 1;
+                        dbContext.RandomMemeOrder.AddRange(
+                            newFiles.Select(
+                                (a) => new MemeOrder() { FilePath = a, Order = cunter++ }
                             )
-                            .ToList();
-                        dbContext.RandomMemeOrder.AddRange(newOrders);
+                        );
                     }
 
                     if (missingFiles.Any() || newFiles.Any())

@@ -1,35 +1,19 @@
 ﻿using MARS.Server.Services.RandomMem.Entity;
-using TwitchLib.EventSub.Core.SubscriptionTypes.Channel;
 
 namespace MARS.Server.Services.Twitch.Rewards.TwitchRandomMeme;
 
-public class RandomMeme
+public class RandomMeme(
+    IHubContext<TelegramusHub, ITelegramusHub> hubContext,
+    IWebHostEnvironment webHostEnvironment,
+    IDbContextFactory<AppDbContext> dbContextFactory,
+    IHostApplicationLifetime applicationLifetime
+)
 {
-    private readonly ITwitchClient _client;
-    private readonly IHubContext<TelegramusHub, ITelegramusHub> _hubContext;
-    private readonly ILogger<RandomMeme> _logger;
-    private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
-
-    private readonly IWebHostEnvironment _webHostEnvironment;
-
-    public RandomMeme(
-        IHubContext<TelegramusHub, ITelegramusHub> hubContext,
-        IWebHostEnvironment webHostEnvironment,
-        ITwitchClient client,
-        ILogger<RandomMeme> logger,
-        IDbContextFactory<AppDbContext> dbContextFactory
-    )
-    {
-        _hubContext = hubContext;
-        _webHostEnvironment = webHostEnvironment;
-        _client = client;
-        _logger = logger;
-        _dbContextFactory = dbContextFactory;
-    }
+    private readonly CancellationToken _stoppingToken = applicationLifetime.ApplicationStopping;
 
     public async Task RandomMemeHandler(object sender, ChannelPointsCustomRewardRedemptionArgs args)
     {
-        ChannelPointsCustomRewardRedemption? twEvent = args.Notification.Payload.Event;
+        var twEvent = args.Notification.Payload.Event;
         if (
             twEvent.BroadcasterUserId.Equals(
                 TwitchExstension.ChannelId,
@@ -41,11 +25,11 @@ public class RandomMeme
             {
                 case 9:
                 {
-                    MediaInfo? media = await GetMeme(twEvent.UserName);
+                    var media = await GetMeme(twEvent.UserName);
 
                     if (media is not null)
                     {
-                        await _hubContext.Clients.All.Alert(
+                        await hubContext.Clients.All.Alert(
                             new MediaDto(media) { MediaInfo = media }
                         );
                     }
@@ -54,24 +38,11 @@ public class RandomMeme
                 }
                 case 10:
                 {
-                    MediaInfo? sound = await GetRandomSound(twEvent.UserName);
+                    var sound = await GetRandomSound(twEvent.UserName);
 
                     if (sound is not null)
                     {
-                        await _hubContext.Clients.All.Alert(
-                            new MediaDto(sound) { MediaInfo = sound }
-                        );
-                    }
-
-                    break;
-                }
-                case 3:
-                {
-                    MediaInfo? sound = await GetHigemSound(twEvent.UserName);
-
-                    if (sound is not null)
-                    {
-                        await _hubContext.Clients.All.Alert(
+                        await hubContext.Clients.All.Alert(
                             new MediaDto(sound) { MediaInfo = sound }
                         );
                     }
@@ -84,110 +55,90 @@ public class RandomMeme
 
     private Task<MediaInfo?> GetRandomSound(string? displayName)
     {
-        var path = Path.Combine(_webHostEnvironment.WebRootPath, "Alerts", "zvik");
+        var path = Path.Combine(webHostEnvironment.WebRootPath, "Alerts", "zvik");
         return GetAlert(path, displayName);
-    }
-
-    private Task<MediaInfo?> GetHigemSound(string? displayName)
-    {
-        var path = Path.Combine(_webHostEnvironment.WebRootPath, "Alerts", "zvik", "higem");
-        return GetAlert(path, displayName, true);
     }
 
     private Task<MediaInfo?> GetMeme(string? displayName)
     {
-        var path = Path.Combine(_webHostEnvironment.WebRootPath, "Alerts", "random_meme");
-        return GetAlert(path, displayName, true);
+        var path = Path.Combine(webHostEnvironment.WebRootPath, "Alerts", "random_meme");
+        return GetAlert(path, displayName);
     }
 
-    private async Task<MediaInfo?> GetAlert(
-        string path,
-        string? displayName,
-        bool isSearchInDirs = false
-    )
+    private async Task<MediaInfo?> GetAlert(string path, string? displayName)
     {
-        var files = Directory.GetFiles(
-            path,
-            "*.*",
-            isSearchInDirs ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly
-        );
+        var mediaOrder = await GetNextVideoOrderAsync(path);
+        var filePath = mediaOrder.FilePath;
 
-        if (files.Length > 0)
+        var exst = Path.GetExtension(filePath);
+        var fileType = await filePath.GetFileMediaTypeAsync();
+        var shortPath = filePath[
+            (filePath.IndexOf("wwwroot", StringComparison.Ordinal) + "wwwroot".Length)..
+        ];
+
+        var mediaInfo = new MediaInfo
         {
-            var filePath = files.MinBy(File.GetLastWriteTime);
-
-            if (string.IsNullOrWhiteSpace(filePath))
+            FileInfo = new MediaFileInfo
             {
-                await _client.SendMessageToMainTwitchAsync("Не могу найти мем", _logger);
-                return null;
-            }
-
-            var exst = Path.GetExtension(filePath);
-            var fileType = await exst.GetFileMediaTypeAsync();
-
-            var shortPath = filePath.Substring(
-                filePath.IndexOf("wwwroot", StringComparison.Ordinal) + "wwwroot".Length
-            );
-
-            File.SetLastWriteTime(filePath, DateTime.Now);
-
-            var mediaInfo = new MediaInfo
+                Extension = exst,
+                Type = fileType,
+                FileName = Path.GetFileName(filePath),
+                LocalFilePath = shortPath,
+            },
+            MetaInfo = new MediaMetaInfo
             {
-                FileInfo = new MediaFileInfo
-                {
-                    Extension = exst,
-                    Type = fileType,
-                    FileName = Path.GetFileName(filePath),
-                    LocalFilePath = shortPath,
-                },
-                MetaInfo = new MediaMetaInfo
-                {
-                    DisplayName = displayName ?? string.Empty,
-                    IsLooped = false,
-                },
-                PositionInfo = new MediaPositionInfo
-                {
-                    Height = 400,
-                    Width = 400,
-                    IsProportion = true,
-                    IsResizeRequires = true,
-                },
-                StylesInfo = new MediaStylesInfo { IsBorder = false },
-                TextInfo = new MediaTextInfo(),
-            };
+                DisplayName = displayName ?? string.Empty,
+                IsLooped = false,
+            },
+            PositionInfo = new MediaPositionInfo
+            {
+                Height = 400,
+                Width = 400,
+                IsProportion = true,
+                IsResizeRequires = true,
+            },
+            StylesInfo = new MediaStylesInfo { IsBorder = false },
+            TextInfo = new MediaTextInfo(),
+        };
 
-            return mediaInfo;
-        }
-        return null;
+        return mediaInfo;
     }
 
-    public async Task<VideoOrder?> GetNextVideoOrderAsync(
-        string path,
-        CancellationToken stoppingToken
-    )
+    public async Task<MemeOrder> GetNextVideoOrderAsync(string path)
     {
-        await using AppDbContext dbContext = await _dbContextFactory.CreateDbContextAsync(
-            stoppingToken
-        );
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(_stoppingToken);
 
-        // Get the first video order from the database
+        var type = dbContext
+            .RandomMemeType.AsNoTracking()
+            .AsEnumerable()
+            .First(e => path.Contains(e.FolderPath, StringComparison.OrdinalIgnoreCase));
+
         var nextVideoOrder = await dbContext
             .RandomMemeOrder.OrderBy(o => o.Order)
-            .FirstOrDefaultAsync(stoppingToken);
+            .FirstOrDefaultAsync(e => e.Order == 1 && e.MemeTypeId == type.Id, _stoppingToken);
 
-        if (nextVideoOrder != null)
+        if (nextVideoOrder is null)
         {
-            // Get all video orders except the one being moved
-            var otherOrders = await dbContext
-                .RandomMemeOrder.Where(e => e.Id != nextVideoOrder.Id)
-                .ExecuteUpdateAsync(
-                    e => e.SetProperty(a => a.Order, order => order.Order - 1),
-                    cancellationToken: stoppingToken
-                );
-
-            // Save changes to the database
-            await dbContext.SaveChangesAsync(stoppingToken);
+            throw new NullReferenceException();
         }
+
+        var maxOrder = await dbContext
+            .RandomMemeOrder.AsNoTracking()
+            .MaxAsync(e => e.Order, cancellationToken: _stoppingToken);
+
+        nextVideoOrder.Order = maxOrder;
+
+        dbContext.RandomMemeOrder.Update(nextVideoOrder);
+
+        await dbContext
+            .RandomMemeOrder.Where(e => e.Id != nextVideoOrder.Id && e.MemeTypeId != type.Id)
+            .ExecuteUpdateAsync(
+                e => e.SetProperty(a => a.Order, order => order.Order - 1),
+                cancellationToken: _stoppingToken
+            );
+
+        // Save changes to the database
+        await dbContext.SaveChangesAsync(_stoppingToken);
 
         return nextVideoOrder;
     }

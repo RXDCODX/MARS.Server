@@ -180,6 +180,6 @@ public class DailyMarkMarkNotificationsSerivce(
 
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        return Task.CompletedTask;
+        return NotifyAsync(stoppingToken);
     }
 }

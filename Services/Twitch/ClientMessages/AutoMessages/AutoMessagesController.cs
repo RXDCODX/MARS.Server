@@ -19,7 +19,8 @@ public class AutoMessagesController
     public AutoMessagesController(
         ITwitchClient client,
         ILogger<AutoMessagesController> logger,
-        IDbContextFactory<AppDbContext> dbContextFactory
+        IDbContextFactory<AppDbContext> dbContextFactory,
+        IHostApplicationLifetime applicationLifetime
     )
     {
         _client = client;
@@ -34,6 +35,11 @@ public class AutoMessagesController
         {
             _client.JoinChannel(Channel);
         }
+
+        applicationLifetime.ApplicationStarted.Register(() =>
+        {
+            client.OnMessageReceived += OnMessageReceived;
+        });
     }
 
     private int MessagesCounter { get; set; }
@@ -41,16 +47,16 @@ public class AutoMessagesController
 
     public async void OnMessageReceived(object? sender, OnMessageReceivedArgs args)
     {
-        await Task.Run(async () =>
+        if (args.ChatMessage.Channel.Equals(Channel, StringComparison.OrdinalIgnoreCase))
         {
-            if (args.ChatMessage.Channel.Equals(Channel, StringComparison.OrdinalIgnoreCase))
-            {
-                MessagesCounter++;
+            MessagesCounter++;
 
-                if (
-                    MessagesCounter >= 70
-                    && LastPostDateTime.Add(TimeSpan.FromMinutes(45)) < DateTimeOffset.Now
-                )
+            if (
+                MessagesCounter >= 70
+                && LastPostDateTime.Add(TimeSpan.FromMinutes(45)) < DateTimeOffset.Now
+            )
+            {
+                await Task.Run(async () =>
                 {
                     try
                     {
@@ -89,8 +95,8 @@ public class AutoMessagesController
                     {
                         _logger.LogException(exception);
                     }
-                }
+                });
             }
-        });
+        }
     }
 }

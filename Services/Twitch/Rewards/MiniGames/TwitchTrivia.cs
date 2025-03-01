@@ -40,12 +40,14 @@ public class TwitchTrivia : BackgroundService
         _applicationLifetime = applicationLifetime;
         CountQuestions = File.ReadAllLines(FilenameTrivia).Length;
 
-        _client.OnMessageReceived += NewMessage;
-        UserAuthHelper.WsClient.ChannelPointsCustomRewardRedemptionAdd += NewAlert;
-        UserAuthHelper.WsClient.StreamOffline += Closing;
-
         CountQuestions = File.ReadAllLines(FilenameTrivia).Length;
-        applicationLifetime.ApplicationStarted.Register(() => IsAppActive = true);
+        applicationLifetime.ApplicationStarted.Register(() =>
+        {
+            IsAppActive = true;
+            _client.OnMessageReceived += NewMessage;
+            UserAuthHelper.WsClient.ChannelPointsCustomRewardRedemptionAdd += NewAlert;
+            UserAuthHelper.WsClient.StreamOffline += Closing;
+        });
     }
 
     internal string FilenameTrivia =>

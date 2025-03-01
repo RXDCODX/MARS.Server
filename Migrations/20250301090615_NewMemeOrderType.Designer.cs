@@ -3,6 +3,7 @@ using System;
 using MARS.Server.DataBaseContext;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Telegramus.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250301090615_NewMemeOrderType")]
+    partial class NewMemeOrderType
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -40,7 +43,7 @@ namespace Telegramus.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Logs", (string)null);
+                    b.ToTable("Logs");
                 });
 
             modelBuilder.Entity("MARS.Server.Services.PyroAlerts.Entitys.MediaInfo", b =>
@@ -51,7 +54,7 @@ namespace Telegramus.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Alerts", (string)null);
+                    b.ToTable("Alerts");
                 });
 
             modelBuilder.Entity("MARS.Server.Services.RandomMem.Entity.MemeOrder", b =>
@@ -78,7 +81,7 @@ namespace Telegramus.Migrations
 
                     b.HasIndex("MemeTypeId");
 
-                    b.ToTable("RandomMemeOrder", (string)null);
+                    b.ToTable("RandomMemeOrder");
                 });
 
             modelBuilder.Entity("MARS.Server.Services.RandomMem.Entity.MemeType", b =>
@@ -101,20 +104,26 @@ namespace Telegramus.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("RandomMemeType", (string)null);
+                    b.ToTable("RandomMemeType");
 
                     b.HasData(
                         new
                         {
                             Id = 3,
-                            FolderPath = "Alerts\\zvik",
+                            FolderPath = "Alerts/zvik",
                             Name = "Random Sound"
                         },
                         new
                         {
                             Id = 2,
-                            FolderPath = "Alerts\\random_meme",
+                            FolderPath = "Alerts/random_meme",
                             Name = "Random Meme"
+                        },
+                        new
+                        {
+                            Id = 1,
+                            FolderPath = "",
+                            Name = "None"
                         });
                 });
 
@@ -156,7 +165,7 @@ namespace Telegramus.Migrations
 
                     b.HasKey("UserId");
 
-                    b.ToTable("TelegramUsers", (string)null);
+                    b.ToTable("TelegramUsers");
                 });
 
             modelBuilder.Entity("MARS.Server.Services.Twitch.ClientMessages.AutoMessages.Entitys.AutoMessage", b =>
@@ -171,7 +180,7 @@ namespace Telegramus.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("AutoMessages", (string)null);
+                    b.ToTable("AutoMessages");
                 });
 
             modelBuilder.Entity("MARS.Server.Services.Twitch.FumoFriday.Entitys.FumoUser", b =>
@@ -187,7 +196,7 @@ namespace Telegramus.Migrations
 
                     b.HasKey("TwitchId");
 
-                    b.ToTable("FumoUsers", (string)null);
+                    b.ToTable("FumoUsers");
                 });
 
             modelBuilder.Entity("MARS.Server.Services.Twitch.HelloVideos.Entitys.HelloVideosUsers", b =>
@@ -215,7 +224,7 @@ namespace Telegramus.Migrations
                     b.HasIndex("MediaInfoId")
                         .IsUnique();
 
-                    b.ToTable("HelloVideosUsers", (string)null);
+                    b.ToTable("HelloVideosUsers");
                 });
 
             modelBuilder.Entity("MARS.Server.Services.Twitch.TokenInfo", b =>
@@ -240,7 +249,7 @@ namespace Telegramus.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("TwitchToken", (string)null);
+                    b.ToTable("TwitchToken");
                 });
 
             modelBuilder.Entity("MARS.Server.Services.WaifuRoll.Entitys.Host", b =>
@@ -271,7 +280,7 @@ namespace Telegramus.Migrations
 
                     b.HasKey("TwitchId");
 
-                    b.ToTable("Hosts", (string)null);
+                    b.ToTable("Hosts");
 
                     b.UseTpcMappingStrategy();
                 });
@@ -294,7 +303,7 @@ namespace Telegramus.Migrations
                     b.HasIndex("HostId")
                         .IsUnique();
 
-                    b.ToTable("AutoHello", (string)null);
+                    b.ToTable("AutoHello");
                 });
 
             modelBuilder.Entity("MARS.Server.Services.WaifuRoll.Entitys.HostCoolDown", b =>
@@ -315,7 +324,7 @@ namespace Telegramus.Migrations
                     b.HasIndex("HostId")
                         .IsUnique();
 
-                    b.ToTable("CD", (string)null);
+                    b.ToTable("CD");
                 });
 
             modelBuilder.Entity("MARS.Server.Services.WaifuRoll.Entitys.Waifu", b =>
@@ -357,7 +366,7 @@ namespace Telegramus.Migrations
 
                     b.HasKey("ShikiId");
 
-                    b.ToTable("Waifus", (string)null);
+                    b.ToTable("Waifus");
                 });
 
             modelBuilder.Entity("MARS.Server.Services.PyroAlerts.Entitys.MediaInfo", b =>
@@ -389,7 +398,7 @@ namespace Telegramus.Migrations
 
                             b1.HasKey("MediaInfoId");
 
-                            b1.ToTable("Alerts", (string)null);
+                            b1.ToTable("Alerts");
 
                             b1.WithOwner()
                                 .HasForeignKey("MediaInfoId");
@@ -423,7 +432,7 @@ namespace Telegramus.Migrations
 
                             b1.HasKey("MediaInfoId");
 
-                            b1.ToTable("Alerts", (string)null);
+                            b1.ToTable("Alerts");
 
                             b1.WithOwner()
                                 .HasForeignKey("MediaInfoId");
@@ -483,7 +492,7 @@ namespace Telegramus.Migrations
 
                             b1.HasKey("MediaInfoId");
 
-                            b1.ToTable("Alerts", (string)null);
+                            b1.ToTable("Alerts");
 
                             b1.WithOwner()
                                 .HasForeignKey("MediaInfoId");
@@ -500,7 +509,7 @@ namespace Telegramus.Migrations
 
                             b1.HasKey("MediaInfoId");
 
-                            b1.ToTable("Alerts", (string)null);
+                            b1.ToTable("Alerts");
 
                             b1.WithOwner()
                                 .HasForeignKey("MediaInfoId");
@@ -532,7 +541,7 @@ namespace Telegramus.Migrations
 
                             b1.HasKey("MediaInfoId");
 
-                            b1.ToTable("Alerts", (string)null);
+                            b1.ToTable("Alerts");
 
                             b1.WithOwner()
                                 .HasForeignKey("MediaInfoId");

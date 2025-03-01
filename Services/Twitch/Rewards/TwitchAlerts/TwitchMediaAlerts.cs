@@ -16,11 +16,18 @@ public class TwitchMediaAlerts
 
     public TwitchMediaAlerts(
         IHubContext<TelegramusHub, ITelegramusHub> hubContext,
-        IDbContextFactory<AppDbContext> dbContextFactory
+        IDbContextFactory<AppDbContext> dbContextFactory,
+        ITwitchClient client,
+        IHostApplicationLifetime applicationLifetime
     )
     {
         _hubContext = hubContext;
         _dbContextFactory = dbContextFactory;
+
+        applicationLifetime.ApplicationStarted.Register(() =>
+        {
+            client.OnMessageReceived += TwitchClientOnNormalMessage;
+        });
     }
 
     private async Task GetAndSendAlert(string message)
@@ -114,17 +121,17 @@ public class TwitchMediaAlerts
 
     internal async void TwitchClientOnNormalMessage(object? sender, OnMessageReceivedArgs args)
     {
-        await Task.Run(async () =>
-        {
-            if (
-                args.ChatMessage.Channel.Equals(
-                    TwitchExstension.Channel,
-                    StringComparison.OrdinalIgnoreCase
-                )
-                && !TwitchExstension.BlackList.Any(u =>
-                    u.Equals(args.ChatMessage.Username, StringComparison.OrdinalIgnoreCase)
-                )
+        if (
+            args.ChatMessage.Channel.Equals(
+                TwitchExstension.Channel,
+                StringComparison.OrdinalIgnoreCase
             )
+            && !TwitchExstension.BlackList.Any(u =>
+                u.Equals(args.ChatMessage.Username, StringComparison.OrdinalIgnoreCase)
+            )
+        )
+        {
+            await Task.Run(async () =>
             {
                 var value = args.ChatMessage.Message.ToLower().Trim();
 
@@ -134,8 +141,8 @@ public class TwitchMediaAlerts
                 }
 
                 await GetAndSendAlert(value);
-            }
-        });
+            });
+        }
     }
 
     internal async Task TwitchClientOnOnMessageSend(

@@ -1,4 +1,5 @@
 ﻿using MARS.Server.Services.PyroAlerts;
+using MARS.Server.Services.RandomMem.Entity;
 using Telegram.Bot.Types.Enums;
 using File = System.IO.File;
 
@@ -7,17 +8,17 @@ namespace MARS.Server.Services.RandomMem;
 public class RandomMemHandler(
     IWebHostEnvironment environment,
     PyroAlertsHelper helper,
-    ILogger<RandomMemHandler> logger
+    ILogger<RandomMemHandler> logger,
+    IDbContextFactory<AppDbContext> contextFactory,
+    IHostApplicationLifetime applicationLifetime
 ) : ITelegramusService
 {
-    public readonly string AlertsPath = Path.Combine(
-        environment.WebRootPath,
-        "Alerts",
-        "random_meme"
-    );
+    public readonly string AlertsPath = Path.Combine(environment.WebRootPath, "Alerts");
 
     private string? LastMediaGroupId { get; set; }
     private bool IsGoldMediaGroup { get; set; }
+    private CancellationToken CancellationToken { get; set; } =
+        applicationLifetime.ApplicationStopping;
 
     public async Task HandMessage(ITelegramBotClient client, Update update)
     {
@@ -68,7 +69,7 @@ public class RandomMemHandler(
         var downloadPath = folderPath + "\\" + fileInfo.FilePath;
 
         MediaType type = await Path.GetExtension(fileInfo.FilePath).GetFileMediaTypeAsync();
-        var caption = string.Empty;
+        string caption;
         const string answer1 = "Скачал твой файл ({1})";
         const string answer = "такой файл уже есть, обновил время последнего акцесса до {0}";
         const string answer2 = "С мемом чето не так, ппц брат.";
@@ -111,14 +112,45 @@ public class RandomMemHandler(
 
         try
         {
+            await CreateMemeOrder(downloadPath);
+
             await client.SendMessage(
                 833194345,
-                string.Format(caption, DateTimeOffset.Now.LocalDateTime, fileInfo.FilePath)
+                string.Format(caption, DateTimeOffset.Now.LocalDateTime, fileInfo.FilePath),
+                cancellationToken: CancellationToken
             );
         }
         catch (Exception e)
         {
             logger.LogException(e);
         }
+    }
+
+    private async Task CreateMemeOrder(string filePath)
+    {
+        await using var dbContext = await contextFactory.CreateDbContextAsync(CancellationToken);
+
+        var order = await dbContext.RandomMemeOrder.MaxAsync(e => e.Order, CancellationToken);
+
+        var types = dbContext.RandomMemeType.AsAsyncEnumerable();
+
+        var newOrder = new MemeOrder() { FilePath = filePath, Order = ++order };
+
+        await foreach (var type in types)
+        {
+            if (filePath.Contains(type.FolderPath, StringComparison.OrdinalIgnoreCase))
+            {
+                newOrder.MemeTypeId = type.Id;
+            }
+        }
+
+        if (newOrder.MemeTypeId is 0 or null)
+        {
+            newOrder.MemeTypeId = 1;
+        }
+
+        await dbContext.RandomMemeOrder.AddAsync(newOrder, CancellationToken);
+
+        await dbContext.SaveChangesAsync(CancellationToken);
     }
 }

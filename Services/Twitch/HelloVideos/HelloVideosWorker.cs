@@ -2,15 +2,32 @@
 
 namespace MARS.Server.Services.Twitch.HelloVideos;
 
-public class HelloVideoWorker(
-    IDbContextFactory<AppDbContext> dbContextFactory,
-    ILogger<HelloVideoWorker> logger,
-    IHostApplicationLifetime hostApplicationLifetime,
-    IHubContext<TelegramusHub, ITelegramusHub> _hubContext
-)
+public class HelloVideoWorker
 {
-    private readonly CancellationToken _token = hostApplicationLifetime.ApplicationStopping;
+    private readonly CancellationToken _token;
     private readonly List<string> _users = new();
+    private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
+    private readonly ILogger<HelloVideoWorker> _logger;
+    private readonly IHubContext<TelegramusHub, ITelegramusHub> _hubContext1;
+
+    public HelloVideoWorker(
+        IDbContextFactory<AppDbContext> dbContextFactory,
+        ILogger<HelloVideoWorker> logger,
+        IHostApplicationLifetime hostApplicationLifetime,
+        IHubContext<TelegramusHub, ITelegramusHub> hubContext,
+        ITwitchClient client
+    )
+    {
+        _dbContextFactory = dbContextFactory;
+        _logger = logger;
+        _hubContext1 = hubContext;
+        _token = hostApplicationLifetime.ApplicationStopping;
+
+        hostApplicationLifetime.ApplicationStarted.Register(() =>
+        {
+            client.OnMessageReceived += OnMessageReceived;
+        });
+    }
 
     public async void OnMessageReceived(object? sender, OnMessageReceivedArgs args)
     {
@@ -25,7 +42,9 @@ public class HelloVideoWorker(
                 try
                 {
                     var now = DateTimeOffset.Now;
-                    await using var dbContext = await dbContextFactory.CreateDbContextAsync(_token);
+                    await using var dbContext = await _dbContextFactory.CreateDbContextAsync(
+                        _token
+                    );
                     var user = await dbContext.FumoUsers.FindAsync(args.ChatMessage.Id, _token);
                     var notifUser = await dbContext
                         .HelloVideosUsers.Include(e => e.MediaInfo)
@@ -54,7 +73,7 @@ public class HelloVideoWorker(
                             );
                             var mediaDto = new MediaDto() { MediaInfo = notifUser.MediaInfo };
 
-                            await _hubContext.Clients.All.Alert(mediaDto);
+                            await _hubContext1.Clients.All.Alert(mediaDto);
                         }
 
                         _users.Add(args.ChatMessage.Id);
@@ -62,7 +81,7 @@ public class HelloVideoWorker(
                 }
                 catch (Exception ex)
                 {
-                    logger.LogException(ex);
+                    _logger.LogException(ex);
                 }
             },
             _token
@@ -78,7 +97,7 @@ public class HelloVideoWorker(
     /// <exception cref="NullReferenceException"></exception>
     public async Task<string?> TestVideo(string name, string? color = "white")
     {
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(_token);
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync(_token);
         var user = dbContext
             .HelloVideosUsers.AsNoTracking()
             .Include(e => e.MediaInfo)
@@ -95,7 +114,7 @@ public class HelloVideoWorker(
 
         var mediaDto = new MediaDto() { MediaInfo = user.MediaInfo };
 
-        await _hubContext.Clients.All.Alert(mediaDto);
+        await _hubContext1.Clients.All.Alert(mediaDto);
         return user.Name;
     }
 }

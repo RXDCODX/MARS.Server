@@ -43,7 +43,8 @@ public sealed class AppDbContext : DbContext
     public DbSet<AutoMessage> AutoMessages { get; set; } = null!;
     public DbSet<TokenInfo> TwitchToken { get; set; } = null!;
     public DbSet<Log> Logs { get; set; } = null!;
-    public DbSet<VideoOrder> RandomMemeOrder { get; set; } = null!;
+    public DbSet<MemeOrder> RandomMemeOrder { get; set; } = null!;
+    public DbSet<MemeType> RandomMemeType { get; set; } = null!;
     public DbSet<FumoUser> FumoUsers { get; set; }
     public DbSet<HelloVideosUsers> HelloVideosUsers { get; set; } = null!;
 
@@ -72,6 +73,32 @@ public sealed class AppDbContext : DbContext
             .HasOne(e => e.MediaInfo)
             .WithOne()
             .HasForeignKey<HelloVideosUsers>(e => e.MediaInfoId);
+
+        modelBuilder.Entity<MemeOrder>().HasKey(e => e.Id);
+        modelBuilder
+            .Entity<MemeOrder>()
+            .HasOne(mo => mo.Type)
+            .WithMany()
+            .HasForeignKey(mo => mo.MemeTypeId);
+
+        modelBuilder
+            .Entity<MemeType>()
+            .HasData(
+                [
+                    new MemeType()
+                    {
+                        Name = "Random Sound",
+                        Id = 3,
+                        FolderPath = "Alerts\\zvik",
+                    },
+                    new MemeType()
+                    {
+                        Name = "Random Meme",
+                        Id = 2,
+                        FolderPath = "Alerts\\random_meme",
+                    },
+                ]
+            );
 
         modelBuilder.Entity<MediaInfo>(entity =>
         {

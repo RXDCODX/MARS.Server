@@ -29,7 +29,8 @@ public class TwitchRussianRoulete : BackgroundService
         ILogger<TwitchRussianRoulete> logger,
         UserAuthHelper helper,
         ITwitchAPI api,
-        IDbContextFactory<AppDbContext> dbContextFactory
+        IDbContextFactory<AppDbContext> dbContextFactory,
+        IHostApplicationLifetime applicationLifetime
     )
     {
         _client = client;
@@ -39,8 +40,11 @@ public class TwitchRussianRoulete : BackgroundService
         _dbContextFactory = dbContextFactory;
         _cancellationTokenSource = new CancellationTokenSource();
 
-        UserAuthHelper.WsClient.StreamOffline += Closing;
-        UserAuthHelper.WsClient.ChannelPointsCustomRewardRedemptionAdd += NewAlert;
+        applicationLifetime.ApplicationStarted.Register(() =>
+        {
+            UserAuthHelper.WsClient.StreamOffline += Closing;
+            UserAuthHelper.WsClient.ChannelPointsCustomRewardRedemptionAdd += NewAlert;
+        });
     }
 
     private Task InitializeGame()
@@ -91,7 +95,6 @@ public class TwitchRussianRoulete : BackgroundService
                 AnnouncementColors.Primary,
                 _helper.Token!.AccessToken
             );
-            //_client.Announce(TwitchExstension.Channel, $"@{name} запускает русскую рулетку, у вас есть {seconds.TotalSeconds} секунд! Чтобы принять участие нажмите на награду за баллы канала стоимостью {_costOfRoulette}!");
             _gameStartDateTime = DateTimeOffset.Now;
             _isAwaitingNewPlayers = true;
 

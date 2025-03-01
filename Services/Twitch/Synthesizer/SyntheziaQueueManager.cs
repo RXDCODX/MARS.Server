@@ -11,13 +11,18 @@ public class SyntheziaQueueManager
 
     private bool _isAppReady;
 
-    public SyntheziaQueueManager(IVoicer voicer, IHostApplicationLifetime hostApplicationLifetime)
+    public SyntheziaQueueManager(
+        IVoicer voicer,
+        IHostApplicationLifetime hostApplicationLifetime,
+        ITwitchClient client
+    )
     {
         _voicer = voicer;
 
         hostApplicationLifetime.ApplicationStarted.Register(() =>
         {
             _isAppReady = true;
+            client.OnMessageReceived += HandMessageToVoice;
         });
     }
 
@@ -46,17 +51,17 @@ public class SyntheziaQueueManager
 
     public async void HandMessageToVoice(object? sender, OnMessageReceivedArgs args)
     {
-        await Task.Run(async () =>
-        {
-            if (
-                args.ChatMessage.Channel.Equals(
-                    TwitchExstension.Channel,
-                    StringComparison.OrdinalIgnoreCase
-                )
-                && !TwitchExstension.BlackList.Any(e =>
-                    e.Equals(args.ChatMessage.Username, StringComparison.OrdinalIgnoreCase)
-                )
+        if (
+            args.ChatMessage.Channel.Equals(
+                TwitchExstension.Channel,
+                StringComparison.OrdinalIgnoreCase
             )
+            && !TwitchExstension.BlackList.Any(e =>
+                e.Equals(args.ChatMessage.Username, StringComparison.OrdinalIgnoreCase)
+            )
+        )
+        {
+            await Task.Run(async () =>
             {
                 var message = new MessageToSynthezid
                 {
@@ -68,7 +73,7 @@ public class SyntheziaQueueManager
 
                 _queue.Enqueue(message);
                 await ProcessMessages();
-            }
-        });
+            });
+        }
     }
 }
