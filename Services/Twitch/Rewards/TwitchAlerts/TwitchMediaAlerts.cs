@@ -108,7 +108,7 @@ public class TwitchMediaAlerts
 
             if (mediaOld != null)
             {
-                var mediaClone = (MediaInfo)mediaOld.CloneTo();
+                var mediaClone = mediaOld.CloneTo();
                 mediaClone.FixAlertText(
                     argsCustomRewardArgs!.Notification.Payload.Event.UserName,
                     argsCustomRewardArgs.Notification.Payload.Event.UserInput

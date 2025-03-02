@@ -1,4 +1,5 @@
 ﻿using MARS.Server.Services.AutoArts.Entitys;
+using MARS.Server.Services.Twitch.Rewards.TwitchScreenParticles.Entitys;
 using SignalRSwaggerGen.Attributes;
 using TwitchLib.Client.Models;
 
@@ -18,4 +19,6 @@ public interface ITelegramusHub
     public Task Highlite(ChatMessage message, string color, Image faceUrl);
     public Task PostTwitchInfo(string clientId, string secret);
     public Task TwitchMsg(string msg);
+    public Task MakeScreenParticles(TwitchScreenParticles particles);
+    public Task MakeScreenEmojisParticles(string userInput);
 }

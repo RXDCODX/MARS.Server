@@ -3,6 +3,5 @@
 public enum TwitchScreenParticles
 {
     Confetty,
-    Snow,
     Fireworks,
 }

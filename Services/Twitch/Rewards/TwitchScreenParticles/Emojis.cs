@@ -2,13 +2,13 @@
 
 namespace MARS.Server.Services.Twitch.Rewards.TwitchScreenParticles;
 
-public class Fireworks
+public class Emojis
 {
     private readonly ILogger<Confetty> _logger;
     private readonly IHubContext<TelegramusHub, ITelegramusHub> _hub;
     private readonly ITwitchClient _client;
 
-    public Fireworks(
+    public Emojis(
         EventSubService eventSubService,
         ILogger<Confetty> logger,
         IHubContext<TelegramusHub, ITelegramusHub> hub,
@@ -33,14 +33,14 @@ public class Fireworks
     {
         var twEvent = args.Notification.Payload.Event;
         if (
-            twEvent.Reward.Cost == 1701
+            twEvent.Reward.Cost == 1702
             && twEvent.BroadcasterUserLogin.Equals(
                 TwitchExstension.Channel,
                 StringComparison.OrdinalIgnoreCase
             )
         )
         {
-            return _hub.Clients.All.MakeScreenParticles(Entitys.TwitchScreenParticles.Fireworks);
+            return _hub.Clients.All.MakeScreenEmojisParticles(twEvent.UserInput);
         }
 
         return Task.CompletedTask;
