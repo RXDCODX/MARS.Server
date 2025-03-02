@@ -1,4 +1,5 @@
-﻿using TwitchLib.Api.Auth;
+﻿using MARS.Server.Services.Twitch.Management.Entitys;
+using TwitchLib.Api.Auth;
 
 namespace MARS.Server.Services.Twitch.Management;
 
@@ -29,7 +30,7 @@ public class TokenService(
 
     public async Task<TokenInfo?> GetTokenAsync(CancellationToken cancellationToken)
     {
-        await using AppDbContext context = await factory.CreateDbContextAsync(cancellationToken);
+        await using var context = await factory.CreateDbContextAsync(cancellationToken);
         return await context.TwitchToken.SingleOrDefaultAsync(cancellationToken);
     }
 

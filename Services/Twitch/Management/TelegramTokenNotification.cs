@@ -16,8 +16,7 @@ public class TelegramTokenNotification(
     {
         try
         {
-            IServerAddressesFeature? addressesFeature =
-                server.Features.Get<IServerAddressesFeature>();
+            var addressesFeature = server.Features.Get<IServerAddressesFeature>();
 
             while (!addressesFeature!.Addresses.Any())
             {

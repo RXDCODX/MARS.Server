@@ -1,5 +1,4 @@
-﻿using MARS.Server.Services.Twitch;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
+﻿using MARS.Server.Services.Twitch.Management.Entitys;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable

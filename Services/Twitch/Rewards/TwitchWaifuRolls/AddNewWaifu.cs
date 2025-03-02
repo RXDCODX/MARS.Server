@@ -1,6 +1,7 @@
 ﻿using System.Text.RegularExpressions;
 using MARS.Server.Services.Shikimori;
 using MARS.Server.Services.Shikimori.Entitys;
+using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.WaifuRoll;
 using TwitchLib.Api.Helix.Models.Chat;
 
@@ -10,12 +11,12 @@ public class AddNewWaifu : BackgroundService
 {
     private readonly ITwitchAPI _api;
     private readonly ITwitchClient _client;
-    private readonly UserAuthHelper _helper;
     private readonly IHubContext<TelegramusHub, ITelegramusHub> _hubContext;
     private readonly ILogger<AddNewWaifu> _logger;
     private readonly ShikimoriClientOptions _options;
     private readonly ShikimoriService _shikimoriService;
     private readonly WaifuRollService _waifuRollService;
+    private readonly TokenService _tokenService;
 
     public AddNewWaifu(
         ILogger<AddNewWaifu> logger,
@@ -25,8 +26,9 @@ public class AddNewWaifu : BackgroundService
         WaifuRollService waifuRollService,
         IHubContext<TelegramusHub, ITelegramusHub> hubContext,
         ITwitchAPI api,
-        UserAuthHelper helper,
-        IHostApplicationLifetime lifetime
+        IHostApplicationLifetime lifetime,
+        EventSubService eventSub,
+        TokenService tokenService
     )
     {
         _logger = logger;
@@ -36,13 +38,12 @@ public class AddNewWaifu : BackgroundService
         _hubContext = hubContext;
 
         _api = api;
-        _helper = helper;
+        _tokenService = tokenService;
         _options = options.Value;
 
         lifetime.ApplicationStarted.Register(() =>
         {
-            UserAuthHelper.WsClient.ChannelPointsCustomRewardRedemptionAdd +=
-                AddNewWaifuTwitchEvent;
+            eventSub.WsClient.ChannelPointsCustomRewardRedemptionAdd += AddNewWaifuTwitchEvent;
         });
     }
 
@@ -123,21 +124,21 @@ public class AddNewWaifu : BackgroundService
                     var chance = Random.Shared.Next(0, 101);
                     if (chance < 3)
                     {
-                        if (_helper.Token != null)
+                        if (_tokenService.Token != null)
                         {
                             message =
                                 $"@{twEvent.UserName}! Поздравляю, ты получил VIP -статус за добавление персонажей!";
                             await _api.Helix.Channels.AddChannelVIPAsync(
                                 TwitchExstension.ChannelId,
                                 args.Notification.Payload.Event.UserId,
-                                _helper.Token.AccessToken
+                                _tokenService.Token.AccessToken
                             );
                             await _api.Helix.Chat.SendChatAnnouncementAsync(
                                 TwitchExstension.ChannelId,
                                 TwitchExstension.ChannelId,
                                 message,
                                 AnnouncementColors.Primary,
-                                _helper.Token.AccessToken
+                                _tokenService.Token.AccessToken
                             );
                         }
                     }

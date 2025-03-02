@@ -20,7 +20,7 @@ public class EventSubService(
     FumoFridayWorker fumoFridayWorker
 )
 {
-    public static readonly EventSubWebsocketClient WsClient = new();
+    public readonly EventSubWebsocketClient WsClient = new();
 
     private bool _firstActivation = true;
 
@@ -157,11 +157,10 @@ public class EventSubService(
 
         condition.Clear();
 
-        GetEventSubSubscriptionsResponse? response =
-            await api.Helix.EventSub.GetEventSubSubscriptionsAsync(
-                clientId: api.Settings.ClientId,
-                accessToken: token
-            );
+        var response = await api.Helix.EventSub.GetEventSubSubscriptionsAsync(
+            clientId: api.Settings.ClientId,
+            accessToken: token
+        );
 
         if (response.Subscriptions.Length < 1)
         {
@@ -169,9 +168,12 @@ public class EventSubService(
         }
         else
         {
-            var aa = response.Subscriptions.Select(e => e.Type);
+            var aa = response.Subscriptions.Select(e => e.Type).Distinct();
             var message = string.Join(Environment.NewLine, aa);
-            await client.SendMessage(402763435, "Подключенные ивенты для твича: " + message);
+            await client.SendMessage(
+                402763435,
+                "Подключенные ивенты для твича: " + Environment.NewLine + message
+            );
         }
     }
 

@@ -1,7 +1,7 @@
-﻿using MARS.Server.Services.WaifuRoll;
+﻿using MARS.Server.Services.Twitch.Management;
+using MARS.Server.Services.WaifuRoll;
 using MARS.Server.Services.WaifuRoll.helpers;
 using TwitchLib.Api.Helix.Models.Chat;
-using TwitchLib.EventSub.Core.SubscriptionTypes.Channel;
 
 namespace MARS.Server.Services.Twitch.Rewards.TwitchWaifuRolls;
 
@@ -9,12 +9,11 @@ public class MergeWaifu : BackgroundService
 {
     private readonly ITwitchAPI _api;
     private readonly ITwitchClient _client;
-    private readonly WaifuRollDataBaseHelper _dataBaseHelper;
     private readonly IDbContextFactory<AppDbContext> _factory;
-    private readonly UserAuthHelper _helper;
     private readonly IHubContext<TelegramusHub, ITelegramusHub> _hubContext;
     private readonly ILogger<MergeWaifu> _logger;
     private readonly WaifuRollService _waifuRollService;
+    private readonly TokenService _tokenService;
 
     public MergeWaifu(
         ILogger<MergeWaifu> logger,
@@ -24,7 +23,8 @@ public class MergeWaifu : BackgroundService
         IDbContextFactory<AppDbContext> factory,
         WaifuRollDataBaseHelper dataBaseHelper,
         ITwitchAPI api,
-        UserAuthHelper helper
+        EventSubService eventSubService,
+        TokenService tokenService
     )
     {
         _logger = logger;
@@ -32,11 +32,10 @@ public class MergeWaifu : BackgroundService
         _waifuRollService = waifuRollService;
         _hubContext = hubContext;
         _factory = factory;
-        _dataBaseHelper = dataBaseHelper;
         _api = api;
-        _helper = helper;
+        _tokenService = tokenService;
 
-        UserAuthHelper.WsClient.ChannelPointsCustomRewardRedemptionAdd += MergeWaifuTwitchEvent;
+        eventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd += MergeWaifuTwitchEvent;
     }
 
     public async Task MergeWaifuTwitchEvent(
@@ -44,7 +43,7 @@ public class MergeWaifu : BackgroundService
         ChannelPointsCustomRewardRedemptionArgs args
     )
     {
-        ChannelPointsCustomRewardRedemption? twEvent = args.Notification.Payload.Event;
+        var twEvent = args.Notification.Payload.Event;
         if (
             twEvent.BroadcasterUserId.Equals(
                 TwitchExstension.ChannelId,
@@ -80,14 +79,14 @@ public class MergeWaifu : BackgroundService
 
                                 await _hubContext.Clients.All.MergeWaifu(waifu, twEvent.UserName);
 
-                                if (_helper.Token != null)
+                                if (_tokenService.Token != null)
                                 {
                                     await _api.Helix.Chat.SendChatAnnouncementAsync(
                                         TwitchExstension.ChannelId,
                                         TwitchExstension.ChannelId,
                                         message,
                                         AnnouncementColors.Primary,
-                                        _helper.Token.AccessToken
+                                        _tokenService.Token.AccessToken
                                     );
                                 }
 

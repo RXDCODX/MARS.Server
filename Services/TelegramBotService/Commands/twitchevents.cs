@@ -11,15 +11,25 @@ public partial class Commands
         CancellationToken cancellationToken
     )
     {
-        var response = await userAuthHelper.GetEventSubs();
-
-        if (response == null)
+        if (tokenService.Token is null)
             return await botClient.SendMessage(
                 message.Chat.Id,
                 "Не удалось провести запрос",
                 replyMarkup: new ReplyKeyboardRemove(),
                 cancellationToken: cancellationToken
             );
+
+        var response = await eventSubService.GetEventSubsAsync(tokenService.Token.AccessToken);
+
+        if (response == null)
+        {
+            return await botClient.SendMessage(
+                message.Chat.Id,
+                "Не удалось провести запрос",
+                replyMarkup: new ReplyKeyboardRemove(),
+                cancellationToken: cancellationToken
+            );
+        }
 
         var subs = response.Subscriptions.Select(e => $"{e.Type} - {e.Status}");
 

@@ -1,4 +1,5 @@
-﻿using MARS.Server.Services.Twitch.Rewards.MiniGames.Subs;
+﻿using MARS.Server.Services.Twitch.Management;
+using MARS.Server.Services.Twitch.Rewards.MiniGames.Subs;
 using TwitchLib.Client.Events;
 using TwitchLib.EventSub.Websockets.Core.EventArgs.Stream;
 
@@ -30,7 +31,8 @@ public class TwitchTrivia : BackgroundService
         IWebHostEnvironment environment,
         ILogger<TwitchTrivia> logger,
         IDbContextFactory<AppDbContext> dbContextFactory,
-        IHostApplicationLifetime applicationLifetime
+        IHostApplicationLifetime applicationLifetime,
+        EventSubService eventSubService
     )
     {
         _client = client;
@@ -45,8 +47,8 @@ public class TwitchTrivia : BackgroundService
         {
             IsAppActive = true;
             _client.OnMessageReceived += NewMessage;
-            UserAuthHelper.WsClient.ChannelPointsCustomRewardRedemptionAdd += NewAlert;
-            UserAuthHelper.WsClient.StreamOffline += Closing;
+            eventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd += NewAlert;
+            eventSubService.WsClient.StreamOffline += Closing;
         });
     }
 

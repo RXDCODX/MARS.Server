@@ -11,7 +11,7 @@ public partial class Commands
         CancellationToken cancellationToken
     )
     {
-        await userAuthHelper.Reconnect(string.Empty);
+        await eventSubService.ReconnectAsync(string.Empty);
         var text = "Отправлена попытка реконекта";
 
         return await botClient.SendMessage(

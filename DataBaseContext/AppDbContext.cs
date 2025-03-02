@@ -3,6 +3,7 @@ using MARS.Server.Services.Twitch;
 using MARS.Server.Services.Twitch.ClientMessages.AutoMessages.Entitys;
 using MARS.Server.Services.Twitch.FumoFriday.Entitys;
 using MARS.Server.Services.Twitch.HelloVideos.Entitys;
+using MARS.Server.Services.Twitch.Management.Entitys;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace MARS.Server.DataBaseContext;

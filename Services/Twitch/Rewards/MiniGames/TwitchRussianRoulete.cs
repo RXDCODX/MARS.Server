@@ -1,4 +1,5 @@
-﻿using MARS.Server.Services.Twitch.Rewards.MiniGames.Subs;
+﻿using MARS.Server.Services.Twitch.Management;
+using MARS.Server.Services.Twitch.Rewards.MiniGames.Subs;
 using TwitchLib.Api.Helix.Models.Chat;
 using TwitchLib.EventSub.Websockets.Core.EventArgs.Stream;
 
@@ -10,10 +11,10 @@ public class TwitchRussianRoulete : BackgroundService
     private readonly ITwitchAPI _api;
     private readonly double _awaitingTimeForNewPlayersInMilliseconds = 1000 * 60;
     private readonly ITwitchClient _client;
+    private readonly TokenService _tokenService;
 
     private readonly int _costOfRoulette = 6;
     private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
-    private readonly UserAuthHelper _helper;
     private readonly ILogger<TwitchRussianRoulete> _logger;
     private CancellationTokenSource _cancellationTokenSource;
     private DateTimeOffset _gameStartDateTime;
@@ -27,23 +28,24 @@ public class TwitchRussianRoulete : BackgroundService
     public TwitchRussianRoulete(
         ITwitchClient client,
         ILogger<TwitchRussianRoulete> logger,
-        UserAuthHelper helper,
         ITwitchAPI api,
         IDbContextFactory<AppDbContext> dbContextFactory,
-        IHostApplicationLifetime applicationLifetime
+        IHostApplicationLifetime applicationLifetime,
+        EventSubService eventSubService,
+        TokenService tokenService
     )
     {
         _client = client;
         _logger = logger;
-        _helper = helper;
         _api = api;
         _dbContextFactory = dbContextFactory;
+        _tokenService = tokenService;
         _cancellationTokenSource = new CancellationTokenSource();
 
         applicationLifetime.ApplicationStarted.Register(() =>
         {
-            UserAuthHelper.WsClient.StreamOffline += Closing;
-            UserAuthHelper.WsClient.ChannelPointsCustomRewardRedemptionAdd += NewAlert;
+            eventSubService.WsClient.StreamOffline += Closing;
+            eventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd += NewAlert;
         });
     }
 
@@ -93,7 +95,7 @@ public class TwitchRussianRoulete : BackgroundService
                 TwitchExstension.ChannelId,
                 text,
                 AnnouncementColors.Primary,
-                _helper.Token!.AccessToken
+                _tokenService.Token!.AccessToken
             );
             _gameStartDateTime = DateTimeOffset.Now;
             _isAwaitingNewPlayers = true;
@@ -179,7 +181,7 @@ public class TwitchRussianRoulete : BackgroundService
                     TwitchExstension.ChannelId,
                     "Осталось меньше 10 секунд до начала рулетки!",
                     AnnouncementColors.Primary,
-                    _helper.Token!.AccessToken
+                    _tokenService.Token!.AccessToken
                 );
                 tenSecAuth = true;
             }

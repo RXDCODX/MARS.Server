@@ -1,6 +1,6 @@
 ﻿using System.Reflection;
-using MARS.Server.Services.Twitch;
 using MARS.Server.Services.Twitch.HelloVideos;
+using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.Twitch.Synthesizer.Enitity;
 using Telegram.Bot.Types.ReplyMarkups;
 
@@ -10,10 +10,11 @@ public partial class Commands(
     IWebHostEnvironment environment,
     IDbContextFactory<AppDbContext> factory,
     ITwitchClient client,
-    UserAuthHelper userAuthHelper,
     IVoicer syntheziaVoicer,
     IHubContext<TelegramusHub, ITelegramusHub> alertsHub,
-    HelloVideoWorker helloVideoWorker
+    HelloVideoWorker helloVideoWorker,
+    EventSubService eventSubService,
+    TokenService tokenService
 ) : ITelegramusService
 {
     public const string Template =
