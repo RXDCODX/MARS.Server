@@ -5,9 +5,7 @@ namespace MARS.Server.Hubs;
 public class TelegramusHub(
     IDbContextFactory<AppDbContext> factory,
     IOptions<ShikimoriClientOptions> shikiOptions,
-    ILogger<TelegramusHub> logger,
-    IOptions<TwitchConfiguration> twitchConfiguration,
-    ITwitchClient twitchClient
+    IOptions<TwitchConfiguration> twitchConfiguration
 ) : Hub<ITelegramusHub>
 {
     private readonly TwitchConfiguration _twitchConfiguration =
@@ -21,21 +19,6 @@ public class TelegramusHub(
             _twitchConfiguration.ClientId,
             _twitchConfiguration.ClientSecret
         );
-    }
-
-    public Task SendNewMessage(string id, ChatMessage content)
-    {
-        return Clients.All.NewMessage(id, content);
-    }
-
-    public Task DeleteMessage(string id)
-    {
-        return Clients.All.DeleteMessage(id);
-    }
-
-    public Task TwitchMsg(string msg)
-    {
-        return twitchClient.SendMessageToMainTwitchAsync(msg, logger);
     }
 
     public async Task UpdateWaifuPrizesAsync()

@@ -1,4 +1,4 @@
-// Global using directives
+﻿// Global using directives
 
 global using System.ComponentModel.DataAnnotations;
 global using System.ComponentModel.DataAnnotations.Schema;
@@ -20,3 +20,4 @@ global using TwitchLib.Api.Interfaces;
 global using TwitchLib.Client.Interfaces;
 global using TwitchLib.EventSub.Websockets.Core.EventArgs.Channel;
 global using Host = MARS.Server.Services.WaifuRoll.Entitys.Host;
+global using Timer = System.Timers.Timer;

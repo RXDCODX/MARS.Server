@@ -192,12 +192,9 @@ public sealed class AppDbContext : DbContext
             .HaveConversion<DateTimeOffsetConversion>();
     }
 
-    private sealed class DateTimeOffsetConversion : ValueConverter<DateTimeOffset, DateTimeOffset>
-    {
-        public DateTimeOffsetConversion()
-            : base(
-                offset => offset.Offset != TimeSpan.Zero ? offset.ToOffset(TimeSpan.Zero) : offset,
-                v => v.ToLocalTime()
-            ) { }
-    }
+    public sealed class DateTimeOffsetConversion()
+        : ValueConverter<DateTimeOffset, DateTimeOffset>(
+            offset => offset.Offset != TimeSpan.Zero ? offset.ToOffset(TimeSpan.Zero) : offset,
+            v => v.ToLocalTime()
+        );
 }
