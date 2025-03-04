@@ -13,7 +13,11 @@ public class RandomMemHandler(
     IHostApplicationLifetime applicationLifetime
 ) : ITelegramusService
 {
-    public readonly string AlertsPath = Path.Combine(environment.WebRootPath, "Alerts");
+    public readonly string AlertsPath = Path.Combine(
+        environment.WebRootPath,
+        "Alerts",
+        "random_meme"
+    );
 
     private string? LastMediaGroupId { get; set; }
     private bool IsGoldMediaGroup { get; set; }
@@ -24,8 +28,8 @@ public class RandomMemHandler(
     {
         if (update.Type == UpdateType.Message)
         {
-            Message message = update.Message!;
-            if (message.Chat.Id == 833194345)
+            var message = update.Message!;
+            if (message.Chat.Id is 833194345 or TelegramExstension.Rxdcodx)
             {
                 if (message.MediaGroupId == null)
                 {
@@ -115,7 +119,7 @@ public class RandomMemHandler(
             await CreateMemeOrder(downloadPath);
 
             await client.SendMessage(
-                833194345,
+                message.Chat.Id,
                 string.Format(caption, DateTimeOffset.Now.LocalDateTime, fileInfo.FilePath),
                 cancellationToken: CancellationToken
             );
@@ -130,27 +134,68 @@ public class RandomMemHandler(
     {
         await using var dbContext = await contextFactory.CreateDbContextAsync(CancellationToken);
 
-        var order = await dbContext.RandomMemeOrder.MaxAsync(e => e.Order, CancellationToken);
-
         var types = dbContext.RandomMemeType.AsAsyncEnumerable();
 
-        var newOrder = new MemeOrder() { FilePath = filePath, Order = ++order };
+        var typeId = 0;
 
         await foreach (var type in types)
         {
-            if (filePath.Contains(type.FolderPath, StringComparison.OrdinalIgnoreCase))
+            // Собираем полный путь: basePath + type.FolderPath
+            var fullFolderPath = Path.Combine(environment.WebRootPath, type.FolderPath);
+
+            // Нормализуем пути
+            var normalizedFilePath = Path.GetFullPath(filePath)
+                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+            var normalizedFolderPath = Path.GetFullPath(fullFolderPath)
+                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+            // Проверяем, содержится ли folderPath в filePath
+            if (
+                normalizedFilePath.StartsWith(
+                    normalizedFolderPath,
+                    StringComparison.OrdinalIgnoreCase
+                )
+            )
             {
-                newOrder.MemeTypeId = type.Id;
+                typeId = type.Id;
+                break;
             }
         }
 
-        if (newOrder.MemeTypeId is 0 or null)
+        if (typeId is 0)
         {
-            newOrder.MemeTypeId = 1;
+            typeId = 1;
         }
+
+        var order = await dbContext
+            .RandomMemeOrder.Where(e => e.MemeTypeId == typeId)
+            .MaxAsync(e => e.Order, CancellationToken);
+
+        var newOrder = new MemeOrder()
+        {
+            FilePath = filePath,
+            Order = ++order,
+            MemeTypeId = typeId,
+        };
 
         await dbContext.RandomMemeOrder.AddAsync(newOrder, CancellationToken);
 
         await dbContext.SaveChangesAsync(CancellationToken);
+    }
+
+    private bool IsSubDir(string parentPath, string childPath)
+    {
+        var parentUri = new Uri(parentPath);
+        var childUri = new DirectoryInfo(childPath).Parent;
+        while (childUri != null)
+        {
+            if (new Uri(childUri.FullName) == parentUri)
+            {
+                return true;
+            }
+            childUri = childUri.Parent;
+        }
+        return false;
     }
 }

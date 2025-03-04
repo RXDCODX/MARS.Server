@@ -4,9 +4,11 @@ namespace MARS.Server.Services.RandomMem;
 
 public class RandomMemeWorker(
     IDbContextFactory<AppDbContext> contextFactory,
-    RandomMemHandler randomMemHandler
+    IWebHostEnvironment webHostEnvironment
 ) : BackgroundService
 {
+    private readonly string folderPath = Path.Combine(webHostEnvironment.WebRootPath, "Alerts");
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         //TODO: добавить миграцию
@@ -18,8 +20,9 @@ public class RandomMemeWorker(
                     await using var dbContext = await contextFactory.CreateDbContextAsync(
                         stoppingToken
                     );
+
                     var files = Directory
-                        .GetFiles(randomMemHandler.AlertsPath, "*", SearchOption.AllDirectories)
+                        .GetFiles(folderPath, "*", SearchOption.AllDirectories)
                         .ToHashSet();
                     var orders = await dbContext.RandomMemeOrder.ToListAsync(stoppingToken);
 
