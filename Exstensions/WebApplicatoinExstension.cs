@@ -8,7 +8,8 @@ public static class WebApplicatoinExstension
 {
     public static IApplicationBuilder AddStaticFilesBrowser(
         this WebApplication app,
-        string directory
+        string directory,
+        bool isWithSpa
     )
     {
         var env = app.Environment;
@@ -33,7 +34,7 @@ public static class WebApplicatoinExstension
                 }
             },
             RedirectToAppendTrailingSlash = true,
-            RequestPath = PathString.FromUriComponent("/staticfiles"),
+            RequestPath = isWithSpa ? PathString.FromUriComponent("/staticfiles") : "",
         };
 
         app.UseDirectoryBrowser(

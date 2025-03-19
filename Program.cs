@@ -146,6 +146,7 @@ public class Program
             (sp) => VoicerFactory.CreateVoicer(sp.GetRequiredService<ILogger<IVoicer>>())
         );
         services.AddSingleton<SyntheziaQueueManager>();
+        services.AddHostedService(sp => sp.GetRequiredService<SyntheziaQueueManager>());
 
         services.Configure<BotConfiguration>(
             configuration
@@ -196,6 +197,7 @@ public class Program
             {
                 options.PayloadSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
                 options.PayloadSerializerOptions.DictionaryKeyPolicy = JsonNamingPolicy.CamelCase;
+                options.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter());
             });
 
         services.AddSwaggerGen(options =>
@@ -242,7 +244,7 @@ public class Program
 
         var app = builder.Build();
 
-        app.AddStaticFilesBrowser(directory);
+        app.AddStaticFilesBrowser(directory, isWithSpa);
         app.UseSwagger();
         app.UseSwaggerUi(settings =>
         {

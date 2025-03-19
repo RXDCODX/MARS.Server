@@ -1,14 +1,9 @@
-namespace MARS.Server.Services.PyroAlerts.Entitys;
+﻿namespace MARS.Server.Services.PyroAlerts.Entitys;
 
-public struct MediaDto
+public struct MediaDto(MediaInfo mediaInfo)
 {
-    public MediaDto(MediaInfo mediaInfo)
-    {
-        MediaInfo = mediaInfo;
-    }
-
     [Required]
-    public required MediaInfo MediaInfo { get; init; }
+    public required MediaInfo MediaInfo { get; init; } = mediaInfo;
 
     public DateTime UploadStartTime { get; set; } = DateTime.Now;
 }

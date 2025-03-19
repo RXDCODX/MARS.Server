@@ -4,7 +4,7 @@ using TwitchLib.Client.Events;
 
 namespace MARS.Server.Services.Twitch.Synthesizer;
 
-public class SyntheziaQueueManager
+public class SyntheziaQueueManager : BackgroundService
 {
     private readonly ConcurrentQueue<MessageToSynthezid?> _queue = new();
     private readonly IVoicer _voicer;
@@ -75,5 +75,10 @@ public class SyntheziaQueueManager
                 await ProcessMessages();
             });
         }
+    }
+
+    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        return Task.CompletedTask;
     }
 }
