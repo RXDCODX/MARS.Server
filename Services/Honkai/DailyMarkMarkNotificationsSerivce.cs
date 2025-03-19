@@ -58,12 +58,12 @@ public class DailyMarkMarkNotificationsSerivce(
                         )
                         {
                             const string query3 = """
-                                Время дневной отметки в Honkai:Star Rail, Zenless Zone Zero и Genshin Impact!
+                                Время дневной отметки в Honkai:Star Rail, Zenless Cell Zero и Genshin Impact!
 
                                 Honkai:Star Rail:
                                 https://act.hoyolab.com/bbs/event/signin/hkrpg/index.html?act_id=e202303301540311
 
-                                Zenless Zone Zero:
+                                Zenless Cell Zero:
                                 https://act.hoyolab.com/bbs/event/signin/zzz/e202406031448091.html?act_id=e202406031448091
 
                                 Genshin Impact:
@@ -76,12 +76,12 @@ public class DailyMarkMarkNotificationsSerivce(
                         )
                         {
                             const string query3 = """
-                                Время дневной отметки в Honkai:Star Rail и Zenless Zone Zero!
+                                Время дневной отметки в Honkai:Star Rail и Zenless Cell Zero!
 
                                 Honkai:Star Rail:
                                 https://act.hoyolab.com/bbs/event/signin/hkrpg/index.html?act_id=e202303301540311
 
-                                Zenless Zone Zero:
+                                Zenless Cell Zero:
                                 https://act.hoyolab.com/bbs/event/signin/zzz/e202406031448091.html?act_id=e202406031448091
                                 """;
                             message = query3;
@@ -107,9 +107,9 @@ public class DailyMarkMarkNotificationsSerivce(
                         )
                         {
                             const string query3 = """
-                                Время дневной отметки в Zenless Zone Zero и Genshin Impact!
+                                Время дневной отметки в Zenless Cell Zero и Genshin Impact!
 
-                                Zenless Zone Zero:
+                                Zenless Cell Zero:
                                 https://act.hoyolab.com/bbs/event/signin/zzz/e202406031448091.html?act_id=e202406031448091
 
                                 Genshin Impact:
@@ -129,7 +129,7 @@ public class DailyMarkMarkNotificationsSerivce(
                         else if (user.ZenlessZoneZeroDailyNotif)
                         {
                             const string query2 = """
-                                Время дневной отметки в Zenless Zone Zero!
+                                Время дневной отметки в Zenless Cell Zero!
 
                                 https://act.hoyolab.com/bbs/event/signin/zzz/e202406031448091.html?act_id=e202406031448091
                                 """;

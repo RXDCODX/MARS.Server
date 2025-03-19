@@ -52,7 +52,7 @@ public partial class Commands
             {
                 return await botClient.SendMessage(
                     userName,
-                    $"Не удалось добавить уведомления об отметках в Zenless Zone Zero :-( {e.Message}",
+                    $"Не удалось добавить уведомления об отметках в Zenless Cell Zero :-( {e.Message}",
                     messageThreadId: message.MessageThreadId,
                     replyParameters: message.MessageId,
                     cancellationToken: cancellationToken

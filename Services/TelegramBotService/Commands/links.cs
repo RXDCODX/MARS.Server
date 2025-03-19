@@ -23,11 +23,11 @@ public partial class Commands
             ▷ Трекеры ‒ https://starrailstation.com/ru/warp#char_event | https://pom.moe/warp
             ▷ Калькулятор - https://zeeka32.github.io/Star-Rail-Damage-Calculator/
 
-            Zenless Zone Zero
+            Zenless Cell Zero
 
             ▷ Официальный сайт https://zenless.hoyoverse.com
             ▷ Официальные инструменты HoYoLAB https://www.hoyolab.com/circles/8/47/official профиль, объявления и прочее
-            ▷ Вики и гайды https://zzzero.ru | https://www.prydwen.gg/zenless | https://game8.co/games/Zenless-Zone-Zero
+            ▷ Вики и гайды https://zzzero.ru | https://www.prydwen.gg/zenless | https://game8.co/games/Zenless-Cell-Zero
             ▷ Базы данных https://zzz.gg | https://zenless.gg
             ▷ Трекер круток https://zzz.rng.moe
             ▷ Расписание https://zenless.gg/events

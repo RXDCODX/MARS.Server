@@ -19,5 +19,6 @@ global using Telegram.Bot.Types;
 global using TwitchLib.Api.Interfaces;
 global using TwitchLib.Client.Interfaces;
 global using TwitchLib.EventSub.Websockets.Core.EventArgs.Channel;
+global using Color = System.Drawing.Color;
 global using Host = MARS.Server.Services.WaifuRoll.Entitys.Host;
 global using Timer = System.Timers.Timer;

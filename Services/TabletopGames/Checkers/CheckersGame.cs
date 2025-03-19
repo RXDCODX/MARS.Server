@@ -1,0 +1,241 @@
+﻿using MARS.Server.Services.TabletopGames.Entitys;
+using Telegramus.Migrations;
+
+namespace MARS.Server.Services.TabletopGames.Checkers;
+
+public class CheckersGame
+{
+    public GameBoard GameBoard = GameBoard.CreateDefaultBoard();
+    public List<Cell[]> Logs = [];
+
+    public Cell? GetCell(string coordinates)
+    {
+        if (coordinates.Length != 2)
+        {
+            return null;
+        }
+
+        var result = ValidateAndGetCoordinates(coordinates);
+
+        if (result is not null)
+        {
+            foreach (var cell in GameBoard.Board)
+            {
+                if (
+                    cell.YCoordinate == result.Value.YCoordinate
+                    && cell.XCoordinate == result.Value.XCoordinate
+                )
+                {
+                    return cell;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    public (bool IsSuccess, bool CanContinue, string Message) TryToDoAMove(
+        Cell sourceCell,
+        Cell targetCell
+    )
+    {
+        // Проверка, что исходная клетка занята (там должна быть шашка)
+        if (!sourceCell.IsBusy)
+        {
+            return (false, false, "Исходная клетка пуста. Выберите клетку с шашкой.");
+        }
+
+        // Проверка, что целевая клетка пуста (для обычного хода или атаки)
+        if (!targetCell.IsBusy)
+        {
+            // Проверка, что ход выполняется по диагонали
+            if (IsValidMove(sourceCell, targetCell))
+            {
+                // Обычный ход
+                targetCell.IsBusy = true;
+                targetCell.IsKing = sourceCell.IsKing; // Сохраняем статус дамки
+                sourceCell.IsBusy = false;
+                sourceCell.IsKing = false;
+                return (true, false, "Ход выполнен.");
+            }
+            else
+            {
+                return (false, false, "Невозможно выполнить ход. Шашки ходят только по диагонали.");
+            }
+        }
+        else
+        {
+            // Проверка, возможна ли атака
+            if (CanAttack(sourceCell, targetCell, out Cell attackTarget, out Cell nextTarget))
+            {
+                // Выполняем атаку
+                attackTarget.IsBusy = false; // Убираем вражескую шашку
+                attackTarget.IsKing = false;
+
+                // Перемещаем шашку на новую позицию
+                targetCell.IsBusy = true;
+                targetCell.IsKing = sourceCell.IsKing;
+                sourceCell.IsBusy = false;
+                sourceCell.IsKing = false;
+
+                // Проверка, может ли дамка продолжить атаку
+                bool canContinue = false;
+                if (targetCell.IsKing)
+                {
+                    canContinue = CanContinueAttack(targetCell);
+                }
+
+                return (
+                    true,
+                    canContinue,
+                    "Атака выполнена." + (canContinue ? " Можете продолжить атаку." : "")
+                );
+            }
+            else
+            {
+                return (
+                    false,
+                    false,
+                    "Невозможно выполнить атаку. Чтобы атаковать, выберите клетку за вражеской шашкой."
+                );
+            }
+        }
+    }
+
+    // Проверка, что ход выполняется по диагонали
+    private bool IsValidMove(Cell sourceCell, Cell targetCell)
+    {
+        // Проверка, что координаты целевой клетки находятся в пределах доски
+        if (
+            targetCell.XCoordinate < 'a'
+            || targetCell.XCoordinate > 'h'
+            || targetCell.YCoordinate < 1
+            || targetCell.YCoordinate > 8
+        )
+        {
+            return false; // Клетка за пределами доски
+        }
+
+        int xDiff = Math.Abs(targetCell.XCoordinate - sourceCell.XCoordinate);
+        int yDiff = Math.Abs(targetCell.YCoordinate - sourceCell.YCoordinate);
+
+        // Обычная шашка может ходить только на одну клетку
+        if (!sourceCell.IsKing)
+        {
+            // Проверка направления хода (вперед)
+            if (sourceCell.Color == Color.White && targetCell.YCoordinate <= sourceCell.YCoordinate)
+            {
+                return false; // Белая шашка не может ходить назад
+            }
+            if (sourceCell.Color == Color.Black && targetCell.YCoordinate >= sourceCell.YCoordinate)
+            {
+                return false; // Черная шашка не может ходить назад
+            }
+
+            return xDiff == 1 && yDiff == 1;
+        }
+        // Дамка может ходить на любое количество клеток по диагонали
+        else
+        {
+            return xDiff == yDiff;
+        }
+    }
+
+    // Проверка, возможна ли атака
+    private (bool isCanAttack, string reason) CanAttack(Cell sourceCell, Cell targetCell)
+    {
+        if (targetCell.IsBusy)
+        {
+            return (false, "Выбрана не правильно клетка для атаки");
+        }
+
+        if (!sourceCell.IsBusy)
+        {
+            return (false, "Клетка для передвижения пуста");
+        }
+
+        var dif1 = Math.Abs(targetCell.YCoordinate - sourceCell.YCoordinate);
+        var dif2 = Math.Abs((int)targetCell.XCoordinate - (int)sourceCell.XCoordinate);
+
+        if (dif1 != 2) { }
+    }
+
+    // Проверка, может ли дамка продолжить атаку
+    private bool CanContinueAttack(Cell currentCell)
+    {
+        // Проверяем все четыре диагональных направления
+        for (int xDir = -1; xDir <= 1; xDir += 2)
+        {
+            for (int yDir = -1; yDir <= 1; yDir += 2)
+            {
+                char nextX = (char)(currentCell.XCoordinate + xDir * 2);
+                ushort nextY = (ushort)(currentCell.YCoordinate + yDir * 2);
+
+                Cell attackTarget = GetCell(
+                    (char)(currentCell.XCoordinate + xDir),
+                    (ushort)(currentCell.YCoordinate + yDir)
+                );
+                Cell nextTarget = GetCell(nextX, nextY);
+
+                if (attackTarget is { IsBusy: true } && nextTarget is { IsBusy: false })
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    // Вспомогательный метод для получения клетки по координатам
+    private Cell GetCell(char x, ushort y)
+    {
+        // Здесь должна быть логика получения клетки из игрового поля
+        // Например, если у вас есть игровое поле в виде массива:
+        // return Board[x - 'a', y - 1];
+        throw new NotImplementedException(
+            "Реализуйте метод GetCell для получения клетки по координатам."
+        );
+    }
+
+    public static (char XCoordinate, ushort YCoordinate)? ValidateAndGetCoordinates(string input)
+    {
+        // Проверка длины строки
+        if (input.Length != 2)
+        {
+            return null;
+        }
+
+        var xCoordinate = '\0'; // Инициализация координаты X
+        ushort yCoordinate = 0; // Инициализация координаты Y
+
+        var hasLetter = false;
+        var hasDigit = false;
+
+        foreach (var c in input)
+        {
+            if (char.IsLetter(c) && (c is >= 'a' and <= 'z' or >= 'A' and <= 'Z'))
+            {
+                xCoordinate = char.ToLower(c); // Сохраняем букву в координату X
+                hasLetter = true;
+            }
+            else if (char.IsDigit(c))
+            {
+                yCoordinate = ushort.Parse(c.ToString()); // Сохраняем цифру в координату Y
+                hasDigit = true;
+            }
+            else
+            {
+                return null;
+            }
+        }
+
+        // Проверка, что строка содержит ровно одну букву и одну цифру
+        if (!hasLetter || !hasDigit)
+        {
+            return null;
+        }
+
+        return (xCoordinate, yCoordinate);
+    }
+}
