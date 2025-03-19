@@ -5,7 +5,7 @@ namespace MARS.Server.Services.TabletopGames.Checkers;
 
 public class CheckersGame
 {
-    public GameBoard GameBoard = GameBoard.CreateDefaultBoard();
+    private readonly GameBoard _gameBoard = GameBoard.CreateDefaultBoard();
     public List<Cell[]> Logs = [];
 
     public Cell? GetCell(string coordinates)
@@ -19,7 +19,7 @@ public class CheckersGame
 
         if (result is not null)
         {
-            foreach (var cell in GameBoard.Board)
+            foreach (var cell in _gameBoard.Board)
             {
                 if (
                     cell.YCoordinate == result.Value.YCoordinate
@@ -66,7 +66,9 @@ public class CheckersGame
         else
         {
             // Проверка, возможна ли атака
-            if (CanAttack(sourceCell, targetCell, out Cell attackTarget, out Cell nextTarget))
+            var (isCanAttack, reason) = CanAttack(sourceCell, targetCell);
+
+            if (isCanAttack)
             {
                 // Выполняем атаку
                 attackTarget.IsBusy = false; // Убираем вражескую шашку
@@ -142,22 +144,110 @@ public class CheckersGame
     }
 
     // Проверка, возможна ли атака
-    private (bool isCanAttack, string reason) CanAttack(Cell sourceCell, Cell targetCell)
+    private (bool isCanAttack, string reason) CanAttack(
+        Cell sourceCell,
+        Cell targetCell,
+        out Cell damagedCell
+    )
     {
+        damagedCell = null; // Инициализация выходного параметра
+
         if (targetCell.IsBusy)
         {
-            return (false, "Выбрана не правильно клетка для атаки");
+            return (false, "Выбрана неправильная клетка для атаки.");
         }
 
         if (!sourceCell.IsBusy)
         {
-            return (false, "Клетка для передвижения пуста");
+            return (false, "Клетка для передвижения пуста.");
         }
 
-        var dif1 = Math.Abs(targetCell.YCoordinate - sourceCell.YCoordinate);
-        var dif2 = Math.Abs((int)targetCell.XCoordinate - (int)sourceCell.XCoordinate);
+        var isKing = sourceCell.IsKing;
 
-        if (dif1 != 2) { }
+        var (isDiagonal, cellsBetween) = CheckDiagonalAndDistance(sourceCell, targetCell);
+
+        if (!isDiagonal)
+        {
+            return (false, "Выбранные клетки не находятся на одной диагонали!");
+        }
+
+        if (!isKing && cellsBetween != 1)
+        {
+            return (false, "Обычная шашка может атаковать только через одну клетку.");
+        }
+
+        // Определяем направление движения
+        int xDirection = Math.Sign(targetCell.XCoordinate - sourceCell.XCoordinate);
+        int yDirection = Math.Sign(targetCell.YCoordinate - sourceCell.YCoordinate);
+
+        // Переменная для хранения клетки с вражеской шашкой
+        Cell enemyCell = null;
+        int enemyCount = 0;
+
+        // Проверяем все клетки между sourceCell и targetCell
+        for (int i = 1; i < cellsBetween; i++)
+        {
+            char currentX = (char)(sourceCell.XCoordinate + xDirection * i);
+            ushort currentY = (ushort)(sourceCell.YCoordinate + yDirection * i);
+
+            // Получаем клетку с доски
+            Cell currentCell = _gameBoard.Board[currentX - 'a', currentY - 1];
+
+            if (currentCell == null)
+            {
+                return (false, "Клетка за пределами доски.");
+            }
+
+            if (currentCell.IsBusy)
+            {
+                // Проверяем, что шашка принадлежит врагу
+                if (currentCell.Color == sourceCell.Color)
+                {
+                    return (false, "На пути находится своя шашка.");
+                }
+
+                enemyCount++;
+                enemyCell = currentCell;
+            }
+        }
+
+        // Для обычной шашки должна быть ровно одна вражеская шашка
+        if (!isKing && enemyCount != 1)
+        {
+            return (false, "Обычная шашка может атаковать только через одну вражескую шашку.");
+        }
+
+        // Для дамки должна быть хотя бы одна вражеская шашка
+        if (isKing && enemyCount < 1)
+        {
+            return (false, "Дамка должна атаковать через хотя бы одну вражескую шашку.");
+        }
+
+        damagedCell = enemyCell; // Клетка с вражеской шашкой
+        return (true, "Хороший ход! Так держать!");
+    }
+
+    public (bool IsDiagonal, int CellsBetween) CheckDiagonalAndDistance(
+        Cell sourceCell,
+        Cell targetCell
+    )
+    {
+        // Вычисляем разницу по X и Y
+        int xDiff = Math.Abs(targetCell.XCoordinate - sourceCell.XCoordinate);
+        int yDiff = Math.Abs(targetCell.YCoordinate - sourceCell.YCoordinate);
+
+        // Проверяем, что клетки находятся на одной диагонали
+        if (xDiff == yDiff)
+        {
+            // Количество клеток между sourceCell и targetCell
+            int cellsBetween = xDiff - 1;
+            return (true, cellsBetween);
+        }
+        else
+        {
+            // Клетки не на одной диагонали
+            return (false, 0);
+        }
     }
 
     // Проверка, может ли дамка продолжить атаку
