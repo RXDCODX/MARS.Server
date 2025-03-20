@@ -2,7 +2,7 @@
 
 namespace MARS.Server.Services.Twitch.Rewards.TwitchScreenParticles;
 
-public class Confetty
+public class Confetty : BackgroundService
 {
     private readonly ILogger<Confetty> _logger;
     private readonly IHubContext<TelegramusHub, ITelegramusHub> _hub;
@@ -43,6 +43,11 @@ public class Confetty
             return _hub.Clients.All.MakeScreenParticles(Entitys.TwitchScreenParticles.Confetty);
         }
 
+        return Task.CompletedTask;
+    }
+
+    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    {
         return Task.CompletedTask;
     }
 }

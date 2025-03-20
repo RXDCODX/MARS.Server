@@ -8,6 +8,7 @@ using MARS.Server.Services.Twitch.Rewards.MiniGames;
 using MARS.Server.Services.Twitch.Rewards.TwitchAlerts;
 using MARS.Server.Services.Twitch.Rewards.TwitchHighlitedMessage;
 using MARS.Server.Services.Twitch.Rewards.TwitchRandomMeme;
+using MARS.Server.Services.Twitch.Rewards.TwitchScreenParticles;
 using MARS.Server.Services.Twitch.Rewards.TwitchWaifuRolls;
 using MARS.Server.Services.Twitch.StreamBotNotifications;
 using TwitchLib.Api;
@@ -69,6 +70,13 @@ public static class StartupEstensions
         services.AddSingleton<HighlitedMessage>();
         services.AddSingleton<FumoFridayWorker>();
         services.AddSingleton<HelloVideoWorker>();
+
+        services.AddSingleton<Confetty>();
+        services.AddSingleton<Fireworks>();
+        services.AddSingleton<Emojis>();
+        services.AddHostedService(sp => sp.GetRequiredService<Confetty>());
+        services.AddHostedService(sp => sp.GetRequiredService<Fireworks>());
+        services.AddHostedService(sp => sp.GetRequiredService<Emojis>());
 
         return services;
     }

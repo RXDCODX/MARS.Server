@@ -2,15 +2,15 @@
 
 namespace MARS.Server.Services.Twitch.Rewards.TwitchScreenParticles;
 
-public class Fireworks
+public class Fireworks : BackgroundService
 {
-    private readonly ILogger<Confetty> _logger;
+    private readonly ILogger<Fireworks> _logger;
     private readonly IHubContext<TelegramusHub, ITelegramusHub> _hub;
     private readonly ITwitchClient _client;
 
     public Fireworks(
         EventSubService eventSubService,
-        ILogger<Confetty> logger,
+        ILogger<Fireworks> logger,
         IHubContext<TelegramusHub, ITelegramusHub> hub,
         IHostApplicationLifetime lifetime,
         ITwitchClient client
@@ -43,6 +43,11 @@ public class Fireworks
             return _hub.Clients.All.MakeScreenParticles(Entitys.TwitchScreenParticles.Fireworks);
         }
 
+        return Task.CompletedTask;
+    }
+
+    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    {
         return Task.CompletedTask;
     }
 }

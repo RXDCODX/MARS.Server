@@ -2,7 +2,7 @@
 
 namespace MARS.Server.Services.Twitch.Rewards.TwitchScreenParticles;
 
-public class Emojis
+public class Emojis : BackgroundService
 {
     private readonly ILogger<Confetty> _logger;
     private readonly IHubContext<TelegramusHub, ITelegramusHub> _hub;
@@ -43,6 +43,11 @@ public class Emojis
             return _hub.Clients.All.MakeScreenEmojisParticles(twEvent.UserInput);
         }
 
+        return Task.CompletedTask;
+    }
+
+    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    {
         return Task.CompletedTask;
     }
 }
