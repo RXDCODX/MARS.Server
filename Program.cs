@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using BooruSharp.Booru;
 using Hangfire.Server;
 using MARS.Server.CustomLoggers.TelegramLogger;
 using MARS.Server.Services.Honkai;
@@ -148,6 +149,20 @@ public class Program
         services.AddSingleton<SyntheziaQueueManager>();
         services.AddHostedService(sp => sp.GetRequiredService<SyntheziaQueueManager>());
 
+        services.AddSingleton<Gelbooru>(sp =>
+        {
+            var booruConfiguration =
+                sp.GetService<IOptions<BooruConfiguration>>() ?? throw new NullReferenceException();
+
+            return new Gelbooru()
+            {
+                Auth = new BooruAuth(
+                    booruConfiguration.Value.UserId,
+                    booruConfiguration.Value.PwdHash
+                ),
+            };
+        });
+
         services.Configure<BotConfiguration>(
             configuration
                 .GetSection(AppBase.Base)
@@ -178,6 +193,9 @@ public class Program
         );
         services.Configure<VkConfiguration>(
             configuration.GetSection(AppBase.Base).GetSection(VkConfiguration.SectionName)
+        );
+        services.Configure<BooruConfiguration>(
+            configuration.GetSection(AppBase.Base).GetSection(BooruConfiguration.Section)
         );
 
         services.AddTwitchEvents(configuration, loggerFactory);

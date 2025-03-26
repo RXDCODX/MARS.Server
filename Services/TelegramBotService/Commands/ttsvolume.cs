@@ -14,7 +14,7 @@ public partial class Commands
         string returnMessage;
         var split = message.Text?.Split(' ');
 
-        if (split != null && split.Length == 2)
+        if (split is { Length: 2 })
         {
             if (int.TryParse(split[1], out var volume))
             {
@@ -31,8 +31,14 @@ public partial class Commands
             else
                 returnMessage = "Громкость должна быть натуральным числом!";
         }
+        else if (split is { Length: 1 })
+        {
+            returnMessage = "Текущая громкость - " + syntheziaVoicer.GetVolume();
+        }
         else
+        {
             returnMessage = "Кривые параметры!";
+        }
 
         return await botClient.SendMessage(
             message.Chat.Id,

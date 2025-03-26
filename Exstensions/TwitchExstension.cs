@@ -49,6 +49,34 @@ public static class TwitchExstension
         return Task.CompletedTask;
     }
 
+    public static Task SendMessageToMainTwitchAsync(
+        this ITwitchClient client,
+        string message,
+        ILogger? logger = null
+    )
+    {
+        try
+        {
+            if (
+                !client.JoinedChannels.Any(e =>
+                    e.Channel.Equals(Channel, StringComparison.OrdinalIgnoreCase)
+                )
+            )
+            {
+                client.JoinChannel(Channel);
+            }
+
+            JoinedChannel? channel = client.GetJoinedChannel(Channel);
+            client.SendMessage(channel, message);
+        }
+        catch (Exception e)
+        {
+            logger?.LogException(e);
+        }
+
+        return Task.CompletedTask;
+    }
+
     public static async Task<bool> ValidateToken<T>(
         this ITwitchAPI api,
         ILogger<T> logger,

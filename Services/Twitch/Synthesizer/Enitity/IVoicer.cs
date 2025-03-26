@@ -2,6 +2,8 @@
 
 public interface IVoicer
 {
+    int GetVolume();
     void ChangeVolume(int volume);
-    void Sound(MessageToSynthezid message);
+    Task Sound(MessageToSynthezid message);
+    Task Stop();
 }

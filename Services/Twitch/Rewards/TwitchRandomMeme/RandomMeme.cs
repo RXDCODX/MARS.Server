@@ -83,7 +83,7 @@ public class RandomMeme(
                 Extension = exst,
                 Type = fileType,
                 FileName = Path.GetFileName(filePath),
-                LocalFilePath = shortPath,
+                FilePath = shortPath,
             },
             MetaInfo = new MediaMetaInfo
             {

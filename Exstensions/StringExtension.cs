@@ -1,4 +1,4 @@
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 
 namespace MARS.Server.Exstensions;
 
@@ -39,26 +39,58 @@ public static class StringExtension
         }
     }
 
-    public static string ReplaceTooLongWords(this string input)
+    public static string ReplaceTooLongWords(
+        this string input,
+        string replacement = "Слишком большое слово"
+    )
     {
-        // ���������� ���������� ��������� ��� ������ ���� ������ 20 � ����� ��������
         string pattern = @"\b\w{20,}\b";
-        string replacement = "������� ������� �����";
 
-        // �������� ��� ��������� ����� �� "������� ������� �����"
         string result = Regex.Replace(input, pattern, replacement);
 
         return result;
     }
 
-    public static string ReplaceLinks(this string input)
+    public static string ReplaceLinks(this string input, string replacement = " ссылка ")
     {
-        // ���������� ��������� ��� ������ ������, ������������ � http:// ��� https://
         var pattern = @"\bhttps?://\S+\b";
 
-        // ������ ���� ������ �� ����� "������"
-        var result = Regex.Replace(input, pattern, " ������ ");
+        var result = Regex.Replace(input, pattern, replacement);
 
         return result;
+    }
+
+    public static string CutTooLongText(
+        this string input,
+        ushort maxLength = 140,
+        bool hardCut = false
+    )
+    {
+        if (hardCut)
+        {
+            if (input.Length > 140)
+            {
+                return input[..140];
+            }
+
+            return input;
+        }
+
+        var splits = input.Split(' ');
+
+        var count = 0;
+
+        for (var index = 0; index < splits.Length; index++)
+        {
+            var split = splits[index];
+            if (count + split.Length > maxLength)
+            {
+                return string.Join(' ', splits[..index]);
+            }
+
+            count += split.Length;
+        }
+
+        return input;
     }
 }

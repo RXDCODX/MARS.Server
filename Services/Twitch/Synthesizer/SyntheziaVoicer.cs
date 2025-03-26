@@ -21,13 +21,18 @@ public class SyntheziaVoicer : IVoicer
             _speechSynthesizer.SetOutputToDefaultAudioDevice();
     }
 
+    public int GetVolume()
+    {
+        return _speechSynthesizer.Volume;
+    }
+
     public void ChangeVolume(int volume)
     {
         if (OperatingSystem.IsWindows())
             _speechSynthesizer.Volume = volume;
     }
 
-    public async void Sound(MessageToSynthezid message)
+    public async Task Sound(MessageToSynthezid message)
     {
         if (!OperatingSystem.IsWindows())
             return;
@@ -56,14 +61,14 @@ public class SyntheziaVoicer : IVoicer
 
             if (isExist)
             {
-                var isGet = _linkedVoices.TryGetValue(message.Name, out InstalledVoice? voice);
-                if (isGet && voice is { })
+                var isGet = _linkedVoices.TryGetValue(message.Name, out var voice);
+                if (isGet && voice is not null)
                 {
                     var builder = new PromptBuilder();
                     builder.StartVoice(voice.VoiceInfo.Name);
                     builder.AppendText(sb.ToString());
                     builder.EndVoice();
-                    _speechSynthesizer.Speak(builder);
+                    _speechSynthesizer.SpeakAsync(builder);
                 }
             }
             else
@@ -81,7 +86,7 @@ public class SyntheziaVoicer : IVoicer
                 builder.AppendText(sb.ToString());
                 builder.EndVoice();
 
-                _speechSynthesizer.Speak(builder);
+                _speechSynthesizer.SpeakAsync(builder);
             }
 
             _semaphore.Release();
@@ -90,5 +95,10 @@ public class SyntheziaVoicer : IVoicer
         {
             _logger.LogException(ex);
         }
+    }
+
+    public Task Stop()
+    {
+        return Task.FromResult(_speechSynthesizer.SpeakAsyncCancelAll);
     }
 }

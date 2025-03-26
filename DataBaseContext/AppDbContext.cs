@@ -119,8 +119,9 @@ public sealed class AppDbContext : DbContext
                 fileInfo =>
                 {
                     fileInfo.Property(p => p.FileName).HasColumnName("FileInfo_FileName");
-                    fileInfo.Property(p => p.LocalFilePath).HasColumnName("FileInfo_LocalFilePath");
+                    fileInfo.Property(p => p.FilePath).HasColumnName("FileInfo_LocalFilePath");
                     fileInfo.Property(p => p.Extension).HasColumnName("FileInfo_Extension");
+                    fileInfo.Property(p => p.IsLocalFile).HasColumnName("FileInfo_IsLocal");
                     fileInfo
                         .Property(p => p.Type)
                         .HasColumnName("FileInfo_Type")

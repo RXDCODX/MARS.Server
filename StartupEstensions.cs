@@ -1,5 +1,7 @@
-﻿using MARS.Server.Services.Twitch;
+﻿using System.Runtime.InteropServices;
+using MARS.Server.Services.Twitch;
 using MARS.Server.Services.Twitch.ClientMessages.AutoMessages;
+using MARS.Server.Services.Twitch.ClientMessages.SignalRAlerts;
 using MARS.Server.Services.Twitch.ClientMessages.TwitchAutoHello;
 using MARS.Server.Services.Twitch.FumoFriday;
 using MARS.Server.Services.Twitch.HelloVideos;
@@ -7,6 +9,7 @@ using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.Twitch.Rewards.MiniGames;
 using MARS.Server.Services.Twitch.Rewards.TwitchAlerts;
 using MARS.Server.Services.Twitch.Rewards.TwitchHighlitedMessage;
+using MARS.Server.Services.Twitch.Rewards.TwitchRandomArt;
 using MARS.Server.Services.Twitch.Rewards.TwitchRandomMeme;
 using MARS.Server.Services.Twitch.Rewards.TwitchScreenParticles;
 using MARS.Server.Services.Twitch.Rewards.TwitchWaifuRolls;
@@ -77,6 +80,12 @@ public static class StartupEstensions
         services.AddHostedService(sp => sp.GetRequiredService<Confetty>());
         services.AddHostedService(sp => sp.GetRequiredService<Fireworks>());
         services.AddHostedService(sp => sp.GetRequiredService<Emojis>());
+
+        services.AddSingleton<RandomArt>();
+        services.AddHostedService(sp => sp.GetRequiredService<RandomArt>());
+
+        services.AddSingleton<TwitchMessagesHubAwaker>();
+        services.AddHostedService(sp => sp.GetRequiredService<TwitchMessagesHubAwaker>());
 
         return services;
     }

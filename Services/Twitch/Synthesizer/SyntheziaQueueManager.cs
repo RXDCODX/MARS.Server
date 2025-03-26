@@ -10,6 +10,15 @@ public class SyntheziaQueueManager : BackgroundService
     private readonly IVoicer _voicer;
 
     private bool _isAppReady;
+    private string _lastMessage = string.Empty;
+    private bool _isRepeatMessageSad = false;
+    private MessageToSynthezid _repeatSynthezid = new()
+    {
+        CreationDateTime = DateTimeOffset.Now,
+        Guid = Guid.NewGuid(),
+        Message = "Не хочу повторять ваши пасты",
+        Name = "CatisaAi",
+    };
 
     public SyntheziaQueueManager(
         IVoicer voicer,
@@ -35,10 +44,10 @@ public class SyntheziaQueueManager : BackgroundService
                 var isDequeued = false;
                 do
                 {
-                    isDequeued = _queue.TryDequeue(out MessageToSynthezid? result);
+                    isDequeued = _queue.TryDequeue(out var result);
                     if (isDequeued && result is not null)
                     {
-                        _voicer.Sound(result);
+                        await _voicer.Sound(result);
                     }
 
                     await Task.Delay(500);
@@ -63,16 +72,39 @@ public class SyntheziaQueueManager : BackgroundService
         {
             await Task.Run(async () =>
             {
-                var message = new MessageToSynthezid
-                {
-                    CreationDateTime = DateTimeOffset.Now,
-                    Guid = new Guid(),
-                    Message = args.ChatMessage.Message.ReplaceLinks().ReplaceTooLongWords(),
-                    Name = args.ChatMessage.Username,
-                };
+                var currentMessage = args.ChatMessage.Message;
 
-                _queue.Enqueue(message);
-                await ProcessMessages();
+                MessageToSynthezid message;
+
+                if (_lastMessage.Equals(currentMessage))
+                {
+                    message = _repeatSynthezid;
+                    _isRepeatMessageSad = true;
+                }
+                else
+                {
+                    message = new MessageToSynthezid
+                    {
+                        CreationDateTime = DateTimeOffset.Now,
+                        Guid = new Guid(),
+                        Message = currentMessage
+                            .Trim()
+                            .CutTooLongText()
+                            .ReplaceLinks()
+                            .ReplaceTooLongWords(),
+                        Name = args.ChatMessage.Username,
+                    };
+
+                    _repeatSynthezid = message;
+                    _lastMessage = currentMessage;
+                    _isRepeatMessageSad = false;
+                }
+
+                if (!_isRepeatMessageSad)
+                {
+                    _queue.Enqueue(message);
+                    await ProcessMessages();
+                }
             });
         }
     }

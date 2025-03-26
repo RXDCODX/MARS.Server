@@ -53,7 +53,7 @@ public class PyroAlertsHelper(
                     Extension = extension,
                     Type = fileType,
                     FileName = fileInfo.FileUniqueId,
-                    LocalFilePath = filePath,
+                    FilePath = filePath,
                 },
                 MetaInfo = new MediaMetaInfo
                 {

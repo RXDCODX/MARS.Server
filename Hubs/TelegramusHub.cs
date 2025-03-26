@@ -5,12 +5,18 @@ namespace MARS.Server.Hubs;
 public class TelegramusHub(
     IDbContextFactory<AppDbContext> factory,
     IOptions<ShikimoriClientOptions> shikiOptions,
-    IOptions<TwitchConfiguration> twitchConfiguration
+    IOptions<TwitchConfiguration> twitchConfiguration,
+    ITwitchClient _twitchClient
 ) : Hub<ITelegramusHub>
 {
     private readonly TwitchConfiguration _twitchConfiguration =
         twitchConfiguration.Value ?? throw new NullReferenceException();
     private string ShikimoriSite => shikiOptions.Value.ShikimoriSite;
+
+    public Task TwitchMsg(string msg)
+    {
+        return _twitchClient.SendMessageToMainTwitchAsync(msg);
+    }
 
     public override async Task OnConnectedAsync()
     {

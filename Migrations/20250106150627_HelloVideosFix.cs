@@ -13,7 +13,7 @@ public partial class HelloVideosFix : Migration
     {
         migrationBuilder.DropColumn(name: "FileExtension", table: "HelloVideosUsers");
 
-        migrationBuilder.DropColumn(name: "LocalFilePath", table: "HelloVideosUsers");
+        migrationBuilder.DropColumn(name: "FilePath", table: "HelloVideosUsers");
 
         migrationBuilder.RenameColumn(
             name: "TextInfo_KeyWord",
@@ -85,7 +85,7 @@ public partial class HelloVideosFix : Migration
         );
 
         migrationBuilder.AddColumn<string>(
-            name: "LocalFilePath",
+            name: "FilePath",
             table: "HelloVideosUsers",
             type: "text",
             nullable: false,
