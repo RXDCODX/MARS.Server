@@ -60,7 +60,7 @@ public class HighlitedMessage
         );
     }
 
-    private Image GetImageByFilePath(string filePath)
+    private static Image GetImageByFilePath(string filePath)
     {
         if (!File.Exists(filePath))
         {

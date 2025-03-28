@@ -16,6 +16,7 @@ using MARS.Server.Services.Twitch.Synthesizer;
 using MARS.Server.Services.Twitch.Synthesizer.Enitity;
 using MARS.Server.Services.WaifuRoll;
 using MARS.Server.Services.WaifuRoll.helpers;
+using Microsoft.OpenApi;
 using NJsonSchema.Generation;
 
 namespace MARS.Server;
@@ -64,6 +65,11 @@ public class Program
                 //loggingBuilder.SetMinimumLevel(LogLevel.Trace);
                 loggingBuilder.AddConsole();
                 loggingBuilder.SetMinimumLevel(LogLevel.Trace);
+            }
+            else
+            {
+                loggingBuilder.AddConsole();
+                loggingBuilder.SetMinimumLevel(LogLevel.Information);
             }
 
             var telegramConfiguration = new TelegramConfiguration();
@@ -258,7 +264,6 @@ public class Program
         );
 
         builder.Services.AddControllers();
-        builder.Services.AddOpenApi();
 
         var app = builder.Build();
 
@@ -275,6 +280,7 @@ public class Program
 
         app.UseCors("CorsPolicy");
         app.MapHub<TelegramusHub>("/telegramus");
+        app.MapHub<SoundBarHub>("/soundbar");
 
         app.UseRouting();
 

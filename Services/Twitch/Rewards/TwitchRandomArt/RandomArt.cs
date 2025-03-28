@@ -2,6 +2,7 @@
 using BooruSharp.Search.Post;
 using MARS.Server.Services.PyroAlerts.Entitys;
 using MARS.Server.Services.Twitch.Management;
+using MARS.Server.Services.Twitch.SoundBarService;
 
 namespace MARS.Server.Services.Twitch.Rewards.TwitchRandomArt;
 

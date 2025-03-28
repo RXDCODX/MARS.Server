@@ -1,4 +1,5 @@
 ﻿using MARS.Server.Services.RandomMem.Entity;
+using MARS.Server.Services.Twitch.SoundBarService;
 
 namespace MARS.Server.Services.Twitch.Rewards.TwitchRandomMeme;
 
@@ -6,7 +7,8 @@ public class RandomMeme(
     IHubContext<TelegramusHub, ITelegramusHub> hubContext,
     IWebHostEnvironment webHostEnvironment,
     IDbContextFactory<AppDbContext> dbContextFactory,
-    IHostApplicationLifetime applicationLifetime
+    IHostApplicationLifetime applicationLifetime,
+    SoundBarFactory soundBarFactory
 )
 {
     private readonly CancellationToken _stoppingToken = applicationLifetime.ApplicationStopping;
@@ -29,6 +31,12 @@ public class RandomMeme(
 
                     if (media is not null)
                     {
+                        if (media.MetaInfo.Priority == MediaAlertPriority.High)
+                        {
+                            var soundBar = soundBarFactory.CreateSoundBar();
+                            await soundBar.Mute();
+                        }
+
                         await hubContext.Clients.All.Alert(
                             new MediaDto(media) { MediaInfo = media }
                         );
@@ -42,6 +50,12 @@ public class RandomMeme(
 
                     if (sound is not null)
                     {
+                        if (sound.MetaInfo.Priority == MediaAlertPriority.High)
+                        {
+                            var soundBar = soundBarFactory.CreateSoundBar();
+                            await soundBar.Mute();
+                        }
+
                         await hubContext.Clients.All.Alert(
                             new MediaDto(sound) { MediaInfo = sound }
                         );

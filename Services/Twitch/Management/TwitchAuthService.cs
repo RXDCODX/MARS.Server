@@ -1,4 +1,6 @@
-﻿namespace MARS.Server.Services.Twitch.Management;
+﻿using MARS.Server.Services.Twitch.Management.Entitys;
+
+namespace MARS.Server.Services.Twitch.Management;
 
 public class TwitchAuthService(
     ITwitchAPI api,
@@ -6,71 +8,40 @@ public class TwitchAuthService(
     TokenService tokenService,
     EventSubService eventSubService,
     TelegramTokenNotification telegramNotificationService
-) : IHostedService
+) : BackgroundService
 {
-    private Timer? _timer;
+    const int CheckIntervalSeconds = 30;
 
-    public async Task StartAsync(CancellationToken cancellationToken)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _timer = new Timer(TimeSpan.FromSeconds(30));
-        _timer.AutoReset = true;
-
-        _timer.Elapsed += async (_, __) =>
-        {
-            if (tokenService.Token != null)
-            {
-                if (DateTimeOffset.Now >= tokenService.Token.WhenExpires)
-                {
-                    var validated = await api.ValidateToken(logger, tokenService.Token.AccessToken);
-
-                    if (!validated)
-                    {
-                        var isRefreshed = await tokenService.RefreshTokenAsync(tokenService.Token);
-
-                        if (!isRefreshed)
-                        {
-                            await telegramNotificationService.NotifyStreamerAboutAuthAsync(api);
-                        }
-                        else
-                        {
-                            // Обновляем подписки EventSub после успешного обновления токена
-                            await eventSubService.UpdatePubSubAsync(tokenService.Token.AccessToken);
-                        }
-                    }
-                }
-            }
-        };
-
-        _timer.Start();
-
         try
         {
-            var tokenInfo = await tokenService.GetTokenAsync(cancellationToken);
+            // Initial token check
+            var tokenInfo = await tokenService.GetTokenAsync(stoppingToken);
 
             if (string.IsNullOrWhiteSpace(tokenInfo?.AccessToken))
             {
                 await telegramNotificationService.NotifyStreamerAboutAuthAsync(api);
             }
-            else
+            else if (!await ValidateAndRefreshToken(tokenInfo))
             {
-                var validated = await api.ValidateToken(logger, tokenInfo.AccessToken);
+                await telegramNotificationService.NotifyStreamerAboutAuthAsync(api);
+            }
 
-                if (validated)
+            // Main loop
+            while (!stoppingToken.IsCancellationRequested)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(CheckIntervalSeconds), stoppingToken);
+
+                if (tokenService.Token != null)
                 {
-                    tokenService.Token = tokenInfo;
-                    // Инициализируем подписки EventSub при старте
-                    await eventSubService.UpdatePubSubAsync(tokenInfo.AccessToken);
-                }
-                else
-                {
-                    var isRefreshed = await tokenService.RefreshTokenAsync(tokenInfo);
-                    if (isRefreshed)
-                    {
-                        // Обновляем подписки EventSub после успешного обновления токена
-                        await eventSubService.UpdatePubSubAsync(tokenInfo.AccessToken);
-                    }
+                    await ValidateAndRefreshToken(tokenService.Token);
                 }
             }
+        }
+        catch (OperationCanceledException)
+        {
+            // Service is stopping
         }
         catch (Exception e)
         {
@@ -78,10 +49,26 @@ public class TwitchAuthService(
         }
     }
 
-    public Task StopAsync(CancellationToken cancellationToken)
+    private async Task<bool> ValidateAndRefreshToken(TokenInfo token)
     {
-        _timer!.Stop();
-        _timer.Dispose();
-        return Task.CompletedTask;
+        if (DateTimeOffset.Now < token.WhenExpires)
+        {
+            return true;
+        }
+
+        var validated = await api.ValidateToken(logger, token.AccessToken);
+        if (validated)
+        {
+            return true;
+        }
+
+        var isRefreshed = await tokenService.RefreshTokenAsync(token);
+        if (isRefreshed)
+        {
+            await eventSubService.UpdatePubSubAsync(token.AccessToken);
+            return true;
+        }
+
+        return false;
     }
 }

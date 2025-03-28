@@ -1,4 +1,6 @@
-﻿using TwitchLib.Client.Events;
+﻿using MARS.Server.Services.PyroAlerts.Entitys;
+using MARS.Server.Services.Twitch.SoundBarService;
+using TwitchLib.Client.Events;
 
 namespace MARS.Server.Services.Twitch.HelloVideos;
 
@@ -8,19 +10,22 @@ public class HelloVideoWorker
     private readonly List<string> _users = new();
     private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
     private readonly ILogger<HelloVideoWorker> _logger;
-    private readonly IHubContext<TelegramusHub, ITelegramusHub> _hubContext1;
+    private readonly IHubContext<TelegramusHub, ITelegramusHub> _hubContext;
+    private readonly SoundBarFactory _soundBarFactory;
 
     public HelloVideoWorker(
         IDbContextFactory<AppDbContext> dbContextFactory,
         ILogger<HelloVideoWorker> logger,
         IHostApplicationLifetime hostApplicationLifetime,
         IHubContext<TelegramusHub, ITelegramusHub> hubContext,
-        ITwitchClient client
+        ITwitchClient client,
+        SoundBarFactory soundBarFactory
     )
     {
         _dbContextFactory = dbContextFactory;
         _logger = logger;
-        _hubContext1 = hubContext;
+        _hubContext = hubContext;
+        this._soundBarFactory = soundBarFactory;
         _token = hostApplicationLifetime.ApplicationStopping;
 
         hostApplicationLifetime.ApplicationStarted.Register(() =>
@@ -71,9 +76,18 @@ public class HelloVideoWorker
                                 args.ChatMessage.DisplayName,
                                 args.ChatMessage.Message
                             );
-                            var mediaDto = new MediaDto() { MediaInfo = notifUser.MediaInfo };
 
-                            await _hubContext1.Clients.All.Alert(mediaDto);
+                            notifUser.MediaInfo.MetaInfo.Priority = MediaAlertPriority.High;
+
+                            var mediaDto = new MediaDto { MediaInfo = notifUser.MediaInfo };
+
+                            if (mediaDto.MediaInfo.MetaInfo.Priority == MediaAlertPriority.High)
+                            {
+                                var soundBar = _soundBarFactory.CreateSoundBar();
+                                await soundBar.Mute();
+                            }
+
+                            await _hubContext.Clients.All.Alert(mediaDto);
                         }
 
                         _users.Add(args.ChatMessage.Id);
@@ -114,7 +128,13 @@ public class HelloVideoWorker
 
         var mediaDto = new MediaDto() { MediaInfo = user.MediaInfo };
 
-        await _hubContext1.Clients.All.Alert(mediaDto);
+        if (mediaDto.MediaInfo.MetaInfo.Priority == MediaAlertPriority.High)
+        {
+            var soundBar = _soundBarFactory.CreateSoundBar();
+            await soundBar.Mute();
+        }
+
+        await _hubContext.Clients.All.Alert(mediaDto);
         return user.Name;
     }
 }

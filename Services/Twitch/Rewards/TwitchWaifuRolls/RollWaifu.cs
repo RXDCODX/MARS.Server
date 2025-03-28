@@ -58,7 +58,7 @@ public class RollWaifu
                     .Hosts.Include(host1 => host1.HostCoolDown)
                     .AsNoTracking()
                     .FirstOrDefaultAsync(e => e.TwitchId == twEvent.UserId);
-                DateTimeOffset? time = hostRoolWaifu?.HostCoolDown?.Time;
+                var time = hostRoolWaifu?.HostCoolDown?.Time;
 
                 if (time != null)
                 {

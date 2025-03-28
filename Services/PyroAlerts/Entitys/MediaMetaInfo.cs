@@ -1,4 +1,4 @@
-namespace MARS.Server.Services.PyroAlerts.Entitys;
+﻿namespace MARS.Server.Services.PyroAlerts.Entitys;
 
 public class MediaMetaInfo
 {
@@ -7,4 +7,5 @@ public class MediaMetaInfo
     public required string DisplayName { get; set; }
     public bool IsLooped { get; set; } = false;
     public int Duration { get; set; } = 15; //длительность отображения на странице для изображения, по умолчанию 5 секунд
+    public MediaAlertPriority Priority { get; set; } = MediaAlertPriority.Normal;
 }

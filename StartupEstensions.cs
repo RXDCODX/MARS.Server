@@ -1,6 +1,4 @@
-﻿using System.Runtime.InteropServices;
-using MARS.Server.Services.Twitch;
-using MARS.Server.Services.Twitch.ClientMessages.AutoMessages;
+﻿using MARS.Server.Services.Twitch.ClientMessages.AutoMessages;
 using MARS.Server.Services.Twitch.ClientMessages.SignalRAlerts;
 using MARS.Server.Services.Twitch.ClientMessages.TwitchAutoHello;
 using MARS.Server.Services.Twitch.FumoFriday;
@@ -13,6 +11,7 @@ using MARS.Server.Services.Twitch.Rewards.TwitchRandomArt;
 using MARS.Server.Services.Twitch.Rewards.TwitchRandomMeme;
 using MARS.Server.Services.Twitch.Rewards.TwitchScreenParticles;
 using MARS.Server.Services.Twitch.Rewards.TwitchWaifuRolls;
+using MARS.Server.Services.Twitch.SoundBarService;
 using MARS.Server.Services.Twitch.StreamBotNotifications;
 using TwitchLib.Api;
 using TwitchLib.Api.Core.Enums;
@@ -86,6 +85,8 @@ public static class StartupEstensions
 
         services.AddSingleton<TwitchMessagesHubAwaker>();
         services.AddHostedService(sp => sp.GetRequiredService<TwitchMessagesHubAwaker>());
+
+        services.AddSingleton<SoundBarFactory>();
 
         return services;
     }

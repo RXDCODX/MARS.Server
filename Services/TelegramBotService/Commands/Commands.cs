@@ -40,7 +40,7 @@ public partial class Commands(
         {
             methods = commands
                 .GetMethods(BindingFlags.DeclaredOnly | BindingFlags.Instance | BindingFlags.Public)
-                .Where(method => method.GetCustomAttribute<AdminAtribbute>() == null)
+                .Where(method => method.GetCustomAttribute<AdminAttribute>() == null)
                 .ToArray();
         }
 
@@ -64,6 +64,7 @@ public partial class Commands(
         );
     }
 
+    [Ignore]
     private string[] GetCommandName(MethodInfo[] methods)
     {
         var commandNames = new string[methods.Length];

@@ -1,11 +1,13 @@
-﻿using Telegram.Bot.Types.Enums;
+﻿using MARS.Server.Services.Twitch.SoundBarService;
+using Telegram.Bot.Types.Enums;
 
 namespace MARS.Server.Services.PyroAlerts;
 
 public class PyroAlertsHandler(
     PyroAlertsHelper alertsHelper,
     IHubContext<TelegramusHub, ITelegramusHub> hubContext,
-    IDbContextFactory<AppDbContext> factory
+    IDbContextFactory<AppDbContext> factory,
+    SoundBarFactory soundBarFactory
 ) : ITelegramusService
 {
     public async Task HandAlert(ITelegramBotClient client, Update update)
@@ -31,6 +33,12 @@ public class PyroAlertsHandler(
 
                         if (mediaInfo != null)
                         {
+                            if (mediaInfo.MetaInfo.Priority == MediaAlertPriority.High)
+                            {
+                                var soundBar = soundBarFactory.CreateSoundBar();
+                                await soundBar.Mute();
+                            }
+
                             await hubContext.Clients.All.Alert(
                                 new MediaDto(mediaInfo) { MediaInfo = mediaInfo }
                             );
@@ -77,6 +85,13 @@ public class PyroAlertsHandler(
                                     mediaInfo.FileInfo.Type = MediaType.Voice;
                                     mediaInfo.TextInfo.Text = avatarPath;
                                     mediaInfo.MetaInfo.DisplayName = chat.Username ?? string.Empty;
+
+                                    if (mediaInfo.MetaInfo.Priority == MediaAlertPriority.High)
+                                    {
+                                        var soundBar = soundBarFactory.CreateSoundBar();
+                                        await soundBar.Mute();
+                                    }
+
                                     await hubContext.Clients.All.Alert(
                                         new MediaDto { MediaInfo = mediaInfo }
                                     );

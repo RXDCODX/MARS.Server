@@ -4,7 +4,7 @@ namespace MARS.Server.Services.TelegramBotService.Commands;
 
 public partial class Commands
 {
-    [AdminAtribbute]
+    [AdminAttribute]
     public async Task<Message> OnTTSVolumeCommandReceived(
         ITelegramBotClient botClient,
         Message message,

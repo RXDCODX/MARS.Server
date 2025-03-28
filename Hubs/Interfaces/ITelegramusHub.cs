@@ -9,6 +9,7 @@ namespace MARS.Server.Hubs.Interfaces;
 public interface ITelegramusHub
 {
     public Task Alert(MediaDto info);
+    public Task UnmuteSessions();
     public Task Alerts(MediaDto[] info);
     public Task UpdateWaifuPrizes(ICollection<PrizeType> prizes);
     public Task WaifuRoll(Waifu content, string? displayName, string? color = default);

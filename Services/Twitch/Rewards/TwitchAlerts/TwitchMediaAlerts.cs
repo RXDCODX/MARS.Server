@@ -1,4 +1,6 @@
 ﻿using System.Collections.Concurrent;
+using MARS.Server.Services.PyroAlerts.Entitys;
+using MARS.Server.Services.Twitch.SoundBarService;
 using TwitchLib.Client.Events;
 
 namespace MARS.Server.Services.Twitch.Rewards.TwitchAlerts;
@@ -7,6 +9,7 @@ public class TwitchMediaAlerts
 {
     private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
     private readonly IHubContext<TelegramusHub, ITelegramusHub> _hubContext;
+    private readonly SoundBarFactory _soundBarFactory;
 
     private readonly ConcurrentDictionary<string, OnMessageReceivedArgs> _normalMessages = new();
     private readonly ConcurrentDictionary<
@@ -18,11 +21,13 @@ public class TwitchMediaAlerts
         IHubContext<TelegramusHub, ITelegramusHub> hubContext,
         IDbContextFactory<AppDbContext> dbContextFactory,
         ITwitchClient client,
-        IHostApplicationLifetime applicationLifetime
+        IHostApplicationLifetime applicationLifetime,
+        SoundBarFactory soundBarFactory
     )
     {
         _hubContext = hubContext;
         _dbContextFactory = dbContextFactory;
+        _soundBarFactory = soundBarFactory;
 
         applicationLifetime.ApplicationStarted.Register(() =>
         {
@@ -113,6 +118,12 @@ public class TwitchMediaAlerts
                     argsCustomRewardArgs!.Notification.Payload.Event.UserName,
                     argsCustomRewardArgs.Notification.Payload.Event.UserInput
                 );
+
+                if (mediaClone.MetaInfo.Priority == MediaAlertPriority.High)
+                {
+                    var soundBar = _soundBarFactory.CreateSoundBar();
+                    await soundBar.Mute();
+                }
 
                 await _hubContext.Clients.All.Alert(new MediaDto { MediaInfo = mediaClone });
             }

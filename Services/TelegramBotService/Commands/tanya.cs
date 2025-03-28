@@ -4,7 +4,7 @@ namespace MARS.Server.Services.TelegramBotService.Commands;
 
 public partial class Commands
 {
-    [AdminAtribbute]
+    [AdminAttribute]
     public async Task<Message> OnTanyaCommandReceived(
         ITelegramBotClient botClient,
         Message message,
@@ -39,6 +39,7 @@ public partial class Commands
         );
     }
 
+    [Ignore]
     private ValueTask<DateTimeOffset[]> FindNearestWorkDay(
         DateTimeOffset lastWorkDay,
         DateTimeOffset today
