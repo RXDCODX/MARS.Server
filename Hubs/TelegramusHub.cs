@@ -1,11 +1,13 @@
-﻿namespace MARS.Server.Hubs;
+﻿using MARS.Server.Services.Twitch.SoundBarService;
+
+namespace MARS.Server.Hubs;
 
 public class TelegramusHub(
     IDbContextFactory<AppDbContext> factory,
     IOptions<ShikimoriClientOptions> shikiOptions,
     IOptions<TwitchConfiguration> twitchConfiguration,
     ITwitchClient twitchClient,
-    IHubContext<SoundBarHub, ISoundBarHub> soundBarContext
+    SoundBarFactory soundBarFactory
 ) : Hub<ITelegramusHub>
 {
     private readonly TwitchConfiguration _twitchConfiguration =
@@ -53,6 +55,6 @@ public class TelegramusHub(
 
     public Task UnmuteSessions()
     {
-        return soundBarContext.Clients.All.Unmute();
+        return soundBarFactory.CreateSoundBar().Unmute();
     }
 }

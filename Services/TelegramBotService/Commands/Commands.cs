@@ -20,7 +20,7 @@ public partial class Commands(
     public const string Template =
         "Не получилось получить комманды бота, сообщите об этой ошибке разработчику";
 
-    internal async Task<Message> OnUsageCommandReceived(
+    public async Task<Message> OnCommandsCommandReceived(
         ITelegramBotClient botClient,
         Message message,
         CancellationToken cancellationToken,
