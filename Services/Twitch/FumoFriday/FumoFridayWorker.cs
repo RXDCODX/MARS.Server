@@ -12,19 +12,22 @@ public class FumoFridayWorker
     private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
     private readonly ILogger<FumoFridayWorker> _logger;
     private readonly ITwitchClient _twitchClient;
+    private readonly ITwitchAPI _twitchApi;
 
     public FumoFridayWorker(
         IHubContext<TelegramusHub, ITelegramusHub> alertsHub,
         IDbContextFactory<AppDbContext> dbContextFactory,
         ILogger<FumoFridayWorker> logger,
         IHostApplicationLifetime hostApplicationLifetime,
-        ITwitchClient twitchClient
+        ITwitchClient twitchClient,
+        ITwitchAPI twitchApi
     )
     {
         _alertsHub = alertsHub;
         _dbContextFactory = dbContextFactory;
         _logger = logger;
         _twitchClient = twitchClient;
+        _twitchApi = twitchApi;
         _cancellationToken = hostApplicationLifetime.ApplicationStopping;
 
         hostApplicationLifetime.ApplicationStarted.Register(() =>
@@ -56,11 +59,14 @@ public class FumoFridayWorker
                         && now.DayOfWeek == DayOfWeek.Friday
                     )
                     {
-                        await _alertsHub.Clients.All.FumoFriday(
-                            name,
-                            e.ChatMessage.Color.ToString()
-                        );
+                        var color = string.IsNullOrWhiteSpace(e.ChatMessage.ColorHex)
+                            ? (await GetColor(e.ChatMessage.UserId))
+                            : e.ChatMessage.ColorHex;
+                        await _alertsHub.Clients.All.FumoFriday(name, color);
                         _users.Add(id);
+
+                        fumoUser.LastTime = now;
+                        await dbContext.SaveChangesAsync(_cancellationToken);
                     }
                 },
                 _cancellationToken
@@ -84,6 +90,7 @@ public class FumoFridayWorker
                 if (args.Notification.Payload.Event.Reward.Cost == 13)
                 {
                     var name = args.Notification.Payload.Event.UserName;
+                    var id = args.Notification.Payload.Event.UserId;
 
                     if (_users.Contains(name))
                     {
@@ -99,7 +106,6 @@ public class FumoFridayWorker
                         await using var dbContext = await _dbContextFactory.CreateDbContextAsync(
                             _cancellationToken
                         );
-                        var id = args.Notification.Payload.Event.UserId;
                         var now = DateTimeOffset.Now;
 
                         var isExists = await dbContext.FumoUsers.AnyAsync(
@@ -121,7 +127,8 @@ public class FumoFridayWorker
 
                             if (now.DayOfWeek == DayOfWeek.Friday)
                             {
-                                await _alertsHub.Clients.All.FumoFriday(name);
+                                var color = await GetColor(id);
+                                await _alertsHub.Clients.All.FumoFriday(name, color);
                                 _users.Add(id);
                             }
                         }
@@ -141,5 +148,18 @@ public class FumoFridayWorker
             },
             _cancellationToken
         );
+    }
+
+    private async Task<string?> GetColor(string id)
+    {
+        try
+        {
+            var aa = await _twitchApi.Helix.Chat.GetUserChatColorAsync([id]);
+            return aa.Data[0].Color;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
     }
 }

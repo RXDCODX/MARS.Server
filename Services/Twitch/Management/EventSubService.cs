@@ -20,7 +20,9 @@ public class EventSubService(
     FumoFridayWorker fumoFridayWorker
 )
 {
-    public readonly EventSubWebsocketClient WsClient = new();
+    private static readonly EventSubWebsocketClient WsPrivateClient = new();
+
+    public EventSubWebsocketClient WsClient => WsPrivateClient;
 
     private bool _firstActivation = true;
 
@@ -65,12 +67,24 @@ public class EventSubService(
 
             WsClient.WebsocketReconnected += async (sender, args) =>
             {
-                await ReconnectAsync(token);
+                if (token != null)
+                {
+                    await DeleteAllSubs(token);
+                    await ReconnectAsync(token);
+                }
+
                 await Task.Delay(1000);
             };
 
             WsClient.WebsocketDisconnected += async (sender, args) =>
             {
+                await WsClient.ConnectAsync();
+
+                await Task.Delay(5000);
+
+                if (token != null)
+                    await DeleteAllSubs(token);
+
                 while (!await WsClient.ReconnectAsync())
                 {
                     await Task.Delay(30 * 1000);
@@ -81,6 +95,21 @@ public class EventSubService(
 
             await WsClient.ConnectAsync();
         }
+    }
+
+    private async Task DeleteAllSubs(string token)
+    {
+        var response = await GetEventSubsAsync(token);
+
+        if (response != null)
+            foreach (var subscription in response.Subscriptions)
+            {
+                await api.Helix.EventSub.DeleteEventSubSubscriptionAsync(
+                    subscription.Id,
+                    api.Settings.ClientId,
+                    accessToken: token
+                );
+            }
     }
 
     public async Task ReconnectAsync(string? token)

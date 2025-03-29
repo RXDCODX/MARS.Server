@@ -36,15 +36,29 @@ public class TwitchMessagesHubAwaker : BackgroundService
 
     private async void ClientOnOnMessageCleared(object? sender, OnMessageClearedArgs args)
     {
-        await Task.Factory.StartNew(
-            () => _hubContext.Clients.All.DeleteMessage(args.TargetMessageId)
-        );
+        if (args.Channel.Equals(TwitchExstension.Channel, StringComparison.OrdinalIgnoreCase))
+        {
+            await Task.Factory.StartNew(
+                () => _hubContext.Clients.All.DeleteMessage(args.TargetMessageId)
+            );
+        }
     }
 
     private async void ClientOnOnMessageReceived(object? sender, OnMessageReceivedArgs args)
     {
-        await Task.Factory.StartNew(
-            () => _hubContext.Clients.All.NewMessage(args.ChatMessage.Id, args.ChatMessage)
-        );
+        if (
+            args.ChatMessage.Channel.Equals(
+                TwitchExstension.Channel,
+                StringComparison.OrdinalIgnoreCase
+            )
+        )
+        {
+            if (string.IsNullOrWhiteSpace(args.ChatMessage.CustomRewardId))
+            {
+                await Task.Factory.StartNew(
+                    () => _hubContext.Clients.All.NewMessage(args.ChatMessage.Id, args.ChatMessage)
+                );
+            }
+        }
     }
 }
