@@ -40,11 +40,20 @@ public class TokenService(
         {
             await using AppDbContext dbContext = await factory.CreateDbContextAsync();
 
-            RefreshResponse? result = await api.Auth.RefreshAuthTokenAsync(
+            var result = await api.Auth.RefreshAuthTokenAsync(
                 refreshToken.RefreshToken,
                 api.Settings.Secret,
                 api.Settings.ClientId
             );
+
+            var token = (await dbContext.TwitchToken.Where(e => true).ToListAsync())[0];
+
+            token.AccessToken = result.AccessToken;
+            token.ExpiresIn = TimeSpan.FromSeconds(result.ExpiresIn);
+            token.RefreshToken = result.RefreshToken;
+            token.WhenCreated = DateTimeOffset.Now.AddSeconds(-30);
+            dbContext.TwitchToken.Update(token);
+
             refreshToken.AccessToken = result.AccessToken;
             refreshToken.ExpiresIn = TimeSpan.FromSeconds(result.ExpiresIn);
             refreshToken.RefreshToken = result.RefreshToken;

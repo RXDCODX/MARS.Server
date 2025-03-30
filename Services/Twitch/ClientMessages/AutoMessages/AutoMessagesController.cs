@@ -3,7 +3,7 @@ using TwitchLib.Client.Events;
 
 namespace MARS.Server.Services.Twitch.ClientMessages.AutoMessages;
 
-public class AutoMessagesController
+public class AutoMessagesController : BackgroundService
 {
     private const string Channel = TwitchExstension.Channel;
     private readonly ITwitchClient _client;
@@ -98,5 +98,10 @@ public class AutoMessagesController
                 });
             }
         }
+    }
+
+    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        return Task.CompletedTask;
     }
 }

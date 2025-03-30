@@ -22,5 +22,5 @@ public interface ITelegramusHub
     public Task PostTwitchInfo(string clientId, string secret);
     public Task TwitchMsg(string msg);
     public Task MakeScreenParticles(TwitchScreenParticles particles);
-    public Task MakeScreenEmojisParticles(string userInput);
+    public Task MakeScreenEmojisParticles(ChatMessage message);
 }

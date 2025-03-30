@@ -3,6 +3,7 @@
 public class MediaMetaInfo
 {
     public int TwitchPointsCost { get; set; } = 0;
+    public Guid? TwitchGuid { get; set; } = Guid.Empty;
     public bool VIP { get; set; } = false;
     public required string DisplayName { get; set; }
     public bool IsLooped { get; set; } = false;

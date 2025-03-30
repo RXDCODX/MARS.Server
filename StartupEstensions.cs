@@ -1,4 +1,5 @@
-﻿using MARS.Server.Services.Twitch.ClientMessages.AutoMessages;
+﻿using MARS.Server.Services.Twitch.AutoInfoFetch;
+using MARS.Server.Services.Twitch.ClientMessages.AutoMessages;
 using MARS.Server.Services.Twitch.ClientMessages.SignalRAlerts;
 using MARS.Server.Services.Twitch.ClientMessages.TwitchAutoHello;
 using MARS.Server.Services.Twitch.FumoFriday;
@@ -53,12 +54,15 @@ public static class StartupEstensions
         services.AddSingleton<TwitchStreamStartupNotifications>();
         services.AddSingleton<TwitchMediaAlerts>();
         services.AddSingleton<AutoMessagesController>();
+        services.AddHostedService(sp => sp.GetRequiredService<AutoMessagesController>());
         services.AddSingleton<TwitchAuthService>();
         services.AddHostedService(sp => sp.GetRequiredService<TwitchAuthService>());
         services.AddSingleton<EventSubService>();
         services.AddSingleton<TelegramTokenNotification>();
         services.AddSingleton<TokenService>();
         services.AddSingleton<AutoHello>();
+        services.AddHostedService(sp => sp.GetRequiredService<AutoHello>());
+
         services.AddSingleton<AddNewWaifu>();
         services.AddHostedService(sp => sp.GetRequiredService<AddNewWaifu>());
         services.AddSingleton<MergeWaifu>();
@@ -87,6 +91,9 @@ public static class StartupEstensions
         services.AddHostedService(sp => sp.GetRequiredService<TwitchMessagesHubAwaker>());
 
         services.AddSingleton<SoundBarFactory>();
+
+        services.AddSingleton<AutoRewardInfoFetcher>();
+        services.AddHostedService(sp => sp.GetRequiredService<AutoRewardInfoFetcher>());
 
         return services;
     }

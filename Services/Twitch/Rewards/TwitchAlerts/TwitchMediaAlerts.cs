@@ -1,7 +1,6 @@
-﻿using System.Collections.Concurrent;
-using MARS.Server.Services.PyroAlerts.Entitys;
-using MARS.Server.Services.Twitch.SoundBarService;
+﻿using MARS.Server.Services.Twitch.SoundBarService;
 using TwitchLib.Client.Events;
+using TwitchLib.EventSub.Core.SubscriptionTypes.Channel;
 
 namespace MARS.Server.Services.Twitch.Rewards.TwitchAlerts;
 
@@ -10,12 +9,7 @@ public class TwitchMediaAlerts
     private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
     private readonly IHubContext<TelegramusHub, ITelegramusHub> _hubContext;
     private readonly SoundBarFactory _soundBarFactory;
-
-    private readonly ConcurrentDictionary<string, OnMessageReceivedArgs> _normalMessages = new();
-    private readonly ConcurrentDictionary<
-        string,
-        ChannelPointsCustomRewardRedemptionArgs?
-    > _pointsMessages = new();
+    private readonly CancellationToken _token;
 
     public TwitchMediaAlerts(
         IHubContext<TelegramusHub, ITelegramusHub> hubContext,
@@ -28,106 +22,12 @@ public class TwitchMediaAlerts
         _hubContext = hubContext;
         _dbContextFactory = dbContextFactory;
         _soundBarFactory = soundBarFactory;
+        _token = applicationLifetime.ApplicationStopping;
 
         applicationLifetime.ApplicationStarted.Register(() =>
         {
             client.OnMessageReceived += TwitchClientOnNormalMessage;
         });
-    }
-
-    private async Task GetAndSendAlert(string message)
-    {
-        ChannelPointsCustomRewardRedemptionArgs? argsCustomRewardArgs;
-
-        while (!_pointsMessages.TryGetValue(message, out argsCustomRewardArgs))
-        {
-            await Task.Delay(50);
-        }
-
-        var isAlertWithUserInput = !string.IsNullOrWhiteSpace(
-            argsCustomRewardArgs?.Notification.Payload.Event.UserInput
-        );
-
-        if (
-            isAlertWithUserInput
-                ? _normalMessages.ContainsKey(message) && _pointsMessages.ContainsKey(message)
-                : _pointsMessages.ContainsKey(message) && !_normalMessages.ContainsKey(message)
-        )
-        {
-            while (
-                !_pointsMessages.TryRemove(message, out ChannelPointsCustomRewardRedemptionArgs? b)
-            )
-            {
-                await Task.Delay(50);
-
-                if (!_pointsMessages.ContainsKey(message))
-                {
-                    break;
-                }
-            }
-
-            if (isAlertWithUserInput)
-            {
-                while (!_normalMessages.TryGetValue(message, out OnMessageReceivedArgs? _))
-                {
-                    await Task.Delay(50);
-
-                    if (!_normalMessages.ContainsKey(message))
-                    {
-                        break;
-                    }
-                }
-
-                while (!_normalMessages.TryRemove(message, out OnMessageReceivedArgs? b))
-                {
-                    await Task.Delay(50);
-
-                    if (!_normalMessages.ContainsKey(message))
-                    {
-                        break;
-                    }
-                }
-            }
-
-            await using AppDbContext dbContext = await _dbContextFactory.CreateDbContextAsync();
-            var mediaList = dbContext
-                .Alerts.AsNoTracking()
-                .AsEnumerable()
-                .Where(e =>
-                    e.MetaInfo.TwitchPointsCost
-                    == argsCustomRewardArgs!.Notification.Payload.Event.Reward.Cost
-                )
-                .ToList();
-
-            MediaInfo? mediaOld = null;
-
-            if (mediaList.Count == 1)
-            {
-                mediaOld = mediaList[0];
-            }
-            else if (mediaList.Count > 1)
-            {
-                var index = Random.Shared.Next(mediaList.Count);
-                mediaOld = mediaList[index];
-            }
-
-            if (mediaOld != null)
-            {
-                var mediaClone = mediaOld.CloneTo();
-                mediaClone.FixAlertText(
-                    argsCustomRewardArgs!.Notification.Payload.Event.UserName,
-                    argsCustomRewardArgs.Notification.Payload.Event.UserInput
-                );
-
-                if (mediaClone.MetaInfo.Priority == MediaAlertPriority.High)
-                {
-                    var soundBar = _soundBarFactory.CreateSoundBar();
-                    await soundBar.Mute();
-                }
-
-                await _hubContext.Clients.All.Alert(new MediaDto { MediaInfo = mediaClone });
-            }
-        }
     }
 
     internal async void TwitchClientOnNormalMessage(object? sender, OnMessageReceivedArgs args)
@@ -142,17 +42,60 @@ public class TwitchMediaAlerts
             )
         )
         {
-            await Task.Run(async () =>
-            {
-                var value = args.ChatMessage.Message.ToLower().Trim();
-
-                while (!_normalMessages.TryAdd(value, args))
+            await Task.Run(
+                async () =>
                 {
-                    await Task.Delay(50);
-                }
+                    var context = await _dbContextFactory.CreateDbContextAsync(_token);
 
-                await GetAndSendAlert(value);
-            });
+                    var alert = context.Alerts.FirstOrDefault(e =>
+                        e.MetaInfo.TwitchGuid.ToString() == args.ChatMessage.CustomRewardId
+                    );
+
+                    if (alert != default)
+                    {
+                        await SendAlert(args);
+                    }
+                },
+                _token
+            );
+        }
+    }
+
+    private async Task SendAlert(OnMessageReceivedArgs args)
+    {
+        var message = args.ChatMessage;
+
+        await using AppDbContext dbContext = await _dbContextFactory.CreateDbContextAsync(_token);
+        var mediaList = dbContext
+            .Alerts.AsNoTracking()
+            .AsEnumerable()
+            .Where(e => e.MetaInfo.TwitchGuid == Guid.Parse(message.CustomRewardId))
+            .ToList();
+
+        MediaInfo? mediaOld = null;
+
+        if (mediaList.Count == 1)
+        {
+            mediaOld = mediaList[0];
+        }
+        else if (mediaList.Count > 1)
+        {
+            var index = Random.Shared.Next(mediaList.Count);
+            mediaOld = mediaList[index];
+        }
+
+        if (mediaOld != null)
+        {
+            var mediaClone = mediaOld.CloneTo();
+            mediaClone.FixAlertText(message.DisplayName, message.Message);
+
+            if (mediaClone.MetaInfo.Priority == MediaAlertPriority.High)
+            {
+                var soundBar = _soundBarFactory.CreateSoundBar();
+                await soundBar.Mute();
+            }
+
+            await _hubContext.Clients.All.Alert(new MediaDto { MediaInfo = mediaClone });
         }
     }
 
@@ -168,14 +111,50 @@ public class TwitchMediaAlerts
             )
         )
         {
-            var value = args.Notification.Payload.Event.UserInput.ToLower().Trim();
+            var value = args.Notification.Payload.Event;
 
-            while (!_pointsMessages.TryAdd(value, args))
+            if (string.IsNullOrWhiteSpace(value.UserInput))
             {
-                await Task.Delay(50);
+                await SendAlert(value);
+            }
+        }
+    }
+
+    private async Task SendAlert(ChannelPointsCustomRewardRedemption value)
+    {
+        var message = value;
+
+        await using AppDbContext dbContext = await _dbContextFactory.CreateDbContextAsync(_token);
+        var mediaList = dbContext
+            .Alerts.AsNoTracking()
+            .AsEnumerable()
+            .Where(e => e.MetaInfo.TwitchGuid == Guid.Parse(message.Reward.Id))
+            .ToList();
+
+        MediaInfo? mediaOld = null;
+
+        if (mediaList.Count == 1)
+        {
+            mediaOld = mediaList[0];
+        }
+        else if (mediaList.Count > 1)
+        {
+            var index = Random.Shared.Next(mediaList.Count);
+            mediaOld = mediaList[index];
+        }
+
+        if (mediaOld != null)
+        {
+            var mediaClone = mediaOld.CloneTo();
+            mediaClone.FixAlertText(message.UserName, message.UserInput);
+
+            if (mediaClone.MetaInfo.Priority == MediaAlertPriority.High)
+            {
+                var soundBar = _soundBarFactory.CreateSoundBar();
+                await soundBar.Mute();
             }
 
-            await GetAndSendAlert(value);
+            await _hubContext.Clients.All.Alert(new MediaDto { MediaInfo = mediaClone });
         }
     }
 }

@@ -26,9 +26,6 @@
 
     <ItemGroup>
         <PackageReference Include="BooruSharp" Version="3.6.0" />
-        <PackageReference Include="Hangfire" Version="1.8.18" />
-        <PackageReference Include="Hangfire.Dashboard.Management" Version="1.7.9" />
-        <PackageReference Include="Hangfire.PostgreSql" Version="1.20.10" />
         <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="9.0.3" />
         <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.1" />
         <PackageReference Include="Microsoft.AspNetCore.SpaProxy">

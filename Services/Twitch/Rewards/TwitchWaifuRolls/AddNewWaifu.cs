@@ -62,99 +62,102 @@ public class AddNewWaifu : BackgroundService
         {
             if (twEvent.Reward.Cost == 5)
             {
-                var id = await GetShikimoriCharacterIdFromLink(twEvent.UserInput);
-
-                if (string.IsNullOrWhiteSpace(id))
+                await Task.Factory.StartNew(async () =>
                 {
-                    const string template =
-                        "@{user}, не удалось добавить твоего супруга, кривая ссылка! :-(";
-                    var message = AnswersForTwitchRewards.ReplaceKeywordsInAnswer(
+                    var id = await GetShikimoriCharacterIdFromLink(twEvent.UserInput);
+
+                    if (string.IsNullOrWhiteSpace(id))
+                    {
+                        const string template =
+                            "@{user}, не удалось добавить твоего супруга, кривая ссылка! :-(";
+                        var message = AnswersForTwitchRewards.ReplaceKeywordsInAnswer(
+                            twEvent.UserName,
+                            template
+                        );
+
+                        await _client.SendMessageToMainTwitchAsync(message, _logger);
+                        return;
+                    }
+
+                    ShikiCharacter? character = await _shikimoriService.GetShikiCharacterById(id);
+
+                    if (character is null)
+                    {
+                        const string template =
+                            "@{user}, не удалось добавить твоего супруга, проблема с ссылкой и получением с неё id персонажа! :-(";
+                        var message = AnswersForTwitchRewards.ReplaceKeywordsInAnswer(
+                            twEvent.UserName,
+                            template
+                        );
+
+                        await _client.SendMessageToMainTwitchAsync(message, _logger);
+                        return;
+                    }
+
+                    var (waifu, isException) = await _waifuRollService.AddNewWaifu(character);
+
+                    if (waifu is null && !isException)
+                    {
+                        const string template = "@{user}, такой персонаж уже есть! :-(";
+                        var message = AnswersForTwitchRewards.ReplaceKeywordsInAnswer(
+                            twEvent.UserName,
+                            template
+                        );
+
+                        await _client.SendMessageToMainTwitchAsync(message, _logger);
+                        return;
+                    }
+
+                    if (waifu != null)
+                    {
+                        var message = AnswersForTwitchRewards.ReplaceKeywordsInAnswer(
+                            twEvent.UserName,
+                            AnswersForTwitchRewards.Answers[Command.AddNewWaifu],
+                            null,
+                            null,
+                            waifu
+                        );
+
+                        waifu.IsAdded = true;
+
+                        await _hubContext.Clients.All.AddNewWaifu(waifu, twEvent.UserName);
+                        await _client.SendMessageToMainTwitchAsync(message, _logger);
+
+                        var chance = Random.Shared.Next(0, 101);
+                        if (chance < 3)
+                        {
+                            if (_tokenService.Token != null)
+                            {
+                                message =
+                                    $"@{twEvent.UserName}! Поздравляю, ты получил VIP -статус за добавление персонажей!";
+                                await _api.Helix.Channels.AddChannelVIPAsync(
+                                    TwitchExstension.ChannelId,
+                                    args.Notification.Payload.Event.UserId,
+                                    _tokenService.Token.AccessToken
+                                );
+                                await _api.Helix.Chat.SendChatAnnouncementAsync(
+                                    TwitchExstension.ChannelId,
+                                    TwitchExstension.ChannelId,
+                                    message,
+                                    AnnouncementColors.Primary,
+                                    _tokenService.Token.AccessToken
+                                );
+                            }
+                        }
+
+                        return;
+                    }
+
+                    const string template3 = "@{user}, не удалось добавить твоего супруга! :-(";
+                    var resultMessage = AnswersForTwitchRewards.ReplaceKeywordsInAnswer(
                         twEvent.UserName,
-                        template
-                    );
-
-                    await _client.SendMessageToMainTwitchAsync(message, _logger);
-                    return;
-                }
-
-                ShikiCharacter? character = await _shikimoriService.GetShikiCharacterById(id);
-
-                if (character is null)
-                {
-                    const string template =
-                        "@{user}, не удалось добавить твоего супруга, проблема с ссылкой и получением с неё id персонажа! :-(";
-                    var message = AnswersForTwitchRewards.ReplaceKeywordsInAnswer(
-                        twEvent.UserName,
-                        template
-                    );
-
-                    await _client.SendMessageToMainTwitchAsync(message, _logger);
-                    return;
-                }
-
-                (Waifu? waifu, var isException) = await _waifuRollService.AddNewWaifu(character);
-
-                if (waifu is null && !isException)
-                {
-                    const string template = "@{user}, такой персонаж уже есть! :-(";
-                    var message = AnswersForTwitchRewards.ReplaceKeywordsInAnswer(
-                        twEvent.UserName,
-                        template
-                    );
-
-                    await _client.SendMessageToMainTwitchAsync(message, _logger);
-                    return;
-                }
-
-                if (waifu != null)
-                {
-                    var message = AnswersForTwitchRewards.ReplaceKeywordsInAnswer(
-                        twEvent.UserName,
-                        AnswersForTwitchRewards.Answers[Command.AddNewWaifu],
+                        template3,
                         null,
                         null,
                         waifu
                     );
-
-                    waifu.IsAdded = true;
-
-                    await _hubContext.Clients.All.AddNewWaifu(waifu, twEvent.UserName);
-                    await _client.SendMessageToMainTwitchAsync(message, _logger);
-
-                    var chance = Random.Shared.Next(0, 101);
-                    if (chance < 3)
-                    {
-                        if (_tokenService.Token != null)
-                        {
-                            message =
-                                $"@{twEvent.UserName}! Поздравляю, ты получил VIP -статус за добавление персонажей!";
-                            await _api.Helix.Channels.AddChannelVIPAsync(
-                                TwitchExstension.ChannelId,
-                                args.Notification.Payload.Event.UserId,
-                                _tokenService.Token.AccessToken
-                            );
-                            await _api.Helix.Chat.SendChatAnnouncementAsync(
-                                TwitchExstension.ChannelId,
-                                TwitchExstension.ChannelId,
-                                message,
-                                AnnouncementColors.Primary,
-                                _tokenService.Token.AccessToken
-                            );
-                        }
-                    }
-
-                    return;
-                }
-
-                const string template3 = "@{user}, не удалось добавить твоего супруга! :-(";
-                var resultMessage = AnswersForTwitchRewards.ReplaceKeywordsInAnswer(
-                    twEvent.UserName,
-                    template3,
-                    null,
-                    null,
-                    waifu
-                );
-                await _client.SendMessageToMainTwitchAsync(resultMessage, _logger);
+                    await _client.SendMessageToMainTwitchAsync(resultMessage, _logger);
+                });
             }
         }
     }

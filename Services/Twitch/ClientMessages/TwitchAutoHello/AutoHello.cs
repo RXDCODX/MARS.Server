@@ -4,7 +4,7 @@ using TwitchLib.Client.Events;
 
 namespace MARS.Server.Services.Twitch.ClientMessages.TwitchAutoHello;
 
-public class AutoHello
+public class AutoHello : BackgroundService
 {
     private readonly ILogger<AddNewWaifu> _logger;
     private readonly ITwitchClient _client;
@@ -49,5 +49,10 @@ public class AutoHello
                 }
             });
         }
+    }
+
+    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        return Task.CompletedTask;
     }
 }

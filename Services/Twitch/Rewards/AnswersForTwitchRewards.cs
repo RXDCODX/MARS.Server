@@ -6,7 +6,7 @@ public class AnswersForTwitchRewards
 {
     public static readonly Dictionary<Command, string> Answers = new()
     {
-        { Command.AddNewWaifu, "@{user}, твой супруг {waifuName} добавлен(-а)!" },
+        { Command.AddNewWaifu, "@{user}, новый супруг {waifuName} добавлен(-а)!" },
         { Command.GetRandomAnime, "@{user}, твое рандомное аниме - {animeTitle}" },
         { Command.GetRandomManga, "@{user}, твоя рандомная манга - {mangaTitle}" },
         { Command.MergeWaifu, "Произошла свадьба между @{user} и {waifuName}! Совет да любовь!" },

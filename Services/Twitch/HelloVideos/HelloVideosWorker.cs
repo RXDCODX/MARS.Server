@@ -50,7 +50,7 @@ public class HelloVideoWorker
                     await using var dbContext = await _dbContextFactory.CreateDbContextAsync(
                         _token
                     );
-                    var user = await dbContext.FumoUsers.FindAsync(args.ChatMessage.Id, _token);
+                    var user = await dbContext.FumoUsers.FindAsync(args.ChatMessage.UserId, _token);
                     var notifUser = await dbContext
                         .HelloVideosUsers.Include(e => e.MediaInfo)
                         .FirstOrDefaultAsync(e => e.TwitchId == args.ChatMessage.UserId, _token);

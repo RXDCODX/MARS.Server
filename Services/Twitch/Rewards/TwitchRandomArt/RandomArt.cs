@@ -1,8 +1,6 @@
 ﻿using BooruSharp.Booru;
 using BooruSharp.Search.Post;
-using MARS.Server.Services.PyroAlerts.Entitys;
 using MARS.Server.Services.Twitch.Management;
-using MARS.Server.Services.Twitch.SoundBarService;
 
 namespace MARS.Server.Services.Twitch.Rewards.TwitchRandomArt;
 
@@ -47,86 +45,92 @@ public class RandomArt : BackgroundService
             )
         )
         {
-            if (twEvent.UserInput.Contains("rating", StringComparison.OrdinalIgnoreCase))
+            await Task.Factory.StartNew(async () =>
             {
-                await _client.SendMessageToMainTwitchAsync(
-                    @$"@{twEvent.UserName}, ты охуел?",
-                    _logger
-                );
-                return;
-            }
-
-            var result = new List<SearchResult>();
-
-            if (int.TryParse(twEvent.UserInput, out var aa))
-            {
-                do
+                if (twEvent.UserInput.Contains("rating", StringComparison.OrdinalIgnoreCase))
                 {
-                    var answer = await _site.GetRandomPostsAsync(10, "rating:general");
-
-                    var posts = answer.Where(e =>
-                        e.Rating is Rating.General or Rating.Questionable
+                    await _client.SendMessageToMainTwitchAsync(
+                        @$"@{twEvent.UserName}, ты охуел?",
+                        _logger
                     );
+                    return;
+                }
 
-                    result.AddRange(posts);
-                } while (result.Count == 0);
-            }
-            else
-            {
-                do
+                var result = new List<SearchResult>();
+
+                if (int.TryParse(twEvent.UserInput, out var aa))
                 {
-                    var tagParams = (twEvent.UserInput + " rating:general").Split(' ');
-                    var answer = await _site.GetRandomPostsAsync(10, string.Join(' ', tagParams));
-
-                    if (answer.Length == 0)
+                    do
                     {
-                        await _client.SendMessageToMainTwitchAsync(
-                            @$"@{twEvent.UserName}, плохой запрос, нету артов(",
-                            _logger
+                        var answer = await _site.GetRandomPostsAsync(10, "rating:general");
+
+                        var posts = answer.Where(e =>
+                            e.Rating is Rating.General or Rating.Questionable
                         );
-                        return;
-                    }
 
-                    var posts = answer.Where(e => e.Rating is Rating.General or Rating.Safe);
-
-                    result.AddRange(posts);
-                } while (result.Count == 0);
-            }
-
-            var mediaDtos = new MediaDto[result.Count];
-            var index = 0;
-            result = result.DistinctBy(e => e.ID).ToList();
-
-            foreach (var sr in result)
-            {
-                var fileUrl = sr.FileUrl.AbsoluteUri;
-                var extension = Path.GetExtension(fileUrl);
-                var fileName = Path.GetFileName(fileUrl);
-                var mediaType = await extension.GetFileMediaTypeAsync();
-
-                var mediaDto = new MediaDto()
+                        result.AddRange(posts);
+                    } while (result.Count == 0);
+                }
+                else
                 {
-                    MediaInfo = new MediaInfo()
+                    do
                     {
-                        FileInfo = new MediaFileInfo()
+                        var tagParams = (twEvent.UserInput + " rating:general").Split(' ');
+                        var answer = await _site.GetRandomPostsAsync(
+                            10,
+                            string.Join(' ', tagParams)
+                        );
+
+                        if (answer.Length == 0)
                         {
-                            Extension = extension,
-                            FileName = fileName,
-                            FilePath = fileUrl,
-                            Type = mediaType,
-                            IsLocalFile = false,
+                            await _client.SendMessageToMainTwitchAsync(
+                                @$"@{twEvent.UserName}, плохой запрос, нету артов(",
+                                _logger
+                            );
+                            return;
+                        }
+
+                        var posts = answer.Where(e => e.Rating is Rating.General or Rating.Safe);
+
+                        result.AddRange(posts);
+                    } while (result.Count == 0);
+                }
+
+                var mediaDtos = new MediaDto[result.Count];
+                var index = 0;
+                result = result.DistinctBy(e => e.ID).ToList();
+
+                foreach (var sr in result)
+                {
+                    var fileUrl = sr.FileUrl.AbsoluteUri;
+                    var extension = Path.GetExtension(fileUrl);
+                    var fileName = Path.GetFileName(fileUrl);
+                    var mediaType = await extension.GetFileMediaTypeAsync();
+
+                    var mediaDto = new MediaDto()
+                    {
+                        MediaInfo = new MediaInfo()
+                        {
+                            FileInfo = new MediaFileInfo()
+                            {
+                                Extension = extension,
+                                FileName = fileName,
+                                FilePath = fileUrl,
+                                Type = mediaType,
+                                IsLocalFile = false,
+                            },
+                            MetaInfo = new MediaMetaInfo() { DisplayName = twEvent.UserName },
+                            PositionInfo = new MediaPositionInfo(),
+                            StylesInfo = new MediaStylesInfo(),
+                            TextInfo = new MediaTextInfo(),
                         },
-                        MetaInfo = new MediaMetaInfo() { DisplayName = twEvent.UserName },
-                        PositionInfo = new MediaPositionInfo(),
-                        StylesInfo = new MediaStylesInfo(),
-                        TextInfo = new MediaTextInfo(),
-                    },
-                };
+                    };
 
-                mediaDtos[index++] = mediaDto;
-            }
+                    mediaDtos[index++] = mediaDto;
+                }
 
-            await _hub.Clients.All.Alerts(mediaDtos);
+                await _hub.Clients.All.Alerts(mediaDtos);
+            });
         }
     }
 

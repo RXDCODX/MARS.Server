@@ -2,7 +2,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using BooruSharp.Booru;
-using Hangfire.Server;
 using MARS.Server.CustomLoggers.TelegramLogger;
 using MARS.Server.Services.Honkai;
 using MARS.Server.Services.PyroAlerts;
@@ -16,7 +15,6 @@ using MARS.Server.Services.Twitch.Synthesizer;
 using MARS.Server.Services.Twitch.Synthesizer.Enitity;
 using MARS.Server.Services.WaifuRoll;
 using MARS.Server.Services.WaifuRoll.helpers;
-using Microsoft.OpenApi;
 using NJsonSchema.Generation;
 
 namespace MARS.Server;
