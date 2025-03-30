@@ -1,5 +1,4 @@
-﻿using MARS.Server.Services.Twitch.Management;
-using TwitchLib.Client.Events;
+﻿using TwitchLib.Client.Events;
 
 namespace MARS.Server.Services.Twitch.Rewards.TwitchScreenParticles;
 
@@ -11,7 +10,7 @@ public class Emojis : BackgroundService
     private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
     private readonly CancellationToken _token;
 
-    private MediaInfo? _alert;
+    private Guid Guid = System.Guid.Parse("22db3d35-1b76-4674-beb7-cc7546356a84");
 
     public Emojis(
         ILogger<Confetty> logger,
@@ -41,21 +40,8 @@ public class Emojis : BackgroundService
                 {
                     var message = e.ChatMessage;
 
-                    if (_alert is null)
-                    {
-                        await using var dbContext = await _dbContextFactory.CreateDbContextAsync(
-                            _token
-                        );
-
-                        var alert = dbContext.Alerts.FirstOrDefault(e =>
-                            e.MetaInfo.TwitchPointsCost == 1702
-                        );
-
-                        _alert = alert ?? throw new NullReferenceException();
-                    }
-
                     if (
-                        message.CustomRewardId == _alert.MetaInfo.TwitchGuid.ToString()
+                        message.CustomRewardId == Guid.ToString()
                         && message.Channel.Equals(
                             TwitchExstension.Channel,
                             StringComparison.OrdinalIgnoreCase
