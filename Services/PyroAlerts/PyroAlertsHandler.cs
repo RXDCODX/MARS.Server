@@ -85,6 +85,7 @@ public class PyroAlertsHandler(
                                     mediaInfo.FileInfo.Type = MediaType.Voice;
                                     mediaInfo.TextInfo.Text = avatarPath;
                                     mediaInfo.MetaInfo.DisplayName = chat.Username ?? string.Empty;
+                                    mediaInfo.MetaInfo.Priority = MediaAlertPriority.High;
 
                                     if (mediaInfo.MetaInfo.Priority == MediaAlertPriority.High)
                                     {
