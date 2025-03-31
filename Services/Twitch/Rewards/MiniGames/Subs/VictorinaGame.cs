@@ -2,20 +2,10 @@
 
 namespace MARS.Server.Services.Twitch.Rewards.MiniGames.Subs;
 
-public class VictorinaGame
+public class VictorinaGame(ILogger<TwitchTrivia> logger, ITwitchClient client, TwitchTrivia trivia)
 {
-    private readonly ITwitchClient _client;
     private readonly List<VictorinaLetter> _listLetters = new();
-    private readonly ILogger<TwitchTrivia> _logger;
-    private readonly TwitchTrivia _trivia;
     public string Answer = "";
-
-    public VictorinaGame(ILogger<TwitchTrivia> logger, ITwitchClient client, TwitchTrivia trivia)
-    {
-        _logger = logger;
-        _client = client;
-        _trivia = trivia;
-    }
 
     public bool Active { get; set; } = true;
     public bool AllLettersShowed { get; set; }
@@ -23,7 +13,7 @@ public class VictorinaGame
 
     private async Task StartQuestion()
     {
-        var numberQuestion = Random.Shared.Next(0, _trivia.CountQuestions);
+        var numberQuestion = Random.Shared.Next(0, trivia.CountQuestions);
         var strQuestion = await GetQuestion(numberQuestion);
         var arrQuestion = strQuestion.Split('|');
         Answer = arrQuestion[1];
@@ -33,15 +23,15 @@ public class VictorinaGame
             _listLetters.Add(new VictorinaLetter { Letter = t, Showed = false });
         }
 
-        await _client.SendMessageToMainTwitchAsync(
+        await client.SendMessageToMainTwitchAsync(
             $"({Answer.Length} букв): {arrQuestion[0]}",
-            _logger
+            logger
         );
     }
 
     private async Task<string> GetQuestion(int numberQuestion)
     {
-        var lines = await File.ReadAllLinesAsync(_trivia.FilenameTrivia);
+        var lines = await File.ReadAllLinesAsync(trivia.FilenameTrivia);
 
         do
         {
@@ -64,21 +54,21 @@ public class VictorinaGame
 
             while (!AllLettersShowed && !SkipQuestion)
             {
-                await Task.Delay(_trivia.TimeoutBetweenHints * 1000, _trivia.TokenSource!.Token);
+                await Task.Delay(trivia.TimeoutBetweenHints * 1000, trivia.TokenSource!.Token);
 
                 if (!Active)
                 {
                     return;
                 }
 
-                await _trivia.SemaphoreSlim.WaitAsync(_trivia.TokenSource.Token);
+                await trivia.SemaphoreSlim.WaitAsync(trivia.TokenSource.Token);
                 if (SkipQuestion)
                 {
                     SkipQuestion = false;
                     break;
                 }
 
-                _trivia.SemaphoreSlim.Release();
+                trivia.SemaphoreSlim.Release();
 
                 var founded = false;
                 while (!founded)
@@ -91,14 +81,14 @@ public class VictorinaGame
                     }
                 }
 
-                await _trivia.SemaphoreSlim.WaitAsync(_trivia.TokenSource.Token);
+                await trivia.SemaphoreSlim.WaitAsync(trivia.TokenSource.Token);
                 if (SkipQuestion)
                 {
                     SkipQuestion = false;
                     break;
                 }
 
-                _trivia.SemaphoreSlim.Release();
+                trivia.SemaphoreSlim.Release();
 
                 //вывод подсказки
                 var strHint = new StringBuilder("");
@@ -117,7 +107,7 @@ public class VictorinaGame
                 }
 
                 //если отгадали otgadali = true; break
-                await _trivia.SemaphoreSlim.WaitAsync(_trivia.TokenSource.Token);
+                await trivia.SemaphoreSlim.WaitAsync(trivia.TokenSource.Token);
 
                 if (SkipQuestion)
                 {
@@ -137,17 +127,17 @@ public class VictorinaGame
                 if (allLettersAreValid)
                 {
                     AllLettersShowed = true;
-                    await _client.SendMessageToMainTwitchAsync(
+                    await client.SendMessageToMainTwitchAsync(
                         $"Никто не отгадал! Ответ: {strHint}",
-                        _logger
+                        logger
                     );
                 }
                 else
                 {
-                    await _client.SendMessageToMainTwitchAsync($"Подсказка: {strHint}", _logger);
+                    await client.SendMessageToMainTwitchAsync($"Подсказка: {strHint}", logger);
                 }
 
-                _trivia.SemaphoreSlim.Release();
+                trivia.SemaphoreSlim.Release();
             }
 
             Active = false;
@@ -155,12 +145,12 @@ public class VictorinaGame
         }
         catch (Exception ex)
         {
-            _logger.LogException(ex);
+            logger.LogException(ex);
         }
         finally
         {
             Active = false;
-            _trivia.IsGameActive = false;
+            trivia.IsGameActive = false;
         }
     }
 }

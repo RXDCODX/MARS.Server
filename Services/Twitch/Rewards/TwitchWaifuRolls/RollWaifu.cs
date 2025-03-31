@@ -4,29 +4,14 @@ using TwitchLib.EventSub.Core.SubscriptionTypes.Channel;
 
 namespace MARS.Server.Services.Twitch.Rewards.TwitchWaifuRolls;
 
-public class RollWaifu
+public class RollWaifu(
+    ILogger<RollWaifu> logger,
+    ITwitchClient client,
+    WaifuRollService waifuRollService,
+    IHubContext<TelegramusHub, ITelegramusHub> hubContext,
+    IDbContextFactory<AppDbContext> factory
+)
 {
-    private readonly ITwitchClient _client;
-    private readonly IDbContextFactory<AppDbContext> _factory;
-    private readonly IHubContext<TelegramusHub, ITelegramusHub> _hubContext;
-    private readonly ILogger<RollWaifu> _logger;
-    private readonly WaifuRollService _waifuRollService;
-
-    public RollWaifu(
-        ILogger<RollWaifu> logger,
-        ITwitchClient client,
-        WaifuRollService waifuRollService,
-        IHubContext<TelegramusHub, ITelegramusHub> hubContext,
-        IDbContextFactory<AppDbContext> factory
-    )
-    {
-        _logger = logger;
-        _client = client;
-        _waifuRollService = waifuRollService;
-        _hubContext = hubContext;
-        _factory = factory;
-    }
-
     public async Task RollWaifuTwitchEvent(
         object sender,
         ChannelPointsCustomRewardRedemptionArgs args
@@ -42,18 +27,18 @@ public class RollWaifu
         {
             if (twEvent.Reward.Cost == 4)
             {
-                Waifu? waifu = await _waifuRollService.RollTheWaifu(
+                Waifu? waifu = await waifuRollService.RollTheWaifu(
                     twEvent.UserId,
                     twEvent.UserName
                 );
 
                 if (waifu is not null)
                 {
-                    await _hubContext.Clients.All.WaifuRoll(waifu, twEvent.UserName);
+                    await hubContext.Clients.All.WaifuRoll(waifu, twEvent.UserName);
                     return;
                 }
 
-                await using AppDbContext dbContext = await _factory.CreateDbContextAsync();
+                await using AppDbContext dbContext = await factory.CreateDbContextAsync();
                 Host? hostRoolWaifu = await dbContext
                     .Hosts.Include(host1 => host1.HostCoolDown)
                     .AsNoTracking()
@@ -75,7 +60,7 @@ public class RollWaifu
                         null,
                         waifu
                     );
-                    await _client.SendMessageToMainTwitchAsync(message, _logger);
+                    await client.SendMessageToMainTwitchAsync(message, logger);
                 }
             }
         }

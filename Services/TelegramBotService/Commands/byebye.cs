@@ -11,9 +11,9 @@ public partial class Commands
         var userName = message.Chat.Id;
         await using var dbContext = await factory.CreateDbContextAsync(cancellationToken);
 
-        var dbUser = await dbContext.TelegramUsers.FindAsync(userName);
+        var dbUser = await dbContext.TelegramUsers.FindAsync(userName, cancellationToken);
 
-        if (dbUser == null || !dbUser.ByeByeServiceNotification)
+        if (dbUser is not { ByeByeServiceNotification: true })
         {
             if (dbUser == null)
             {

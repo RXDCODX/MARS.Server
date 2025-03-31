@@ -45,7 +45,7 @@ public class RandomMemeWorker(
                     var memeTypes = await dbContext
                         .RandomMemeType.AsNoTracking()
                         .OrderByDescending(e => e.FolderPath.Length)
-                        .ToArrayAsync(cancellationToken: stoppingToken);
+                        .ToArrayAsync(stoppingToken);
 
                     foreach (var memeOrder in orders.Where(e => e.MemeTypeId is null))
                     {

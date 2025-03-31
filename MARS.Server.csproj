@@ -108,4 +108,12 @@
         </None>
     </ItemGroup>
 
+    <ItemGroup>
+      <EditorConfigFiles Remove="D:\VS\TestScripts\MARS\MARS.Server\.editorconfig" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Include="D:\VS\TestScripts\MARS\MARS.Server\.editorconfig" />
+    </ItemGroup>
+
 </Project>

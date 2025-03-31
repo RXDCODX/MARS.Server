@@ -2,34 +2,19 @@
 
 namespace MARS.Server.Services.Twitch.Rewards.MiniGames.Subs;
 
-public class RouleteGame
+public class RouleteGame(
+    List<RouletePlayer> players,
+    GameType type,
+    CancellationToken token,
+    ITwitchClient client,
+    ILogger<TwitchRussianRoulete> logger,
+    IDbContextFactory<AppDbContext> factory
+)
 {
     private const int ChanceToBeSaved = 40;
-    private readonly ITwitchClient _client;
-    private readonly IDbContextFactory<AppDbContext> _factory;
-    private readonly ILogger<TwitchRussianRoulete> _logger;
 
-    private readonly CancellationToken _token;
-
-    public RouleteGame(
-        List<RouletePlayer> players,
-        GameType type,
-        CancellationToken token,
-        ITwitchClient client,
-        ILogger<TwitchRussianRoulete> logger,
-        IDbContextFactory<AppDbContext> factory
-    )
-    {
-        Players = players.ToList();
-        Type = type;
-        _token = token;
-        _client = client;
-        _logger = logger;
-        _factory = factory;
-    }
-
-    private List<RouletePlayer> Players { get; }
-    private GameType Type { get; }
+    private List<RouletePlayer> Players { get; } = players.ToList();
+    private GameType Type { get; } = type;
 
     public async Task RussianRoulette()
     {
@@ -39,20 +24,20 @@ public class RouleteGame
 
         if (numPlayers == 1)
         {
-            await AloneRoulette(Players[0].Name, _token);
+            await AloneRoulette(Players[0].Name, token);
             return;
         }
 
         if (numPlayers == 2)
         {
             var namesForMinigame = string.Join(", ", Players.Select(player => player.Name));
-            await _client.SendMessageToMainTwitchAsync(
+            await client.SendMessageToMainTwitchAsync(
                 $"Играется рулетка на двоих! Играют: {namesForMinigame}",
-                _logger
+                logger
             );
         }
 
-        while (Players.Count(e => e.IsAlive) > 1 && !_token.IsCancellationRequested)
+        while (Players.Count(e => e.IsAlive) > 1 && !token.IsCancellationRequested)
         {
             var alivePlayers = Players.Where(player => player.IsAlive).ToList();
             if (Type != GameType.MiniGame)
@@ -61,14 +46,14 @@ public class RouleteGame
                     ", ",
                     alivePlayers.Select(player => player.Name)
                 );
-                await _client.SendMessageToMainTwitchAsync(
+                await client.SendMessageToMainTwitchAsync(
                     $"Русская рулетка - раунд {roundNum}! Играют: {alivePlayersNames}",
-                    _logger
+                    logger
                 );
             }
 
             var index = random.Next(alivePlayers.Count(e => e.IsAlive));
-            await Task.Delay(1000, _token);
+            await Task.Delay(1000, token);
             RouletePlayer shotPlayer = alivePlayers[index];
 
             var isSaved = await TryToSavePlayer(shotPlayer);
@@ -76,7 +61,7 @@ public class RouleteGame
             if (isSaved)
             {
                 await using AppDbContext context =
-                    await _factory.CreateDbContextAsync(_token) ?? throw new Exception("еблан?");
+                    await factory.CreateDbContextAsync(token) ?? throw new Exception("еблан?");
                 Host host =
                     context.Hosts.Find(shotPlayer.TwitchId)
                     ?? throw new NullReferenceException(
@@ -85,24 +70,24 @@ public class RouleteGame
                 Waifu waifu =
                     await context.Waifus.FirstOrDefaultAsync(
                         e => e.ShikiId == host.WaifuBrideId,
-                        _token
+                        token
                     ) ?? throw new NullReferenceException("не найдена зарегестрированная жена");
-                await _client.SendMessageToMainTwitchAsync(
+                await client.SendMessageToMainTwitchAsync(
                     $"@{shotPlayer.Name}, твой супруг - {waifu.Name} спас тебя от неминуемой гибели!",
-                    _logger
+                    logger
                 );
             }
             else
             {
-                await _client.SendMessageToMainTwitchAsync(
+                await client.SendMessageToMainTwitchAsync(
                     StaticContent.PlayerEliminated(shotPlayer.Name),
-                    _logger
+                    logger
                 );
                 shotPlayer.IsAlive = false;
                 //_client.TimeoutUser(TwitchExstension.Channel, shotPlayer.Name, TimeSpan.FromMinutes(10), "Ты вмер!");
             }
 
-            await Task.Delay(2000, _token);
+            await Task.Delay(2000, token);
 
             roundNum++;
         }
@@ -110,23 +95,23 @@ public class RouleteGame
         RouletePlayer winner = Players.First(e => e.IsAlive);
         if (Type == GameType.MiniGame)
         {
-            await _client.SendMessageToMainTwitchAsync(
+            await client.SendMessageToMainTwitchAsync(
                 $"Победитель: {winner.Name}. {StaticContent.GetMiniHistory(winner.Name)}",
-                _logger
+                logger
             );
         }
         else
         {
-            await _client.SendMessageToMainTwitchAsync(
+            await client.SendMessageToMainTwitchAsync(
                 $"Поздравляем {winner.Name} с победой в игре!",
-                _logger
+                logger
             );
         }
     }
 
     private async ValueTask<bool> TryToSavePlayer(RouletePlayer shotPlayer)
     {
-        await using AppDbContext dbcontext = await _factory.CreateDbContextAsync(_token);
+        await using AppDbContext dbcontext = await factory.CreateDbContextAsync(token);
         Host? host = await dbcontext.Hosts.FindAsync(shotPlayer.TwitchId);
 
         if (host?.IsPrivated == false)
@@ -145,13 +130,13 @@ public class RouleteGame
 
     private async Task AloneRoulette(string username, CancellationToken token)
     {
-        await _client.SendMessageToMainTwitchAsync($"@{username}, я взвожу курок...", _logger);
+        await client.SendMessageToMainTwitchAsync($"@{username}, я взвожу курок...", logger);
         await Task.Delay(3000, token);
-        await _client.SendMessageToMainTwitchAsync($"@{username}, 3", _logger);
+        await client.SendMessageToMainTwitchAsync($"@{username}, 3", logger);
         await Task.Delay(1000, token);
-        await _client.SendMessageToMainTwitchAsync($"@{username}, 2", _logger);
+        await client.SendMessageToMainTwitchAsync($"@{username}, 2", logger);
         await Task.Delay(1000, token);
-        await _client.SendMessageToMainTwitchAsync($"@{username}, 1", _logger);
+        await client.SendMessageToMainTwitchAsync($"@{username}, 1", logger);
         await Task.Delay(1000, token);
 
         var rnd = new Random();
@@ -159,41 +144,41 @@ public class RouleteGame
         switch (randomShoot)
         {
             case 1:
-                await _client.SendMessageToMainTwitchAsync(
+                await client.SendMessageToMainTwitchAsync(
                     $"@{username}, сегодня твой день.",
-                    _logger
+                    logger
                 );
                 break;
             case 6:
-                await _client.SendMessageToMainTwitchAsync(
+                await client.SendMessageToMainTwitchAsync(
                     $"@{username}, осечка, но я не думаю, что в следующий раз тебе так повезет.",
-                    _logger
+                    logger
                 );
                 break;
             case 3:
-                await _client.SendMessageToMainTwitchAsync(
+                await client.SendMessageToMainTwitchAsync(
                     $"@{username}, я медленно подвожу ствол к твоему виску. Ничего не происходит. Повезло. Или это просто осечка?",
-                    _logger
+                    logger
                 );
                 break;
             case 4:
-                await _client.SendMessageToMainTwitchAsync(
+                await client.SendMessageToMainTwitchAsync(
                     $"@{username}, повезло. Не уверен, что ты рискнешь еще раз со мной сыграть в эту игру.",
-                    _logger
+                    logger
                 );
                 break;
             case 5:
-                await _client.SendMessageToMainTwitchAsync(
+                await client.SendMessageToMainTwitchAsync(
                     $"@{username}, живой или мертвый ты пойдешь со мной. Но видимо не сегодня.",
-                    _logger
+                    logger
                 );
                 break;
             case 2:
-                await _client.SendMessageToMainTwitchAsync(
+                await client.SendMessageToMainTwitchAsync(
                     $"@{username}, BANG! BANG! BANG!",
-                    _logger
+                    logger
                 );
-                _client.TimeoutUser(
+                client.TimeoutUser(
                     TwitchExstension.Channel,
                     username,
                     TimeSpan.FromMinutes(10),

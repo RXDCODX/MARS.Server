@@ -10,7 +10,7 @@ public class Emojis : BackgroundService
     private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
     private readonly CancellationToken _token;
 
-    private Guid Guid = System.Guid.Parse("22db3d35-1b76-4674-beb7-cc7546356a84");
+    private readonly Guid Guid = System.Guid.Parse("22db3d35-1b76-4674-beb7-cc7546356a84");
 
     public Emojis(
         ILogger<Confetty> logger,

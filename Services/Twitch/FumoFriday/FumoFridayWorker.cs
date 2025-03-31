@@ -110,7 +110,7 @@ public class FumoFridayWorker
 
                         var isExists = await dbContext.FumoUsers.AnyAsync(
                             e => e.TwitchId == id,
-                            cancellationToken: _cancellationToken
+                            _cancellationToken
                         );
 
                         if (!isExists)

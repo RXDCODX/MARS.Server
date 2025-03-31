@@ -21,10 +21,10 @@ public class MergeWaifu : BackgroundService
         WaifuRollService waifuRollService,
         IHubContext<TelegramusHub, ITelegramusHub> hubContext,
         IDbContextFactory<AppDbContext> factory,
-        WaifuRollDataBaseHelper dataBaseHelper,
         ITwitchAPI api,
         EventSubService eventSubService,
-        TokenService tokenService
+        TokenService tokenService,
+        IHostApplicationLifetime lifetime
     )
     {
         _logger = logger;
@@ -35,7 +35,11 @@ public class MergeWaifu : BackgroundService
         _api = api;
         _tokenService = tokenService;
 
-        eventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd += MergeWaifuTwitchEvent;
+        lifetime.ApplicationStarted.Register(() =>
+        {
+            eventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd +=
+                MergeWaifuTwitchEvent;
+        });
     }
 
     public async Task MergeWaifuTwitchEvent(

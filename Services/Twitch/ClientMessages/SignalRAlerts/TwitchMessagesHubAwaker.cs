@@ -58,9 +58,7 @@ public class TwitchMessagesHubAwaker : BackgroundService
                         _token
                     );
 
-                    var mediaInfo = await dbContext
-                        .Alerts.AsNoTracking()
-                        .ToArrayAsync(cancellationToken: _token);
+                    var mediaInfo = await dbContext.Alerts.AsNoTracking().ToArrayAsync(_token);
 
                     var alerts = mediaInfo
                         .Where(info =>

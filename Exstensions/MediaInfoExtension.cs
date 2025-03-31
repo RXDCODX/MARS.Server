@@ -7,7 +7,7 @@ public static class MediaInfoExtension
         if (media.TextInfo.Text?.ToLower().Contains("{user.text}") ?? false)
         {
             media.TextInfo.Text = usertext.StartsWith("@")
-                ? media.TextInfo.Text.Replace("{user.text}", usertext.Substring(1).Trim())
+                ? media.TextInfo.Text.Replace("{user.text}", usertext[1..].Trim())
                 : media.TextInfo.Text.Replace("{user.text}", usertext.Trim());
         }
 

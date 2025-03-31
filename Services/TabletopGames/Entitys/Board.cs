@@ -11,10 +11,10 @@ public sealed class GameBoard
     public static GameBoard CreateDefaultBoard()
     {
         var board = new GameBoard();
-        bool isWhite = false;
+        var isWhite = false;
 
         // Инициализация каждой клетки на доске
-        for (char x = 'a'; x <= 'h'; x++)
+        for (var x = 'a'; x <= 'h'; x++)
         {
             for (ushort y = 1; y <= Height; y++)
             {

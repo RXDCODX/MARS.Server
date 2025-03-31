@@ -107,7 +107,7 @@ public class EventSubService(
                 await api.Helix.EventSub.DeleteEventSubSubscriptionAsync(
                     subscription.Id,
                     api.Settings.ClientId,
-                    accessToken: token
+                    token
                 );
             }
     }

@@ -37,7 +37,7 @@ public class DailyMarkMarkNotificationsSerivce(
             {
                 var copy = await dbContext
                     .TelegramUsers.Where(e => e.HonkaiNotifications || e.ZenlessZoneZeroDailyNotif)
-                    .ToListAsync(cancellationToken: stoppingToken);
+                    .ToListAsync(stoppingToken);
 
                 foreach (var user in copy)
                     if (

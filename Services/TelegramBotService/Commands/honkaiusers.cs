@@ -13,7 +13,7 @@ public partial class Commands
         await using var dbContext = await factory.CreateDbContextAsync(cancellationToken);
         var players = await dbContext
             .TelegramUsers.Where(e => e.HonkaiNotifications)
-            .ToListAsync(cancellationToken: cancellationToken);
+            .ToListAsync(cancellationToken);
 
         return await botClient.SendMessage(
             message.Chat.Id,

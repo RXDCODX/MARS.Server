@@ -138,7 +138,7 @@ public class RandomMeme(
 
         var maxOrder = await dbContext
             .RandomMemeOrder.AsNoTracking()
-            .MaxAsync(e => e.Order, cancellationToken: _stoppingToken);
+            .MaxAsync(e => e.Order, _stoppingToken);
 
         nextVideoOrder.Order = maxOrder;
 
@@ -148,7 +148,7 @@ public class RandomMeme(
             .RandomMemeOrder.Where(e => e.Id != nextVideoOrder.Id && e.MemeTypeId != type.Id)
             .ExecuteUpdateAsync(
                 e => e.SetProperty(a => a.Order, order => order.Order - 1),
-                cancellationToken: _stoppingToken
+                _stoppingToken
             );
 
         // Save changes to the database

@@ -8,35 +8,22 @@ public static class StringExtension
     {
         var exstension = exst?.ToLower();
 
-        switch (exstension)
+        return exstension switch
         {
-            case ".tgs":
-                return ValueTask.FromResult(MediaType.TelegramSticker);
-            case ".ogg":
-                return ValueTask.FromResult(MediaType.Audio);
-            case ".oga":
-                return ValueTask.FromResult(MediaType.Audio);
-            case ".webm":
-                return ValueTask.FromResult(MediaType.Video);
-            case ".mp4":
-                return ValueTask.FromResult(MediaType.Video);
-            case ".jpg":
-                return ValueTask.FromResult(MediaType.Image);
-            case ".jpeg":
-                return ValueTask.FromResult(MediaType.Image);
-            case ".png":
-                return ValueTask.FromResult(MediaType.Image);
-            case ".webp":
-                return ValueTask.FromResult(MediaType.Image);
-            case ".gif":
-                return ValueTask.FromResult(MediaType.Gif);
-            case ".mp3":
-                return ValueTask.FromResult(MediaType.Audio);
-            case ".wav":
-                return ValueTask.FromResult(MediaType.Audio);
-            default:
-                return ValueTask.FromResult(MediaType.None);
-        }
+            ".tgs" => ValueTask.FromResult(MediaType.TelegramSticker),
+            ".ogg" => ValueTask.FromResult(MediaType.Audio),
+            ".oga" => ValueTask.FromResult(MediaType.Audio),
+            ".webm" => ValueTask.FromResult(MediaType.Video),
+            ".mp4" => ValueTask.FromResult(MediaType.Video),
+            ".jpg" => ValueTask.FromResult(MediaType.Image),
+            ".jpeg" => ValueTask.FromResult(MediaType.Image),
+            ".png" => ValueTask.FromResult(MediaType.Image),
+            ".webp" => ValueTask.FromResult(MediaType.Image),
+            ".gif" => ValueTask.FromResult(MediaType.Gif),
+            ".mp3" => ValueTask.FromResult(MediaType.Audio),
+            ".wav" => ValueTask.FromResult(MediaType.Audio),
+            _ => ValueTask.FromResult(MediaType.None),
+        };
     }
 
     public static string ReplaceTooLongWords(
@@ -44,16 +31,16 @@ public static class StringExtension
         string replacement = "Слишком большое слово"
     )
     {
-        string pattern = @"\b\w{20,}\b";
+        const string pattern = @"\b\w{20,}\b";
 
-        string result = Regex.Replace(input, pattern, replacement);
+        var result = Regex.Replace(input, pattern, replacement);
 
         return result;
     }
 
     public static string ReplaceLinks(this string input, string replacement = " ссылка ")
     {
-        var pattern = @"\bhttps?://\S+\b";
+        const string pattern = @"\bhttps?://\S+\b";
 
         var result = Regex.Replace(input, pattern, replacement);
 
