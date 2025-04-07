@@ -7,8 +7,7 @@ public class RandomMeme(
     IHubContext<TelegramusHub, ITelegramusHub> hubContext,
     IWebHostEnvironment webHostEnvironment,
     IDbContextFactory<AppDbContext> dbContextFactory,
-    IHostApplicationLifetime applicationLifetime,
-    SoundBarFactory soundBarFactory
+    IHostApplicationLifetime applicationLifetime
 )
 {
     private readonly CancellationToken _stoppingToken = applicationLifetime.ApplicationStopping;
@@ -31,12 +30,6 @@ public class RandomMeme(
 
                     if (media is not null)
                     {
-                        if (media.MetaInfo.Priority == MediaAlertPriority.High)
-                        {
-                            var soundBar = soundBarFactory.CreateSoundBar();
-                            await soundBar.Mute();
-                        }
-
                         await hubContext.Clients.All.Alert(
                             new MediaDto(media) { MediaInfo = media }
                         );
@@ -50,12 +43,6 @@ public class RandomMeme(
 
                     if (sound is not null)
                     {
-                        if (sound.MetaInfo.Priority == MediaAlertPriority.High)
-                        {
-                            var soundBar = soundBarFactory.CreateSoundBar();
-                            await soundBar.Mute();
-                        }
-
                         await hubContext.Clients.All.Alert(
                             new MediaDto(sound) { MediaInfo = sound }
                         );
@@ -85,7 +72,7 @@ public class RandomMeme(
         var filePath = mediaOrder.FilePath;
 
         var exst = Path.GetExtension(filePath);
-        var fileType = await filePath.GetFileMediaTypeAsync();
+        var fileType = await exst.GetFileMediaTypeAsync();
         var shortPath = filePath[
             (filePath.IndexOf("wwwroot", StringComparison.Ordinal) + "wwwroot".Length)..
         ];
@@ -129,7 +116,7 @@ public class RandomMeme(
 
         var nextVideoOrder = await dbContext
             .RandomMemeOrder.OrderBy(o => o.Order)
-            .FirstOrDefaultAsync(e => e.Order == 1 && e.MemeTypeId == type.Id, _stoppingToken);
+            .FirstOrDefaultAsync(e => e.MemeTypeId == type.Id, _stoppingToken);
 
         if (nextVideoOrder is null)
         {
@@ -145,7 +132,7 @@ public class RandomMeme(
         dbContext.RandomMemeOrder.Update(nextVideoOrder);
 
         await dbContext
-            .RandomMemeOrder.Where(e => e.Id != nextVideoOrder.Id && e.MemeTypeId != type.Id)
+            .RandomMemeOrder.Where(e => e.Id != nextVideoOrder.Id && e.MemeTypeId == type.Id)
             .ExecuteUpdateAsync(
                 e => e.SetProperty(a => a.Order, order => order.Order - 1),
                 _stoppingToken

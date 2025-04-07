@@ -20,13 +20,11 @@ public class EventSubService(
     FumoFridayWorker fumoFridayWorker
 )
 {
-    private static readonly EventSubWebsocketClient WsPrivateClient = new();
-
-    public EventSubWebsocketClient WsClient => WsPrivateClient;
+    public static EventSubWebsocketClient WsClient = new();
 
     private bool _firstActivation = true;
 
-    public async Task UpdatePubSubAsync(string? token = null)
+    public async Task UpdateEventSubbAsync(string? token = null)
     {
         if (!_firstActivation)
         {
@@ -42,7 +40,6 @@ public class EventSubService(
                 )
                 {
                     await WsClient.DisconnectAsync();
-                    await WsClient.ConnectAsync();
                 }
             }
         }
@@ -78,13 +75,6 @@ public class EventSubService(
 
             WsClient.WebsocketDisconnected += async (sender, args) =>
             {
-                await WsClient.ConnectAsync();
-
-                await Task.Delay(5000);
-
-                if (token != null)
-                    await DeleteAllSubs(token);
-
                 while (!await WsClient.ReconnectAsync())
                 {
                     await Task.Delay(30 * 1000);
@@ -92,6 +82,15 @@ public class EventSubService(
             };
 
             _firstActivation = false;
+
+            if (token != null)
+            {
+                var subs = await GetEventSubsAsync(token);
+                if (subs?.Subscriptions is { Length: > 0 })
+                {
+                    await DeleteAllSubs(token);
+                }
+            }
 
             await WsClient.ConnectAsync();
         }
@@ -102,6 +101,7 @@ public class EventSubService(
         var response = await GetEventSubsAsync(token);
 
         if (response != null)
+        {
             foreach (var subscription in response.Subscriptions)
             {
                 await api.Helix.EventSub.DeleteEventSubSubscriptionAsync(
@@ -110,6 +110,7 @@ public class EventSubService(
                     token
                 );
             }
+        }
     }
 
     public async Task ReconnectAsync(string? token)

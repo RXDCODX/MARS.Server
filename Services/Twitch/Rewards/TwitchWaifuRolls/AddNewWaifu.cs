@@ -27,7 +27,6 @@ public class AddNewWaifu : BackgroundService
         IHubContext<TelegramusHub, ITelegramusHub> hubContext,
         ITwitchAPI api,
         IHostApplicationLifetime lifetime,
-        EventSubService eventSub,
         TokenService tokenService
     )
     {
@@ -43,7 +42,8 @@ public class AddNewWaifu : BackgroundService
 
         lifetime.ApplicationStarted.Register(() =>
         {
-            eventSub.WsClient.ChannelPointsCustomRewardRedemptionAdd += AddNewWaifuTwitchEvent;
+            EventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd +=
+                AddNewWaifuTwitchEvent;
         });
     }
 

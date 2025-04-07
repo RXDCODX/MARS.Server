@@ -1,4 +1,5 @@
-﻿using MARS.Server.Services.RandomMem.Entity;
+﻿using MARS.Server.Services._365Genius.Entitys;
+using MARS.Server.Services.RandomMem.Entity;
 using MARS.Server.Services.Twitch;
 using MARS.Server.Services.Twitch.ClientMessages.AutoMessages.Entitys;
 using MARS.Server.Services.Twitch.FumoFriday.Entitys;
@@ -48,6 +49,7 @@ public sealed class AppDbContext : DbContext
     public DbSet<MemeType> RandomMemeType { get; set; } = null!;
     public DbSet<FumoUser> FumoUsers { get; set; }
     public DbSet<HelloVideosUsers> HelloVideosUsers { get; set; } = null!;
+    public DbSet<Video365> Videos365 { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

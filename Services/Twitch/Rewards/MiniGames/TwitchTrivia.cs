@@ -47,8 +47,8 @@ public class TwitchTrivia : BackgroundService
         {
             IsAppActive = true;
             _client.OnMessageReceived += NewMessage;
-            eventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd += NewAlert;
-            eventSubService.WsClient.StreamOffline += Closing;
+            EventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd += NewAlert;
+            EventSubService.WsClient.StreamOffline += Closing;
         });
     }
 

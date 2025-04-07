@@ -81,12 +81,6 @@ public class HelloVideoWorker
 
                             var mediaDto = new MediaDto { MediaInfo = notifUser.MediaInfo };
 
-                            if (mediaDto.MediaInfo.MetaInfo.Priority == MediaAlertPriority.High)
-                            {
-                                var soundBar = _soundBarFactory.CreateSoundBar();
-                                await soundBar.Mute();
-                            }
-
                             await _hubContext.Clients.All.Alert(mediaDto);
                         }
 
@@ -127,12 +121,6 @@ public class HelloVideoWorker
         user.MediaInfo.TextInfo.KeyWordsColor = color;
 
         var mediaDto = new MediaDto() { MediaInfo = user.MediaInfo };
-
-        if (mediaDto.MediaInfo.MetaInfo.Priority == MediaAlertPriority.High)
-        {
-            var soundBar = _soundBarFactory.CreateSoundBar();
-            await soundBar.Mute();
-        }
 
         await _hubContext.Clients.All.Alert(mediaDto);
         return user.Name;

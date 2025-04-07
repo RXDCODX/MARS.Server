@@ -29,7 +29,9 @@ public partial class Commands
                 }
             }
             else
+            {
                 returnMessage = "Громкость должна быть натуральным числом!";
+            }
         }
         else if (split is { Length: 1 })
         {

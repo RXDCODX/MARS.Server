@@ -1,4 +1,4 @@
-namespace MARS.Server.Services.TelegramBotService.Abstract;
+﻿namespace MARS.Server.Services.TelegramBotService.Abstract;
 
 /// <summary>
 ///     A marker interface for Update Receiver service

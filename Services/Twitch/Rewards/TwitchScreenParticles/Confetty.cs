@@ -21,7 +21,7 @@ public class Confetty : BackgroundService
         _client = client;
         lifetime.ApplicationStarted.Register(() =>
         {
-            eventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd +=
+            EventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd +=
                 WsClientOnChannelPointsCustomRewardRedemptionAdd;
         });
     }

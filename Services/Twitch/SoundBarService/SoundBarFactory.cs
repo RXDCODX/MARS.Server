@@ -30,7 +30,9 @@ public class SoundBarFactory
     private bool IsRunningAsWindowsService()
     {
         if (!OperatingSystem.IsWindows())
+        {
             return false;
+        }
 
         // В .NET Framework можно использовать Environment.UserInteractive
         if (Environment.OSVersion.Platform == PlatformID.Win32NT && Environment.Version.Major < 5) // .NET Framework

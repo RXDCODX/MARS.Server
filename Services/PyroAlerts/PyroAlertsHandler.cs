@@ -6,8 +6,7 @@ namespace MARS.Server.Services.PyroAlerts;
 public class PyroAlertsHandler(
     PyroAlertsHelper alertsHelper,
     IHubContext<TelegramusHub, ITelegramusHub> hubContext,
-    IDbContextFactory<AppDbContext> factory,
-    SoundBarFactory soundBarFactory
+    IDbContextFactory<AppDbContext> factory
 ) : ITelegramusService
 {
     public async Task HandAlert(ITelegramBotClient client, Update update)
@@ -33,12 +32,6 @@ public class PyroAlertsHandler(
 
                         if (mediaInfo != null)
                         {
-                            if (mediaInfo.MetaInfo.Priority == MediaAlertPriority.High)
-                            {
-                                var soundBar = soundBarFactory.CreateSoundBar();
-                                await soundBar.Mute();
-                            }
-
                             await hubContext.Clients.All.Alert(
                                 new MediaDto(mediaInfo) { MediaInfo = mediaInfo }
                             );
@@ -86,12 +79,6 @@ public class PyroAlertsHandler(
                                     mediaInfo.TextInfo.Text = avatarPath;
                                     mediaInfo.MetaInfo.DisplayName = chat.Username ?? string.Empty;
                                     mediaInfo.MetaInfo.Priority = MediaAlertPriority.High;
-
-                                    if (mediaInfo.MetaInfo.Priority == MediaAlertPriority.High)
-                                    {
-                                        var soundBar = soundBarFactory.CreateSoundBar();
-                                        await soundBar.Mute();
-                                    }
 
                                     await hubContext.Clients.All.Alert(
                                         new MediaDto { MediaInfo = mediaInfo }

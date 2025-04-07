@@ -29,7 +29,9 @@ public class ShikimoriAuthorizationHelpService : ITelegramusService
             var token = JsonConvert.DeserializeObject<ShikiAccessToken>(text);
 
             if (token is null)
+            {
                 throw new NullReferenceException();
+            }
 
             return token;
         }

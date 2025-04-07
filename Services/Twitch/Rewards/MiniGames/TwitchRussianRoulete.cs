@@ -44,8 +44,8 @@ public class TwitchRussianRoulete : BackgroundService
 
         applicationLifetime.ApplicationStarted.Register(() =>
         {
-            eventSubService.WsClient.StreamOffline += Closing;
-            eventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd += NewAlert;
+            EventSubService.WsClient.StreamOffline += Closing;
+            EventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd += NewAlert;
         });
     }
 

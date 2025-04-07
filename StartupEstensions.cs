@@ -74,6 +74,7 @@ public static class StartupEstensions
         services.AddSingleton<TwitchTrivia>();
         services.AddHostedService(sp => sp.GetRequiredService<TwitchTrivia>());
         services.AddSingleton<HighlitedMessage>();
+        services.AddHostedService(sp => sp.GetRequiredService<HighlitedMessage>());
         services.AddSingleton<FumoFridayWorker>();
         services.AddSingleton<HelloVideoWorker>();
 

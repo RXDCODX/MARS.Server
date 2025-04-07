@@ -17,6 +17,7 @@ public class TelegramUser
 
     public bool RaidHelper { get; set; } = false;
     public bool PyroAlertsAccess { get; set; } = false;
+    public bool IsRandomMemeSendler { get; set; } = false;
     public bool HonkaiNotifications { get; set; } = false;
     public bool StreamUpNotifications { get; set; } = false;
     public bool ZenlessZoneZeroDailyNotif { get; set; } = false;

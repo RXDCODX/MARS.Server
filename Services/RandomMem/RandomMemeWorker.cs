@@ -57,7 +57,10 @@ public class RandomMemeWorker(
                                     StringComparison.OrdinalIgnoreCase
                                 )
                             )
+                            {
                                 continue;
+                            }
+
                             memeOrder.MemeTypeId = memeType.Id;
                             break;
                         }
@@ -65,6 +68,7 @@ public class RandomMemeWorker(
 
                     // Добавляем новые файлы в конец очереди и пересчитываем их MemeOrder.Order
                     var newFiles = files.Except(fileNamesInDb).ToArray();
+                    Random.Shared.Shuffle(newFiles);
                     if (newFiles.Any())
                     {
                         foreach (var type in memeTypes)

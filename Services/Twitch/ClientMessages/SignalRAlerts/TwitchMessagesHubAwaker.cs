@@ -64,7 +64,10 @@ public class TwitchMessagesHubAwaker : BackgroundService
                         .Where(info =>
                         {
                             if (info.TextInfo.TriggerWord == null)
+                            {
                                 return false;
+                            }
+
                             var words = info.TextInfo.TriggerWord.Split(' ');
                             var textWords = e.ChatMessage.Message.Split(' ');
                             var isExists = textWords.Any(t =>

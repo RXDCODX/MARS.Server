@@ -17,15 +17,10 @@ public class TelegramusHub(
 
     public override async Task OnConnectedAsync()
     {
-        await UpdateWaifuPrizesPrizesAsync();
         await Clients.Caller.PostTwitchInfo(
             _twitchConfiguration.ClientId,
             _twitchConfiguration.ClientSecret
         );
-    }
-
-    public async Task UpdateWaifuPrizesPrizesAsync()
-    {
         var prizes = await GetWaifuPrizesAsync();
         await Clients.Caller.UpdateWaifuPrizes(prizes);
     }
@@ -56,5 +51,10 @@ public class TelegramusHub(
     public Task UnmuteSessions()
     {
         return soundBarFactory.CreateSoundBar().Unmute();
+    }
+
+    public Task MuteAll(params string[] args)
+    {
+        return soundBarFactory.CreateSoundBar().Mute(args);
     }
 }

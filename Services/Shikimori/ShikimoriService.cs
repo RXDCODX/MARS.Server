@@ -41,7 +41,9 @@ public class ShikimoriService(
         if (response.StatusCode == HttpStatusCode.Unauthorized)
         {
             if (recursed)
+            {
                 throw new Exception("Рекурсивный вызов GetRandomAnime()");
+            }
 
             _accessToken = await shikimoriAuthorizationHelpService.RefreshToken(
                 _shikiClient,
@@ -75,7 +77,9 @@ public class ShikimoriService(
         if (response.StatusCode == HttpStatusCode.Unauthorized)
         {
             if (recursed)
+            {
                 throw new Exception("Рекурсивный вызов GetAnimeById()");
+            }
 
             _accessToken = await shikimoriAuthorizationHelpService.RefreshToken(
                 _shikiClient,
@@ -113,7 +117,9 @@ public class ShikimoriService(
         if (response.StatusCode == HttpStatusCode.Unauthorized)
         {
             if (recursed)
+            {
                 throw new Exception("Рекурсивный вызов GetRandomManga()");
+            }
 
             _accessToken = await shikimoriAuthorizationHelpService.RefreshToken(
                 _shikiClient,
@@ -147,7 +153,9 @@ public class ShikimoriService(
         if (response.StatusCode == HttpStatusCode.Unauthorized)
         {
             if (recursed)
+            {
                 throw new Exception("Рекурсивный вызов GetMangaById()");
+            }
 
             _accessToken = await shikimoriAuthorizationHelpService.RefreshToken(
                 _shikiClient,

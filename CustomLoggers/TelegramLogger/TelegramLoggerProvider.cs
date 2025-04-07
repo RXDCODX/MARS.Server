@@ -18,15 +18,19 @@ public class TelegramLoggerProvider : ILoggerProvider
     )
     {
         if (options.ChatId.Length == 0)
+        {
             throw new ArgumentException(
                 "Log receiver Id should not be null, empty or be a whitespace"
             );
+        }
 
         if (
             string.IsNullOrEmpty(options.SourceName)
             || string.IsNullOrWhiteSpace(options.SourceName)
         )
+        {
             throw new ArgumentException("Source name should not be null, empty or be a whitespace");
+        }
 
         _filter = filter;
         _options = options;

@@ -42,15 +42,21 @@ public class TelegramLogger : ILogger
     )
     {
         if (!IsEnabled(logLevel))
+        {
             return;
+        }
 
         if (formatter == null)
+        {
             throw new ArgumentNullException(nameof(formatter));
+        }
 
         var message = formatter(state, exception);
 
         if (!string.IsNullOrEmpty(message) && !string.IsNullOrWhiteSpace(message))
+        {
             SendMessage(logLevel, _category, eventId.Id, message, exception);
+        }
     }
 
     public bool IsEnabled(LogLevel logLevel)
@@ -75,10 +81,11 @@ public class TelegramLogger : ILogger
         _logBuilder = null;
 
         if ((int)logLevel < (int)_options.MinimumLevel)
+        {
             return;
+        }
 
-        if (logBuilder == null)
-            logBuilder = new StringBuilder();
+        logBuilder ??= new StringBuilder();
 
         var logLevelString = GetLogLevelString(logLevel);
 
@@ -86,7 +93,9 @@ public class TelegramLogger : ILogger
         logBuilder.AppendLine();
 
         if (!string.IsNullOrEmpty(logLevelString))
+        {
             logBuilder.Append($"{logLevelString}: ");
+        }
 
         logBuilder.Append(logName);
         logBuilder.Append("[");
@@ -107,7 +116,9 @@ public class TelegramLogger : ILogger
         }
 
         if (logBuilder.Length == 0)
+        {
             return;
+        }
 
         if (logBuilder.Length > 4096)
         {
@@ -123,7 +134,10 @@ public class TelegramLogger : ILogger
 
         logBuilder.Clear();
         if (logBuilder.Capacity > 1024)
+        {
             logBuilder.Capacity = 1024;
+        }
+
         _logBuilder = logBuilder;
     }
 

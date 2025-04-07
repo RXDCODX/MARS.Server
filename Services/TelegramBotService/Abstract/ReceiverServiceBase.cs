@@ -1,4 +1,4 @@
-using Telegram.Bot.Polling;
+﻿using Telegram.Bot.Polling;
 
 namespace MARS.Server.Services.TelegramBotService.Abstract;
 
@@ -28,6 +28,7 @@ public abstract class ReceiverServiceBase<TUpdateHandler> : IReceiverService
     ///     Start to service Updates with provided Update Handler class
     /// </summary>
     /// <param name="stoppingToken"></param>
+    /// <param name="offset"></param>
     /// <returns></returns>
     public async Task ReceiveAsync(CancellationToken stoppingToken)
     {

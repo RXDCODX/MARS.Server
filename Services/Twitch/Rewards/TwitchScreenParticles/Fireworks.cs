@@ -9,7 +9,6 @@ public class Fireworks : BackgroundService
     private readonly ITwitchClient _client;
 
     public Fireworks(
-        EventSubService eventSubService,
         ILogger<Fireworks> logger,
         IHubContext<TelegramusHub, ITelegramusHub> hub,
         IHostApplicationLifetime lifetime,
@@ -21,7 +20,7 @@ public class Fireworks : BackgroundService
         _client = client;
         lifetime.ApplicationStarted.Register(() =>
         {
-            eventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd +=
+            EventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd +=
                 WsClientOnChannelPointsCustomRewardRedemptionAdd;
         });
     }

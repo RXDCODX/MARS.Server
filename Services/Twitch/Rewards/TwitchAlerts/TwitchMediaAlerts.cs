@@ -89,12 +89,6 @@ public class TwitchMediaAlerts
             var mediaClone = mediaOld.CloneTo();
             mediaClone.FixAlertText(message.DisplayName, message.Message);
 
-            if (mediaClone.MetaInfo.Priority == MediaAlertPriority.High)
-            {
-                var soundBar = _soundBarFactory.CreateSoundBar();
-                await soundBar.Mute();
-            }
-
             await _hubContext.Clients.All.Alert(new MediaDto { MediaInfo = mediaClone });
         }
     }
@@ -147,12 +141,6 @@ public class TwitchMediaAlerts
         {
             var mediaClone = mediaOld.CloneTo();
             mediaClone.FixAlertText(message.UserName, message.UserInput);
-
-            if (mediaClone.MetaInfo.Priority == MediaAlertPriority.High)
-            {
-                var soundBar = _soundBarFactory.CreateSoundBar();
-                await soundBar.Mute();
-            }
 
             await _hubContext.Clients.All.Alert(new MediaDto { MediaInfo = mediaClone });
         }

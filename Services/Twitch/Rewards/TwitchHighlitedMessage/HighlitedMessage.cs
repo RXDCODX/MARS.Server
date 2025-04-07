@@ -3,7 +3,7 @@ using TwitchLib.Client.Events;
 
 namespace MARS.Server.Services.Twitch.Rewards.TwitchHighlitedMessage;
 
-public class HighlitedMessage
+public class HighlitedMessage : BackgroundService
 {
     private readonly IHubContext<TelegramusHub, ITelegramusHub> _hubContext;
     private readonly IWebHostEnvironment _environment;
@@ -26,21 +26,21 @@ public class HighlitedMessage
 
     internal async void TwitchClientOnNormalMessage(object? sender, OnMessageReceivedArgs args)
     {
-        await Task.Factory.StartNew(
-            async () =>
+        if (
+            (
+                args.ChatMessage.IsVip
+                || args.ChatMessage.IsModerator
+                || args.ChatMessage.IsBroadcaster
+            )
+            && args.ChatMessage.IsHighlighted
+            && args.ChatMessage.Channel.Equals(
+                TwitchExstension.Channel,
+                StringComparison.OrdinalIgnoreCase
+            )
+        )
+        {
+            await Task.Factory.StartNew(async () =>
             {
-                if (
-                    (
-                        args.ChatMessage.IsVip
-                        || args.ChatMessage.IsModerator
-                        || args.ChatMessage.IsBroadcaster
-                    )
-                    && args.ChatMessage.IsHighlighted
-                    && args.ChatMessage.Channel.Equals(
-                        TwitchExstension.Channel,
-                        StringComparison.OrdinalIgnoreCase
-                    )
-                )
                 {
                     var color = string.IsNullOrWhiteSpace(args.ChatMessage.ColorHex)
                         ? "#ffffff"
@@ -55,9 +55,8 @@ public class HighlitedMessage
 
                     await _hubContext.Clients.All.Highlite(args.ChatMessage, color, image);
                 }
-            },
-            TaskCreationOptions.None
-        );
+            });
+        }
     }
 
     private static Image GetImageByFilePath(string filePath)
@@ -73,5 +72,10 @@ public class HighlitedMessage
         );
 
         return new Image() { URL = filePath, Extension = exstension };
+    }
+
+    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        return Task.CompletedTask;
     }
 }

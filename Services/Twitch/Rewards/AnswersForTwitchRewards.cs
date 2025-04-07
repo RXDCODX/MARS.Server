@@ -35,6 +35,7 @@ public class AnswersForTwitchRewards
             var keywords = Keywords.Where(e => message.Contains(e));
 
             foreach (var keyword in keywords)
+            {
                 switch (keyword)
                 {
                     case "{user}":
@@ -70,6 +71,7 @@ public class AnswersForTwitchRewards
                         message = message.Replace(keyword, title);
                         break;
                 }
+            }
         }
 
         return message;

@@ -37,7 +37,7 @@ public class MergeWaifu : BackgroundService
 
         lifetime.ApplicationStarted.Register(() =>
         {
-            eventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd +=
+            EventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd +=
                 MergeWaifuTwitchEvent;
         });
     }

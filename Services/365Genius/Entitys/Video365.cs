@@ -1,0 +1,21 @@
+﻿namespace MARS.Server.Services._365Genius.Entitys;
+
+public class Video365
+{
+    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+    [Key]
+    public Guid Id { get; set; } = Guid.NewGuid();
+
+    public int SiteId { get; set; }
+    public required string Title { get; set; }
+    public required string PlayerUrl { get; set; }
+    public required string DirectLinkUrl { get; set; }
+    public required string Description { get; set; }
+    public required string DownloadUrl { get; set; }
+    public bool IsUploaded { get; set; }
+    public DateTimeOffset DateUpload { get; set; }
+    public TimeSpan Duration { get; set; }
+    public long TelegramMessageId { get; set; }
+    public required int VideoWidth { get; set; }
+    public required int VideoHeight { get; set; }
+}

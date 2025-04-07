@@ -12,6 +12,7 @@ public partial class Commands
         var split = message?.Text?.Split(' ');
 
         if (split is { Length: < 3 })
+        {
             return await botClient.SendMessage(
                 userName,
                 "Кривые параметры котисы!",
@@ -19,6 +20,8 @@ public partial class Commands
                 replyParameters: message.MessageId,
                 cancellationToken: cancellationToken
             );
+        }
+
         var channel = split?[1];
         var text = split?.Skip(2).ToList();
 
@@ -26,7 +29,9 @@ public partial class Commands
         {
             client.JoinChannel(channel, true);
             if (text != null)
+            {
                 client.SendMessage(channel, string.Join(' ', text));
+            }
 
             return await botClient.SendMessage(
                 userName,

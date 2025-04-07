@@ -1,4 +1,4 @@
-namespace MARS.Server.Services.TelegramBotService.Abstract;
+﻿namespace MARS.Server.Services.TelegramBotService.Abstract;
 
 // A background service consuming a scoped service.
 // See more: https://docs.microsoft.com/en-us/aspnet/core/fundamentals/host/hosted-services#consuming-a-scoped-service-in-a-background-task
@@ -33,6 +33,7 @@ public abstract class PollingServiceBase<TReceiverService> : BackgroundService
         // Make sure we receive updates until Cancellation Requested,
         // no matter what errors our ReceiveAsync get
         while (!stoppingToken.IsCancellationRequested)
+        {
             try
             {
                 // Create new IServiceScope on each iteration.
@@ -53,5 +54,6 @@ public abstract class PollingServiceBase<TReceiverService> : BackgroundService
                 // Cooldown if something goes wrong
                 await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
             }
+        }
     }
 }

@@ -39,12 +39,14 @@ public class TelegramLoggerSender : IDisposable
     public void EnqueueMessage(string message)
     {
         if (!_messageQueue.IsAddingCompleted)
+        {
             try
             {
                 _messageQueue.Add(message);
                 return;
             }
             catch (InvalidOperationException) { }
+        }
 
         // Adding is completed so just log the message
         WriteMessage(message);
@@ -57,7 +59,9 @@ public class TelegramLoggerSender : IDisposable
             try
             {
                 foreach (var id in _chatIds)
+                {
                     await _botClient.SendMessage(id, message).ConfigureAwait(false);
+                }
             }
             catch (Exception)
             {
@@ -69,7 +73,9 @@ public class TelegramLoggerSender : IDisposable
     private void ProcessLogQueue()
     {
         foreach (var message in _messageQueue.GetConsumingEnumerable())
+        {
             WriteMessage(message);
+        }
     }
 
     private static void ProcessLogQueue(object? state)

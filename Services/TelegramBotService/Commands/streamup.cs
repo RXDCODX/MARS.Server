@@ -24,7 +24,9 @@ public partial class Commands
         if (dbUser == null || !dbUser.StreamUpNotifications)
         {
             if (dbUser == null)
+            {
                 dbContext.TelegramUsers.Add(user);
+            }
             else
             {
                 dbUser.StreamUpNotifications = true;

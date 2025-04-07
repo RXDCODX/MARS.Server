@@ -40,6 +40,7 @@ public class DailyMarkMarkNotificationsSerivce(
                     .ToListAsync(stoppingToken);
 
                 foreach (var user in copy)
+                {
                     if (
                         DateTimeOffset.Now.Date > user.LastTimeMessage.Date
                         && DateTimeOffset.Now.Hour >= 6
@@ -168,6 +169,7 @@ public class DailyMarkMarkNotificationsSerivce(
 
                         user.LastTimeMessage = DateTimeOffset.Now;
                     }
+                }
 
                 await dbContext.SaveChangesAsync(stoppingToken);
             }

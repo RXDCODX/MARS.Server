@@ -12,7 +12,6 @@ public class RandomArt : BackgroundService
     private readonly ILogger<RandomArt> _logger;
 
     public RandomArt(
-        EventSubService eventSubService,
         IHubContext<TelegramusHub, ITelegramusHub> hub,
         IHostApplicationLifetime lifetime,
         ITwitchClient client,
@@ -26,7 +25,7 @@ public class RandomArt : BackgroundService
         _logger = logger;
         lifetime.ApplicationStarted.Register(() =>
         {
-            eventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd +=
+            EventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd +=
                 WsClientOnChannelPointsCustomRewardRedemptionAdd;
         });
     }

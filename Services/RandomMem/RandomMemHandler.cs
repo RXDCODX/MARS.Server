@@ -24,35 +24,78 @@ public class RandomMemHandler(
     private CancellationToken CancellationToken { get; set; } =
         applicationLifetime.ApplicationStopping;
 
-    public async Task HandMessage(ITelegramBotClient client, Update update)
+    private List<long> BlockedUsers { get; set; } = [];
+    private List<long> AllowdUsers { get; set; } = [];
+
+    public Task HandMessage(ITelegramBotClient client, Update update)
     {
         if (update.Type == UpdateType.Message)
         {
             var message = update.Message!;
-            if (message.Chat.Id is 833194345 or TelegramExstension.Rxdcodx)
-            {
-                if (message.MediaGroupId == null)
-                {
-                    await Process(client, message);
-                    LastMediaGroupId = null;
-                    IsGoldMediaGroup = false;
-                }
-                else
-                {
-                    if (LastMediaGroupId == null || LastMediaGroupId != message.MediaGroupId)
-                    {
-                        LastMediaGroupId = message.MediaGroupId;
-                        var isGold = !string.IsNullOrWhiteSpace(message.Caption);
-                        IsGoldMediaGroup = isGold;
-                    }
+            var chatId = message.Chat.Id;
 
-                    if (LastMediaGroupId == message.MediaGroupId)
+            if (!BlockedUsers.Contains(chatId))
+            {
+                return Task.Factory.StartNew(
+                    async () =>
                     {
-                        await Process(client, message, IsGoldMediaGroup);
-                    }
-                }
+                        bool pass;
+
+                        if (AllowdUsers.Contains(chatId))
+                        {
+                            pass = true;
+                        }
+                        else
+                        {
+                            await using var dbContext = await contextFactory.CreateDbContextAsync(
+                                CancellationToken
+                            );
+                            pass = await dbContext.TelegramUsers.AnyAsync(
+                                e => e.UserId == chatId && e.IsRandomMemeSendler,
+                                cancellationToken: CancellationToken
+                            );
+                            AllowdUsers.Add(chatId);
+                        }
+
+                        if (pass)
+                        {
+                            if (message.MediaGroupId == null)
+                            {
+                                await Process(client, message);
+                                LastMediaGroupId = null;
+                                IsGoldMediaGroup = false;
+                            }
+                            else
+                            {
+                                if (
+                                    LastMediaGroupId == null
+                                    || LastMediaGroupId != message.MediaGroupId
+                                )
+                                {
+                                    LastMediaGroupId = message.MediaGroupId;
+                                    var isGold = !string.IsNullOrWhiteSpace(message.Caption);
+                                    IsGoldMediaGroup = isGold;
+                                }
+
+                                if (LastMediaGroupId == message.MediaGroupId)
+                                {
+                                    await Process(client, message, IsGoldMediaGroup);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            if (!BlockedUsers.Contains(chatId))
+                            {
+                                BlockedUsers.Add(chatId);
+                            }
+                        }
+                    },
+                    CancellationToken
+                );
             }
         }
+        return Task.CompletedTask;
     }
 
     private async Task Process(ITelegramBotClient client, Message message, bool isGold = false)

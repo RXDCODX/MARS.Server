@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using BooruSharp.Booru;
 using MARS.Server.CustomLoggers.TelegramLogger;
+using MARS.Server.Services._365Genius;
 using MARS.Server.Services.Honkai;
 using MARS.Server.Services.PyroAlerts;
 using MARS.Server.Services.RandomMem;
@@ -16,6 +17,7 @@ using MARS.Server.Services.Twitch.Synthesizer.Enitity;
 using MARS.Server.Services.WaifuRoll;
 using MARS.Server.Services.WaifuRoll.helpers;
 using NJsonSchema.Generation;
+using WTelegram;
 
 namespace MARS.Server;
 
@@ -153,6 +155,49 @@ public class Program
         services.AddSingleton<SyntheziaQueueManager>();
         services.AddHostedService(sp => sp.GetRequiredService<SyntheziaQueueManager>());
 
+        services.AddSingleton<Worker365>();
+        services.AddHostedService(sp => sp.GetRequiredService<Worker365>());
+
+        services.AddSingleton<Client>(
+            (sp) =>
+            {
+                var options = sp.GetRequiredService<IOptions<WTelegramClientConfiguration>>().Value;
+                var client = new Client(options.AppId, options.ApiHash);
+                client.LoginUserIfNeeded();
+                //DoLogin(client, options.PhoneNumber, options).GetAwaiter().GetResult();
+
+                return client;
+
+                //static async Task DoLogin(
+                //    Client client,
+                //    string loginInfo,
+                //    WTelegramClientConfiguration configuration
+                //) // (add this method to your code)
+                //{
+                //    while (client.User == null)
+                //    {
+                //        switch (await client.Login(loginInfo)) // returns which config is needed to continue login
+                //        {
+                //            case "verification_code":
+                //                Console.Write("Code: ");
+                //                loginInfo =
+                //                    Console.ReadLine() ?? throw new NullReferenceException();
+                //                break;
+                //            case "name":
+                //                loginInfo = configuration.FirstNameLastName;
+                //                break; // if sign-up is required (first/last_name)
+                //            case "password":
+                //                loginInfo = configuration.Password;
+                //                break; // if user has enabled 2FA
+                //            default:
+                //                loginInfo = string.Empty;
+                //                break;
+                //        }
+                //    }
+                //}
+            }
+        );
+
         services.AddSingleton<Gelbooru>(sp =>
         {
             var booruConfiguration =
@@ -200,6 +245,11 @@ public class Program
         );
         services.Configure<BooruConfiguration>(
             configuration.GetSection(AppBase.Base).GetSection(BooruConfiguration.Section)
+        );
+        services.Configure<WTelegramClientConfiguration>(
+            configuration
+                .GetSection(AppBase.Base)
+                .GetSection(WTelegramClientConfiguration.TelegramSection)
         );
 
         services.AddTwitchEvents(configuration, loggerFactory);

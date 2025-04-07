@@ -18,7 +18,9 @@ public class SyntheziaVoicer : IVoicer
     {
         _logger = logger;
         if (OperatingSystem.IsWindows())
+        {
             _speechSynthesizer.SetOutputToDefaultAudioDevice();
+        }
     }
 
     public int GetVolume()
@@ -29,13 +31,17 @@ public class SyntheziaVoicer : IVoicer
     public void ChangeVolume(int volume)
     {
         if (OperatingSystem.IsWindows())
+        {
             _speechSynthesizer.Volume = volume;
+        }
     }
 
     public async Task Sound(MessageToSynthezid message)
     {
         if (!OperatingSystem.IsWindows())
+        {
             return;
+        }
 
         try
         {

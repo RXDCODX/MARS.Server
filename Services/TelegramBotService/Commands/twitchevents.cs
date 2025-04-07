@@ -12,12 +12,14 @@ public partial class Commands
     )
     {
         if (tokenService.Token is null)
+        {
             return await botClient.SendMessage(
                 message.Chat.Id,
                 "Не удалось провести запрос",
                 replyMarkup: new ReplyKeyboardRemove(),
                 cancellationToken: cancellationToken
             );
+        }
 
         var response = await eventSubService.GetEventSubsAsync(tokenService.Token.AccessToken);
 

@@ -1,4 +1,4 @@
-using System.Reflection;
+﻿using System.Reflection;
 using System.Runtime.CompilerServices;
 using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
@@ -10,7 +10,9 @@ public class SchemaFilter : ISchemaFilter
     public string ToPascalCase(string str)
     {
         if (string.IsNullOrEmpty(str))
+        {
             return str;
+        }
 
         return char.ToUpper(str[0]) + str.Substring(1);
     }
@@ -29,6 +31,8 @@ public class SchemaFilter : ISchemaFilter
         schema.Required = requiredJsonProps.Select(x => x.Key).ToHashSet();
 
         foreach (var requiredJsonProp in requiredJsonProps)
+        {
             requiredJsonProp.Value.Nullable = false;
+        }
     }
 }
