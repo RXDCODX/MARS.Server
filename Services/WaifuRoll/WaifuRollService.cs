@@ -4,40 +4,19 @@ using MARS.Server.Services.WaifuRoll.helpers;
 
 namespace MARS.Server.Services.WaifuRoll;
 
-public class WaifuRollService : ITelegramusService
+public class WaifuRollService(
+    ILogger<WaifuRollService> logger,
+    IOptions<ShikimoriClientOptions> options,
+    IDbContextFactory<AppDbContext> factory,
+    WaifuRollDataBaseHelper waifuDbHelper,
+    IHostEnvironment environment
+) : ITelegramusService
 {
-    private readonly IDbContextFactory<AppDbContext> _factory;
-    private readonly ILogger<WaifuRollService> _logger;
-    private readonly IOptions<ShikimoriClientOptions> _options;
-    private readonly WaifuRollDataBaseHelper _waifuDbHelper;
-    private readonly IHostEnvironment _environment;
-
-    public WaifuRollService(
-        ILogger<WaifuRollService> logger,
-        IOptions<ShikimoriClientOptions> options,
-        IDbContextFactory<AppDbContext> factory,
-        WaifuRollDataBaseHelper waifuDbHelper,
-        IHostEnvironment environment
-    )
-    {
-        _logger = logger;
-        _options = options;
-        _factory = factory;
-        _waifuDbHelper = waifuDbHelper;
-        _environment = environment;
-    }
-
-    private static DateTimeOffset MoscowTime =>
-        TimeZoneInfo.ConvertTimeFromUtc(
-            DateTimeOffset.Now.LocalDateTime,
-            TimeZoneInfo.FindSystemTimeZoneById("Russian Standard Time")
-        );
-
     public async Task<Waifu?> RollTheWaifu(string id, string? displayName = null)
     {
         var pass = false;
 
-        await using AppDbContext dbContext = await _factory.CreateDbContextAsync();
+        await using AppDbContext dbContext = await factory.CreateDbContextAsync();
         Host? host = await dbContext.Hosts.FindAsync(id);
         var cd = dbContext.HostsCoolDowns.FirstOrDefault(e => e.HostId == id);
         if (host != null && cd is not null)
@@ -45,8 +24,8 @@ public class WaifuRollService : ITelegramusService
             if (cd.HostId == host.TwitchId)
             {
                 var isCDed =
-                    DateTimeOffset.Now - cd.Time >= TimeSpan.FromHours(1)
-                    || _environment.IsDevelopment();
+                    DateTimeOffset.Now.AddHours(-1) - cd.Time >= TimeSpan.FromHours(1)
+                    || environment.IsDevelopment();
                 if (isCDed)
                 {
                     pass = true;
@@ -55,7 +34,7 @@ public class WaifuRollService : ITelegramusService
             else
             {
                 cd.HostId = host.TwitchId;
-                cd.Time = DateTimeOffset.Now;
+                cd.Time = DateTimeOffset.Now.AddHours(-1);
 
                 await dbContext.AddAsync(cd);
                 pass = true;
@@ -80,6 +59,11 @@ public class WaifuRollService : ITelegramusService
 
         await dbContext.SaveChangesAsync();
 
+        if (id == TwitchExstension.ChannelId)
+        {
+            pass = true;
+        }
+
         if (pass)
         {
             // Находим вайфу с минимальным LastOrder за один SQL-запрос
@@ -91,23 +75,23 @@ public class WaifuRollService : ITelegramusService
             if (waifu != null)
             {
                 host.WaifuRollId = waifu.ShikiId;
-                host.WhenOrdered = DateTimeOffset.Now;
+                host.WhenOrdered = DateTimeOffset.Now.AddHours(-1);
                 host.OrderCount++;
 
-                waifu.LastOrder = DateTimeOffset.Now;
+                waifu.LastOrder = DateTimeOffset.Now.AddHours(-1);
                 waifu.OrderCount++;
 
                 if (string.IsNullOrWhiteSpace(waifu.ImageUrl))
                 {
-                    waifu = await _waifuDbHelper.EnsureWaifuHaveImageIrl(waifu);
+                    waifu = await waifuDbHelper.EnsureWaifuHaveImageIrl(waifu);
 
                     dbContext.Waifus.Update(waifu);
                 }
 
-                cd.Time = DateTimeOffset.Now;
+                cd.Time = DateTimeOffset.Now.AddHours(-1);
                 await dbContext.SaveChangesAsync();
 
-                waifu.ImageUrl = _options.Value.ShikimoriSite + waifu.ImageUrl;
+                waifu.ImageUrl = options.Value.ShikimoriSite + waifu.ImageUrl;
 
                 return waifu;
             }
@@ -120,7 +104,7 @@ public class WaifuRollService : ITelegramusService
     {
         try
         {
-            await using AppDbContext dbContext = await _factory.CreateDbContextAsync();
+            await using AppDbContext dbContext = await factory.CreateDbContextAsync();
 
             if (dbContext.Waifus.Any(e => e.ShikiId == character.id.ToString()))
             {
@@ -128,28 +112,28 @@ public class WaifuRollService : ITelegramusService
             }
 
             var waifu = character.CreateWaifu();
-            waifu = await _waifuDbHelper.EnsureWaifuHaveImageIrl(waifu);
+            waifu = await waifuDbHelper.EnsureWaifuHaveImageIrl(waifu);
             await dbContext.Waifus.AddAsync(waifu);
             await dbContext.SaveChangesAsync();
             return (waifu, false);
         }
         catch (Exception e)
         {
-            _logger.LogException(e);
+            logger.LogException(e);
             return (null, true);
         }
     }
 
     public async Task<bool> MergeTheWaifu(Host host, Waifu waifu, bool makeprivate = true)
     {
-        await using AppDbContext dbContext = await _factory.CreateDbContextAsync();
+        await using AppDbContext dbContext = await factory.CreateDbContextAsync();
 
         if (makeprivate)
         {
             waifu.IsPrivated = true;
             host.IsPrivated = true;
             host.WaifuBrideId = waifu.ShikiId;
-            host.WhenPrivated = MoscowTime;
+            host.WhenPrivated = DateTimeOffset.Now.AddHours(-1);
         }
         else
         {
@@ -157,12 +141,15 @@ public class WaifuRollService : ITelegramusService
             host.IsPrivated = false;
         }
 
+        dbContext.Waifus.Update(waifu);
+        dbContext.Hosts.Update(host);
+
         return await dbContext.SaveChangesAsync() != 0;
     }
 
     public async Task<string?> AutoHello(string id, string displayName)
     {
-        await using AppDbContext dbContext = await _factory.CreateDbContextAsync();
+        await using AppDbContext dbContext = await factory.CreateDbContextAsync();
 
         var host = dbContext.Hosts.Find(id);
 
@@ -200,11 +187,15 @@ public class WaifuRollService : ITelegramusService
 
                     if (hello != default)
                     {
-                        hello.Time = DateTimeOffset.Now;
+                        hello.Time = DateTimeOffset.Now.AddHours(-1);
                     }
                     else
                     {
-                        hello = new HostAutoHello { HostId = id, Time = DateTimeOffset.Now };
+                        hello = new HostAutoHello
+                        {
+                            HostId = id,
+                            Time = DateTimeOffset.Now.AddHours(-1),
+                        };
 
                         dbContext.Add(hello);
                     }
@@ -247,7 +238,7 @@ public class WaifuRollService : ITelegramusService
     {
         if (message.Contains("{randomHost}"))
         {
-            await using AppDbContext dbContext = await _factory.CreateDbContextAsync();
+            await using AppDbContext dbContext = await factory.CreateDbContextAsync();
             var count = dbContext.Hosts.Count(e => !e.IsPrivated);
 
             if (count > 0)

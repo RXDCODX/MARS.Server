@@ -1,6 +1,7 @@
 ﻿using System.Reflection;
 using MARS.Server.Services.Twitch.HelloVideos;
 using MARS.Server.Services.Twitch.Management;
+using MARS.Server.Services.Twitch.Rewards.TwitchWaifuRolls;
 using MARS.Server.Services.Twitch.Synthesizer.Enitity;
 using Telegram.Bot.Types.ReplyMarkups;
 
@@ -14,7 +15,8 @@ public partial class Commands(
     IHubContext<TelegramusHub, ITelegramusHub> alertsHub,
     HelloVideoWorker helloVideoWorker,
     EventSubService eventSubService,
-    TokenService tokenService
+    TokenService tokenService,
+    MergeWaifu mergeWaifu
 ) : ITelegramusService
 {
     public const string Template =

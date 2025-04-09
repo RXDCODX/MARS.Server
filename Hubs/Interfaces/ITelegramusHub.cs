@@ -14,7 +14,12 @@ public interface ITelegramusHub
     public Task UpdateWaifuPrizes(ICollection<PrizeType> prizes);
     public Task WaifuRoll(Waifu content, string? displayName, string? color = default);
     public Task AddNewWaifu(Waifu content, string? displayName, string? color = default);
-    public Task MergeWaifu(Waifu content, string? displayName, string? color = default);
+    public Task MergeWaifu(
+        Waifu content,
+        string? displayName,
+        string? avatar = default,
+        string? color = default
+    );
     public Task FumoFriday(string displayName, string? color = null);
     public Task NewMessage(string id, ChatMessage message);
     public Task DeleteMessage(string id);

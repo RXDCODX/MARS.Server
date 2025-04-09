@@ -13,6 +13,7 @@ public class Worker365(
     IOptions<Config365> options,
     IHttpClientFactory httpClientFactory,
     IHostApplicationLifetime lifetime,
+    IHostEnvironment environment,
     IDbContextFactory<AppDbContext> appDbContextFactory,
     Client botClient,
     ILogger<Worker365> logger
@@ -154,15 +155,20 @@ public class Worker365(
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        try
+        if (environment.IsProduction())
         {
-            return Main();
+            try
+            {
+                return Main();
+            }
+            catch (Exception e)
+            {
+                logger.LogException(e);
+                return Task.CompletedTask;
+            }
         }
-        catch (Exception e)
-        {
-            logger.LogException(e);
-            return Task.CompletedTask;
-        }
+
+        return Task.CompletedTask;
     }
 
     public Task StopAsync(CancellationToken cancellationToken)

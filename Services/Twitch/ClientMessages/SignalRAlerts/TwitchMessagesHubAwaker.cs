@@ -63,7 +63,7 @@ public class TwitchMessagesHubAwaker : BackgroundService
                     var alerts = mediaInfo
                         .Where(info =>
                         {
-                            if (info.TextInfo.TriggerWord == null)
+                            if (string.IsNullOrWhiteSpace(info.TextInfo.TriggerWord))
                             {
                                 return false;
                             }
