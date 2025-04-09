@@ -162,7 +162,9 @@ public class Program
             (sp) =>
             {
                 var options = sp.GetRequiredService<IOptions<WTelegramClientConfiguration>>().Value;
-                var client = new Client(options.AppId, options.ApiHash);
+                var client = new Client(options.AppId, options.ApiHash, "bin/WTelegram.session");
+                var logger = loggerFactory.CreateLogger("WTelegram");
+                Helpers.Log = (i, v) => logger.Log((LogLevel)i, v);
                 client.LoginUserIfNeeded();
                 //DoLogin(client, options.PhoneNumber, options).GetAwaiter().GetResult();
 

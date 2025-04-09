@@ -18,4 +18,7 @@ public class Video365
     public long TelegramMessageId { get; set; }
     public required int VideoWidth { get; set; }
     public required int VideoHeight { get; set; }
+
+    [NotMapped]
+    public required string ThumbnailFilePath { get; set; }
 }

@@ -120,7 +120,13 @@ public class AddNewWaifu : BackgroundService
 
                         waifu.IsAdded = true;
 
-                        await _hubContext.Clients.All.AddNewWaifu(waifu, twEvent.UserName);
+                        var color = await _api.Helix.Chat.GetUserChatColorAsync([twEvent.UserId]);
+
+                        await _hubContext.Clients.All.AddNewWaifu(
+                            waifu,
+                            twEvent.UserName,
+                            color.Data[0]?.Color
+                        );
                         await _client.SendMessageToMainTwitchAsync(message, _logger);
 
                         var chance = Random.Shared.Next(0, 101);

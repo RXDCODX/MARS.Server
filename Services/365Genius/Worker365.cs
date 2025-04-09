@@ -4,6 +4,7 @@ using HtmlAgilityPack;
 using MARS.Server.Services._365Genius.Entitys;
 using TL;
 using WTelegram;
+using InputFile = TL.InputFile;
 using InputMediaDocument = TL.InputMediaDocument;
 
 namespace MARS.Server.Services._365Genius;
@@ -13,7 +14,8 @@ public class Worker365(
     IHttpClientFactory httpClientFactory,
     IHostApplicationLifetime lifetime,
     IDbContextFactory<AppDbContext> appDbContextFactory,
-    Client botClient
+    Client botClient,
+    ILogger<Worker365> logger
 ) : IHostedService
 {
     private readonly Uri _site = new(options.Value.Site ?? throw new NullReferenceException());
@@ -60,18 +62,11 @@ public class Worker365(
         var videoList = new List<Video365>();
         for (var i = pageNumbers; i >= 1; i--)
         {
+            await Task.Delay(TimeSpan.FromSeconds(5), _cancellationToken);
             var pageDoc = await GetFavouritePageHtmlDocument(httpClient, i);
 
-            var result = await GetVideos365(httpClient, pageDoc);
-            videoList.AddRange(result.Item1);
-
-            if (result.Item2)
-            {
-                break;
-            }
+            await GetVideos365(httpClient, pageDoc);
         }
-
-        await UploadVideos(httpClient, videoList);
     }
 
     private void ValidateConfig(Config365? optionsValue)
@@ -89,29 +84,6 @@ public class Worker365(
         )
         {
             throw new NullReferenceException();
-        }
-    }
-
-    private async Task UploadVideos(HttpClient http, List<Video365> videoList)
-    {
-        await using var dbContext = await appDbContextFactory.CreateDbContextAsync(
-            _cancellationToken
-        );
-
-        foreach (var video in videoList)
-        {
-            try
-            {
-                var bb = await UploadVideo(http, video);
-                dbContext.Videos365.Add(bb);
-            }
-            catch (Exception)
-            {
-                dbContext.Videos365.Add(video);
-                // ignored
-            }
-
-            await dbContext.SaveChangesAsync(_cancellationToken);
         }
     }
 
@@ -151,6 +123,7 @@ public class Worker365(
         var chats = await botClient.Messages_GetAllChats();
         var channel = chats.chats[options.Value.TelegramChannelId];
         var file = await botClient.UploadFileAsync(bb, video.Id.ToString());
+        var thumb = await botClient.UploadFileAsync(video.ThumbnailFilePath);
         await botClient.Messages_SendMedia(
             channel,
             new InputMediaUploadedDocument()
@@ -167,6 +140,7 @@ public class Worker365(
                         flags = DocumentAttributeVideo.Flags.supports_streaming,
                     },
                 ],
+                thumb = thumb,
             },
             video.Title,
             Random.Shared.NextInt64()
@@ -174,12 +148,21 @@ public class Worker365(
 
         video.IsUploaded = true;
         File.Delete(path);
+        File.Delete(video.ThumbnailFilePath);
         return video;
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        return Main();
+        try
+        {
+            return Main();
+        }
+        catch (Exception e)
+        {
+            logger.LogException(e);
+            return Task.CompletedTask;
+        }
     }
 
     public Task StopAsync(CancellationToken cancellationToken)
@@ -284,12 +267,8 @@ public class Worker365(
         return pageDoc;
     }
 
-    private async Task<(ICollection<Video365>, bool)> GetVideos365(
-        HttpClient httpClient,
-        HtmlDocument document
-    )
+    private async Task GetVideos365(HttpClient httpClient, HtmlDocument document)
     {
-        var rr = false;
         await using var dbConext = await appDbContextFactory.CreateDbContextAsync(
             _cancellationToken
         );
@@ -299,75 +278,77 @@ public class Worker365(
             )
             .Reverse()
             .ToList();
-        var list = new List<Video365>();
+        var ids = liNodes.Select(e => e.GetAttributeValue("id", 0)).ToArray();
 
-        foreach (var node in liNodes)
+        var ll = ids.Where(e => dbConext.Videos365.All(t => t.SiteId != e)).ToArray();
+
+        if (ll.Length != 0)
         {
-            var id = node.GetAttributeValue("id", 0);
-            var link = node.SelectSingleNode(".//a[@class=\"image\"]")
-                .GetAttributeValue("href", string.Empty);
-
-            var isUploaded = await dbConext.Videos365.AnyAsync(
-                e => e.SiteId == id,
-                cancellationToken: _cancellationToken
-            );
-
-            if (!isUploaded)
+            foreach (var node in liNodes)
             {
-                try
-                {
-                    var video = await GetVideo365Information(httpClient, link, id);
-                    video = await UploadVideo(httpClient, video);
+                var id = node.GetAttributeValue("id", 0);
+                var link = node.SelectSingleNode(".//a[@class=\"image\"]")
+                    .GetAttributeValue("href", string.Empty);
 
-                    if (dbConext.Videos365.Any(e => e.SiteId == video.SiteId))
-                    {
-                        dbConext.Videos365.Update(video);
-                    }
-                    else
-                    {
-                        dbConext.Videos365.Add(video);
-                    }
-
-                    await dbConext.SaveChangesAsync(_cancellationToken);
-                }
-                catch (HttpRequestException)
-                {
-                    rr = true;
-                    break;
-                }
-            }
-            else
-            {
-                var pass = await dbConext.Videos365.AnyAsync(
-                    e => e.SiteId == id && !e.IsUploaded,
+                var isUploaded = await dbConext.Videos365.AnyAsync(
+                    e => e.SiteId == id,
                     cancellationToken: _cancellationToken
                 );
 
-                if (pass)
+                if (!isUploaded)
                 {
-                    var video = await dbConext.Videos365.SingleAsync(
-                        e => e.SiteId == id,
+                    try
+                    {
+                        var video = await GetVideo365Information(httpClient, link, id);
+                        video = await UploadVideo(httpClient, video);
+
+                        if (dbConext.Videos365.Any(e => e.SiteId == video.SiteId))
+                        {
+                            dbConext.Videos365.Update(video);
+                        }
+                        else
+                        {
+                            dbConext.Videos365.Add(video);
+                        }
+
+                        await dbConext.SaveChangesAsync(_cancellationToken);
+                    }
+                    catch (HttpRequestException)
+                    {
+                        break;
+                    }
+                }
+                else
+                {
+                    var pass = await dbConext.Videos365.AnyAsync(
+                        e => e.SiteId == id && !e.IsUploaded,
                         cancellationToken: _cancellationToken
                     );
-                    video = await UploadVideo(httpClient, video);
 
-                    if (dbConext.Videos365.Any(e => e.SiteId == video.SiteId))
+                    if (pass)
                     {
-                        dbConext.Videos365.Update(video);
-                    }
-                    else
-                    {
-                        dbConext.Videos365.Add(video);
-                    }
+                        var video = await dbConext.Videos365.SingleAsync(
+                            e => e.SiteId == id,
+                            cancellationToken: _cancellationToken
+                        );
+                        video = await UploadVideo(httpClient, video);
 
-                    await dbConext.SaveChangesAsync(_cancellationToken);
+                        if (dbConext.Videos365.Any(e => e.SiteId == video.SiteId))
+                        {
+                            dbConext.Videos365.Update(video);
+                        }
+                        else
+                        {
+                            dbConext.Videos365.Add(video);
+                        }
+
+                        await dbConext.SaveChangesAsync(_cancellationToken);
+                    }
                 }
+
+                await Task.Delay(TimeSpan.FromSeconds(10), _cancellationToken);
             }
-
-            await Task.Delay(TimeSpan.FromSeconds(10), _cancellationToken);
         }
-
-        return (list, rr);
     }
 
     private async Task<Video365> GetVideo365Information(HttpClient httpClient, string link, int id)
@@ -417,6 +398,7 @@ public class Worker365(
         var height = document
             .DocumentNode.SelectSingleNode("//meta[@property='og:video:height']")
             .GetAttributeValue("content", 0);
+        var thumbNailFilePath = await GetThumbNailFilePath(httpClient, document);
 
         if (
             string.IsNullOrWhiteSpace(discription)
@@ -439,7 +421,55 @@ public class Worker365(
             Duration = TimeSpan.FromSeconds(duration),
             VideoHeight = height,
             VideoWidth = width,
+            ThumbnailFilePath = thumbNailFilePath,
         };
+    }
+
+    private async Task<string> GetThumbNailFilePath(HttpClient httpClient, HtmlDocument document)
+    {
+        try
+        {
+            var saveDirectory = Directory.GetCurrentDirectory();
+
+            // 1. Находим элемент <link> с прелоад-изображением
+            var linkNode = document.DocumentNode.SelectSingleNode(
+                "//link[@rel=\"preload\" and @as=\"image\"]"
+            );
+            if (linkNode == null)
+            {
+                throw new Exception("Элемент <link> не найден.");
+            }
+
+            // 2. Извлекаем URL изображения
+            var imageUrl = linkNode.GetAttributeValue("href", "");
+            if (string.IsNullOrEmpty(imageUrl))
+            {
+                throw new Exception("Атрибут href не содержит ссылки.");
+            }
+
+            // 3. Скачиваем изображение
+            var imageBytes = await httpClient.GetByteArrayAsync(imageUrl, _cancellationToken);
+
+            // 4. Создаем папку, если её нет
+            if (!Directory.Exists(saveDirectory))
+            {
+                Directory.CreateDirectory(saveDirectory);
+            }
+
+            // 5. Формируем путь для сохранения (используем имя файла из URL)
+            var fileName = Path.GetFileName(new Uri(imageUrl).LocalPath);
+            var filePath = Path.Combine(saveDirectory, fileName);
+
+            // 6. Сохраняем файл
+            await File.WriteAllBytesAsync(filePath, imageBytes, _cancellationToken);
+
+            return filePath;
+        }
+        catch (Exception ex)
+        {
+            // Логируем ошибку (можно заменить на Console.WriteLine или logger)
+            throw new Exception($"Ошибка при сохранении изображения: {ex.Message}");
+        }
     }
 
     private HttpRequestMessage GetMovieRequest(int id)

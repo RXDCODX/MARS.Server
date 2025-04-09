@@ -81,7 +81,14 @@ public class MergeWaifu : BackgroundService
 
                                 waifu.IsMerged = true;
 
-                                await _hubContext.Clients.All.MergeWaifu(waifu, twEvent.UserName);
+                                var color = await _api.Helix.Chat.GetUserChatColorAsync(
+                                    [twEvent.UserId]
+                                );
+                                await _hubContext.Clients.All.MergeWaifu(
+                                    waifu,
+                                    twEvent.UserName,
+                                    color.Data[0]?.Color
+                                );
 
                                 if (_tokenService.Token != null)
                                 {

@@ -9,7 +9,8 @@ public class RollWaifu(
     ITwitchClient client,
     WaifuRollService waifuRollService,
     IHubContext<TelegramusHub, ITelegramusHub> hubContext,
-    IDbContextFactory<AppDbContext> factory
+    IDbContextFactory<AppDbContext> factory,
+    ITwitchAPI api
 )
 {
     public async Task RollWaifuTwitchEvent(
@@ -34,7 +35,12 @@ public class RollWaifu(
 
                 if (waifu is not null)
                 {
-                    await hubContext.Clients.All.WaifuRoll(waifu, twEvent.UserName);
+                    var color = await api.Helix.Chat.GetUserChatColorAsync([twEvent.UserId]);
+                    await hubContext.Clients.All.WaifuRoll(
+                        waifu,
+                        twEvent.UserName,
+                        color.Data[0]?.Color
+                    );
                     return;
                 }
 
