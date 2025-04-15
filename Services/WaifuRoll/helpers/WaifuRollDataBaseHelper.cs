@@ -2,28 +2,19 @@
 
 namespace MARS.Server.Services.WaifuRoll.helpers;
 
-public class WaifuRollDataBaseHelper : ITelegramusService
+public class WaifuRollDataBaseHelper(
+    ILogger<WaifuRollDataBaseHelper> logger,
+    ShikimoriService shikiService,
+    IDbContextFactory<AppDbContext> factory
+) : ITelegramusService
 {
-    private readonly IDbContextFactory<AppDbContext> _factory;
-    private readonly ILogger _logger;
-    private readonly ShikimoriService _shikiService;
-
-    public WaifuRollDataBaseHelper(
-        ILogger<WaifuRollDataBaseHelper> logger,
-        ShikimoriService shikiService,
-        IDbContextFactory<AppDbContext> factory
-    )
-    {
-        _shikiService = shikiService;
-        _factory = factory;
-        _logger = logger;
-    }
+    private readonly ILogger _logger = logger;
 
     public async Task<Host?> GetRandomPrivatedHost()
     {
         try
         {
-            await using var dbContext = await _factory.CreateDbContextAsync();
+            await using var dbContext = await factory.CreateDbContextAsync();
             var count = dbContext.Hosts.Count(e => !e.IsPrivated);
 
             if (count > 0)
@@ -54,7 +45,7 @@ public class WaifuRollDataBaseHelper : ITelegramusService
             return waifu;
         }
 
-        var character = await _shikiService.GetShikiCharacterById(waifu.ShikiId);
+        var character = await shikiService.GetShikiCharacterById(waifu.ShikiId);
         waifu.ImageUrl = character!.image.original;
         return waifu;
     }

@@ -8,35 +8,52 @@ public class WaifuRollService(
     ILogger<WaifuRollService> logger,
     IOptions<ShikimoriClientOptions> options,
     IDbContextFactory<AppDbContext> factory,
-    WaifuRollDataBaseHelper waifuDbHelper,
-    IHostEnvironment environment
+    WaifuRollDataBaseHelper waifuDbHelper
 ) : ITelegramusService
 {
-    public async Task<Waifu?> RollTheWaifu(string id, string? displayName = null)
+    public async Task<Waifu?> RollTheWaifu(
+        string id,
+        string? displayName = null,
+        bool forcePass = false
+    )
     {
         var pass = false;
 
         await using AppDbContext dbContext = await factory.CreateDbContextAsync();
-        Host? host = await dbContext.Hosts.FindAsync(id);
-        var cd = dbContext.HostsCoolDowns.FirstOrDefault(e => e.HostId == id);
-        if (host != null && cd is not null)
+        var host = dbContext
+            .Hosts.Include(e => e.HostCoolDown)
+            .FirstOrDefault(e => e.TwitchId == id);
+        var cd = host?.HostCoolDown;
+        if (host != null)
         {
-            if (cd.HostId == host.TwitchId)
+            if (cd is not null)
             {
-                var isCDed =
-                    DateTimeOffset.Now.AddHours(-1) - cd.Time >= TimeSpan.FromHours(1)
-                    || environment.IsDevelopment();
-                if (isCDed)
+                if (cd.HostId == host.TwitchId)
                 {
+                    var now = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
+                    var cdTime = cd.Time.ToOffset(TimeSpan.FromHours(3));
+
+                    var isCDed = now - cdTime >= TimeSpan.FromHours(1);
+                    if (isCDed)
+                    {
+                        pass = true;
+                    }
+                }
+                else
+                {
+                    cd.HostId = host.TwitchId;
+                    cd.Time = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
+
+                    await dbContext.AddAsync(cd);
                     pass = true;
                 }
             }
             else
             {
-                cd.HostId = host.TwitchId;
-                cd.Time = DateTimeOffset.Now.AddHours(-1);
+                cd = new HostCoolDown() { HostId = id };
 
-                await dbContext.AddAsync(cd);
+                await dbContext.HostsCoolDowns.AddAsync(cd);
+
                 pass = true;
             }
         }
@@ -52,14 +69,14 @@ public class WaifuRollService(
                 HostCoolDown = cd,
             };
 
-            await dbContext.AddAsync(host);
+            await dbContext.Hosts.AddAsync(host);
 
             pass = true;
         }
 
         await dbContext.SaveChangesAsync();
 
-        if (id == TwitchExstension.ChannelId)
+        if (id == TwitchExstension.ChannelId || forcePass)
         {
             pass = true;
         }
@@ -75,10 +92,11 @@ public class WaifuRollService(
             if (waifu != null)
             {
                 host.WaifuRollId = waifu.ShikiId;
-                host.WhenOrdered = DateTimeOffset.Now.AddHours(-1);
+                host.WhenOrdered = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
                 host.OrderCount++;
+                host.HostCoolDown.Time = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
 
-                waifu.LastOrder = DateTimeOffset.Now.AddHours(-1);
+                waifu.LastOrder = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
                 waifu.OrderCount++;
 
                 if (string.IsNullOrWhiteSpace(waifu.ImageUrl))
@@ -88,7 +106,7 @@ public class WaifuRollService(
                     dbContext.Waifus.Update(waifu);
                 }
 
-                cd.Time = DateTimeOffset.Now.AddHours(-1);
+                cd.Time = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
                 await dbContext.SaveChangesAsync();
 
                 waifu.ImageUrl = options.Value.ShikimoriSite + waifu.ImageUrl;
@@ -98,6 +116,23 @@ public class WaifuRollService(
         }
 
         return null;
+    }
+
+    public async Task<(Waifu? waifu, Host? host)> TelegramRollWaifu(string name)
+    {
+        await using var dbContext = await factory.CreateDbContextAsync();
+
+        var host = await dbContext.Hosts.FirstOrDefaultAsync(e =>
+            e.Name != null && EF.Functions.Like(e.Name, $"%{name}%")
+        );
+
+        if (host is not null)
+        {
+            var waifu = await RollTheWaifu(host.TwitchId, host.Name, true);
+            return (waifu, host);
+        }
+
+        return (null, null);
     }
 
     public async Task<(Waifu?, bool)> AddNewWaifu(ShikiCharacter character)
@@ -133,7 +168,7 @@ public class WaifuRollService(
             waifu.IsPrivated = true;
             host.IsPrivated = true;
             host.WaifuBrideId = waifu.ShikiId;
-            host.WhenPrivated = DateTimeOffset.Now.AddHours(-1);
+            host.WhenPrivated = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
         }
         else
         {
@@ -187,14 +222,14 @@ public class WaifuRollService(
 
                     if (hello != default)
                     {
-                        hello.Time = DateTimeOffset.Now.AddHours(-1);
+                        hello.Time = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
                     }
                     else
                     {
                         hello = new HostAutoHello
                         {
                             HostId = id,
-                            Time = DateTimeOffset.Now.AddHours(-1),
+                            Time = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3)),
                         };
 
                         dbContext.Add(hello);

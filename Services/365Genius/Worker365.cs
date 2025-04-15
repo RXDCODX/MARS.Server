@@ -153,22 +153,19 @@ public class Worker365(
         return video;
     }
 
-    public Task StartAsync(CancellationToken cancellationToken)
+    public async Task StartAsync(CancellationToken cancellationToken)
     {
         if (environment.IsProduction())
         {
             try
             {
-                return Main();
+                await Task.Factory.StartNew(Main, _cancellationToken);
             }
             catch (Exception e)
             {
                 logger.LogException(e);
-                return Task.CompletedTask;
             }
         }
-
-        return Task.CompletedTask;
     }
 
     public Task StopAsync(CancellationToken cancellationToken)

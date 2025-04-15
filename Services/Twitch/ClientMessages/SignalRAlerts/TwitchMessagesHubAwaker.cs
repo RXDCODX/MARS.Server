@@ -1,5 +1,4 @@
-﻿using Npgsql.EntityFrameworkCore.PostgreSQL.Storage.Internal.Mapping;
-using TwitchLib.Client.Events;
+﻿using TwitchLib.Client.Events;
 
 namespace MARS.Server.Services.Twitch.ClientMessages.SignalRAlerts;
 
@@ -11,6 +10,7 @@ public class TwitchMessagesHubAwaker : BackgroundService
     private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
 
     private readonly CancellationToken _token;
+    private MediaInfo[]? _alerts;
 
     public TwitchMessagesHubAwaker(
         ITwitchClient client,
@@ -54,22 +54,31 @@ public class TwitchMessagesHubAwaker : BackgroundService
             await Task.Factory.StartNew(
                 async () =>
                 {
-                    await using var dbContext = await _dbContextFactory.CreateDbContextAsync(
-                        _token
-                    );
+                    if (_alerts is not { Length: > 0 })
+                    {
+                        await using var dbContext = await _dbContextFactory.CreateDbContextAsync(
+                            _token
+                        );
 
-                    var mediaInfo = await dbContext.Alerts.AsNoTracking().ToArrayAsync(_token);
+                        _alerts = await dbContext
+                            .Alerts.AsNoTracking()
+                            .Where(mediaInfo =>
+                                !string.IsNullOrWhiteSpace(mediaInfo.TextInfo.TriggerWord)
+                            )
+                            .ToArrayAsync(_token);
+                    }
 
-                    var alerts = mediaInfo
+                    var alerts = _alerts
                         .Where(info =>
                         {
-                            if (string.IsNullOrWhiteSpace(info.TextInfo.TriggerWord))
+                            var words = info.TextInfo.TriggerWord?.Trim().Split(' ');
+                            var textWords = e.ChatMessage.Message.Trim().Split(' ');
+
+                            if (words is not { Length: > 0 })
                             {
                                 return false;
                             }
 
-                            var words = info.TextInfo.TriggerWord.Split(' ');
-                            var textWords = e.ChatMessage.Message.Split(' ');
                             var isExists = textWords.Any(t =>
                                 words.Any(r => r.Equals(t, StringComparison.OrdinalIgnoreCase))
                             );

@@ -3,6 +3,7 @@ using MARS.Server.Services.WaifuRoll;
 using MARS.Server.Services.WaifuRoll.helpers;
 using Microsoft.Extensions.Options;
 using TwitchLib.Api.Helix.Models.Chat;
+using static Microsoft.Extensions.Logging.EventSource.LoggingEventSource;
 
 namespace MARS.Server.Services.Twitch.Rewards.TwitchWaifuRolls;
 
@@ -162,7 +163,9 @@ public class MergeWaifu : BackgroundService
 
                         if (waifu is { IsPrivated: true })
                         {
-                            var spanaa = DateTimeOffset.Now.AddHours(-1) - host.WhenPrivated;
+                            var spanaa =
+                                DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3))
+                                - host.WhenPrivated;
 
                             if (spanaa.HasValue)
                             {
@@ -304,9 +307,8 @@ public class MergeWaifu : BackgroundService
     public async Task<(Waifu? waifu, Host? host)> Unmerge(string nickname)
     {
         await using var dbContext = await _factory.CreateDbContextAsync(_cancellationToken);
-
         var host = await dbContext.Hosts.SingleOrDefaultAsync(
-            e => e.Name != null && e.Name.Equals(nickname, StringComparison.OrdinalIgnoreCase),
+            e => e.Name != null && EF.Functions.Like(e.Name, $"%{nickname}%"),
             _cancellationToken
         );
 

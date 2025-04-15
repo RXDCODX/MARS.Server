@@ -3,6 +3,7 @@ using MARS.Server.Services.Twitch.HelloVideos;
 using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.Twitch.Rewards.TwitchWaifuRolls;
 using MARS.Server.Services.Twitch.Synthesizer.Enitity;
+using MARS.Server.Services.WaifuRoll;
 using Telegram.Bot.Types.ReplyMarkups;
 
 namespace MARS.Server.Services.TelegramBotService.Commands;
@@ -16,7 +17,8 @@ public partial class Commands(
     HelloVideoWorker helloVideoWorker,
     EventSubService eventSubService,
     TokenService tokenService,
-    MergeWaifu mergeWaifu
+    MergeWaifu mergeWaifu,
+    WaifuRollService waifoRollService
 ) : ITelegramusService
 {
     public const string Template =

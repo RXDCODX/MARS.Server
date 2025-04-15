@@ -49,12 +49,14 @@ public class RollWaifu(
                     .Hosts.Include(host1 => host1.HostCoolDown)
                     .AsNoTracking()
                     .FirstOrDefaultAsync(e => e.TwitchId == twEvent.UserId);
-                var time = hostRoolWaifu?.HostCoolDown?.Time;
+                var time = hostRoolWaifu?.HostCoolDown?.Time.ToOffset(TimeSpan.FromHours(3));
 
                 if (time != null)
                 {
                     DateTimeOffset notNullTime = time.Value;
-                    TimeSpan wasteTime = notNullTime.AddHours(1) - DateTimeOffset.Now;
+                    TimeSpan wasteTime =
+                        notNullTime.AddHours(1)
+                        - DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
 
                     var culture = CultureInfo.GetCultureInfo("ru-RU");
                     var message =
