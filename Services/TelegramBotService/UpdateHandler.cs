@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using System.Diagnostics.Eventing.Reader;
+using System.Reflection;
 using MARS.Server.Services.PyroAlerts;
 using MARS.Server.Services.RandomMem;
 using MARS.Server.Services.TelegramBotService.Commands.Attribute;
@@ -180,9 +181,11 @@ public class UpdateHandler : IUpdateHandler
                 else
                 {
                     var parameters = new object[] { _botClient, message, cancellationToken };
-                    if (methodName == "OnCommandsCommandReceived" && isAdminUser)
+                    if (methodName == "OnCommandsCommandReceived")
                     {
-                        parameters = new object[] { _botClient, message, cancellationToken, true };
+                        parameters = isAdminUser
+                            ? new object[] { _botClient, message, cancellationToken, true }
+                            : new object[] { _botClient, message, cancellationToken, false };
                     }
 
                     action = (Task<Message>?)method.Invoke(_commands, parameters);
