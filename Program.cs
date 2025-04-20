@@ -95,10 +95,13 @@ public class Program
 
         if (builder.Environment.IsProduction() && OperatingSystem.IsWindows())
         {
-            var servicePath = Environment.GetEnvironmentVariable(
-                "ZYZ_SERVICE_PATH",
-                EnvironmentVariableTarget.Machine
-            );
+            var curPath = Directory.GetCurrentDirectory();
+            var servicePath = curPath.Contains("C:")
+                ? Environment.GetEnvironmentVariable(
+                    "ZYZ_SERVICE_PATH",
+                    EnvironmentVariableTarget.Machine
+                )
+                : curPath;
             if (string.IsNullOrWhiteSpace(servicePath))
             {
                 throw new NullReferenceException();
