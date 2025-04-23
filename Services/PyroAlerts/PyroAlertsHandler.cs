@@ -65,20 +65,24 @@ public class PyroAlertsHandler(
                             var fileInfo = await alertsHelper.GetChatPhotoFilePath(client, chat);
                             if (fileInfo is { FilePath: not null })
                             {
-                                await alertsHelper.DownloadFile(
-                                    client,
-                                    fileInfo,
-                                    alertsHelper.TelegramCache
-                                );
-                                var avatarPath = await alertsHelper.GetFilePhysPath(fileInfo);
+                                if (!MemoryStorage.FileExists(fileInfo.FilePath))
+                                {
+                                    var content = await alertsHelper.DownloadFile(client, fileInfo);
+                                    await MemoryStorage.AddFileAsync(fileInfo.FilePath, content);
+                                }
+                                else
+                                {
+                                    await MemoryStorage.AddFileAsync(fileInfo.FilePath, []);
+                                }
 
                                 var mediaInfo = await alertsHelper.GetTransferObj(client, message);
                                 if (mediaInfo != null)
                                 {
                                     mediaInfo.FileInfo.Type = MediaType.Voice;
-                                    mediaInfo.TextInfo.Text = avatarPath;
+                                    mediaInfo.TextInfo.Text = "/memory/" + fileInfo.FilePath;
                                     mediaInfo.MetaInfo.DisplayName = chat.Username ?? string.Empty;
                                     mediaInfo.MetaInfo.Priority = MediaAlertPriority.High;
+                                    mediaInfo.FileInfo.IsLocalFile = true;
 
                                     await hubContext.Clients.All.Alert(
                                         new MediaDto { MediaInfo = mediaInfo }

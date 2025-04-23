@@ -6,23 +6,28 @@ public static class StringExtension
 {
     public static ValueTask<MediaType> GetFileMediaTypeAsync(this string? exst)
     {
+        return ValueTask.FromResult(GetFileMediaType(exst));
+    }
+
+    public static MediaType GetFileMediaType(this string? exst)
+    {
         var exstension = exst?.ToLower();
 
         return exstension switch
         {
-            ".tgs" => ValueTask.FromResult(MediaType.TelegramSticker),
-            ".ogg" => ValueTask.FromResult(MediaType.Audio),
-            ".oga" => ValueTask.FromResult(MediaType.Audio),
-            ".webm" => ValueTask.FromResult(MediaType.Video),
-            ".mp4" => ValueTask.FromResult(MediaType.Video),
-            ".jpg" => ValueTask.FromResult(MediaType.Image),
-            ".jpeg" => ValueTask.FromResult(MediaType.Image),
-            ".png" => ValueTask.FromResult(MediaType.Image),
-            ".webp" => ValueTask.FromResult(MediaType.Image),
-            ".gif" => ValueTask.FromResult(MediaType.Gif),
-            ".mp3" => ValueTask.FromResult(MediaType.Audio),
-            ".wav" => ValueTask.FromResult(MediaType.Audio),
-            _ => ValueTask.FromResult(MediaType.None),
+            ".tgs" => MediaType.TelegramSticker,
+            ".ogg" => MediaType.Audio,
+            ".oga" => MediaType.Audio,
+            ".webm" => MediaType.Video,
+            ".mp4" => MediaType.Video,
+            ".jpg" => MediaType.Image,
+            ".jpeg" => MediaType.Image,
+            ".png" => MediaType.Image,
+            ".webp" => MediaType.Image,
+            ".gif" => MediaType.Gif,
+            ".mp3" => MediaType.Audio,
+            ".wav" => MediaType.Audio,
+            _ => MediaType.None,
         };
     }
 
