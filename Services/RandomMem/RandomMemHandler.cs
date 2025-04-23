@@ -100,7 +100,7 @@ public class RandomMemHandler(
 
     private async Task Process(ITelegramBotClient client, Message message, bool isGold = false)
     {
-        var fileInfo = await helper.GetFilePath(client, message);
+        var fileInfo = await helper.GetTgFileInfo(client, message);
 
         if (fileInfo == null)
         {
@@ -129,7 +129,7 @@ public class RandomMemHandler(
             case MediaType.Video:
                 if (!File.Exists(downloadPath))
                 {
-                    await helper.DownloadFile(client, fileInfo, folderPath);
+                    await helper.DownloadFileAndCache(client, fileInfo, folderPath);
                     caption = isGold ? goldAnswer1 : answer1;
                 }
                 else
@@ -142,7 +142,7 @@ public class RandomMemHandler(
             case MediaType.Image:
                 if (!File.Exists(downloadPath))
                 {
-                    await helper.DownloadFile(client, fileInfo, folderPath);
+                    await helper.DownloadFileAndCache(client, fileInfo, folderPath);
                     caption = isGold ? goldAnswer1 : answer1;
                 }
                 else

@@ -1,50 +1,23 @@
-﻿using Microsoft.AspNetCore.Hosting.Server;
-using Microsoft.AspNetCore.Hosting.Server.Features;
+﻿namespace MARS.Server.Services.PyroAlerts;
 
-namespace MARS.Server.Services.PyroAlerts;
-
-public class PyroAlertsHelper(
-    IServer server,
-    ILogger<PyroAlertsHelper> logger,
-    IWebHostEnvironment environment
-) : ITelegramusService
+public class PyroAlertsHelper(ILogger<PyroAlertsHelper> logger) : ITelegramusService
 {
-    private readonly IServerAddressesFeature? _serverAddresses =
-        server.Features.Get<IServerAddressesFeature>();
-
-    public string TelegramCache { get; } = Path.Combine(environment.WebRootPath, "TelegramCache");
-
-    public async ValueTask<string> GetFilePhysPath(TGFile fileInfo)
-    {
-        //var address = _serverAddresses?.Addresses.First();
-        return await ValueTask.FromResult("/TelegramCache/" + fileInfo.FilePath);
-    }
-
     public async Task<MediaInfo?> GetTransferObj(ITelegramBotClient client, Message message)
     {
         try
         {
-            var fileInfo = await GetFilePath(client, message);
+            var fileInfo = await GetTgFileInfo(client, message);
 
             if (fileInfo == null)
             {
                 return null;
             }
 
-            var downloadPath = TelegramCache + "\\" + fileInfo.FilePath;
+            var fileContent = await DownloadFile(client, fileInfo);
 
-            if (!File.Exists(downloadPath))
-            {
-                await DownloadFile(client, fileInfo, TelegramCache);
-            }
-            else
-            {
-                File.SetLastAccessTime(downloadPath, DateTimeOffset.Now.LocalDateTime);
-            }
-
+            var downloadPath = fileInfo.FilePath ?? throw new NullReferenceException();
             var extension = Path.GetExtension(downloadPath);
             var fileType = await extension.GetFileMediaTypeAsync();
-            var filePath = await GetFilePhysPath(fileInfo);
 
             var mediainfo = new MediaInfo
             {
@@ -52,13 +25,14 @@ public class PyroAlertsHelper(
                 {
                     Extension = extension,
                     Type = fileType,
-                    FileName = fileInfo.FileUniqueId,
-                    FilePath = filePath,
+                    FileName = fileInfo.FilePath,
+                    IsLocalFile = true,
+                    FilePath = "memory/" + fileInfo.FilePath,
                 },
                 MetaInfo = new MediaMetaInfo
                 {
                     DisplayName = message.Chat.Username ?? string.Empty,
-                    IsLooped = fileType == MediaType.Video ? true : false,
+                    IsLooped = fileType == MediaType.Video,
                     VIP = false,
                 },
                 PositionInfo = new MediaPositionInfo()
@@ -95,6 +69,8 @@ public class PyroAlertsHelper(
                     break;
             }
 
+            await MemoryStorage.AddFileAsync(fileInfo.FilePath, fileContent);
+
             return mediainfo;
         }
         catch (Exception ex)
@@ -105,7 +81,39 @@ public class PyroAlertsHelper(
         return null;
     }
 
-    public async Task DownloadFile(ITelegramBotClient client, TGFile fileInfo, string folderPath)
+    public async Task<byte[]> DownloadFile(ITelegramBotClient client, TGFile fileInfo)
+    {
+        if (!fileInfo.FileSize.HasValue)
+        {
+            throw new NullReferenceException();
+        }
+
+        var buffer = new byte[fileInfo.FileSize.Value];
+        await using var stream = new MemoryStream(buffer, true);
+        try
+        {
+            if (fileInfo.FilePath != null)
+            {
+                await client.DownloadFile(fileInfo.FilePath, stream);
+            }
+            else
+            {
+                Array.Clear(buffer);
+            }
+        }
+        catch (Exception)
+        {
+            Array.Clear(buffer);
+        }
+
+        return buffer;
+    }
+
+    public async Task DownloadFileAndCache(
+        ITelegramBotClient client,
+        TGFile fileInfo,
+        string folderPath
+    )
     {
         var filePath = Path.Combine(
             folderPath,
@@ -149,15 +157,10 @@ public class PyroAlertsHelper(
 
     public async Task<TGFile?> GetChatPhotoFilePath(ITelegramBotClient client, ChatFullInfo chat)
     {
-        if (chat.Photo != null)
-        {
-            return await client.GetFile(chat.Photo.BigFileId);
-        }
-
-        return null;
+        return chat.Photo != null ? await client.GetFile(chat.Photo.BigFileId) : null;
     }
 
-    public async Task<TGFile?> GetFilePath(ITelegramBotClient client, Message? message)
+    public async Task<TGFile?> GetTgFileInfo(ITelegramBotClient client, Message? message)
     {
         try
         {
