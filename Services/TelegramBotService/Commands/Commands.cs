@@ -1,4 +1,5 @@
 ﻿using System.Reflection;
+using MARS.Server.Services.Framedata;
 using MARS.Server.Services.Twitch.HelloVideos;
 using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.Twitch.Rewards.TwitchWaifuRolls;
@@ -18,7 +19,8 @@ public partial class Commands(
     EventSubService eventSubService,
     TokenService tokenService,
     MergeWaifu mergeWaifu,
-    WaifuRollService waifoRollService
+    WaifuRollService waifoRollService,
+    Tekken8FrameData frameData
 ) : ITelegramusService
 {
     public const string Template =

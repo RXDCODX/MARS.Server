@@ -1,4 +1,4 @@
-﻿using MARS.Server.Services.PyroAlerts;
+﻿using MARS.Server.Services.MemoryStorageService;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MARS.Server.Controllers;

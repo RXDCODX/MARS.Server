@@ -1,12 +1,11 @@
-﻿namespace MARS.Server.Services.PyroAlerts.Entitys;
+﻿namespace MARS.Server.Services.MemoryStorageService.Entitys;
 
-public class PyroAlertMemoryStorageFileDescription
+public class MemoryFile
 {
     public required string FileName { get; init; }
-    public required MediaType MediaType { get; init; }
     public ushort UseCount { get; set; }
-
     private byte[]? _fileContent;
+    public required MediaType MediaType { get; init; }
     public required byte[] FileContent
     {
         get
@@ -80,7 +79,7 @@ public class PyroAlertMemoryStorageFileDescription
 
     public override bool Equals(object? obj)
     {
-        if (obj is PyroAlertMemoryStorageFileDescription newDescription)
+        if (obj is MemoryFile newDescription)
         {
             return FileName.Equals(
                 newDescription.FileName.Trim(),

@@ -1,4 +1,5 @@
-﻿using MARS.Server.Services.Twitch.SoundBarService;
+﻿using MARS.Server.Services.Twitch.Management;
+using MARS.Server.Services.Twitch.SoundBarService;
 using TwitchLib.Client.Events;
 using TwitchLib.EventSub.Core.SubscriptionTypes.Channel;
 
@@ -27,6 +28,8 @@ public class TwitchMediaAlerts
         applicationLifetime.ApplicationStarted.Register(() =>
         {
             client.OnMessageReceived += TwitchClientOnNormalMessage;
+            EventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd +=
+                TwitchClientOnOnMessageSend;
         });
     }
 

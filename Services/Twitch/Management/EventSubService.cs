@@ -1,9 +1,4 @@
-﻿using MARS.Server.Services.Twitch.FumoFriday;
-using MARS.Server.Services.Twitch.Rewards.TwitchAlerts;
-using MARS.Server.Services.Twitch.Rewards.TwitchRandomMeme;
-using MARS.Server.Services.Twitch.Rewards.TwitchWaifuRolls;
-using MARS.Server.Services.Twitch.StreamBotNotifications;
-using TwitchLib.Api.Core.Enums;
+﻿using TwitchLib.Api.Core.Enums;
 using TwitchLib.Api.Helix.Models.EventSub;
 using TwitchLib.EventSub.Websockets;
 
@@ -12,12 +7,7 @@ namespace MARS.Server.Services.Twitch.Management;
 public class EventSubService(
     ITwitchAPI api,
     ILogger<EventSubService> logger,
-    TwitchStreamStartupNotifications twitchStreamStartupNotifications,
-    TwitchMediaAlerts twitchMediaAlerts,
-    RollWaifu rollWaifu,
-    RandomMeme twitchRandomMeme,
-    ITelegramBotClient client,
-    FumoFridayWorker fumoFridayWorker
+    ITelegramBotClient client
 )
 {
     public static EventSubWebsocketClient WsClient = new();
@@ -46,14 +36,6 @@ public class EventSubService(
 
         if (_firstActivation)
         {
-            WsClient.StreamOnline += twitchStreamStartupNotifications.PubSubOnlineOnStreamUp;
-            WsClient.StreamOffline += twitchStreamStartupNotifications.PubSibOfflineStream;
-            WsClient.ChannelPointsCustomRewardRedemptionAdd +=
-                twitchMediaAlerts.TwitchClientOnOnMessageSend;
-            WsClient.ChannelPointsCustomRewardRedemptionAdd += rollWaifu.RollWaifuTwitchEvent;
-            WsClient.ChannelPointsCustomRewardRedemptionAdd += twitchRandomMeme.RandomMemeHandler;
-            WsClient.ChannelPointsCustomRewardRedemptionAdd += fumoFridayWorker.OnRewardRedemption;
-
             WsClient.WebsocketConnected += (_, _) => ReconnectAsync(token);
 
             WsClient.ErrorOccurred += (_, args) =>

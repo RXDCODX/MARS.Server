@@ -5,6 +5,7 @@ using BooruSharp.Booru;
 using MARS.Server.CustomLoggers.TelegramLogger;
 using MARS.Server.Services._365Genius;
 using MARS.Server.Services.Honkai;
+using MARS.Server.Services.MemoryStorageService;
 using MARS.Server.Services.PyroAlerts;
 using MARS.Server.Services.RandomMem;
 using MARS.Server.Services.Shikimori;

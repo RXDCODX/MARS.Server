@@ -1,4 +1,4 @@
-﻿using MARS.Server.Services.PyroAlerts;
+﻿using MARS.Server.Services.Twitch.Management;
 using TwitchLib.EventSub.Websockets.Core.EventArgs.Stream;
 
 namespace MARS.Server.Services.Twitch.StreamBotNotifications;
@@ -10,17 +10,18 @@ public class TwitchStreamStartupNotifications
 
     public TwitchStreamStartupNotifications(
         ILogger<TwitchStreamStartupNotifications> logger,
-        ITelegramBotClient client,
-        IDbContextFactory<AppDbContext> factory,
-        ITwitchAPI api,
-        IWebHostEnvironment environment,
         ITwitchClient twitchClient,
-        PyroAlertsHelper helper,
-        IHttpClientFactory httpClientFactory
+        IHostApplicationLifetime lifetime
     )
     {
         _logger = logger;
         _twitchClient = twitchClient;
+
+        lifetime.ApplicationStarted.Register(() =>
+        {
+            EventSubService.WsClient.StreamOffline += PubSibOfflineStream;
+            EventSubService.WsClient.StreamOnline += PubSubOnlineOnStreamUp;
+        });
     }
 
     internal Task PubSubOnlineOnStreamUp(object sender, StreamOnlineArgs streamOnlineArgs)

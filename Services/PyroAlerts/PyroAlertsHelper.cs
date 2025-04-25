@@ -1,4 +1,6 @@
-﻿namespace MARS.Server.Services.PyroAlerts;
+﻿using MARS.Server.Services.MemoryStorageService;
+
+namespace MARS.Server.Services.PyroAlerts;
 
 public class PyroAlertsHelper(ILogger<PyroAlertsHelper> logger) : ITelegramusService
 {

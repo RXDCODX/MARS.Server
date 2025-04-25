@@ -1,4 +1,5 @@
 ﻿using System.Reflection;
+using MARS.Server.Services.Framedata;
 using MARS.Server.Services.PyroAlerts;
 using MARS.Server.Services.RandomMem;
 using MARS.Server.Services.TelegramBotService.Commands.Attribute;
@@ -25,7 +26,8 @@ public class UpdateHandler : IUpdateHandler
         IOptions<TelegramConfiguration> options,
         PyroAlertsHandler pyroAlertsHandler,
         RandomMemHandler randomMemHandler,
-        IHostApplicationLifetime applicationLifetime
+        IHostApplicationLifetime applicationLifetime,
+        Tekken8FrameData frameData
     )
     {
         _botClient = botClient;
@@ -37,6 +39,7 @@ public class UpdateHandler : IUpdateHandler
         {
             TelegramUpdate += pyroAlertsHandler.HandAlert;
             TelegramUpdate += randomMemHandler.HandMessage;
+            TelegramUpdate += frameData.HandAlert;
         });
     }
 
@@ -180,9 +183,16 @@ public class UpdateHandler : IUpdateHandler
                 else
                 {
                     var parameters = new object[] { _botClient, message, cancellationToken };
-                    if (methodName == "OnCommandsCommandReceived" && isAdminUser)
+                    if (methodName == "OnCommandsCommandReceived")
                     {
-                        parameters = new object[] { _botClient, message, cancellationToken, true };
+                        if (isAdminUser)
+                        {
+                            parameters = [_botClient, message, cancellationToken, true];
+                        }
+                        else
+                        {
+                            parameters = [_botClient, message, cancellationToken, false];
+                        }
                     }
 
                     action = (Task<Message>?)method.Invoke(_commands, parameters);
@@ -220,7 +230,6 @@ public class UpdateHandler : IUpdateHandler
 
     private string GetMethodName(string command)
     {
-        // Ïðåîáðàçóåì êîìàíäó â èìÿ ìåòîäà, íàïðèìåð, "/genshin" -> "OnGenshinCommandReceived"
         return "On"
             + command.Substring(1).First().ToString().ToUpper()
             + command.Substring(2)

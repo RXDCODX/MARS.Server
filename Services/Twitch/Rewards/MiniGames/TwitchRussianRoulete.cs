@@ -1,12 +1,15 @@
 ﻿using MARS.Server.Services.Twitch.Management;
-using MARS.Server.Services.Twitch.Rewards.MiniGames.Subs;
+using MARS.Server.Services.Twitch.Rewards.MiniGames.Entitys.Interfaces;
+using MARS.Server.Services.Twitch.Rewards.MiniGames.Entitys.Subs;
 using TwitchLib.Api.Helix.Models.Chat;
 using TwitchLib.EventSub.Websockets.Core.EventArgs.Stream;
 
 namespace MARS.Server.Services.Twitch.Rewards.MiniGames;
 
-public class TwitchRussianRoulete : BackgroundService
+public class TwitchRussianRoulete : BackgroundService, ITwitchMiniGame
 {
+    public bool IsGameRunning { get; set; } = false;
+
     private const int MaxPlayers = 50;
     private readonly ITwitchAPI _api;
     private readonly double _awaitingTimeForNewPlayersInMilliseconds = 1000 * 60;
@@ -23,7 +26,7 @@ public class TwitchRussianRoulete : BackgroundService
     private bool _isAwaitingNewPlayers;
     private bool _isStop = true;
 
-    private List<RouletePlayer> _listOfPlayers = new();
+    private List<RouletePlayer> _listOfPlayers = [];
 
     public TwitchRussianRoulete(
         ITwitchClient client,
@@ -83,59 +86,7 @@ public class TwitchRussianRoulete : BackgroundService
             return;
         }
 
-        if (cost == _costOfRoulette && !_isAwaitingNewPlayers && !_gameStillActive)
-        {
-            var listPlayers = new List<RouletePlayer>();
-            var seconds = TimeSpan.FromMilliseconds(_awaitingTimeForNewPlayersInMilliseconds);
-
-            var text =
-                $"@{name} запускает русскую рулетку, у вас есть {seconds.TotalSeconds} секунд! Чтобы принять участие нажмите на награду за баллы канала стоимостью {_costOfRoulette}!";
-            await _api.Helix.Chat.SendChatAnnouncementAsync(
-                TwitchExstension.ChannelId,
-                TwitchExstension.ChannelId,
-                text,
-                AnnouncementColors.Primary,
-                _tokenService.Token!.AccessToken
-            );
-            _gameStartDateTime = DateTimeOffset.Now;
-            _isAwaitingNewPlayers = true;
-
-            await WaitForPlayers();
-
-            listPlayers.Add(new RouletePlayer { Name = name, TwitchId = userId });
-
-            if (listPlayers.Count > MaxPlayers)
-            {
-                Console.WriteLine("Ошибка: Слишком много игроков. Максимум " + MaxPlayers);
-                return;
-            }
-
-            GameType gameType;
-            if (listPlayers.Count == 1)
-            {
-                gameType = GameType.Alone;
-            }
-            else if (listPlayers.Count == 2)
-            {
-                gameType = GameType.MiniGame;
-            }
-            else
-            {
-                gameType = GameType.Normal;
-            }
-
-            var qwe = new RouleteGame(
-                listPlayers,
-                gameType,
-                _cancellationTokenSource.Token,
-                _client,
-                _logger,
-                _dbContextFactory
-            );
-            await qwe.RussianRoulette();
-            _gameStillActive = false;
-        }
-        else if (cost == _costOfRoulette && _isAwaitingNewPlayers && !_gameStillActive)
+        if (cost == _costOfRoulette && _isAwaitingNewPlayers && !_gameStillActive)
         {
             if (
                 _listOfPlayers.Any(e =>
@@ -176,17 +127,84 @@ public class TwitchRussianRoulete : BackgroundService
                 && !tenSecAuth
             )
             {
-                await _api.Helix.Chat.SendChatAnnouncementAsync(
-                    TwitchExstension.ChannelId,
-                    TwitchExstension.ChannelId,
+                await _api.SendAnnouncementToMainTwitch(
                     "Осталось меньше 10 секунд до начала рулетки!",
+                    _tokenService.Token,
                     AnnouncementColors.Primary,
-                    _tokenService.Token!.AccessToken
+                    _logger
                 );
                 tenSecAuth = true;
             }
 
             await Task.Delay(TimeSpan.FromSeconds(1), _cancellationTokenSource.Token);
+        }
+    }
+
+    public int GetGameCost()
+    {
+        return _costOfRoulette;
+    }
+
+    public Task GameStart()
+    {
+        throw new NotImplementedException();
+    }
+
+    public async Task GameStart(string userName, string userId)
+    {
+        var name = userName;
+
+        if (!_isAwaitingNewPlayers && !_gameStillActive)
+        {
+            var listPlayers = new List<RouletePlayer>();
+            var seconds = TimeSpan.FromMilliseconds(_awaitingTimeForNewPlayersInMilliseconds);
+
+            var text =
+                $"@{name} запускает русскую рулетку, у вас есть {seconds.TotalSeconds} секунд! Чтобы принять участие нажмите на награду за баллы канала стоимостью {_costOfRoulette}!";
+            await _api.SendAnnouncementToMainTwitch(
+                text,
+                _tokenService.Token,
+                AnnouncementColors.Primary,
+                _logger
+            );
+            _gameStartDateTime = DateTimeOffset.Now;
+            _isAwaitingNewPlayers = true;
+
+            await WaitForPlayers();
+
+            listPlayers.Add(new RouletePlayer { Name = name, TwitchId = userId });
+
+            if (listPlayers.Count > MaxPlayers)
+            {
+                Console.WriteLine("Ошибка: Слишком много игроков. Максимум " + MaxPlayers);
+                return;
+            }
+
+            GameType gameType;
+            if (listPlayers.Count == 1)
+            {
+                gameType = GameType.Alone;
+            }
+            else if (listPlayers.Count == 2)
+            {
+                gameType = GameType.MiniGame;
+            }
+            else
+            {
+                gameType = GameType.Normal;
+            }
+
+            var qwe = new RouleteGame(
+                listPlayers,
+                gameType,
+                _cancellationTokenSource.Token,
+                _client,
+                _logger,
+                _dbContextFactory
+            );
+            await qwe.RussianRoulette();
+            _gameStillActive = false;
+            IsGameRunning = false;
         }
     }
 
