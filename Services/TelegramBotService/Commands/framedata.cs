@@ -5,6 +5,7 @@ namespace MARS.Server.Services.TelegramBotService.Commands;
 
 public partial class Commands
 {
+    [Alias("fd")]
     public async Task<Message> OnFramedataCommandReceived(
         ITelegramBotClient botClient,
         Message message,

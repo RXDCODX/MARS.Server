@@ -7,6 +7,7 @@ using MARS.Server.Services.Twitch.ClientMessages.TwitchAutoHello;
 using MARS.Server.Services.Twitch.FumoFriday;
 using MARS.Server.Services.Twitch.HelloVideos;
 using MARS.Server.Services.Twitch.Management;
+using MARS.Server.Services.Twitch.MiniGamesStarts;
 using MARS.Server.Services.Twitch.Rewards.MiniGames;
 using MARS.Server.Services.Twitch.Rewards.TwitchAlerts;
 using MARS.Server.Services.Twitch.Rewards.TwitchHighlitedMessage;
@@ -108,6 +109,9 @@ public static class StartupEstensions
 
         services.AddSingleton<MiniGamesManager>();
         services.AddHostedService(sp => sp.GetRequiredService<MiniGamesManager>());
+
+        services.AddSingleton<TekkenVictorinaLeaderbord>();
+        services.AddHostedService(sp => sp.GetRequiredService<TekkenVictorinaLeaderbord>());
 
         return services;
     }

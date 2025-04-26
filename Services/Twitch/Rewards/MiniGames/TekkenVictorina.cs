@@ -1,6 +1,7 @@
 ﻿using MARS.Server.Services.Framedata;
 using MARS.Server.Services.Framedata.Entitys;
 using MARS.Server.Services.Twitch.Management;
+using MARS.Server.Services.Twitch.MiniGamesStarts;
 using MARS.Server.Services.Twitch.Rewards.MiniGames.Entitys.Interfaces;
 using MARS.Server.Services.Twitch.Rewards.MiniGames.Entitys.Subs;
 using TwitchLib.Api.Helix.Models.Chat;
@@ -14,7 +15,9 @@ public class TekkenVictorina(
     TokenService tokenService,
     Tekken8FrameData frameData,
     IHostApplicationLifetime lifetime,
-    ILogger<TekkenVictorina> logger
+    ILogger<TekkenVictorina> logger,
+    IDbContextFactory<AppDbContext> dbContextFactory,
+    TekkenVictorinaLeaderbord tekkenVictorinaLeaderbord
 ) : BackgroundService, ITwitchMiniGame
 {
     private CancellationToken? _cancellationToken = lifetime.ApplicationStopping;
@@ -40,7 +43,7 @@ public class TekkenVictorina(
         {
             var name = onMessageReceivedArgs.ChatMessage.Username;
             var message = onMessageReceivedArgs.ChatMessage.Message;
-            var id = onMessageReceivedArgs.ChatMessage.UserId;
+            var userId = onMessageReceivedArgs.ChatMessage.UserId;
 
             if (name == TwitchExstension.BotName)
             {
@@ -69,7 +72,7 @@ public class TekkenVictorina(
 
             if (_currentGame != null)
             {
-                CheckIsAnswer(name, message);
+                await CheckIsAnswer(name, userId, message);
             }
         });
     }
@@ -92,7 +95,7 @@ public class TekkenVictorina(
                 @{userName} начал(а) новую теккен викторину! Нужно назвать фреймдату на блоке для: {string.Concat(
                     randomMove.Character!.Name[0].ToString().ToUpper(),
                     randomMove.Character!.Name.AsSpan(1)
-                )} {randomMove.Command} в течении {awaitTime.TotalSeconds} секунд! Принимается ответ в формате: -14 или -14~-11
+                )} {randomMove.Command} в течении {awaitTime.TotalSeconds} секунд! Принимается ответ в формате: -14 или -14~-11 если это диапазон
                 """;
 
             await api.SendAnnouncementToMainTwitch(prepare, tokenService.Token, null, logger);
@@ -113,14 +116,43 @@ public class TekkenVictorina(
 
             if (_currentGame.CancellationTokenForRightAnswer.IsCancellationRequested)
             {
-                var rightAnswer = _currentGame.GoodAnswers.First();
-                await api.SendAnnouncementToMainTwitch(
-                    $"У нас есть победитель в теккен викторине! Поздравляем {rightAnswer.displayName} с ответом {rightAnswer.answer} sigma",
-                    tokenService.Token,
-                    AnnouncementColors.Primary,
-                    logger
-                );
-                ClearGame();
+                if (_currentGame.IsWaifuHelp)
+                {
+                    await using var dbContext = await dbContextFactory.CreateDbContextAsync(
+                        lifetime.ApplicationStopping
+                    );
+                    var waifu = await dbContext.Waifus.FindAsync(_currentGame.WaifuId);
+                    var waifuName = waifu?.Name;
+                    var rightAnswer = _currentGame.GoodAnswers.First();
+                    await api.SendAnnouncementToMainTwitch(
+                        $"Поздравляем {rightAnswer.displayName} с победой в теккен викторине! С подсказкой от близкого человека ({waifuName}) угадал : {rightAnswer.answer} sigma 🎯",
+                        tokenService.Token,
+                        AnnouncementColors.Primary,
+                        logger
+                    );
+                    await tekkenVictorinaLeaderbord.AddOrUpdateUserLeaderBoard(
+                        userId,
+                        userName,
+                        true
+                    );
+                    ClearGame();
+                }
+                else
+                {
+                    var rightAnswer = _currentGame.GoodAnswers.First();
+                    await api.SendAnnouncementToMainTwitch(
+                        $"У нас есть победитель в теккен викторине! Поздравляем {rightAnswer.displayName} с ответом {rightAnswer.answer} sigma",
+                        tokenService.Token,
+                        AnnouncementColors.Primary,
+                        logger
+                    );
+                    await tekkenVictorinaLeaderbord.AddOrUpdateUserLeaderBoard(
+                        userId,
+                        userName,
+                        false
+                    );
+                    ClearGame();
+                }
             }
             else if (_currentGame.GoodAnswers.Count == 0)
             {
@@ -184,7 +216,7 @@ public class TekkenVictorina(
         );
     }
 
-    private bool CheckIsAnswer(string displayName, string input)
+    private async Task<bool> CheckIsAnswer(string displayName, string userId, string input)
     {
         if (_currentGame is not { Active: true })
         {
@@ -199,6 +231,31 @@ public class TekkenVictorina(
         }
 
         var answerRange = _currentGame.Answer;
+
+        if (!_currentGame.Users.Contains(userId))
+        {
+            var chance = Random.Shared.Next();
+            if (chance <= 10)
+            {
+                await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+                var isHaveWaifu = await dbContext.Hosts.AnyAsync(e =>
+                    e.TwitchId == userId && e.IsPrivated
+                );
+
+                if (isHaveWaifu)
+                {
+                    AddOrUpdateGoodAnswer(displayName, answerRange);
+                    _currentGame.IsWaifuHelp = true;
+                    _currentGame.WaifuId = (await dbContext.Hosts.FindAsync(userId))?.WaifuBrideId;
+                    _currentGame.CancellationTokenForRightAnswer.Cancel();
+                    return true;
+                }
+            }
+        }
+        else
+        {
+            _currentGame.Users.Add(userId);
+        }
 
         // Проверяем пересечение диапазонов
         var isIntersect =

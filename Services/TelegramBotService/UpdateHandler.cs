@@ -2,7 +2,6 @@
 using MARS.Server.Services.Framedata;
 using MARS.Server.Services.PyroAlerts;
 using MARS.Server.Services.RandomMem;
-using MARS.Server.Services.TelegramBotService.Commands.Attribute;
 using Telegram.Bot.Exceptions;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types.Enums;
@@ -159,18 +158,33 @@ public class UpdateHandler : IUpdateHandler
         {
             var command = messageText.Split(' ')[0];
             var methodName = GetMethodName(command);
-
-            var method = _commands
+            var methods = _commands
                 .GetType()
-                .GetMethod(
-                    methodName,
-                    BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance
-                );
+                .GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
+
+            var method = methods.FirstOrDefault(e => e.Name == methodName);
             if (method == null)
             {
-                action = ErrorCommand(_botClient, message, cancellationToken);
+                var methodWithAliases = methods.Where(e =>
+                    e.GetCustomAttribute<AliasAttribute>() != null
+                );
+                var commandWithoutSlash = command.Substring(1);
+                method = methodWithAliases.FirstOrDefault(
+                    e =>
+                    {
+                        var aliasAttr = e?.GetCustomAttribute<AliasAttribute>();
+                        if (aliasAttr?.MethodAliases.Contains(commandWithoutSlash) == true)
+                        {
+                            return true;
+                        }
+
+                        return false;
+                    },
+                    null
+                );
             }
-            else
+
+            if (method != null)
             {
                 var isAdminMethod = method.GetCustomAttribute<AdminAttribute>() != null;
                 var isIgnore = method.GetCustomAttribute<IgnoreAttribute>() != null;
@@ -197,6 +211,10 @@ public class UpdateHandler : IUpdateHandler
 
                     action = (Task<Message>?)method.Invoke(_commands, parameters);
                 }
+            }
+            else
+            {
+                action = ErrorCommand(_botClient, message, cancellationToken);
             }
         }
         catch (Exception ex)
