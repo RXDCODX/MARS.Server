@@ -56,6 +56,7 @@ public static class StartupEstensions
 
         services.AddSingleton<TwitchStreamStartupNotifications>();
         services.AddSingleton<TwitchMediaAlerts>();
+        services.AddHostedService(sp => sp.GetRequiredService<TwitchMediaAlerts>());
         services.AddSingleton<AutoMessagesController>();
         services.AddHostedService(sp => sp.GetRequiredService<AutoMessagesController>());
         services.AddSingleton<TwitchAuthService>();
@@ -71,7 +72,9 @@ public static class StartupEstensions
         services.AddSingleton<MergeWaifu>();
         services.AddHostedService(sp => sp.GetRequiredService<MergeWaifu>());
         services.AddSingleton<RollWaifu>();
+        services.AddHostedService(sp => sp.GetRequiredService<RollWaifu>());
         services.AddSingleton<RandomMeme>();
+        services.AddHostedService(sp => sp.GetRequiredService<RandomMeme>());
         services.AddSingleton<TwitchRussianRoulete>();
         services.AddHostedService(sp => sp.GetRequiredService<TwitchRussianRoulete>());
         services.AddSingleton<TekkenVictorina>();
@@ -81,6 +84,7 @@ public static class StartupEstensions
         services.AddSingleton<HighlitedMessage>();
         services.AddHostedService(sp => sp.GetRequiredService<HighlitedMessage>());
         services.AddSingleton<FumoFridayWorker>();
+        services.AddHostedService(sp => sp.GetRequiredService<FumoFridayWorker>());
         services.AddSingleton<HelloVideoWorker>();
 
         services.AddSingleton<Confetty>();

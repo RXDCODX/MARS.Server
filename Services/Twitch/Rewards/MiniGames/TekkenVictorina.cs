@@ -4,6 +4,7 @@ using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.Twitch.MiniGamesStarts;
 using MARS.Server.Services.Twitch.Rewards.MiniGames.Entitys.Interfaces;
 using MARS.Server.Services.Twitch.Rewards.MiniGames.Entitys.Subs;
+using TL.Methods;
 using TwitchLib.Api.Helix.Models.Chat;
 using TwitchLib.Client.Events;
 
@@ -124,10 +125,8 @@ public class TekkenVictorina(
                     var waifu = await dbContext.Waifus.FindAsync(_currentGame.WaifuId);
                     var waifuName = waifu?.Name;
                     var rightAnswer = _currentGame.GoodAnswers.First();
-                    await api.SendAnnouncementToMainTwitch(
+                    await client.SendMessageToMainTwitchAsync(
                         $"Поздравляем {rightAnswer.displayName} с победой в теккен викторине! С подсказкой от близкого человека ({waifuName}) угадал : {rightAnswer.answer} sigma 🎯",
-                        tokenService.Token,
-                        AnnouncementColors.Primary,
                         logger
                     );
                     await tekkenVictorinaLeaderbord.AddOrUpdateUserLeaderBoard(
@@ -140,10 +139,8 @@ public class TekkenVictorina(
                 else
                 {
                     var rightAnswer = _currentGame.GoodAnswers.First();
-                    await api.SendAnnouncementToMainTwitch(
+                    await client.SendMessageToMainTwitchAsync(
                         $"У нас есть победитель в теккен викторине! Поздравляем {rightAnswer.displayName} с ответом {rightAnswer.answer} sigma",
-                        tokenService.Token,
-                        AnnouncementColors.Primary,
                         logger
                     );
                     await tekkenVictorinaLeaderbord.AddOrUpdateUserLeaderBoard(

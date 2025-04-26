@@ -3,7 +3,7 @@ using MARS.Server.Services.Twitch.Management;
 
 namespace MARS.Server.Services.Twitch.Rewards.TwitchRandomMeme;
 
-public class RandomMeme
+public class RandomMeme : BackgroundService
 {
     private readonly CancellationToken _stoppingToken;
     private readonly IHubContext<TelegramusHub, ITelegramusHub> _hubContext;
@@ -158,5 +158,10 @@ public class RandomMeme
         await dbContext.SaveChangesAsync(_stoppingToken);
 
         return nextVideoOrder;
+    }
+
+    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        return Task.CompletedTask;
     }
 }

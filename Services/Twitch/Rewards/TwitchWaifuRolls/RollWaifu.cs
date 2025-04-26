@@ -5,7 +5,7 @@ using TwitchLib.EventSub.Core.SubscriptionTypes.Channel;
 
 namespace MARS.Server.Services.Twitch.Rewards.TwitchWaifuRolls;
 
-public class RollWaifu
+public class RollWaifu : BackgroundService
 {
     private readonly ILogger<RollWaifu> _logger;
     private readonly ITwitchClient _client;
@@ -96,5 +96,10 @@ public class RollWaifu
                 }
             }
         }
+    }
+
+    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        return Task.CompletedTask;
     }
 }

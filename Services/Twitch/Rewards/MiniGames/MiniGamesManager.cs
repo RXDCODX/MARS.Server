@@ -35,7 +35,7 @@ public class MiniGamesManager : BackgroundService
 
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        var aa = _lifetime.ApplicationStarted.Register(() =>
+        _lifetime.ApplicationStarted.Register(() =>
         {
             EventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd +=
                 WsClientOnChannelPointsCustomRewardRedemptionAdd;

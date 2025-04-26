@@ -162,7 +162,9 @@ public class UpdateHandler : IUpdateHandler
                 .GetType()
                 .GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
 
-            var method = methods.FirstOrDefault(e => e.Name == methodName);
+            var method = methods.FirstOrDefault(e =>
+                e.Name.Equals(methodName, StringComparison.OrdinalIgnoreCase)
+            );
             if (method == null)
             {
                 var methodWithAliases = methods.Where(e =>
