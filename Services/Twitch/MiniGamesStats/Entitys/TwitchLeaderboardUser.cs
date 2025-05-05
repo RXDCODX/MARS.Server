@@ -1,4 +1,4 @@
-﻿namespace MARS.Server.Services.Twitch.MiniGamesStarts.Entitys;
+﻿namespace MARS.Server.Services.Twitch.MiniGamesStats.Entitys;
 
 public class TwitchLeaderboardUser
 {

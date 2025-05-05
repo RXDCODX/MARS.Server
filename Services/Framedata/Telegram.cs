@@ -5,7 +5,7 @@ namespace MARS.Server.Services.Framedata;
 
 public partial class Tekken8FrameData
 {
-    public async Task HandAlert(ITelegramBotClient client, Update update)
+    public async Task HandAlert(ITelegramBotClient telegramClient, Update update)
     {
         if (update.Type == UpdateType.CallbackQuery)
         {
@@ -26,7 +26,7 @@ public partial class Tekken8FrameData
                     {
                         var errorAnswer =
                             $"Ошибка парсинга ответного запроса, сообщите разработчику об ошибке. {data.Data}";
-                        await client.SendMessage(
+                        await telegramClient.SendMessage(
                             chatid,
                             errorAnswer,
                             cancellationToken: _cancellationToken
@@ -43,7 +43,7 @@ public partial class Tekken8FrameData
 
                             text.AppendJoin(
                                 Environment.NewLine,
-                                movelist!.Where(e => e.Homing).Select(e => e.Command)
+                                movelist.Where(e => e.Homing).Select(e => e.Command)
                             );
                             break;
                         case "heatengage":
@@ -52,7 +52,7 @@ public partial class Tekken8FrameData
 
                             text.AppendJoin(
                                 Environment.NewLine,
-                                movelist!.Where(e => e.HeatEngage).Select(e => e.Command)
+                                movelist.Where(e => e.HeatEngage).Select(e => e.Command)
                             );
                             break;
                         case "tornado":
@@ -61,7 +61,7 @@ public partial class Tekken8FrameData
 
                             text.AppendJoin(
                                 Environment.NewLine,
-                                movelist!.Where(e => e.Tornado).Select(e => e.Command)
+                                movelist.Where(e => e.Tornado).Select(e => e.Command)
                             );
                             break;
                         case "heatsmash":
@@ -70,7 +70,7 @@ public partial class Tekken8FrameData
 
                             text.AppendJoin(
                                 Environment.NewLine,
-                                movelist!.Where(e => e.HeatSmash).Select(e => e.Command)
+                                movelist.Where(e => e.HeatSmash).Select(e => e.Command)
                             );
                             break;
                         case "heatburst":
@@ -79,7 +79,7 @@ public partial class Tekken8FrameData
 
                             text.AppendJoin(
                                 Environment.NewLine,
-                                movelist!.Where(e => e.HeatBurst).Select(e => e.Command)
+                                movelist.Where(e => e.HeatBurst).Select(e => e.Command)
                             );
                             break;
                         case "powercrush":
@@ -87,7 +87,7 @@ public partial class Tekken8FrameData
                             text.AppendLine();
                             text.AppendJoin(
                                 Environment.NewLine,
-                                movelist!.Where(e => e.PowerCrush).Select(e => e.Command)
+                                movelist.Where(e => e.PowerCrush).Select(e => e.Command)
                             );
                             break;
                         case "stance":
@@ -114,11 +114,11 @@ public partial class Tekken8FrameData
                             break;
                     }
 
-                    await client.AnswerCallbackQuery(
+                    await telegramClient.AnswerCallbackQuery(
                         data.Id,
                         cancellationToken: _cancellationToken
                     );
-                    await client.SendMessage(
+                    await telegramClient.SendMessage(
                         chatid,
                         text.ToString(),
                         ParseMode.Html,

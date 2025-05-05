@@ -23,6 +23,7 @@ public partial class Commands
                 {
                     result =
                         $"Вайфу ролл с вайфучкой {waifu.waifu.Name} для {waifu.host.Name} выполнен!";
+                    await alertsHub.Clients.All.WaifuRoll(waifu.waifu, waifu.host.Name);
                 }
             }
             catch (Exception e)

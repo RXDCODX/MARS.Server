@@ -257,6 +257,9 @@ public class Program
                 .GetSection(AppBase.Base)
                 .GetSection(WTelegramClientConfiguration.TelegramSection)
         );
+        services.Configure<HoyolabConfiguration>(
+            configuration.GetSection(AppBase.Base).GetSection(HoyolabConfiguration.Section)
+        );
 
         services.AddTwitchEvents(configuration, loggerFactory);
 

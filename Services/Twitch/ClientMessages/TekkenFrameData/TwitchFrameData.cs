@@ -26,7 +26,9 @@ public class TwitchFramedate(
                     if (split.Length > 2)
                     {
                         var charNameString = split.Skip(1).ToArray();
-                        var move = await frameData.GetMoveAsync(charNameString);
+                        var move = await frameData
+                            .GetMoveAsync(charNameString)
+                            .ConfigureAwait(false);
                         var channel = args.ChatMessage.Channel;
 
                         if (move != null)

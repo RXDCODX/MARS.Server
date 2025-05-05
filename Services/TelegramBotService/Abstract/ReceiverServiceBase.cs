@@ -27,16 +27,21 @@ public abstract class ReceiverServiceBase<TUpdateHandler> : IReceiverService
     /// <summary>
     ///     Start to service Updates with provided Update Handler class
     /// </summary>
+    /// <param name="context"></param>
     /// <param name="stoppingToken"></param>
-    /// <param name="offset"></param>
     /// <returns></returns>
-    public async Task ReceiveAsync(CancellationToken stoppingToken)
+    public async Task ReceiveAsync(AppDbContext context, CancellationToken stoppingToken)
     {
         // ToDo: we can inject ReceiverOptions through IOptions container
+
+        var offset = await GetOffset(context, stoppingToken);
+        var isOffsetRequired = offset is not null;
+
         var receiverOptions = new ReceiverOptions
         {
             AllowedUpdates = [],
-            DropPendingUpdates = true,
+            DropPendingUpdates = !isOffsetRequired,
+            Offset = offset?.Offset,
         };
 
         var me = await _botClient.GetMe(stoppingToken);
@@ -47,5 +52,16 @@ public abstract class ReceiverServiceBase<TUpdateHandler> : IReceiverService
 
         // Start receiving updates
         await _botClient.ReceiveAsync(_updateHandler, receiverOptions, stoppingToken);
+    }
+
+    private async Task<TelegramUpdateReceiverOffset?> GetOffset(
+        AppDbContext context,
+        CancellationToken token
+    )
+    {
+        var offset = await context.TelegramUpdateReceiverOffset.SingleOrDefaultAsync(
+            cancellationToken: token
+        );
+        return offset;
     }
 }

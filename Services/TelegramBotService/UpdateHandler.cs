@@ -17,6 +17,7 @@ public class UpdateHandler : IUpdateHandler
     private readonly Commands.Commands _commands;
     private readonly ILogger<UpdateHandler> _logger;
     private readonly TelegramConfiguration _options;
+    private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
 
     public UpdateHandler(
         ITelegramBotClient botClient,
@@ -26,12 +27,14 @@ public class UpdateHandler : IUpdateHandler
         PyroAlertsHandler pyroAlertsHandler,
         RandomMemHandler randomMemHandler,
         IHostApplicationLifetime applicationLifetime,
-        Tekken8FrameData frameData
+        Tekken8FrameData frameData,
+        IDbContextFactory<AppDbContext> dbContextFactory
     )
     {
         _botClient = botClient;
         _logger = logger;
         _commands = commands;
+        _dbContextFactory = dbContextFactory;
         _options = options.Value;
 
         applicationLifetime.ApplicationStarted.Register(() =>
@@ -50,11 +53,13 @@ public class UpdateHandler : IUpdateHandler
     {
         try
         {
+            await UpdateOffset(update.Id, cancellationToken);
+
             ResendMessage(update);
         }
         catch (Exception e)
         {
-            _logger.LogWarning("�� ���� forward ��������. {0} # {1}", e.Message, e.StackTrace);
+            _logger.LogException(e);
         }
 
         Task handler = update switch
@@ -291,5 +296,38 @@ public class UpdateHandler : IUpdateHandler
     {
         _logger.LogInformation("Unknown update type: {UpdateType}", update.Type);
         return Task.CompletedTask;
+    }
+
+    private async Task UpdateOffset(int updateId, CancellationToken cancellationToken)
+    {
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
+
+        var offset = await dbContext.TelegramUpdateReceiverOffset.SingleOrDefaultAsync(
+            cancellationToken: cancellationToken
+        );
+
+        if (offset is not null)
+        {
+            if (updateId != offset.Offset + 1)
+            {
+                offset.Offset = updateId;
+            }
+            else
+            {
+                offset.Offset += 1;
+            }
+        }
+        else
+        {
+            var obset = new TelegramUpdateReceiverOffset()
+            {
+                Offset = updateId,
+                Id = Guid.NewGuid(),
+            };
+
+            await dbContext.TelegramUpdateReceiverOffset.AddAsync(obset, cancellationToken);
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
     }
 }

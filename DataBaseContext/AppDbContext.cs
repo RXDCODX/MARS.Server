@@ -6,7 +6,7 @@ using MARS.Server.Services.Twitch.ClientMessages.AutoMessages.Entitys;
 using MARS.Server.Services.Twitch.FumoFriday.Entitys;
 using MARS.Server.Services.Twitch.HelloVideos.Entitys;
 using MARS.Server.Services.Twitch.Management.Entitys;
-using MARS.Server.Services.Twitch.MiniGamesStarts.Entitys;
+using MARS.Server.Services.Twitch.MiniGamesStats.Entitys;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace MARS.Server.DataBaseContext;
@@ -55,6 +55,7 @@ public sealed class AppDbContext : DbContext
     public DbSet<TekkenCharacter> TekkenCharacters { get; set; } = null!;
     public DbSet<Move> TekkenMoves { get; set; } = null!;
     public DbSet<TwitchLeaderboardUser> TwitchLeaderboardUsers { get; set; } = null!;
+    public DbSet<TelegramUpdateReceiverOffset> TelegramUpdateReceiverOffset { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

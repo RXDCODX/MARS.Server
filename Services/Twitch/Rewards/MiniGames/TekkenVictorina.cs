@@ -1,11 +1,9 @@
 ﻿using MARS.Server.Services.Framedata;
 using MARS.Server.Services.Framedata.Entitys;
 using MARS.Server.Services.Twitch.Management;
-using MARS.Server.Services.Twitch.MiniGamesStarts;
+using MARS.Server.Services.Twitch.MiniGamesStats;
 using MARS.Server.Services.Twitch.Rewards.MiniGames.Entitys.Interfaces;
 using MARS.Server.Services.Twitch.Rewards.MiniGames.Entitys.Subs;
-using TL.Methods;
-using TwitchLib.Api.Helix.Models.Chat;
 using TwitchLib.Client.Events;
 
 namespace MARS.Server.Services.Twitch.Rewards.MiniGames;

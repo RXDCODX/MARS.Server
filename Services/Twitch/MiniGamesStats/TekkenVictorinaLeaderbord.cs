@@ -1,7 +1,7 @@
-﻿using MARS.Server.Services.Twitch.MiniGamesStarts.Entitys;
+﻿using MARS.Server.Services.Twitch.MiniGamesStats.Entitys;
 using TwitchLib.Client.Events;
 
-namespace MARS.Server.Services.Twitch.MiniGamesStarts;
+namespace MARS.Server.Services.Twitch.MiniGamesStats;
 
 public class TekkenVictorinaLeaderbord(
     IDbContextFactory<AppDbContext> factory,

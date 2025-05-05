@@ -1,5 +1,6 @@
 ﻿using MARS.Server.Services.Framedata.Entitys;
 using MARS.Server.Services.Framedata.Entitys.Enums;
+using Microsoft.EntityFrameworkCore;
 
 namespace MARS.Server.Services.Framedata;
 
@@ -39,80 +40,37 @@ public partial class Tekken8FrameData(
         return character.Movelist?.ToArray();
     }
 
-    public async Task<Move?> GetMoveAsync(string[] command)
+    public async Task<Move?> GetMoveAsync(string[]? command)
     {
-        TekkenCharacter? charnameOut = null;
-
-        var length = 2;
-
-        var charname = string.Join(" ", command.Take(length));
-
-        var isCharFounded = false;
-        await using AppDbContext dbContext = await dbContextFactory.CreateDbContextAsync(
-            _cancellationToken
-        );
-
-        //
-        foreach (var aliasPair in Aliases.CharacterNameAliases)
-        {
-            if (aliasPair.Key.Equals(charname) || aliasPair.Value.Any(e => e.Equals(charname)))
-            {
-                var character = aliasPair.Key;
-
-                var characters = dbContext.TekkenCharacters.AsAsyncEnumerable();
-                await foreach (TekkenCharacter tekkenCharacter in characters)
-                {
-                    if (tekkenCharacter.Name.Equals(character, StringComparison.OrdinalIgnoreCase))
-                    {
-                        charnameOut = tekkenCharacter;
-                        isCharFounded = true;
-                        break;
-                    }
-                }
-            }
-        }
-
-        if (!isCharFounded)
-        {
-            --length;
-            charname = string.Join(" ", command.Take(length));
-
-            foreach (KeyValuePair<string, string[]> pair in Aliases.CharacterNameAliases)
-            {
-                if (pair.Key.Equals(charname) || pair.Value.Any(e => e.Equals(charname)))
-                {
-                    var character = pair.Key;
-
-                    var characters = dbContext.TekkenCharacters.AsAsyncEnumerable();
-                    await foreach (TekkenCharacter pairCharacter in characters)
-                    {
-                        if (pairCharacter.Name.Equals(character))
-                        {
-                            charnameOut = pairCharacter;
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-
-        if (command.Length - length == 0 || charnameOut is null)
+        if (command == null || command.Length == 0)
         {
             return null;
         }
 
-        var input = string.Join(" ", command.Skip(length)).ToLower();
+        var result = await FindCharacterByNameAsync(command);
+
+        var charnameOut = result.character;
+        var length = result.length;
+
+        if (command.Length <= 1 || charnameOut is null)
+        {
+            return null;
+        }
+
+        var input = string.Join(" ", command.Skip(command.Length - length)).ToLower();
 
         if (string.IsNullOrWhiteSpace(charnameOut.Name) || string.IsNullOrWhiteSpace(input))
         {
             return null;
         }
 
-        var movelist = dbContext
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(_cancellationToken);
+
+        var movelist = await dbContext
             .TekkenMoves.AsNoTracking()
             .Where(e => e.Character == charnameOut)
             .Include(e => e.Character)
-            .ToList();
+            .ToListAsync(_cancellationToken);
 
         if (movelist is { Count: > 0 })
         {
@@ -123,6 +81,58 @@ public partial class Tekken8FrameData(
             return move;
         }
 
+        return null;
+    }
+
+    private async Task<(TekkenCharacter? character, int length)> FindCharacterByNameAsync(
+        string[]? commandParts
+    )
+    {
+        await using AppDbContext dbContext = await dbContextFactory.CreateDbContextAsync(
+            _cancellationToken
+        );
+
+        // Сначала пробуем найти по двум словам
+        var charname = string.Join(" ", commandParts?.Take(2) ?? []);
+        var character = await FindCharacterInDatabaseAsync(charname, dbContext);
+
+        if (character != null)
+        {
+            return (character, 2);
+        }
+
+        // Если не нашли, пробуем по одному слову
+        charname = string.Join(" ", commandParts?.Take(1) ?? []);
+        character = await FindCharacterInDatabaseAsync(charname, dbContext);
+        return (character, 1);
+    }
+
+    private async Task<TekkenCharacter?> FindCharacterInDatabaseAsync(
+        string charname,
+        AppDbContext dbContext
+    )
+    {
+        foreach (var aliasPair in Aliases.CharacterNameAliases)
+        {
+            if (aliasPair.Key.Equals(charname) || aliasPair.Value.Any(e => e.Equals(charname)))
+            {
+                var characterName = aliasPair.Key;
+
+                var characters = dbContext.TekkenCharacters.AsAsyncEnumerable();
+                await foreach (TekkenCharacter tekkenCharacter in characters)
+                {
+                    if (
+                        tekkenCharacter.Name.Equals(
+                            characterName,
+                            StringComparison.OrdinalIgnoreCase
+                        )
+                    )
+                    {
+                        return tekkenCharacter;
+                    }
+                }
+            }
+        }
         return null;
     }
 

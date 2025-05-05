@@ -4,8 +4,6 @@ using HtmlAgilityPack;
 using MARS.Server.Services._365Genius.Entitys;
 using TL;
 using WTelegram;
-using InputFile = TL.InputFile;
-using InputMediaDocument = TL.InputMediaDocument;
 
 namespace MARS.Server.Services._365Genius;
 
@@ -215,7 +213,7 @@ public class Worker365(
             XPathExpression.Compile("//a[@class=\"fav_a\"]")
         );
 
-        var count = favouriteNode.SelectSingleNode("//span[@class=\"user_fav_count\"]").InnerText;
+        var count = favouriteNode?.SelectSingleNode("//span[@class=\"user_fav_count\"]")?.InnerText;
 
         if (!int.TryParse(count, out var aa))
         {
@@ -279,82 +277,91 @@ public class Worker365(
             .DocumentNode.SelectNodes(
                 "//div[@id='video-content']//li[contains(@class, 'video_block')]"
             )
-            .Reverse()
+            ?.Reverse()
             .ToList();
-        var ids = liNodes.Select(e => e.GetAttributeValue("id", 0)).ToArray();
+        var ids = liNodes?.Select(e => e.GetAttributeValue("id", 0)).ToArray();
 
-        var ll = ids.Where(e => dbConext.Videos365.All(t => t.SiteId != e)).ToArray();
+        var ll = ids?.Where(e => dbConext.Videos365.All(t => t.SiteId != e)).ToArray();
 
-        if (ll.Length != 0)
+        if (ll != null && ll.Length != 0)
         {
-            foreach (var node in liNodes)
+            if (liNodes != null)
             {
-                var id = node.GetAttributeValue("id", 0);
-                var link = node.SelectSingleNode(".//a[@class=\"image\"]")
-                    .GetAttributeValue("href", string.Empty);
-
-                var isUploaded = await dbConext.Videos365.AnyAsync(
-                    e => e.SiteId == id,
-                    cancellationToken: _cancellationToken
-                );
-
-                if (!isUploaded)
+                foreach (var node in liNodes)
                 {
-                    try
-                    {
-                        var video = await GetVideo365Information(httpClient, link, id);
-                        video = await UploadVideo(httpClient, video);
+                    var id = node.GetAttributeValue("id", 0);
+                    var link = node.SelectSingleNode(".//a[@class=\"image\"]")
+                        ?.GetAttributeValue("href", string.Empty);
 
-                        if (dbConext.Videos365.Any(e => e.SiteId == video.SiteId))
-                        {
-                            dbConext.Videos365.Update(video);
-                        }
-                        else
-                        {
-                            dbConext.Videos365.Add(video);
-                        }
-
-                        await dbConext.SaveChangesAsync(_cancellationToken);
-                    }
-                    catch (HttpRequestException)
-                    {
-                        break;
-                    }
-                }
-                else
-                {
-                    var pass = await dbConext.Videos365.AnyAsync(
-                        e => e.SiteId == id && !e.IsUploaded,
+                    var isUploaded = await dbConext.Videos365.AnyAsync(
+                        e => e.SiteId == id,
                         cancellationToken: _cancellationToken
                     );
 
-                    if (pass)
+                    if (!isUploaded)
                     {
-                        var video = await dbConext.Videos365.SingleAsync(
-                            e => e.SiteId == id,
+                        try
+                        {
+                            if (link != null)
+                            {
+                                var video = await GetVideo365Information(httpClient, link, id);
+                                if (video != null)
+                                {
+                                    video = await UploadVideo(httpClient, video);
+
+                                    if (dbConext.Videos365.Any(e => e.SiteId == video.SiteId))
+                                    {
+                                        dbConext.Videos365.Update(video);
+                                    }
+                                    else
+                                    {
+                                        dbConext.Videos365.Add(video);
+                                    }
+                                }
+                            }
+
+                            await dbConext.SaveChangesAsync(_cancellationToken);
+                        }
+                        catch (HttpRequestException)
+                        {
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        var pass = await dbConext.Videos365.AnyAsync(
+                            e => e.SiteId == id && !e.IsUploaded,
                             cancellationToken: _cancellationToken
                         );
-                        video = await UploadVideo(httpClient, video);
 
-                        if (dbConext.Videos365.Any(e => e.SiteId == video.SiteId))
+                        if (pass)
                         {
-                            dbConext.Videos365.Update(video);
-                        }
-                        else
-                        {
-                            dbConext.Videos365.Add(video);
-                        }
+                            var video = await dbConext.Videos365.SingleAsync(
+                                e => e.SiteId == id,
+                                cancellationToken: _cancellationToken
+                            );
+                            video = await UploadVideo(httpClient, video);
 
-                        await dbConext.SaveChangesAsync(_cancellationToken);
+                            if (dbConext.Videos365.Any(e => e.SiteId == video.SiteId))
+                            {
+                                dbConext.Videos365.Update(video);
+                            }
+                            else
+                            {
+                                dbConext.Videos365.Add(video);
+                            }
+
+                            await dbConext.SaveChangesAsync(_cancellationToken);
+                        }
                     }
-                }
 
-                await Task.Delay(TimeSpan.FromSeconds(10), _cancellationToken);
+                    await Task.Delay(TimeSpan.FromSeconds(10), _cancellationToken);
+                }
             }
         }
     }
 
-    private async Task<Video365> GetVideo365Information(HttpClient httpClient, string link, int id)
+    private async Task<Video365?> GetVideo365Information(HttpClient httpClient, string link, int id)
     {
         var url = new Uri(link);
         var stringVideoId = url.Segments[2];
@@ -384,23 +391,23 @@ public class Worker365(
         var title = document.DocumentNode.SelectSingleNode("//head/title")!.InnerText.Trim();
         var discription = document
             .DocumentNode.SelectSingleNode("//div[@class=\"story_desription\"]")
-            .InnerText;
+            ?.InnerText;
         var playerUrl = document
             .DocumentNode.SelectSingleNode("//video[@playsinline]")
-            .GetAttributeValue("src", string.Empty);
+            ?.GetAttributeValue("src", string.Empty);
         var downloadUrl = document
             .DocumentNode.SelectSingleNode("//ul[@class=\"download_ul\"]")
-            .SelectSingleNode("//a[@title]")
-            .GetAttributeValue("href", string.Empty);
+            ?.SelectSingleNode("//a[@title]")
+            ?.GetAttributeValue("href", string.Empty);
         var duration = document
             .DocumentNode.SelectSingleNode("//meta[@property='video:duration']")
-            .GetAttributeValue("content", 0);
+            ?.GetAttributeValue("content", 0);
         var width = document
             .DocumentNode.SelectSingleNode("//meta[@property='og:video:width']")
-            .GetAttributeValue("content", 0);
+            ?.GetAttributeValue("content", 0);
         var height = document
             .DocumentNode.SelectSingleNode("//meta[@property='og:video:height']")
-            .GetAttributeValue("content", 0);
+            ?.GetAttributeValue("content", 0);
         var thumbNailFilePath = await GetThumbNailFilePath(httpClient, document);
 
         if (
@@ -413,19 +420,30 @@ public class Worker365(
             throw new NullReferenceException();
         }
 
-        return new Video365()
+        if (duration != null)
         {
-            Description = discription,
-            DirectLinkUrl = url.AbsoluteUri,
-            Title = title,
-            PlayerUrl = playerUrl,
-            DownloadUrl = downloadUrl,
-            SiteId = id,
-            Duration = TimeSpan.FromSeconds(duration),
-            VideoHeight = height,
-            VideoWidth = width,
-            ThumbnailFilePath = thumbNailFilePath,
-        };
+            if (height != null)
+            {
+                if (width != null)
+                {
+                    return new Video365()
+                    {
+                        Description = discription,
+                        DirectLinkUrl = url.AbsoluteUri,
+                        Title = title,
+                        PlayerUrl = playerUrl,
+                        DownloadUrl = downloadUrl,
+                        SiteId = id,
+                        Duration = TimeSpan.FromSeconds(duration.Value),
+                        VideoHeight = height.Value,
+                        VideoWidth = width.Value,
+                        ThumbnailFilePath = thumbNailFilePath,
+                    };
+                }
+            }
+        }
+
+        return null;
     }
 
     private async Task<string> GetThumbNailFilePath(HttpClient httpClient, HtmlDocument document)
