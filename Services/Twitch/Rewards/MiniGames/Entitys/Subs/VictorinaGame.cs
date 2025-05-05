@@ -1,10 +1,10 @@
 ﻿using System.Text;
 
-namespace MARS.Server.Services.Twitch.Rewards.MiniGames.Subs;
+namespace MARS.Server.Services.Twitch.Rewards.MiniGames.Entitys.Subs;
 
 public class VictorinaGame(ILogger<TwitchTrivia> logger, ITwitchClient client, TwitchTrivia trivia)
 {
-    private readonly List<VictorinaLetter> _listLetters = new();
+    private readonly List<VictorinaLetter> _listLetters = [];
     public string Answer = "";
 
     public bool Active { get; set; } = true;
@@ -150,7 +150,7 @@ public class VictorinaGame(ILogger<TwitchTrivia> logger, ITwitchClient client, T
         finally
         {
             Active = false;
-            trivia.IsGameActive = false;
+            trivia.IsGameRunning = false;
         }
     }
 }

@@ -1,18 +1,12 @@
 ﻿using System.Collections.Concurrent;
+using MARS.Server.Services.MemoryStorageService.Entitys;
 
-namespace MARS.Server.Services.PyroAlerts;
-
-using System;
-using System.Collections.Generic;
-using System.IO;
+namespace MARS.Server.Services.MemoryStorageService;
 
 public static class MemoryStorage
 {
     // Приватное поле для хранения файлов в памяти (имя файла -> содержимое)
-    private static readonly ConcurrentDictionary<
-        string,
-        PyroAlertMemoryStorageFileDescription
-    > FileStorage;
+    private static readonly ConcurrentDictionary<string, MemoryFile> FileStorage;
 
     /// <summary>
     /// Конструктор класса MemoryStorage
@@ -46,7 +40,7 @@ public static class MemoryStorage
             var extension = Path.GetExtension(fileName);
             var mediaType = extension.GetFileMediaType();
 
-            var content = new PyroAlertMemoryStorageFileDescription()
+            var content = new MemoryFile()
             {
                 Exstension = extension,
                 MediaType = mediaType,
@@ -139,15 +133,28 @@ public static class MemoryStorage
             return;
         }
 
-        while (!FileStorage.TryRemove(fileName, out var _))
+        while (true)
         {
-            if (description.UseCount != 0)
+            var isRemoved = FileStorage.TryRemove(fileName, out var removedDescription);
+            if (isRemoved)
             {
+                if (removedDescription != null)
+                {
+                    Array.Clear(removedDescription.FileContent);
+                    removedDescription.FileContent = [];
+                }
                 break;
             }
             else
             {
-                await Task.Delay(500);
+                if (description.UseCount != 0)
+                {
+                    break;
+                }
+                else
+                {
+                    await Task.Delay(500);
+                }
             }
         }
     }
@@ -158,7 +165,7 @@ public static class MemoryStorage
     /// <returns>Массив имен файлов</returns>
     public static Task<string[]> GetAllFileNamesAsync()
     {
-        return Task.Factory.StartNew<string[]>(() =>
+        return Task.Factory.StartNew(() =>
         {
             var fileNames = new string[FileStorage.Count];
             FileStorage.Keys.CopyTo(fileNames, 0);

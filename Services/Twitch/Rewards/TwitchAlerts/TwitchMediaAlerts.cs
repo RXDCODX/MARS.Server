@@ -1,10 +1,11 @@
-﻿using MARS.Server.Services.Twitch.SoundBarService;
+﻿using MARS.Server.Services.Twitch.Management;
+using MARS.Server.Services.Twitch.SoundBarService;
 using TwitchLib.Client.Events;
 using TwitchLib.EventSub.Core.SubscriptionTypes.Channel;
 
 namespace MARS.Server.Services.Twitch.Rewards.TwitchAlerts;
 
-public class TwitchMediaAlerts
+public class TwitchMediaAlerts : BackgroundService
 {
     private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
     private readonly IHubContext<TelegramusHub, ITelegramusHub> _hubContext;
@@ -27,6 +28,8 @@ public class TwitchMediaAlerts
         applicationLifetime.ApplicationStarted.Register(() =>
         {
             client.OnMessageReceived += TwitchClientOnNormalMessage;
+            EventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd +=
+                TwitchClientOnOnMessageSend;
         });
     }
 
@@ -144,5 +147,10 @@ public class TwitchMediaAlerts
 
             await _hubContext.Clients.All.Alert(new MediaDto { MediaInfo = mediaClone });
         }
+    }
+
+    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        return Task.CompletedTask;
     }
 }

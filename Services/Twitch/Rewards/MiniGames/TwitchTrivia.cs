@@ -1,61 +1,34 @@
 ﻿using MARS.Server.Services.Twitch.Management;
-using MARS.Server.Services.Twitch.Rewards.MiniGames.Subs;
+using MARS.Server.Services.Twitch.Rewards.MiniGames.Entitys.Interfaces;
+using MARS.Server.Services.Twitch.Rewards.MiniGames.Entitys.Subs;
 using TwitchLib.Client.Events;
 using TwitchLib.EventSub.Websockets.Core.EventArgs.Stream;
 
 namespace MARS.Server.Services.Twitch.Rewards.MiniGames;
 
-public class TwitchTrivia : BackgroundService
+public class TwitchTrivia(
+    ITwitchClient client,
+    IWebHostEnvironment environment,
+    ILogger<TwitchTrivia> logger,
+    IDbContextFactory<AppDbContext> dbContextFactory,
+    IHostApplicationLifetime applicationLifetime
+) : BackgroundService, ITwitchMiniGame
 {
+    public bool IsGameRunning { get; set; } = false;
+    public string CommandForStop { get; set; } = "!викторинастоп";
+
     private const int CostOfAlert = 7;
-    private const string CommandForStop = "!викторинастоп";
     private const int ChanceToBeSaved = 30;
-    private readonly ITwitchClient _client;
-    private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
-    private readonly IWebHostEnvironment _environment;
-    private readonly ILogger<TwitchTrivia> _logger;
-    internal readonly int CountQuestions;
-    internal readonly object Locker = new();
+    internal int CountQuestions;
     internal readonly SemaphoreSlim SemaphoreSlim = new(1);
 
     public readonly int TimeoutBetweenHints = 10;
-    internal bool IsGameActive = false;
 
     internal CancellationTokenSource TokenSource = null!;
 
-    private readonly IHostApplicationLifetime _applicationLifetime;
-    private bool IsAppActive { get; set; } = false;
-
-    public TwitchTrivia(
-        ITwitchClient client,
-        IWebHostEnvironment environment,
-        ILogger<TwitchTrivia> logger,
-        IDbContextFactory<AppDbContext> dbContextFactory,
-        IHostApplicationLifetime applicationLifetime,
-        EventSubService eventSubService
-    )
-    {
-        _client = client;
-        _environment = environment;
-        _logger = logger;
-        _dbContextFactory = dbContextFactory;
-        _applicationLifetime = applicationLifetime;
-        CountQuestions = File.ReadAllLines(FilenameTrivia).Length;
-
-        CountQuestions = File.ReadAllLines(FilenameTrivia).Length;
-        applicationLifetime.ApplicationStarted.Register(() =>
-        {
-            IsAppActive = true;
-            _client.OnMessageReceived += NewMessage;
-            EventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd += NewAlert;
-            EventSubService.WsClient.StreamOffline += Closing;
-        });
-    }
-
     internal string FilenameTrivia =>
-        Path.Combine(_environment.ContentRootPath, "Trivia", "bot_trivia_questions.txt");
+        Path.Combine(environment.ContentRootPath, "Trivia", "bot_trivia_questions.txt");
     private VictorinaGame? CurrentGame { get; set; }
-
     private bool IsStop { get; set; } = true;
 
     private Task Init()
@@ -83,11 +56,6 @@ public class TwitchTrivia : BackgroundService
 
     private async void NewMessage(object? sender, OnMessageReceivedArgs onMessageReceivedArgs)
     {
-        if (!IsAppActive)
-        {
-            return;
-        }
-
         await Task.Run(
             async () =>
             {
@@ -101,21 +69,25 @@ public class TwitchTrivia : BackgroundService
                 }
 
                 //Стоп - слово
-                if (message == CommandForStop && name == "")
+                if (
+                    message.Equals(CommandForStop, StringComparison.OrdinalIgnoreCase)
+                    && name.Equals(TwitchExstension.Channel, StringComparison.OrdinalIgnoreCase)
+                )
                 {
                     if (CurrentGame != null)
                     {
                         CurrentGame.Active = false;
-                        await _client.SendMessageToMainTwitchAsync("Остановка тривии", _logger);
+                        await client.SendMessageToMainTwitchAsync("Остановка тривии", logger);
                     }
                     else
                     {
-                        await _client.SendMessageToMainTwitchAsync(
+                        await client.SendMessageToMainTwitchAsync(
                             "Тривия не была запущена",
-                            _logger
+                            logger
                         );
                     }
 
+                    IsGameRunning = false;
                     return;
                 }
 
@@ -130,7 +102,7 @@ public class TwitchTrivia : BackgroundService
                     {
                         Waifu? waifu = null;
                         await using AppDbContext context =
-                            await _dbContextFactory.CreateDbContextAsync();
+                            await dbContextFactory.CreateDbContextAsync();
 
                         var host = await context.Hosts.FindAsync(id);
 
@@ -159,27 +131,28 @@ public class TwitchTrivia : BackgroundService
                             CurrentGame.AllLettersShowed = true;
                             var answer = CurrentGame.Answer;
                             CurrentGame.Answer = "";
-                            await _client.SendMessageToMainTwitchAsync(
+                            await client.SendMessageToMainTwitchAsync(
                                 $"@{name}, твой супруг ({waifu.Name}) шепнул(-а) на ушко загаданное слово: {answer}",
-                                _logger
+                                logger
                             );
+                            IsGameRunning = false;
                         }
                         else if (!CurrentGame.AllLettersShowed)
                         {
                             CurrentGame.AllLettersShowed = true;
                             var answer = CurrentGame.Answer;
                             CurrentGame.Answer = "";
-                            await _client.SendMessageToMainTwitchAsync(
+                            await client.SendMessageToMainTwitchAsync(
                                 $"@{name} отгадал загаданное слово: {answer}",
-                                _logger
+                                logger
                             );
+                            IsGameRunning = false;
                         }
-
                         SemaphoreSlim.Release();
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogException(ex);
+                        logger.LogException(ex);
                     }
                 }
             },
@@ -187,33 +160,25 @@ public class TwitchTrivia : BackgroundService
         );
     }
 
-    private Task NewAlert(object? sender, ChannelPointsCustomRewardRedemptionArgs args)
+    public int GetGameCost()
     {
-        if (args.Notification.Payload.Event.Reward.Cost == CostOfAlert)
+        return CostOfAlert;
+    }
+
+    public Task GameStart(string userName, string userId)
+    {
+        if (!IsStop)
         {
-            if (!IsGameActive)
+            try
             {
-                if (!IsStop)
-                {
-                    try
-                    {
-                        var qwe = new VictorinaGame(_logger, _client, this);
-                        CurrentGame = qwe;
-                        qwe.MainThread();
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogException(ex);
-                    }
-                }
+                var qwe = new VictorinaGame(logger, client, this);
+                CurrentGame = qwe;
+                qwe.MainThread();
+                IsGameRunning = false;
             }
-            else
+            catch (Exception ex)
             {
-                const string answer = "@{0}, викторина уже запущена!";
-                return _client.SendMessageToMainTwitchAsync(
-                    string.Format(answer, args.Notification.Payload.Event.UserName),
-                    _logger
-                );
+                logger.LogException(ex);
             }
         }
 
@@ -222,6 +187,13 @@ public class TwitchTrivia : BackgroundService
 
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        CountQuestions = File.ReadAllLines(FilenameTrivia).Length;
+        applicationLifetime.ApplicationStarted.Register(() =>
+        {
+            client.OnMessageReceived += NewMessage;
+            EventSubService.WsClient.StreamOffline += Closing;
+        });
+
         return Init();
     }
 }

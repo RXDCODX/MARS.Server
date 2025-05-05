@@ -1,16 +1,32 @@
 ﻿using MARS.Server.Services.RandomMem.Entity;
-using MARS.Server.Services.Twitch.SoundBarService;
+using MARS.Server.Services.Twitch.Management;
 
 namespace MARS.Server.Services.Twitch.Rewards.TwitchRandomMeme;
 
-public class RandomMeme(
-    IHubContext<TelegramusHub, ITelegramusHub> hubContext,
-    IWebHostEnvironment webHostEnvironment,
-    IDbContextFactory<AppDbContext> dbContextFactory,
-    IHostApplicationLifetime applicationLifetime
-)
+public class RandomMeme : BackgroundService
 {
-    private readonly CancellationToken _stoppingToken = applicationLifetime.ApplicationStopping;
+    private readonly CancellationToken _stoppingToken;
+    private readonly IHubContext<TelegramusHub, ITelegramusHub> _hubContext;
+    private readonly IWebHostEnvironment _webHostEnvironment;
+    private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
+
+    public RandomMeme(
+        IHubContext<TelegramusHub, ITelegramusHub> hubContext,
+        IWebHostEnvironment webHostEnvironment,
+        IDbContextFactory<AppDbContext> dbContextFactory,
+        IHostApplicationLifetime applicationLifetime
+    )
+    {
+        _hubContext = hubContext;
+        _webHostEnvironment = webHostEnvironment;
+        _dbContextFactory = dbContextFactory;
+        _stoppingToken = applicationLifetime.ApplicationStopping;
+
+        applicationLifetime.ApplicationStarted.Register(() =>
+        {
+            EventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd += RandomMemeHandler;
+        });
+    }
 
     public async Task RandomMemeHandler(object sender, ChannelPointsCustomRewardRedemptionArgs args)
     {
@@ -30,7 +46,7 @@ public class RandomMeme(
 
                     if (media is not null)
                     {
-                        await hubContext.Clients.All.Alert(
+                        await _hubContext.Clients.All.Alert(
                             new MediaDto(media) { MediaInfo = media }
                         );
                     }
@@ -43,7 +59,7 @@ public class RandomMeme(
 
                     if (sound is not null)
                     {
-                        await hubContext.Clients.All.Alert(
+                        await _hubContext.Clients.All.Alert(
                             new MediaDto(sound) { MediaInfo = sound }
                         );
                     }
@@ -56,13 +72,13 @@ public class RandomMeme(
 
     private Task<MediaInfo?> GetRandomSound(string? displayName)
     {
-        var path = Path.Combine(webHostEnvironment.WebRootPath, "Alerts", "zvik");
+        var path = Path.Combine(_webHostEnvironment.WebRootPath, "Alerts", "zvik");
         return GetAlert(path, displayName);
     }
 
     private Task<MediaInfo?> GetMeme(string? displayName)
     {
-        var path = Path.Combine(webHostEnvironment.WebRootPath, "Alerts", "random_meme");
+        var path = Path.Combine(_webHostEnvironment.WebRootPath, "Alerts", "random_meme");
         return GetAlert(path, displayName);
     }
 
@@ -107,7 +123,7 @@ public class RandomMeme(
 
     public async Task<MemeOrder> GetNextVideoOrderAsync(string path)
     {
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(_stoppingToken);
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync(_stoppingToken);
 
         var type = dbContext
             .RandomMemeType.AsNoTracking()
@@ -142,5 +158,10 @@ public class RandomMeme(
         await dbContext.SaveChangesAsync(_stoppingToken);
 
         return nextVideoOrder;
+    }
+
+    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        return Task.CompletedTask;
     }
 }

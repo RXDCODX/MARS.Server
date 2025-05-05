@@ -1,4 +1,6 @@
-﻿using TwitchLib.Api.Auth;
+﻿using MARS.Server.Services.Twitch.Management.Entitys;
+using TwitchLib.Api.Auth;
+using TwitchLib.Api.Helix.Models.Chat;
 using TwitchLib.Client.Models;
 
 namespace MARS.Server.Exstensions;
@@ -75,6 +77,32 @@ public static class TwitchExstension
         }
 
         return Task.CompletedTask;
+    }
+
+    public static async Task SendAnnouncementToMainTwitch<T>(
+        this ITwitchAPI client,
+        string message,
+        TokenInfo? userToken,
+        AnnouncementColors? color = null,
+        ILogger<T>? logger = null
+    )
+        where T : class
+    {
+        color ??= AnnouncementColors.Primary;
+        try
+        {
+            await client.Helix.Chat.SendChatAnnouncementAsync(
+                ChannelId,
+                ChannelId,
+                message,
+                color,
+                userToken?.AccessToken
+            );
+        }
+        catch (Exception ex)
+        {
+            logger?.LogException(ex);
+        }
     }
 
     public static async Task<bool> ValidateToken<T>(

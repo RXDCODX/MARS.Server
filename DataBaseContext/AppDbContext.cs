@@ -1,10 +1,12 @@
 ﻿using MARS.Server.Services._365Genius.Entitys;
+using MARS.Server.Services.Framedata.Entitys;
 using MARS.Server.Services.RandomMem.Entity;
 using MARS.Server.Services.Twitch;
 using MARS.Server.Services.Twitch.ClientMessages.AutoMessages.Entitys;
 using MARS.Server.Services.Twitch.FumoFriday.Entitys;
 using MARS.Server.Services.Twitch.HelloVideos.Entitys;
 using MARS.Server.Services.Twitch.Management.Entitys;
+using MARS.Server.Services.Twitch.MiniGamesStats.Entitys;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace MARS.Server.DataBaseContext;
@@ -50,6 +52,10 @@ public sealed class AppDbContext : DbContext
     public DbSet<FumoUser> FumoUsers { get; set; }
     public DbSet<HelloVideosUsers> HelloVideosUsers { get; set; } = null!;
     public DbSet<Video365> Videos365 { get; set; } = null!;
+    public DbSet<TekkenCharacter> TekkenCharacters { get; set; } = null!;
+    public DbSet<Move> TekkenMoves { get; set; } = null!;
+    public DbSet<TwitchLeaderboardUser> TwitchLeaderboardUsers { get; set; } = null!;
+    public DbSet<TelegramUpdateReceiverOffset> TelegramUpdateReceiverOffset { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -186,6 +192,22 @@ public sealed class AppDbContext : DbContext
                 }
             );
         });
+
+        modelBuilder.Entity<Move>().HasKey(o => new { o.CharacterName, o.Command });
+
+        modelBuilder
+            .Entity<Move>()
+            .HasOne(m => m.Character)
+            .WithMany(c => c.Movelist)
+            .HasForeignKey(e => e.CharacterName)
+            .OnDelete(DeleteBehavior.NoAction); // assuming you add a CharacterId property to Move
+
+        modelBuilder
+            .Entity<TekkenCharacter>()
+            .HasMany(c => c.Movelist)
+            .WithOne(m => m.Character)
+            .HasForeignKey(e => e.CharacterName)
+            .OnDelete(DeleteBehavior.NoAction);
     }
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)

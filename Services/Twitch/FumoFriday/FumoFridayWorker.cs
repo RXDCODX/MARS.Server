@@ -1,9 +1,10 @@
 ﻿using MARS.Server.Services.Twitch.FumoFriday.Entitys;
+using MARS.Server.Services.Twitch.Management;
 using TwitchLib.Client.Events;
 
 namespace MARS.Server.Services.Twitch.FumoFriday;
 
-public class FumoFridayWorker
+public class FumoFridayWorker : BackgroundService
 {
     private readonly CancellationToken _cancellationToken;
 
@@ -33,6 +34,7 @@ public class FumoFridayWorker
         hostApplicationLifetime.ApplicationStarted.Register(() =>
         {
             twitchClient.OnMessageReceived += OnMessageReceived;
+            EventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd += OnRewardRedemption;
         });
     }
 
@@ -161,5 +163,10 @@ public class FumoFridayWorker
         {
             return null;
         }
+    }
+
+    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        return Task.CompletedTask;
     }
 }

@@ -1,6 +1,6 @@
 ﻿using TwitchLib.Client.Extensions;
 
-namespace MARS.Server.Services.Twitch.Rewards.MiniGames.Subs;
+namespace MARS.Server.Services.Twitch.Rewards.MiniGames.Entitys.Subs;
 
 public class RouleteGame(
     List<RouletePlayer> players,

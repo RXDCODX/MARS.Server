@@ -1,8 +1,8 @@
 ﻿using System.Diagnostics.Eventing.Reader;
 using System.Reflection;
+using MARS.Server.Services.Framedata;
 using MARS.Server.Services.PyroAlerts;
 using MARS.Server.Services.RandomMem;
-using MARS.Server.Services.TelegramBotService.Commands.Attribute;
 using Telegram.Bot.Exceptions;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types.Enums;
@@ -18,6 +18,7 @@ public class UpdateHandler : IUpdateHandler
     private readonly Commands.Commands _commands;
     private readonly ILogger<UpdateHandler> _logger;
     private readonly TelegramConfiguration _options;
+    private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
 
     public UpdateHandler(
         ITelegramBotClient botClient,
@@ -26,18 +27,22 @@ public class UpdateHandler : IUpdateHandler
         IOptions<TelegramConfiguration> options,
         PyroAlertsHandler pyroAlertsHandler,
         RandomMemHandler randomMemHandler,
-        IHostApplicationLifetime applicationLifetime
+        IHostApplicationLifetime applicationLifetime,
+        Tekken8FrameData frameData,
+        IDbContextFactory<AppDbContext> dbContextFactory
     )
     {
         _botClient = botClient;
         _logger = logger;
         _commands = commands;
+        _dbContextFactory = dbContextFactory;
         _options = options.Value;
 
         applicationLifetime.ApplicationStarted.Register(() =>
         {
             TelegramUpdate += pyroAlertsHandler.HandAlert;
             TelegramUpdate += randomMemHandler.HandMessage;
+            TelegramUpdate += frameData.HandAlert;
         });
     }
 
@@ -49,11 +54,13 @@ public class UpdateHandler : IUpdateHandler
     {
         try
         {
+            await UpdateOffset(update.Id, cancellationToken);
+
             ResendMessage(update);
         }
         catch (Exception e)
         {
-            _logger.LogWarning("�� ���� forward ��������. {0} # {1}", e.Message, e.StackTrace);
+            _logger.LogException(e);
         }
 
         Task handler = update switch
@@ -157,18 +164,35 @@ public class UpdateHandler : IUpdateHandler
         {
             var command = messageText.Split(' ')[0];
             var methodName = GetMethodName(command);
-
-            var method = _commands
+            var methods = _commands
                 .GetType()
-                .GetMethod(
-                    methodName,
-                    BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance
-                );
+                .GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
+
+            var method = methods.FirstOrDefault(e =>
+                e.Name.Equals(methodName, StringComparison.OrdinalIgnoreCase)
+            );
             if (method == null)
             {
-                action = ErrorCommand(_botClient, message, cancellationToken);
+                var methodWithAliases = methods.Where(e =>
+                    e.GetCustomAttribute<AliasAttribute>() != null
+                );
+                var commandWithoutSlash = command.Substring(1);
+                method = methodWithAliases.FirstOrDefault(
+                    e =>
+                    {
+                        var aliasAttr = e?.GetCustomAttribute<AliasAttribute>();
+                        if (aliasAttr?.MethodAliases.Contains(commandWithoutSlash) == true)
+                        {
+                            return true;
+                        }
+
+                        return false;
+                    },
+                    null
+                );
             }
-            else
+
+            if (method != null)
             {
                 var isAdminMethod = method.GetCustomAttribute<AdminAttribute>() != null;
                 var isIgnore = method.GetCustomAttribute<IgnoreAttribute>() != null;
@@ -183,13 +207,22 @@ public class UpdateHandler : IUpdateHandler
                     var parameters = new object[] { _botClient, message, cancellationToken };
                     if (methodName == "OnCommandsCommandReceived")
                     {
-                        parameters = isAdminUser
-                            ? new object[] { _botClient, message, cancellationToken, true }
-                            : new object[] { _botClient, message, cancellationToken, false };
+                        if (isAdminUser)
+                        {
+                            parameters = [_botClient, message, cancellationToken, true];
+                        }
+                        else
+                        {
+                            parameters = [_botClient, message, cancellationToken, false];
+                        }
                     }
 
                     action = (Task<Message>?)method.Invoke(_commands, parameters);
                 }
+            }
+            else
+            {
+                action = ErrorCommand(_botClient, message, cancellationToken);
             }
         }
         catch (Exception ex)
@@ -223,7 +256,6 @@ public class UpdateHandler : IUpdateHandler
 
     private string GetMethodName(string command)
     {
-        // Ïðåîáðàçóåì êîìàíäó â èìÿ ìåòîäà, íàïðèìåð, "/genshin" -> "OnGenshinCommandReceived"
         return "On"
             + command.Substring(1).First().ToString().ToUpper()
             + command.Substring(2)
@@ -265,5 +297,38 @@ public class UpdateHandler : IUpdateHandler
     {
         _logger.LogInformation("Unknown update type: {UpdateType}", update.Type);
         return Task.CompletedTask;
+    }
+
+    private async Task UpdateOffset(int updateId, CancellationToken cancellationToken)
+    {
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
+
+        var offset = await dbContext.TelegramUpdateReceiverOffset.SingleOrDefaultAsync(
+            cancellationToken: cancellationToken
+        );
+
+        if (offset is not null)
+        {
+            if (updateId != offset.Offset + 1)
+            {
+                offset.Offset = updateId;
+            }
+            else
+            {
+                offset.Offset += 1;
+            }
+        }
+        else
+        {
+            var obset = new TelegramUpdateReceiverOffset()
+            {
+                Offset = updateId,
+                Id = Guid.NewGuid(),
+            };
+
+            await dbContext.TelegramUpdateReceiverOffset.AddAsync(obset, cancellationToken);
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
     }
 }

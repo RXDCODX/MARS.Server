@@ -5,5 +5,5 @@
 /// </summary>
 public interface IReceiverService
 {
-    Task ReceiveAsync(CancellationToken stoppingToken);
+    Task ReceiveAsync(AppDbContext appDbContext, CancellationToken stoppingToken);
 }

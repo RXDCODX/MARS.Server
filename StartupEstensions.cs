@@ -1,10 +1,13 @@
-﻿using MARS.Server.Services.Twitch.AutoInfoFetch;
+﻿using MARS.Server.Services.Framedata;
+using MARS.Server.Services.Twitch.AutoInfoFetch;
 using MARS.Server.Services.Twitch.ClientMessages.AutoMessages;
 using MARS.Server.Services.Twitch.ClientMessages.SignalRAlerts;
+using MARS.Server.Services.Twitch.ClientMessages.TekkenFrameData;
 using MARS.Server.Services.Twitch.ClientMessages.TwitchAutoHello;
 using MARS.Server.Services.Twitch.FumoFriday;
 using MARS.Server.Services.Twitch.HelloVideos;
 using MARS.Server.Services.Twitch.Management;
+using MARS.Server.Services.Twitch.MiniGamesStats;
 using MARS.Server.Services.Twitch.Rewards.MiniGames;
 using MARS.Server.Services.Twitch.Rewards.TwitchAlerts;
 using MARS.Server.Services.Twitch.Rewards.TwitchHighlitedMessage;
@@ -53,6 +56,7 @@ public static class StartupEstensions
 
         services.AddSingleton<TwitchStreamStartupNotifications>();
         services.AddSingleton<TwitchMediaAlerts>();
+        services.AddHostedService(sp => sp.GetRequiredService<TwitchMediaAlerts>());
         services.AddSingleton<AutoMessagesController>();
         services.AddHostedService(sp => sp.GetRequiredService<AutoMessagesController>());
         services.AddSingleton<TwitchAuthService>();
@@ -68,14 +72,19 @@ public static class StartupEstensions
         services.AddSingleton<MergeWaifu>();
         services.AddHostedService(sp => sp.GetRequiredService<MergeWaifu>());
         services.AddSingleton<RollWaifu>();
+        services.AddHostedService(sp => sp.GetRequiredService<RollWaifu>());
         services.AddSingleton<RandomMeme>();
+        services.AddHostedService(sp => sp.GetRequiredService<RandomMeme>());
         services.AddSingleton<TwitchRussianRoulete>();
         services.AddHostedService(sp => sp.GetRequiredService<TwitchRussianRoulete>());
+        services.AddSingleton<TekkenVictorina>();
+        services.AddHostedService(sp => sp.GetRequiredService<TekkenVictorina>());
         services.AddSingleton<TwitchTrivia>();
         services.AddHostedService(sp => sp.GetRequiredService<TwitchTrivia>());
         services.AddSingleton<HighlitedMessage>();
         services.AddHostedService(sp => sp.GetRequiredService<HighlitedMessage>());
         services.AddSingleton<FumoFridayWorker>();
+        services.AddHostedService(sp => sp.GetRequiredService<FumoFridayWorker>());
         services.AddSingleton<HelloVideoWorker>();
 
         services.AddSingleton<Confetty>();
@@ -95,6 +104,18 @@ public static class StartupEstensions
 
         services.AddSingleton<AutoRewardInfoFetcher>();
         services.AddHostedService(sp => sp.GetRequiredService<AutoRewardInfoFetcher>());
+
+        services.AddSingleton<Tekken8FrameData>();
+        services.AddHostedService(sp => sp.GetRequiredService<Tekken8FrameData>());
+
+        services.AddSingleton<TwitchFramedate>();
+        services.AddHostedService(sp => sp.GetRequiredService<TwitchFramedate>());
+
+        services.AddSingleton<MiniGamesManager>();
+        services.AddHostedService(sp => sp.GetRequiredService<MiniGamesManager>());
+
+        services.AddSingleton<TekkenVictorinaLeaderbord>();
+        services.AddHostedService(sp => sp.GetRequiredService<TekkenVictorinaLeaderbord>());
 
         return services;
     }
