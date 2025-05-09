@@ -13,7 +13,7 @@ public class Worker365(
     IHostApplicationLifetime lifetime,
     IHostEnvironment environment,
     IDbContextFactory<AppDbContext> appDbContextFactory,
-    Client botClient,
+    WTelegramClient botClient,
     ILogger<Worker365> logger
 ) : IHostedService
 {

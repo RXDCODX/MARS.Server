@@ -22,6 +22,8 @@ using WTelegram;
 
 namespace MARS.Server;
 
+public class WTelegramClient(int item1, string item2, string item3) : Client(item1, item2, item3);
+
 public class Program
 {
     public static void Main(string[] args)
@@ -57,6 +59,7 @@ public class Program
                 }
             }
         );
+        StaticDbContextFactory.Factory = contextFactory;
 
         //Twitch
         var loggerFactory = LoggerFactory.Create(loggingBuilder =>
@@ -152,6 +155,8 @@ public class Program
         services.AddSingleton<RandomMemHandler>();
         services.AddSingleton<RandomMemeWorker>();
         services.AddHostedService(sp => sp.GetRequiredService<RandomMemeWorker>());
+        services.AddSingleton<RandomMemOnline>();
+        services.AddHostedService(sp => sp.GetRequiredService<RandomMemOnline>());
 
         services.AddSingleton(
             (sp) => VoicerFactory.CreateVoicer(sp.GetRequiredService<ILogger<IVoicer>>())
@@ -162,11 +167,15 @@ public class Program
         services.AddSingleton<Worker365>();
         services.AddHostedService(sp => sp.GetRequiredService<Worker365>());
 
-        services.AddSingleton<Client>(
+        services.AddSingleton<WTelegramClient>(
             (sp) =>
             {
                 var options = sp.GetRequiredService<IOptions<WTelegramClientConfiguration>>().Value;
-                var client = new Client(options.AppId, options.ApiHash, "bin/WTelegram.session");
+                var client = new WTelegramClient(
+                    options.AppId,
+                    options.ApiHash,
+                    "bin/WTelegram.session"
+                );
                 var logger = loggerFactory.CreateLogger("WTelegram");
                 Helpers.Log = (i, v) => logger.Log((LogLevel)i, v);
                 client.LoginUserIfNeeded();
@@ -319,8 +328,6 @@ public class Program
                 }
             )
         );
-
-        builder.Services.AddControllers();
 
         var app = builder.Build();
 

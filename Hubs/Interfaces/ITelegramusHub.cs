@@ -28,4 +28,5 @@ public interface ITelegramusHub
     public Task TwitchMsg(string msg);
     public Task MakeScreenParticles(TwitchScreenParticles particles);
     public Task MakeScreenEmojisParticles(ChatMessage message);
+    public Task RandomMem(MediaDto mediaInfo);
 }

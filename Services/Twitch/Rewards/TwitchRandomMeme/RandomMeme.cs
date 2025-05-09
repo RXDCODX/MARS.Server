@@ -46,7 +46,7 @@ public class RandomMeme : BackgroundService
 
                     if (media is not null)
                     {
-                        await _hubContext.Clients.All.Alert(
+                        await _hubContext.Clients.All.RandomMem(
                             new MediaDto(media) { MediaInfo = media }
                         );
                     }
@@ -59,7 +59,7 @@ public class RandomMeme : BackgroundService
 
                     if (sound is not null)
                     {
-                        await _hubContext.Clients.All.Alert(
+                        await _hubContext.Clients.All.RandomMem(
                             new MediaDto(sound) { MediaInfo = sound }
                         );
                     }

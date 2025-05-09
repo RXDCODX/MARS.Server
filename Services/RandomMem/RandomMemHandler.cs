@@ -13,11 +13,9 @@ public class RandomMemHandler(
     IHostApplicationLifetime applicationLifetime
 ) : ITelegramusService
 {
-    public readonly string AlertsPath = Path.Combine(
-        environment.WebRootPath,
-        "Alerts",
-        "random_meme"
-    );
+    public readonly string[] AlertsPaths = environment.IsProduction()
+        ? [Path.Combine(environment.WebRootPath, "Alerts", "random_meme"), GetDevAlerts()]
+        : [Path.Combine(environment.WebRootPath, "Alerts", "random_meme")];
 
     private string? LastMediaGroupId { get; set; }
     private bool IsGoldMediaGroup { get; set; }
@@ -112,60 +110,88 @@ public class RandomMemHandler(
             isGold = !string.IsNullOrWhiteSpace(message.Caption);
         }
 
-        var folderPath = isGold ? Path.Combine(AlertsPath, "Gold") : AlertsPath;
-        var downloadPath = folderPath + "\\" + fileInfo.FilePath;
-
-        MediaType type = await Path.GetExtension(fileInfo.FilePath).GetFileMediaTypeAsync();
-        string caption;
+        string caption = null!;
         const string answer1 = "Скачал твой файл ({1})";
-        const string answer = "такой файл уже есть, обновил время последнего акцесса до {0}";
+        const string answer = "такой файл уже есть ({1}), обновил время последнего акцесса до {0}";
         const string answer2 = "С мемом чето не так, ппц брат.";
         const string goldAnswer1 = "Скачал твой ЗОЛОТОЙ файл ({1}) и вставил его в качестве мема!";
         const string goldAnswer =
             "такой ЗОЛОТОЙ файл уже есть, обновил время последнего акцесса до {0}";
         const string goldAnswer2 = "С ЗОЛОТЫМ мемом чето не так, ппц брат.";
-        switch (type)
+
+        for (var index = 0; index < AlertsPaths.Length; index++)
         {
-            case MediaType.Video:
-                if (!File.Exists(downloadPath))
-                {
-                    await helper.DownloadFileAndCache(client, fileInfo, folderPath);
-                    caption = isGold ? goldAnswer1 : answer1;
-                }
-                else
-                {
-                    File.SetLastAccessTime(downloadPath, DateTimeOffset.Now.LocalDateTime);
-                    caption = isGold ? goldAnswer : answer;
-                }
+            var alertsPath = AlertsPaths[index];
+            var folderPath = isGold ? Path.Combine(alertsPath, "Gold") : alertsPath;
+            var downloadPath = folderPath + "\\" + fileInfo.FilePath;
 
-                break;
-            case MediaType.Image:
-                if (!File.Exists(downloadPath))
-                {
-                    await helper.DownloadFileAndCache(client, fileInfo, folderPath);
-                    caption = isGold ? goldAnswer1 : answer1;
-                }
-                else
-                {
-                    File.SetLastAccessTime(downloadPath, DateTimeOffset.Now.LocalDateTime);
-                    caption = isGold ? goldAnswer : answer;
-                }
+            MediaType type = await Path.GetExtension(fileInfo.FilePath).GetFileMediaTypeAsync();
 
-                break;
-            default:
-                caption = isGold ? goldAnswer2 : answer2;
-                break;
+            switch (type)
+            {
+                case MediaType.Video:
+                    if (!File.Exists(downloadPath))
+                    {
+                        await helper.DownloadFileAndCache(client, fileInfo, folderPath);
+                        if (index == 0)
+                        {
+                            caption = isGold ? goldAnswer1 : answer1;
+                        }
+                    }
+                    else
+                    {
+                        File.SetLastAccessTime(downloadPath, DateTimeOffset.Now.LocalDateTime);
+                        if (index == 0)
+                        {
+                            caption = isGold ? goldAnswer : answer;
+                        }
+                    }
+
+                    break;
+                case MediaType.Image:
+                    if (!File.Exists(downloadPath))
+                    {
+                        await helper.DownloadFileAndCache(client, fileInfo, folderPath);
+                        if (index == 0)
+                        {
+                            caption = isGold ? goldAnswer1 : answer1;
+                        }
+                    }
+                    else
+                    {
+                        File.SetLastAccessTime(downloadPath, DateTimeOffset.Now.LocalDateTime);
+                        if (index == 0)
+                        {
+                            caption = isGold ? goldAnswer : answer;
+                        }
+                    }
+
+                    break;
+                default:
+                    if (index == 0)
+                    {
+                        caption = isGold ? goldAnswer2 : answer2;
+                    }
+
+                    break;
+            }
+
+            if (index == 0)
+            {
+                await CreateMemeOrder(downloadPath);
+            }
         }
 
         try
         {
-            await CreateMemeOrder(downloadPath);
-
-            await client.SendMessage(
-                message.Chat.Id,
-                string.Format(caption, DateTimeOffset.Now.LocalDateTime, fileInfo.FilePath),
-                cancellationToken: CancellationToken
-            );
+            if (!string.IsNullOrWhiteSpace(caption))
+            {
+                await client.SendMessage(
+                    message.Chat.Id,
+                    string.Format(caption, DateTimeOffset.Now.LocalDateTime, fileInfo.FilePath),
+                    cancellationToken: CancellationToken
+                );
+            }
         }
         catch (Exception e)
         {
@@ -225,5 +251,45 @@ public class RandomMemHandler(
         await dbContext.RandomMemeOrder.AddAsync(newOrder, CancellationToken);
 
         await dbContext.SaveChangesAsync(CancellationToken);
+    }
+
+    private static string GetDevAlerts()
+    {
+        var currentDir = Directory.GetCurrentDirectory();
+        var projectRoot = FindProjectRoot(currentDir);
+
+        if (projectRoot == null)
+        {
+            throw new DirectoryNotFoundException(
+                "Не удалось найти корень проекта (папку с .csproj)"
+            );
+        }
+
+        return Path.Combine(projectRoot, "wwwroot", "Alerts", "random_meme");
+    }
+
+    // Ищет корень проекта (папку с .csproj), игнорируя вложенные /bin
+    private static string? FindProjectRoot(string startPath)
+    {
+        var dir = new DirectoryInfo(startPath);
+
+        while (dir != null)
+        {
+            // Проверяем, есть ли в этой папке .csproj файл (признак корня проекта)
+            if (dir.GetFiles("*.csproj").Length > 0)
+            {
+                return dir.FullName;
+            }
+
+            // Если дошли до корня диска и не нашли .csproj — выходим
+            if (dir.Parent == null)
+            {
+                break;
+            }
+
+            dir = dir.Parent;
+        }
+
+        return null;
     }
 }

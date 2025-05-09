@@ -1,7 +1,7 @@
-﻿using MARS.Server.Services._365Genius.Entitys;
+﻿using MARS.Server.ApplicationState;
+using MARS.Server.Services._365Genius.Entitys;
 using MARS.Server.Services.Framedata.Entitys;
 using MARS.Server.Services.RandomMem.Entity;
-using MARS.Server.Services.Twitch;
 using MARS.Server.Services.Twitch.ClientMessages.AutoMessages.Entitys;
 using MARS.Server.Services.Twitch.FumoFriday.Entitys;
 using MARS.Server.Services.Twitch.HelloVideos.Entitys;
@@ -16,10 +16,10 @@ public sealed class AppDbContext : DbContext
     private static readonly object Locker = new();
     private static bool _isMigrated;
 
-    public AppDbContext(DbContextOptions<AppDbContext> options)
+    public AppDbContext(DbContextOptions<AppDbContext> options, bool isMigrations)
         : base(options)
     {
-        if (!_isMigrated)
+        if (!_isMigrated && !isMigrations)
         {
             lock (Locker)
             {
@@ -56,6 +56,8 @@ public sealed class AppDbContext : DbContext
     public DbSet<Move> TekkenMoves { get; set; } = null!;
     public DbSet<TwitchLeaderboardUser> TwitchLeaderboardUsers { get; set; } = null!;
     public DbSet<TelegramUpdateReceiverOffset> TelegramUpdateReceiverOffset { get; set; } = null!;
+    public DbSet<WTelegramAlloweedChannel> WTelegramAlloweedChannels { get; set; } = null!;
+    public DbSet<RootState> ApplicationState { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -208,6 +210,10 @@ public sealed class AppDbContext : DbContext
             .WithOne(m => m.Character)
             .HasForeignKey(e => e.CharacterName)
             .OnDelete(DeleteBehavior.NoAction);
+
+        modelBuilder
+            .Entity<RootState>()
+            .HasData(new RootState() { Id = 1, RandomMemeOnlineIsStop = false });
     }
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)

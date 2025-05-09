@@ -1,40 +1,77 @@
-﻿namespace MARS.Server.DataBaseContext;
+﻿using Microsoft.EntityFrameworkCore.Design;
 
-public class AppDbContextFactory : IDbContextFactory<AppDbContext>
+namespace MARS.Server.DataBaseContext;
+
+public class AppDbContextFactory
+    : IDbContextFactory<AppDbContext>,
+        IDesignTimeDbContextFactory<AppDbContext>
 {
-    private readonly IConfiguration _configuration;
-    private readonly IWebHostEnvironment _environment;
-    private readonly DbContextOptions<AppDbContext> _options;
+    private readonly DbContextOptions<AppDbContext>? _options;
 
+    // Конструктор для обычного использования (с DI)
     public AppDbContextFactory(
         IWebHostEnvironment environment,
         IConfiguration configuration,
-        Action<DbContextOptionsBuilder<AppDbContext>> action
+        Action<DbContextOptionsBuilder<AppDbContext>> optionsAction
     )
     {
-        _environment = environment;
-        _configuration = configuration;
-
-        var options = new DbContextOptionsBuilder<AppDbContext>();
-        action.Invoke(options);
-        _options = options.Options;
+        var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
+        optionsAction.Invoke(optionsBuilder);
+        _options = optionsBuilder.Options;
     }
 
+    // Конструктор для миграций (без DI)
+    public AppDbContextFactory()
+    {
+        // В режиме миграций настройки создаются вручную
+    }
+
+    // Реализация IDbContextFactory<AppDbContext>
     public AppDbContext CreateDbContext()
     {
+        return GetDbContext(isMigrations: false);
+    }
+
+    // Реализация IDesignTimeDbContextFactory<AppDbContext>
+    public AppDbContext CreateDbContext(string[] args)
+    {
+        return GetDbContext(isMigrations: true);
+    }
+
+    private AppDbContext GetDbContext(bool isMigrations)
+    {
+        if (_options != null && !isMigrations)
+        {
+            // Используем предварительно настроенные опции (если фабрика создана через DI)
+            return new AppDbContext(_options, isMigrations);
+        }
+
+        // Настройка вручную (для миграций)
         var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
 
-        optionsBuilder
-            .UseNpgsql(_configuration.GetConnectionString("DATABASE_Path"))
-            .UseQueryTrackingBehavior(QueryTrackingBehavior.TrackAll);
+        // Загружаем конфигурацию из appsettings.json
+        var configuration = new ConfigurationBuilder()
+            .SetBasePath(Directory.GetCurrentDirectory())
+            .AddJsonFile("appsettings.json")
+            .AddJsonFile($"appsettings.Development.json", optional: true)
+            .Build();
 
-        if (_environment.IsDevelopment())
+        // Получаем строку подключения
+        var connectionString = configuration.GetConnectionString("Dev_Path"); // Или "Prod_Path", если нужно
+
+        // Настраиваем DbContext
+        optionsBuilder.UseNpgsql(connectionString);
+        optionsBuilder.UseQueryTrackingBehavior(QueryTrackingBehavior.TrackAll);
+        optionsBuilder.EnableThreadSafetyChecks();
+
+        // Включаем детализированные ошибки в Development
+        var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+        if (environment == Environments.Development)
         {
             optionsBuilder.EnableDetailedErrors();
-            optionsBuilder.EnableThreadSafetyChecks();
             optionsBuilder.EnableSensitiveDataLogging();
         }
 
-        return new AppDbContext(_options);
+        return new AppDbContext(optionsBuilder.Options, isMigrations);
     }
 }
