@@ -20,6 +20,70 @@ public partial class Commands
         {
             var keyWords = split.Skip(1).ToArray();
 
+            if (keyWords.Last().StartsWith("stance", StringComparison.OrdinalIgnoreCase))
+            {
+                var charName = string.Join(' ', keyWords.SkipLast(1));
+                var stances = await frameData.GetCharacterStances(charName, cancellationToken);
+
+                if (stances is { Count: > 0 })
+                {
+                    await using var dbContext = await factory.CreateDbContextAsync(
+                        cancellationToken
+                    );
+                    var character = await frameData.FindCharacterInDatabaseAsync(
+                        charName,
+                        dbContext
+                    );
+                    var url = character?.LinkToImage;
+
+                    text = $"""
+                            🎭 <b>Character</b> 🎭
+                            <i>{character?.Name}</i>
+
+                            ///////////////////////////////
+                            Stance code - Stance Name
+                            
+                            {string.Join(
+                                Environment.NewLine,
+                                stances.Select(e => $"<i>{e.Key}</i> - <i>{e.Value}</i>")
+                            )}
+                            """;
+
+                    var buttons = new List<InlineKeyboardButton[]>();
+
+                    foreach (var (stanceCode, stanceValue) in stances)
+                    {
+                        if (character != null)
+                        {
+                            var button = new InlineKeyboardButton(stanceValue)
+                            {
+                                CallbackData = $"framedata:{character.Name}:stance:{stanceCode}",
+                            };
+                            buttons.Add([button]);
+                        }
+                    }
+
+                    var markup = new InlineKeyboardMarkup(buttons);
+                    return string.IsNullOrWhiteSpace(url)
+                        ? await botClient.SendMessage(
+                            message.Chat,
+                            text,
+                            ParseMode.Html,
+                            replyMarkup: markup,
+                            cancellationToken: cancellationToken
+                        )
+                        : await botClient.SendPhoto(
+                            message.Chat,
+                            InputFile.FromUri(url),
+                            text,
+                            showCaptionAboveMedia: true,
+                            replyMarkup: markup,
+                            parseMode: ParseMode.Html,
+                            cancellationToken: cancellationToken
+                        );
+                }
+            }
+
             var move = await frameData.GetMoveAsync(keyWords).ConfigureAwait(false);
 
             if (move != null)

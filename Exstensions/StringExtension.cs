@@ -1,4 +1,5 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Text;
+using System.Text.RegularExpressions;
 
 namespace MARS.Server.Exstensions;
 
@@ -84,5 +85,54 @@ public static class StringExtension
         }
 
         return input;
+    }
+
+    public static string[] SplitWithQuotes(this string text)
+    {
+        text = Regex.Replace(text.Trim(), @"\s+", " ");
+        var list = new List<string>();
+        var sb = new StringBuilder();
+        var isQuoted = false;
+
+        foreach (var c in text)
+        {
+            if (c == ' ' && !isQuoted)
+            {
+                if (sb.Length > 0)
+                {
+                    var word = sb.ToString();
+                    sb.Clear();
+                    list.Add(word);
+                }
+
+                continue;
+            }
+
+            if (c == '"')
+            {
+                if (isQuoted)
+                {
+                    isQuoted = false;
+                    var word = sb.ToString();
+                    sb.Clear();
+                    list.Add(word);
+                    continue;
+                }
+                else
+                {
+                    isQuoted = true;
+                    continue;
+                }
+            }
+
+            sb.Append(c);
+        }
+
+        if (isQuoted)
+        {
+            throw new Exception("ты насрал в ковычках");
+        }
+
+        return list.ToArray();
     }
 }

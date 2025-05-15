@@ -1,4 +1,6 @@
-﻿using TwitchLib.Client.Events;
+﻿using System.Text;
+using System.Text.RegularExpressions;
+using TwitchLib.Client.Events;
 
 namespace MARS.Server.Services.Twitch.ClientMessages.SignalRAlerts;
 
@@ -71,19 +73,50 @@ public class TwitchMessagesHubAwaker : BackgroundService
                     var alerts = _alerts
                         .Where(info =>
                         {
-                            var words = info.TextInfo.TriggerWord?.Trim().Split(' ');
-                            var textWords = e.ChatMessage.Message.Trim().Split(' ');
+                            var message = e.ChatMessage.Message.Trim();
+                            var words = info.TextInfo.TriggerWord?.Trim().SplitWithQuotes(); // Ваш метод для разделения с учетом кавычек
+                            var chatMessageWords = message.Split(
+                                ' ',
+                                StringSplitOptions.RemoveEmptyEntries
+                            );
 
-                            if (words is not { Length: > 0 })
+                            if (words is null || words.Length == 0)
                             {
                                 return false;
                             }
 
-                            var isExists = textWords.Any(t =>
+                            // Проверяем отдельные слова (обычный случай)
+                            var singleWordMatch = chatMessageWords.Any(t =>
                                 words.Any(r => r.Equals(t, StringComparison.OrdinalIgnoreCase))
                             );
 
-                            return isExists;
+                            if (singleWordMatch)
+                            {
+                                return true;
+                            }
+
+                            // Проверяем фразы (если есть триггеры с пробелами)
+                            var phraseTriggers = words.Where(w => w.Contains(' ')).ToArray();
+                            if (phraseTriggers.Length == 0)
+                            {
+                                return false;
+                            }
+
+                            // Собираем сообщение в одну строку для проверки фраз
+                            var fullMessage = string.Join(" ", chatMessageWords);
+
+                            // Проверяем каждую фразу-триггер
+                            foreach (var phrase in phraseTriggers)
+                            {
+                                if (
+                                    fullMessage.Contains(phrase, StringComparison.OrdinalIgnoreCase)
+                                )
+                                {
+                                    return true;
+                                }
+                            }
+
+                            return false;
                         })
                         .ToArray();
 

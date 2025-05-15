@@ -1,6 +1,7 @@
 ﻿using MARS.Server.Services.Framedata.Entitys;
 using MARS.Server.Services.Framedata.Entitys.Enums;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace MARS.Server.Services.Framedata;
 
@@ -25,6 +26,58 @@ public partial class Tekken8FrameData(
         }
 
         await UpdateMovesForVictorina();
+    }
+
+    public async Task<IDictionary<string, string>?> GetCharacterStances(
+        string characterName,
+        CancellationToken? stoppingToken
+    )
+    {
+        stoppingToken = stoppingToken ?? _cancellationToken;
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(
+            stoppingToken.Value
+        );
+
+        var tekkenChar = await FindCharacterInDatabaseAsync(characterName, dbContext);
+
+        if (tekkenChar == null)
+        {
+            return null;
+        }
+
+        var movelist = await GetCharacterStances(tekkenChar, stoppingToken);
+        return movelist;
+    }
+
+    private static readonly ValueComparer<Move> StancesComparer = new(
+        (e1, e2) => e1 != null && e2 != null && e1.StanceCode.Contains(e2.StanceCode),
+        e => HashCode.Combine(e.StanceCode)
+    );
+
+    public async Task<IDictionary<string, string>> GetCharacterStances(
+        TekkenCharacter character,
+        CancellationToken? stoppingToken
+    )
+    {
+        stoppingToken = stoppingToken ?? _cancellationToken;
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(
+            stoppingToken.Value
+        );
+
+        var stancesAndMoves = (
+            await dbContext
+                .TekkenMoves.AsNoTracking()
+                .Where(e =>
+                    e.CharacterName == character.Name
+                    && e.StanceName != null
+                    && e.StanceCode != string.Empty
+                )
+                .ToListAsync(stoppingToken.Value)
+        )
+            .Distinct(StancesComparer)
+            .ToDictionary(e => e.StanceCode, e => e.StanceName ?? string.Empty);
+
+        return stancesAndMoves;
     }
 
     public async Task<Move[]?> GetCharMoveList(string charname)
@@ -107,7 +160,7 @@ public partial class Tekken8FrameData(
         return (character, 1);
     }
 
-    private async Task<TekkenCharacter?> FindCharacterInDatabaseAsync(
+    public async Task<TekkenCharacter?> FindCharacterInDatabaseAsync(
         string charname,
         AppDbContext dbContext
     )
