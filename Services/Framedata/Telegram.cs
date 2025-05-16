@@ -20,7 +20,7 @@ public partial class Tekken8FrameData
                     var type = split[2];
                     var chatid = new ChatId(data.Message!.Chat.Id);
 
-                    var movelist = await GetCharMoveList(charname);
+                    var movelist = await GetCharMoveListAsync(charname);
 
                     if (movelist is null)
                     {

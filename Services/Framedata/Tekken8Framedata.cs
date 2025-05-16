@@ -28,6 +28,42 @@ public partial class Tekken8FrameData(
         await UpdateMovesForVictorina();
     }
 
+    public async Task<(TekkenMoveTag Tag, Move[] Moves)?> GetMultipleMovesByTags(string input)
+    {
+        var split = input.Split(
+            ' ',
+            StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries
+        );
+        var lastSplit = split.Last();
+        var isMultiple = lastSplit.EndsWith('s') || lastSplit.EndsWith("es");
+        var characterName = string.Join(' ', split.SkipLast(1));
+
+        var characterMovelist = await GetCharMoveListAsync(characterName);
+
+        if (characterMovelist == null)
+        {
+            return null;
+        }
+
+        if (isMultiple)
+        {
+            var result = await GetMultipleMovesFromMovelistByTagAsync(lastSplit, characterMovelist);
+
+            return result;
+        }
+        else
+        {
+            var result = await GetMoveFromMovelistByTagAsync(lastSplit, characterMovelist);
+
+            if (result.move != null)
+            {
+                return (result.tag, [result.move]);
+            }
+        }
+
+        return null;
+    }
+
     public async Task<IDictionary<string, string>?> GetCharacterStances(
         string characterName,
         CancellationToken? stoppingToken
@@ -80,7 +116,25 @@ public partial class Tekken8FrameData(
         return stancesAndMoves;
     }
 
-    public async Task<Move[]?> GetCharMoveList(string charname)
+    public async Task<TekkenCharacter?> GetTekkenCharacter(string name, bool isWithMoveList = false)
+    {
+        await using AppDbContext dbContext = await dbContextFactory.CreateDbContextAsync(
+            _cancellationToken
+        );
+        TekkenCharacter result = null!;
+        result = isWithMoveList
+            ? await dbContext
+                .TekkenCharacters.Include(e => e.Movelist)
+                .AsNoTracking()
+                .FirstAsync(e => e.Name.Equals(name), cancellationToken: _cancellationToken)
+            : await dbContext
+                .TekkenCharacters.AsNoTracking()
+                .FirstAsync(e => e.Name.Equals(name), cancellationToken: _cancellationToken);
+
+        return result;
+    }
+
+    public async Task<Move[]?> GetCharMoveListAsync(string charname)
     {
         await using AppDbContext dbContext = await dbContextFactory.CreateDbContextAsync(
             _cancellationToken
@@ -129,7 +183,7 @@ public partial class Tekken8FrameData(
         {
             var move =
                 await GetMoveFromMovelistByCommandAsync(input, movelist)
-                ?? await GetMoveFromMovelistByTagAsync(input, movelist);
+                ?? (await GetMoveFromMovelistByTagAsync(input, movelist)).Item2;
 
             return move;
         }
@@ -189,13 +243,66 @@ public partial class Tekken8FrameData(
         return null;
     }
 
-    private static Task<Move?> GetMoveFromMovelistByTagAsync(string input, List<Move> movelist)
+    private static Task<(TekkenMoveTag tag, Move[])?> GetMultipleMovesFromMovelistByTagAsync(
+        string input,
+        ICollection<Move> movelist
+    )
+    {
+        Move[] moves = [];
+
+        var typeWithoutStance = MoveTags
+            .FirstOrDefault(e =>
+                e.Value.Any(b => b.Equals(input, StringComparison.OrdinalIgnoreCase))
+            )
+            .Key;
+
+        if (typeWithoutStance == TekkenMoveTag.None)
+        {
+            moves = movelist
+                .Where(e => (e.StanceName?.Equals(input) ?? false) || e.StanceCode.Equals(input))
+                .ToArray();
+
+            return Task.FromResult<(TekkenMoveTag tag, Move[])?>((TekkenMoveTag.None, moves));
+        }
+
+        switch (typeWithoutStance)
+        {
+            case TekkenMoveTag.HeatBurst:
+                moves = movelist.Where(e => e is { HeatBurst: true }).ToArray();
+                break;
+            case TekkenMoveTag.HeatEngage:
+                moves = movelist.Where(e => e is { HeatEngage: true }).ToArray();
+                break;
+            case TekkenMoveTag.HeatSmash:
+                moves = movelist.Where(e => e is { HeatSmash: true }).ToArray();
+                break;
+            case TekkenMoveTag.Homing:
+                moves = movelist.Where(e => e is { Homing: true }).ToArray();
+                break;
+            case TekkenMoveTag.PowerCrush:
+                moves = movelist.Where(e => e is { PowerCrush: true }).ToArray();
+                break;
+            case TekkenMoveTag.Throw:
+                moves = movelist.Where(e => e is { Throw: true }).ToArray();
+                break;
+            case TekkenMoveTag.Tornado:
+                moves = movelist.Where(e => e is { Tornado: true }).ToArray();
+                break;
+        }
+
+        return Task.FromResult<(TekkenMoveTag tag, Move[])?>((typeWithoutStance, moves));
+    }
+
+    private static Task<(TekkenMoveTag tag, Move? move)> GetMoveFromMovelistByTagAsync(
+        string input,
+        ICollection<Move> movelist
+    )
     {
         Move? move = null;
 
         var typeWithoutStance = MoveTags
             .FirstOrDefault(e =>
-                e.Value.Any(b => b.Equals(input, StringComparison.InvariantCulture))
+                e.Value.Any(b => b.Equals(input, StringComparison.OrdinalIgnoreCase))
             )
             .Key;
 
@@ -205,7 +312,7 @@ public partial class Tekken8FrameData(
                 (e.StanceName?.Equals(input) ?? false) || e.StanceCode.Equals(input)
             );
 
-            return Task.FromResult(move);
+            return Task.FromResult((TekkenMoveTag.None, move));
         }
 
         switch (typeWithoutStance)
@@ -233,7 +340,7 @@ public partial class Tekken8FrameData(
                 break;
         }
 
-        return Task.FromResult(move);
+        return Task.FromResult((TekkenMoveTag.None, move));
     }
 
     private static Task<Move?> GetMoveFromMovelistByCommandAsync(

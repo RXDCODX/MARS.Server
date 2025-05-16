@@ -1,5 +1,7 @@
-﻿using Telegram.Bot.Types.Enums;
+﻿using Telegram.Bot.Requests;
+using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
+using Message = Telegram.Bot.Types.Message;
 
 namespace MARS.Server.Services.TelegramBotService.Commands;
 
@@ -12,233 +14,211 @@ public partial class Commands
         CancellationToken cancellationToken
     )
     {
-        var msg = message.Text;
-        var text = string.Empty;
-        var split = msg?.Split(" ");
-
-        if (split is { Length: >= 3 })
+        var split = message.Text?.Split(" ");
+        if (split is not { Length: >= 3 })
         {
-            var keyWords = split.Skip(1).ToArray();
+            return await SendDefaultResponse();
+        }
 
-            if (keyWords.Last().StartsWith("stance", StringComparison.OrdinalIgnoreCase))
+        var keyWords = split.Skip(1).ToArray();
+        var response = await HandleTagMoves() ?? await HandleStances() ?? await HandleSingleMove();
+        return response ?? await SendDefaultResponse();
+
+        async Task<Message?> HandleTagMoves()
+        {
+            var result = await frameData.GetMultipleMovesByTags(string.Join(' ', keyWords));
+            if (result is not { Item2.Length: > 1 })
             {
-                var charName = string.Join(' ', keyWords.SkipLast(1));
-                var stances = await frameData.GetCharacterStances(charName, cancellationToken);
-
-                if (stances is { Count: > 0 })
-                {
-                    await using var dbContext = await factory.CreateDbContextAsync(
-                        cancellationToken
-                    );
-                    var character = await frameData.FindCharacterInDatabaseAsync(
-                        charName,
-                        dbContext
-                    );
-                    var url = character?.LinkToImage;
-
-                    text = $"""
-                            🎭 <b>Character</b> 🎭
-                            <i>{character?.Name}</i>
-
-                            ///////////////////////////////
-                            Stance code - Stance Name
-                            
-                            {string.Join(
-                                Environment.NewLine,
-                                stances.Select(e => $"<i>{e.Key}</i> - <i>{e.Value}</i>")
-                            )}
-                            """;
-
-                    var buttons = new List<InlineKeyboardButton[]>();
-
-                    foreach (var (stanceCode, stanceValue) in stances)
-                    {
-                        if (character != null)
-                        {
-                            var button = new InlineKeyboardButton(stanceValue)
-                            {
-                                CallbackData = $"framedata:{character.Name}:stance:{stanceCode}",
-                            };
-                            buttons.Add([button]);
-                        }
-                    }
-
-                    var markup = new InlineKeyboardMarkup(buttons);
-                    return string.IsNullOrWhiteSpace(url)
-                        ? await botClient.SendMessage(
-                            message.Chat,
-                            text,
-                            ParseMode.Html,
-                            replyMarkup: markup,
-                            cancellationToken: cancellationToken
-                        )
-                        : await botClient.SendPhoto(
-                            message.Chat,
-                            InputFile.FromUri(url),
-                            text,
-                            showCaptionAboveMedia: true,
-                            replyMarkup: markup,
-                            parseMode: ParseMode.Html,
-                            cancellationToken: cancellationToken
-                        );
-                }
+                return null;
             }
 
-            var move = await frameData.GetMoveAsync(keyWords).ConfigureAwait(false);
-
-            if (move != null)
+            var character = await frameData.GetTekkenCharacter(
+                string.Join(' ', keyWords.SkipLast(1))
+            );
+            if (character == null)
             {
-                if (move.Character != null)
-                {
-                    var url = move.Character.LinkToImage;
+                return null;
+            }
 
-                    text = $"""
+            var text = $"""
+                🎭 <b>Character</b> 🎭
+                <i>{character.Name}</i>
+
+                ///////////////////////////////
+                {Enum.GetName(result.Value.Tag)}
+
+                {string.Join(Environment.NewLine, result.Value.Moves.Select(e => $"{e.Command}"))}
+                """;
+
+            return await SendResponse(text, null, character?.LinkToImage);
+        }
+
+        async Task<Message?> HandleStances()
+        {
+            if (!keyWords.Last().StartsWith("stance", StringComparison.OrdinalIgnoreCase))
+            {
+                return null;
+            }
+
+            var charName = string.Join(' ', keyWords.SkipLast(1));
+            var stances = await frameData.GetCharacterStances(charName, cancellationToken);
+            if (stances is not { Count: > 0 })
+            {
+                return null;
+            }
+
+            await using var dbContext = await factory.CreateDbContextAsync(cancellationToken);
+            var character = await frameData.FindCharacterInDatabaseAsync(charName, dbContext);
+            if (character == null)
+            {
+                return null;
+            }
+
+            var text = $"""
                         🎭 <b>Character</b> 🎭
-                                <i>{move.Character.Name}</i>
+                        <i>{character.Name}</i>
 
-                        ///////////////////
-                        🔡 <b>Input</b> 🔡
-                                <i>{move.Command}</i>
+                        ///////////////////////////////
+                        Stance code - Stance Name
 
-                        🚀 <b>Startup</b> 🚀
-                                <i>{move.StartUpFrame}</i>
-
-                        🏁 <b>Block frame</b> 🏁
-                                <i>{move.BlockFrame}</i>
-
-                        🎯 <b>Hit frame</b> 🎯
-                                <i>{move.HitFrame}</i>
-
-                        🤝 <b>Counter hit frame</b> 🤝
-                                <i>{move.CounterHitFrame}</i>
-
-                        ///////////////////
-                        📊 <b>Hit Level</b> 📊
-                                <i>{move.HitLevel}</i>
-
-                        💥 <b>Damage</b> 💥
-                                <i>{move.Damage}</i>
-
-                        📝 <b>Notes</b> 📝
-
-                        <i>{move.Notes}</i>
-                        
+                        {string.Join(
+                            Environment.NewLine,
+                            stances.Select(e => $"<i>{e.Key}</i> - <i>{e.Value}</i>")
+                        )}
                         """;
 
-                    var buttons = new List<InlineKeyboardButton>();
-
-                    if (move.HeatEngage)
+            var buttons = stances
+                .Select(s =>
+                    new[]
                     {
-                        var button = new InlineKeyboardButton("Heat Engager")
+                        new InlineKeyboardButton(s.Value)
                         {
-                            CallbackData = $"framedata:{move.Character.Name}:heatengage",
-                        };
-                        buttons.Add(button);
+                            CallbackData = $"framedata:{character.Name}:stance:{s.Key}",
+                        },
                     }
+                )
+                .ToArray();
 
-                    if (move.Tornado)
-                    {
-                        var button = new InlineKeyboardButton("Tornado")
-                        {
-                            CallbackData = $"framedata:{move.Character.Name}:tornado",
-                        };
-                        buttons.Add(button);
-                    }
+            return await SendResponse(
+                text,
+                new InlineKeyboardMarkup(buttons),
+                character.LinkToImage
+            );
+        }
 
-                    if (move.HeatSmash)
-                    {
-                        var button = new InlineKeyboardButton("Heat Smash")
-                        {
-                            CallbackData = $"framedata:{move.Character.Name}:heatsmash",
-                        };
-                        buttons.Add(button);
-                    }
-
-                    if (move.PowerCrush)
-                    {
-                        var button = new InlineKeyboardButton("Power Crush")
-                        {
-                            CallbackData = $"framedata:{move.Character.Name}:powercrush",
-                        };
-                        buttons.Add(button);
-                    }
-
-                    if (move.HeatBurst)
-                    {
-                        var button = new InlineKeyboardButton("Heat Burst")
-                        {
-                            CallbackData = $"framedata:{move.Character.Name}:heatburst",
-                        };
-                        buttons.Add(button);
-                    }
-
-                    if (move.Homing)
-                    {
-                        var button = new InlineKeyboardButton("Homing")
-                        {
-                            CallbackData = $"framedata:{move.Character.Name}:homing",
-                        };
-                        buttons.Add(button);
-                    }
-
-                    if (!string.IsNullOrWhiteSpace(move.StanceCode))
-                    {
-                        if (move.StanceName != null)
-                        {
-                            var button = new InlineKeyboardButton(move.StanceName)
-                            {
-                                CallbackData =
-                                    $"framedata:{move.Character.Name}:stance:{move.StanceCode}",
-                            };
-                            buttons.Add(button);
-                        }
-                        else
-                        {
-                            throw new NullReferenceException(
-                                "Tekken Stance Name is empty when Stance code is not"
-                            );
-                        }
-                    }
-
-                    if (move.Throw)
-                    {
-                        var button = new InlineKeyboardButton("Throw")
-                        {
-                            CallbackData = $"framedata:{move.Character.Name}:throw",
-                        };
-                        buttons.Add(button);
-                    }
-
-                    var markup = new InlineKeyboardMarkup(buttons);
-                    return string.IsNullOrWhiteSpace(url)
-                        ? await botClient.SendMessage(
-                            message.Chat,
-                            text,
-                            ParseMode.Html,
-                            replyMarkup: markup,
-                            cancellationToken: cancellationToken
-                        )
-                        : await botClient.SendPhoto(
-                            message.Chat,
-                            InputFile.FromUri(url),
-                            text,
-                            showCaptionAboveMedia: true,
-                            replyMarkup: markup,
-                            parseMode: ParseMode.Html,
-                            cancellationToken: cancellationToken
-                        );
-                }
-            }
-            else
+        async Task<Message?> HandleSingleMove()
+        {
+            var move = await frameData.GetMoveAsync(keyWords);
+            if (move?.Character == null)
             {
-                text = "Плохие параметры запроса фреймдаты.";
+                return null;
+            }
+
+            var text = $"""
+                🎭 <b>Character</b> 🎭
+                <i>{move.Character.Name}</i>
+
+                ///////////////////
+                🔡 <b>Input</b> 🔡
+                <i>{move.Command}</i>
+
+                🚀 <b>Startup</b> 🚀
+                <i>{move.StartUpFrame}</i>
+
+                🏁 <b>Block frame</b> �
+                <i>{move.BlockFrame}</i>
+
+                🎯 <b>Hit frame</b> 🎯
+                <i>{move.HitFrame}</i>
+
+                🤝 <b>Counter hit frame</b> 🤝
+                <i>{move.CounterHitFrame}</i>
+
+                ///////////////////
+                📊 <b>Hit Level</b> 📊
+                <i>{move.HitLevel}</i>
+
+                💥 <b>Damage</b> 💥
+                <i>{move.Damage}</i>
+
+                📝 <b>Notes</b> 📝
+                <i>{move.Notes}</i>
+                """;
+
+            var buttons = new List<InlineKeyboardButton>();
+            AddButtonIf(move.HeatEngage, "Heat Engager", "heatengage");
+            AddButtonIf(move.Tornado, "Tornado", "tornado");
+            AddButtonIf(move.HeatSmash, "Heat Smash", "heatsmash");
+            AddButtonIf(move.PowerCrush, "Power Crush", "powercrush");
+            AddButtonIf(move.HeatBurst, "Heat Burst", "heatburst");
+            AddButtonIf(move.Homing, "Homing", "homing");
+            AddButtonIf(move.Throw, "Throw", "throw");
+
+            if (!string.IsNullOrWhiteSpace(move.StanceCode))
+            {
+                buttons.Add(
+                    new InlineKeyboardButton(move.StanceName!)
+                    {
+                        CallbackData = $"framedata:{move.Character.Name}:stance:{move.StanceCode}",
+                    }
+                );
+            }
+
+            return await SendResponse(
+                text,
+                new InlineKeyboardMarkup(buttons),
+                move.Character.LinkToImage
+            );
+
+            void AddButtonIf(bool condition, string textForButton, string callbackSuffix)
+            {
+                if (condition)
+                {
+                    buttons.Add(
+                        new InlineKeyboardButton(textForButton)
+                        {
+                            CallbackData = $"framedata:{move.Character.Name}:{callbackSuffix}",
+                        }
+                    );
+                }
             }
         }
 
-        return await botClient.SendMessage(
-            message.Chat.Id,
-            text,
-            cancellationToken: cancellationToken
-        );
+        async Task<Message> SendResponse(
+            string text,
+            InlineKeyboardMarkup? markup,
+            string? imageUrl
+        )
+        {
+            if (string.IsNullOrWhiteSpace(imageUrl))
+            {
+                return await botClient.SendMessage(
+                    message.Chat,
+                    text,
+                    ParseMode.Html,
+                    replyMarkup: markup,
+                    cancellationToken: cancellationToken
+                );
+            }
+
+            return await botClient.SendPhoto(
+                message.Chat,
+                InputFile.FromUri(imageUrl),
+                text,
+                showCaptionAboveMedia: true,
+                replyMarkup: markup,
+                parseMode: ParseMode.Html,
+                cancellationToken: cancellationToken
+            );
+        }
+
+        async Task<Message> SendDefaultResponse()
+        {
+            return await botClient.SendMessage(
+                message.Chat.Id,
+                "Плохие параметры запроса фреймдаты.",
+                cancellationToken: cancellationToken
+            );
+        }
     }
 }

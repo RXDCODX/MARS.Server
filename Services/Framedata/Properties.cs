@@ -15,15 +15,40 @@ public partial class Tekken8FrameData
     {
         {
             TekkenMoveTag.HeatEngage,
-            ["engage", "enga", "enggg", "engg", "heatengage", "heatengagage", "he"]
+            [
+                "engage",
+                "enga",
+                "enggg",
+                "engg",
+                "heatengage",
+                "heatengagage",
+                "he",
+                "eng",
+                "hes",
+                "heatengagers",
+                "engs",
+            ]
         },
-        { TekkenMoveTag.HeatSmash, ["smash", "heatsmash", "smsh", "heatsmsh", "hs"] },
+        {
+            TekkenMoveTag.HeatSmash,
+            ["smash", "heatsmash", "smsh", "heatsmsh", "hs", "hses", "hss"]
+        },
         {
             TekkenMoveTag.PowerCrush,
-            ["crush", "powercrush", "pc", "power", "armor", "armori", "power_crush", "power crush"]
+            [
+                "crush",
+                "powercrush",
+                "pc",
+                "power",
+                "armor",
+                "armori",
+                "power_crush",
+                "power crush",
+                "pcs",
+            ]
         },
         { TekkenMoveTag.Throw, ["throw", "throws", "throwbrow", "grab", "grabs"] },
-        { TekkenMoveTag.Homing, ["homing", "homari"] },
+        { TekkenMoveTag.Homing, ["homing", "homari", "homings", "hmngs", "hmng"] },
         {
             TekkenMoveTag.Tornado,
             [
@@ -40,7 +65,10 @@ public partial class Tekken8FrameData
                 "screws",
             ]
         },
-        { TekkenMoveTag.HeatBurst, ["hb", "heatburst", "heat burst", "hear_burst", "burst"] },
+        {
+            TekkenMoveTag.HeatBurst,
+            ["hb", "heatburst", "heat burst", "hear_burst", "burst", "hbs", "bursts"]
+        },
     };
 
     public readonly Uri BasePath = new("https://tekkendocs.com");
