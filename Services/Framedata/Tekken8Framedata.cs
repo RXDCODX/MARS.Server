@@ -86,7 +86,10 @@ public partial class Tekken8FrameData(
     }
 
     private static readonly ValueComparer<Move> StancesComparer = new(
-        (e1, e2) => e1 != null && e2 != null && e1.StanceCode.Contains(e2.StanceCode),
+        (e1, e2) =>
+            e1 != null
+            && e2 != null
+            && e1.StanceCode.Contains(e2.StanceCode, StringComparison.OrdinalIgnoreCase),
         e => HashCode.Combine(e.StanceCode)
     );
 
@@ -142,9 +145,12 @@ public partial class Tekken8FrameData(
         var character = await dbContext
             .TekkenCharacters.Include(e => e.Movelist)
             .AsNoTracking()
-            .FirstAsync(e => e.Name.Equals(charname), cancellationToken: _cancellationToken);
+            .FirstOrDefaultAsync(
+                e => e.Name.Equals(charname),
+                cancellationToken: _cancellationToken
+            );
 
-        return character.Movelist?.ToArray();
+        return character?.Movelist?.ToArray();
     }
 
     public async Task<Move?> GetMoveAsync(string[]? command)

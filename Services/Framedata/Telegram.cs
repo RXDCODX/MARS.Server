@@ -92,7 +92,7 @@ public partial class Tekken8FrameData
                             break;
                         case "stance":
                             var stanceCode = split[3];
-                            KeyValuePair<string, string> pair = Aliases.Stances.First(e =>
+                            KeyValuePair<string, string>? pair = Aliases.Stances.FirstOrDefault(e =>
                                 e.Key == stanceCode
                             );
                             text.AppendLine($"<b>{pair.Value}</b>");
@@ -100,7 +100,12 @@ public partial class Tekken8FrameData
                             text.AppendJoin(
                                 Environment.NewLine,
                                 movelist!
-                                    .Where(e => e.StanceCode == stanceCode)
+                                    .Where(e =>
+                                        e.StanceCode.Equals(
+                                            stanceCode,
+                                            StringComparison.OrdinalIgnoreCase
+                                        )
+                                    )
                                     .Select(e => e.Command)
                             );
                             break;
