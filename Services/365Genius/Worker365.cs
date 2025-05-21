@@ -58,7 +58,6 @@ public class Worker365(
 
         var pageNumbers = GetFavouritePagesCount(doc);
 
-        var videoList = new List<Video365>();
         for (var i = pageNumbers; i >= 1; i--)
         {
             await Task.Delay(TimeSpan.FromSeconds(5), _cancellationToken);
@@ -68,7 +67,7 @@ public class Worker365(
         }
     }
 
-    private void ValidateConfig(Config365? optionsValue)
+    private static void ValidateConfig(Config365? optionsValue)
     {
         if (optionsValue is null)
         {
@@ -110,8 +109,11 @@ public class Worker365(
         int bytesRead;
         do
         {
-            bytesRead = await responseStream.ReadAsync(buffer, 0, bufferSize, _cancellationToken);
-            await outputFileStream.WriteAsync(buffer, 0, bytesRead, _cancellationToken);
+            bytesRead = await responseStream.ReadAsync(
+                buffer.AsMemory(0, bufferSize),
+                _cancellationToken
+            );
+            await outputFileStream.WriteAsync(buffer.AsMemory(0, bytesRead), _cancellationToken);
         } while (bytesRead > 0);
 
         responseStream.Close();
@@ -207,7 +209,7 @@ public class Worker365(
         return cookie;
     }
 
-    private void ValidateFavouriteCountVideos(HtmlDocument doc)
+    private static void ValidateFavouriteCountVideos(HtmlDocument doc)
     {
         var favouriteNode = doc.DocumentNode.SelectSingleNode(
             XPathExpression.Compile("//a[@class=\"fav_a\"]")

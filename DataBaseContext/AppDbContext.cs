@@ -13,7 +13,7 @@ namespace MARS.Server.DataBaseContext;
 
 public sealed class AppDbContext : DbContext
 {
-    private static readonly object Locker = new();
+    private static readonly Lock Locker = new();
     private static bool _isMigrated;
 
     public AppDbContext(DbContextOptions<AppDbContext> options, bool isMigrations)
@@ -21,20 +21,20 @@ public sealed class AppDbContext : DbContext
     {
         if (!_isMigrated && !isMigrations)
         {
-            lock (Locker)
+            Locker.Enter();
+            if (!_isMigrated)
             {
-                if (!_isMigrated)
+                var migrations = Database.GetPendingMigrations();
+
+                if (migrations.Any())
                 {
-                    var migrations = Database.GetPendingMigrations();
-
-                    if (migrations.Any())
-                    {
-                        Database.Migrate();
-                    }
-
-                    _isMigrated = true;
+                    Database.Migrate();
                 }
+
+                _isMigrated = true;
             }
+
+            Locker.Exit();
         }
     }
 

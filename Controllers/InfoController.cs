@@ -1,22 +1,15 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Controllers;
 
 namespace MARS.Server.Controllers;
 
 [Route("/-/{controller}")]
-public class InfoController : Controller
+public class InfoController(IEnumerable<EndpointDataSource> endpointSources) : Controller
 {
-    private readonly IEnumerable<EndpointDataSource> _endpointSources;
-
-    public InfoController(IEnumerable<EndpointDataSource> endpointSources)
-    {
-        _endpointSources = endpointSources;
-    }
-
     [HttpGet("endpoints")]
     public ActionResult ListAllEndpoints()
     {
-        var endpoints = _endpointSources.SelectMany(es => es.Endpoints).OfType<RouteEndpoint>();
+        var endpoints = endpointSources.SelectMany(es => es.Endpoints).OfType<RouteEndpoint>();
         var output = endpoints.Select(e =>
         {
             var controller = e.Metadata.OfType<ControllerActionDescriptor>().FirstOrDefault();

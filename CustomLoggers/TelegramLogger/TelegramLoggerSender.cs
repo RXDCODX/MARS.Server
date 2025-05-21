@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using TL.Methods;
 
 namespace MARS.Server.CustomLoggers.TelegramLogger;
 
@@ -34,6 +35,7 @@ public class TelegramLoggerSender : IDisposable
         catch (AggregateException ex)
             when (ex.InnerExceptions.Count == 1 && ex.InnerExceptions[0] is TaskCanceledException)
         { }
+        GC.SuppressFinalize(this);
     }
 
     public void EnqueueMessage(string message)

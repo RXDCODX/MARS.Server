@@ -48,8 +48,7 @@ public partial class LiveChannelRename : Migration
 
         migrationBuilder.InsertData(
             table: "LiveChannelState",
-            new[]
-            {
+            [
                 "Id",
                 "ActualPrefix",
                 "IsDiscordChannelRenamed",
@@ -59,9 +58,9 @@ public partial class LiveChannelRename : Migration
                 "LastEnd",
                 "LastStart",
                 "State",
-            },
-            values: new object[]
-            {
+            ],
+            values:
+            [
                 1,
                 "[LIVE 🔴] ",
                 false,
@@ -77,7 +76,7 @@ public partial class LiveChannelRename : Migration
                     new TimeSpan(0, 0, 0, 0, 0)
                 ),
                 0,
-            }
+            ]
         );
     }
 

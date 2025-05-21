@@ -256,10 +256,12 @@ public class UpdateHandler : IUpdateHandler
 
     private string GetMethodName(string command)
     {
-        return "On"
-            + command.Substring(1).First().ToString().ToUpper()
-            + command.Substring(2)
-            + "CommandReceived";
+        return string.Concat(
+            "On",
+            command.Substring(1).First().ToString().ToUpper(),
+            command.AsSpan(2),
+            "CommandReceived"
+        );
     }
 
     #region Inline Mode

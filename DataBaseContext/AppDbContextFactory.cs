@@ -9,11 +9,7 @@ public class AppDbContextFactory
     private readonly DbContextOptions<AppDbContext>? _options;
 
     // Конструктор для обычного использования (с DI)
-    public AppDbContextFactory(
-        IWebHostEnvironment environment,
-        IConfiguration configuration,
-        Action<DbContextOptionsBuilder<AppDbContext>> optionsAction
-    )
+    public AppDbContextFactory(Action<DbContextOptionsBuilder<AppDbContext>> optionsAction)
     {
         var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
         optionsAction.Invoke(optionsBuilder);

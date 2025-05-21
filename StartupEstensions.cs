@@ -10,6 +10,7 @@ using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.Twitch.MiniGamesStats;
 using MARS.Server.Services.Twitch.Rewards.MiniGames;
 using MARS.Server.Services.Twitch.Rewards.TwitchAlerts;
+using MARS.Server.Services.Twitch.Rewards.TwitchClipCreator;
 using MARS.Server.Services.Twitch.Rewards.TwitchHighlitedMessage;
 using MARS.Server.Services.Twitch.Rewards.TwitchRandomArt;
 using MARS.Server.Services.Twitch.Rewards.TwitchRandomMeme;
@@ -40,7 +41,10 @@ public static class StartupEstensions
         services.Configure<TwitchConfiguration>(twitchConfigSection);
         twitchConfigSection.Bind(twitchConfig);
         var twitchApi = new TwitchAPI { Settings = { ClientId = twitchConfig.ClientId } };
-        twitchApi.Settings.AccessToken = twitchApi.Auth.GetAccessTokenAsync().Result;
+        twitchApi.Settings.AccessToken = twitchApi
+            .Auth.GetAccessTokenAsync()
+            .GetAwaiter()
+            .GetResult();
         twitchApi.Settings.Secret = twitchConfig.ClientSecret;
         twitchApi.Settings.Scopes = [AuthScopes.Any];
 
@@ -116,6 +120,9 @@ public static class StartupEstensions
 
         services.AddSingleton<TekkenVictorinaLeaderbord>();
         services.AddHostedService(sp => sp.GetRequiredService<TekkenVictorinaLeaderbord>());
+
+        services.AddSingleton<TwitchClipCreatorService>();
+        services.AddHostedService(sp => sp.GetRequiredService<TwitchClipCreatorService>());
 
         return services;
     }

@@ -69,7 +69,7 @@ public class RandomMemeWorker(
                     // Добавляем новые файлы в конец очереди и пересчитываем их MemeOrder.Order
                     var newFiles = files.Except(fileNamesInDb).ToArray();
                     Random.Shared.Shuffle(newFiles);
-                    if (newFiles.Any())
+                    if (newFiles.Length != 0)
                     {
                         foreach (var type in memeTypes)
                         {

@@ -94,16 +94,9 @@ public class VictorinaGame(ILogger<TwitchTrivia> logger, ITwitchClient client, T
                 var strHint = new StringBuilder("");
                 foreach (VictorinaLetter itemLetter in _listLetters)
                 {
-                    if (itemLetter.Showed)
-                    {
-                        strHint.Append(itemLetter.Letter);
-                    }
-                    else
-                    {
-                        strHint.Append("_");
-                    }
+                    strHint.Append(itemLetter.Showed ? itemLetter.Letter : '_');
 
-                    strHint.Append(" ");
+                    strHint.Append(' ');
                 }
 
                 //если отгадали otgadali = true; break

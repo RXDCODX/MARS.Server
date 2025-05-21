@@ -34,7 +34,6 @@ public class TwitchRussianRoulete : BackgroundService, ITwitchMiniGame
         ITwitchAPI api,
         IDbContextFactory<AppDbContext> dbContextFactory,
         IHostApplicationLifetime applicationLifetime,
-        EventSubService eventSubService,
         TokenService tokenService
     )
     {
@@ -115,7 +114,6 @@ public class TwitchRussianRoulete : BackgroundService, ITwitchMiniGame
                 >= TimeSpan.FromMilliseconds(_awaitingTimeForNewPlayersInMilliseconds)
             )
             {
-                _listOfPlayers.Clear();
                 _isAwaitingNewPlayers = false;
             }
 

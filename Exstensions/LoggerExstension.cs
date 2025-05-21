@@ -15,7 +15,7 @@ public static class LoggerExstension
             innerException = innerException.InnerException;
         }
 
-        logger.LogError("{0} # {1}", innerException.Message, stackTrace);
+        logger.LogError("{Message} # {StackTrace}", innerException.Message, stackTrace);
     }
 
     public static void LogException<T>(this ILogger<T> logger, Exception exception)
@@ -31,6 +31,11 @@ public static class LoggerExstension
             sb.Append(" + " + innerException.Message);
         }
 
-        logger.LogError("({0}): {1} # {2}", nameof(T), sb.ToString(), stackTrace);
+        logger.LogError(
+            "({ClassName}): {Message} # {StackTrace}",
+            typeof(T).Name,
+            sb.ToString(),
+            stackTrace
+        );
     }
 }

@@ -40,6 +40,7 @@ public class TelegramLoggerProvider : ILoggerProvider
     public void Dispose()
     {
         _messageQueue.Dispose();
+        GC.SuppressFinalize(this);
     }
 
     public ILogger CreateLogger(string categoryName)

@@ -4,9 +4,13 @@ public static class MediaInfoExtension
 {
     public static MediaInfo FixAlertText(this MediaInfo media, string username, string usertext)
     {
-        if (media.TextInfo.Text?.ToLower().Contains("{user.text}") ?? false)
+        if (
+            media
+                .TextInfo.Text?.ToLower()
+                .Contains("{user.text}", StringComparison.CurrentCultureIgnoreCase) ?? false
+        )
         {
-            media.TextInfo.Text = usertext.StartsWith("@")
+            media.TextInfo.Text = usertext.StartsWith('@')
                 ? media.TextInfo.Text.Replace("{user.text}", usertext[1..].Trim())
                 : media.TextInfo.Text.Replace("{user.text}", usertext.Trim());
         }

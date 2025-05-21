@@ -47,7 +47,7 @@ public partial class NewMemeOrderType : Migration
 
         migrationBuilder.InsertData(
             table: "RandomMemeType",
-            columns: new[] { "Id", "FolderPath", "Name" },
+            columns: ["Id", "FolderPath", "Name"],
             values: new object[,]
             {
                 { 2, "Alerts\\random_meme", "Random Meme" },

@@ -53,11 +53,14 @@ public partial class Tekken8FrameData(
         }
         else
         {
-            var result = await GetMoveFromMovelistByTagAsync(lastSplit, characterMovelist);
+            (TekkenMoveTag tag, Move? move) = await GetMoveFromMovelistByTagAsync(
+                lastSplit,
+                characterMovelist
+            );
 
-            if (result.move != null)
+            if (move != null)
             {
-                return (result.tag, [result.move]);
+                return (Tag: tag, [move]);
             }
         }
 
@@ -69,7 +72,7 @@ public partial class Tekken8FrameData(
         CancellationToken? stoppingToken
     )
     {
-        stoppingToken = stoppingToken ?? _cancellationToken;
+        stoppingToken ??= _cancellationToken;
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(
             stoppingToken.Value
         );
@@ -98,7 +101,7 @@ public partial class Tekken8FrameData(
         CancellationToken? stoppingToken
     )
     {
-        stoppingToken = stoppingToken ?? _cancellationToken;
+        stoppingToken ??= _cancellationToken;
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(
             stoppingToken.Value
         );

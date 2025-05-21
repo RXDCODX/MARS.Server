@@ -61,12 +61,7 @@ public static class StringExtension
     {
         if (hardCut)
         {
-            if (input.Length > 140)
-            {
-                return input[..140];
-            }
-
-            return input;
+            return input.Length > 140 ? input[..140] : input;
         }
 
         var splits = input.Split(' ');
@@ -128,11 +123,6 @@ public static class StringExtension
             sb.Append(c);
         }
 
-        if (isQuoted)
-        {
-            throw new Exception("ты насрал в ковычках");
-        }
-
-        return list.ToArray();
+        return isQuoted ? throw new Exception("ты насрал в ковычках") : [.. list];
     }
 }

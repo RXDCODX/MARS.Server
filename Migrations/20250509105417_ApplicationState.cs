@@ -31,8 +31,8 @@ public partial class ApplicationState : Migration
 
         migrationBuilder.InsertData(
             table: "ApplicationState",
-            columns: new[] { "Id", "RandomMemeOnlineIsStop" },
-            values: new object[] { 1, false }
+            columns: ["Id", "RandomMemeOnlineIsStop"],
+            values: [1, false]
         );
     }
 

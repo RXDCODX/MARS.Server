@@ -39,26 +39,22 @@ public class Program
             builder.Environment.IsProduction() != true
             && Environment.GetEnvironmentVariable("ASPNETCORE_SPA_LAUNCH") is "TRUE";
 
-        var contextFactory = new AppDbContextFactory(
-            builder.Environment,
-            builder.Configuration,
-            options =>
+        var contextFactory = new AppDbContextFactory(options =>
+        {
+            options.UseQueryTrackingBehavior(QueryTrackingBehavior.TrackAll);
+            options.EnableThreadSafetyChecks();
+            if (builder.Environment.IsDevelopment())
             {
-                options.UseQueryTrackingBehavior(QueryTrackingBehavior.TrackAll);
-                options.EnableThreadSafetyChecks();
-                if (builder.Environment.IsDevelopment())
-                {
-                    options.EnableDetailedErrors();
-                    options.EnableSensitiveDataLogging();
+                options.EnableDetailedErrors();
+                options.EnableSensitiveDataLogging();
 
-                    options.UseNpgsql(configuration.GetConnectionString("Dev_Path"));
-                }
-                else
-                {
-                    options.UseNpgsql(configuration.GetConnectionString("Prod_Path"));
-                }
+                options.UseNpgsql(configuration.GetConnectionString("Dev_Path"));
             }
-        );
+            else
+            {
+                options.UseNpgsql(configuration.GetConnectionString("Prod_Path"));
+            }
+        });
         StaticDbContextFactory.Factory = contextFactory;
 
         //Twitch

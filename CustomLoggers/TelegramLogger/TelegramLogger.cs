@@ -46,10 +46,7 @@ public class TelegramLogger : ILogger
             return;
         }
 
-        if (formatter == null)
-        {
-            throw new ArgumentNullException(nameof(formatter));
-        }
+        ArgumentNullException.ThrowIfNull(formatter);
 
         var message = formatter(state, exception);
 
@@ -89,8 +86,7 @@ public class TelegramLogger : ILogger
 
         var logLevelString = GetLogLevelString(logLevel);
 
-        logBuilder.AppendLine($"Log source: {_options.SourceName}");
-        logBuilder.AppendLine();
+        logBuilder.AppendLine($"Log source: {_options.SourceName}").AppendLine();
 
         if (!string.IsNullOrEmpty(logLevelString))
         {
@@ -98,9 +94,9 @@ public class TelegramLogger : ILogger
         }
 
         logBuilder.Append(logName);
-        logBuilder.Append("[");
+        logBuilder.Append('[');
         logBuilder.Append(eventId);
-        logBuilder.Append("]");
+        logBuilder.Append(']');
         logBuilder.AppendLine();
 
         if (!string.IsNullOrEmpty(message))
@@ -143,22 +139,15 @@ public class TelegramLogger : ILogger
 
     private static string? GetLogLevelString(LogLevel logLevel)
     {
-        switch (logLevel)
+        return logLevel switch
         {
-            case LogLevel.Trace:
-                return "trce";
-            case LogLevel.Debug:
-                return "dbug";
-            case LogLevel.Information:
-                return "info";
-            case LogLevel.Warning:
-                return "warn";
-            case LogLevel.Error:
-                return "fail";
-            case LogLevel.Critical:
-                return "crit";
-            default:
-                return null;
-        }
+            LogLevel.Trace => "trce",
+            LogLevel.Debug => "dbug",
+            LogLevel.Information => "info",
+            LogLevel.Warning => "warn",
+            LogLevel.Error => "fail",
+            LogLevel.Critical => "crit",
+            _ => null,
+        };
     }
 }
