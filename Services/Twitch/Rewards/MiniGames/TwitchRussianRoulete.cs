@@ -8,7 +8,8 @@ namespace MARS.Server.Services.Twitch.Rewards.MiniGames;
 
 public class TwitchRussianRoulete : BackgroundService, ITwitchMiniGame
 {
-    public bool IsGameRunning { get; set; } = false;
+    public bool IsReuseRewardForAddMechanic { get; set; } = true;
+    public bool IsGameRunning { get; set; }
 
     private const int MaxPlayers = 50;
     private readonly ITwitchAPI _api;
@@ -24,7 +25,6 @@ public class TwitchRussianRoulete : BackgroundService, ITwitchMiniGame
     private bool _gameStillActive;
 
     private bool _isAwaitingNewPlayers;
-    private bool _isStop = true;
 
     private List<RouletePlayer> _listOfPlayers = [];
 
@@ -55,7 +55,6 @@ public class TwitchRussianRoulete : BackgroundService, ITwitchMiniGame
     private Task InitializeGame()
     {
         _listOfPlayers = new List<RouletePlayer>();
-        _isStop = false;
         _cancellationTokenSource = new CancellationTokenSource();
         _isAwaitingNewPlayers = false;
 
@@ -64,14 +63,14 @@ public class TwitchRussianRoulete : BackgroundService, ITwitchMiniGame
 
     private Task Closing(object sender, StreamOfflineArgs args)
     {
-        if (!_isStop)
+        if (!IsGameRunning)
         {
             _cancellationTokenSource.Cancel();
             _listOfPlayers = new List<RouletePlayer>();
             _isAwaitingNewPlayers = false;
         }
 
-        _isStop = true;
+        IsGameRunning = false;
         return Task.CompletedTask;
     }
 
@@ -81,7 +80,7 @@ public class TwitchRussianRoulete : BackgroundService, ITwitchMiniGame
         var name = args.Notification.Payload.Event.UserName;
         var userId = args.Notification.Payload.Event.UserId;
 
-        if (_isStop)
+        if (!IsGameRunning)
         {
             return;
         }
@@ -145,11 +144,6 @@ public class TwitchRussianRoulete : BackgroundService, ITwitchMiniGame
         return _costOfRoulette;
     }
 
-    public Task GameStart()
-    {
-        throw new NotImplementedException();
-    }
-
     public async Task GameStart(string userName, string userId)
     {
         var name = userName;
@@ -172,7 +166,10 @@ public class TwitchRussianRoulete : BackgroundService, ITwitchMiniGame
 
             await WaitForPlayers();
 
-            listPlayers.Add(new RouletePlayer { Name = name, TwitchId = userId });
+            listPlayers.AddRange(
+                [.. _listOfPlayers, new RouletePlayer { Name = name, TwitchId = userId }]
+            );
+            _listOfPlayers.Clear();
 
             if (listPlayers.Count > MaxPlayers)
             {
@@ -200,11 +197,11 @@ public class TwitchRussianRoulete : BackgroundService, ITwitchMiniGame
                 _cancellationTokenSource.Token,
                 _client,
                 _logger,
-                _dbContextFactory
+                _dbContextFactory,
+                this
             );
             await qwe.RussianRoulette();
             _gameStillActive = false;
-            IsGameRunning = false;
         }
     }
 

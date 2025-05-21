@@ -2,6 +2,7 @@
 
 public interface ITwitchMiniGame
 {
+    public bool IsReuseRewardForAddMechanic { get; set; }
     public bool IsGameRunning { get; set; }
     public int GetGameCost();
     public Task GameStart(string userName, string userId);

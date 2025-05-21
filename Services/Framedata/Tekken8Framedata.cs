@@ -170,7 +170,7 @@ public partial class Tekken8FrameData(
             return null;
         }
 
-        var input = string.Join(" ", command.Skip(command.Length - length)).ToLower();
+        var input = string.Join(" ", command.TakeLast(command.Length - length)).ToLower();
 
         if (string.IsNullOrWhiteSpace(charnameOut.Name) || string.IsNullOrWhiteSpace(input))
         {

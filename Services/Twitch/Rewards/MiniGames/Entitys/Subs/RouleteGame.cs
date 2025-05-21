@@ -8,13 +8,14 @@ public class RouleteGame(
     CancellationToken token,
     ITwitchClient client,
     ILogger<TwitchRussianRoulete> logger,
-    IDbContextFactory<AppDbContext> factory
+    IDbContextFactory<AppDbContext> factory,
+    TwitchRussianRoulete roulette
 )
 {
     private const int ChanceToBeSaved = 40;
-
     private List<RouletePlayer> Players { get; } = players.ToList();
     private GameType Type { get; } = type;
+    private readonly List<string> _noWaifuHelpUsers = [];
 
     public async Task RussianRoulette()
     {
@@ -25,6 +26,7 @@ public class RouleteGame(
         if (numPlayers == 1)
         {
             await AloneRoulette(Players[0].Name, token);
+            roulette.IsGameRunning = false;
             return;
         }
 
@@ -84,7 +86,6 @@ public class RouleteGame(
                     logger
                 );
                 shotPlayer.IsAlive = false;
-                //_client.TimeoutUser(TwitchExstension.Channel, shotPlayer.Name, TimeSpan.FromMinutes(10), "Ты вмер!");
             }
 
             await Task.Delay(2000, token);
@@ -107,10 +108,16 @@ public class RouleteGame(
                 logger
             );
         }
+
+        roulette.IsGameRunning = false;
     }
 
     private async ValueTask<bool> TryToSavePlayer(RouletePlayer shotPlayer)
     {
+        if (_noWaifuHelpUsers.Contains(shotPlayer.TwitchId))
+        {
+            return false;
+        }
         await using AppDbContext dbcontext = await factory.CreateDbContextAsync(token);
         Host? host = await dbcontext.Hosts.FindAsync(shotPlayer.TwitchId);
 
@@ -122,6 +129,7 @@ public class RouleteGame(
         var chance = Random.Shared.Next(0, 101);
         if (chance < ChanceToBeSaved)
         {
+            _noWaifuHelpUsers.Add(shotPlayer.TwitchId);
             return true;
         }
 

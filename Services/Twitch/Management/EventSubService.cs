@@ -99,7 +99,7 @@ public class EventSubService(
     {
         var condition = new Dictionary<string, string>
         {
-            { "from_broadcaster_user_id", TwitchExstension.ChannelId },
+            { "to_broadcaster_user_id", TwitchExstension.ChannelId },
         };
 
         await api.Helix.EventSub.CreateEventSubSubscriptionAsync(

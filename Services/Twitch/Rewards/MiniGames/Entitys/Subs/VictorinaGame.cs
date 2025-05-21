@@ -131,6 +131,7 @@ public class VictorinaGame(ILogger<TwitchTrivia> logger, ITwitchClient client, T
                         $"Никто не отгадал! Ответ: {strHint}",
                         logger
                     );
+                    trivia.NoWaifuHelpUsers.Clear();
                 }
                 else
                 {

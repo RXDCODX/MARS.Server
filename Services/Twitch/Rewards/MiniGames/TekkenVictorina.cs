@@ -20,6 +20,7 @@ public class TekkenVictorina(
 ) : BackgroundService, ITwitchMiniGame
 {
     private CancellationToken? _cancellationToken = lifetime.ApplicationStopping;
+    public bool IsReuseRewardForAddMechanic { get; set; } = false;
     public bool IsGameRunning { get; set; } = false;
     private const string? CommandForStop = "!стопвикторина";
     private TekkenVictorinaGame? _currentGame;
@@ -229,8 +230,8 @@ public class TekkenVictorina(
 
         if (!_currentGame.Users.Contains(userId))
         {
-            var chance = Random.Shared.Next();
-            if (chance <= 10)
+            var chance = Random.Shared.Next(0, 101);
+            if (chance <= 40)
             {
                 await using var dbContext = await dbContextFactory.CreateDbContextAsync();
                 var isHaveWaifu = await dbContext.Hosts.AnyAsync(e =>

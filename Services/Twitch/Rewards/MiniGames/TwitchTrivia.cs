@@ -14,13 +14,15 @@ public class TwitchTrivia(
     IHostApplicationLifetime applicationLifetime
 ) : BackgroundService, ITwitchMiniGame
 {
-    public bool IsGameRunning { get; set; } = false;
+    public bool IsReuseRewardForAddMechanic { get; set; } = false;
+    public bool IsGameRunning { get; set; }
     public string CommandForStop { get; set; } = "!викторинастоп";
 
     private const int CostOfAlert = 7;
     private const int ChanceToBeSaved = 30;
     internal int CountQuestions;
     internal readonly SemaphoreSlim SemaphoreSlim = new(1);
+    internal readonly List<string> NoWaifuHelpUsers = [];
 
     public readonly int TimeoutBetweenHints = 10;
 
@@ -60,7 +62,7 @@ public class TwitchTrivia(
             async () =>
             {
                 var name = onMessageReceivedArgs.ChatMessage.Username;
-                var message = onMessageReceivedArgs.ChatMessage.Message;
+                var message = onMessageReceivedArgs.ChatMessage.Message.Trim();
                 var id = onMessageReceivedArgs.ChatMessage.UserId;
 
                 if (name == TwitchExstension.BotName || IsStop)
@@ -77,6 +79,7 @@ public class TwitchTrivia(
                     if (CurrentGame != null)
                     {
                         CurrentGame.Active = false;
+                        CurrentGame = null;
                         await client.SendMessageToMainTwitchAsync("Остановка тривии", logger);
                     }
                     else
@@ -92,11 +95,7 @@ public class TwitchTrivia(
                 }
 
                 //травия ответы
-                if (
-                    CurrentGame != null
-                    && message.Equals(CurrentGame.Answer, StringComparison.OrdinalIgnoreCase)
-                    && CurrentGame.Answer != ""
-                )
+                if (CurrentGame != null && CurrentGame.Answer != "")
                 {
                     try
                     {
@@ -106,38 +105,24 @@ public class TwitchTrivia(
 
                         var host = await context.Hosts.FindAsync(id);
 
-                        if (
-                            host is { IsPrivated: true }
-                            && message.Length == CurrentGame.Answer.Length
-                        )
+                        if (host is { IsPrivated: true } && !NoWaifuHelpUsers.Contains(id))
                         {
-                            var isTextSimmetric =
-                                message.Length == CurrentGame.Answer.Length
-                                && message.Where((t, i) => CurrentGame.Answer[i].Equals(t)).Any();
-
-                            if (isTextSimmetric)
+                            var chance = Random.Shared.Next(0, 101);
+                            if (chance < ChanceToBeSaved)
                             {
-                                var chance = Random.Shared.Next(0, 101);
-                                if (chance < ChanceToBeSaved)
-                                {
-                                    waifu = await context.Waifus.FindAsync(host.WaifuBrideId);
-                                }
+                                waifu = await context.Waifus.FindAsync(host.WaifuBrideId);
+                            }
+                            else
+                            {
+                                NoWaifuHelpUsers.Add(id);
                             }
                         }
 
                         await SemaphoreSlim.WaitAsync(TokenSource.Token);
-                        if (!CurrentGame.AllLettersShowed && waifu != null)
-                        {
-                            CurrentGame.AllLettersShowed = true;
-                            var answer = CurrentGame.Answer;
-                            CurrentGame.Answer = "";
-                            await client.SendMessageToMainTwitchAsync(
-                                $"@{name}, твой супруг ({waifu.Name}) шепнул(-а) на ушко загаданное слово: {answer}",
-                                logger
-                            );
-                            IsGameRunning = false;
-                        }
-                        else if (!CurrentGame.AllLettersShowed)
+                        if (
+                            message.Equals(CurrentGame.Answer, StringComparison.OrdinalIgnoreCase)
+                            && !CurrentGame.AllLettersShowed
+                        )
                         {
                             CurrentGame.AllLettersShowed = true;
                             var answer = CurrentGame.Answer;
@@ -147,7 +132,22 @@ public class TwitchTrivia(
                                 logger
                             );
                             IsGameRunning = false;
+                            NoWaifuHelpUsers.Clear();
                         }
+
+                        if (!CurrentGame.AllLettersShowed && waifu != null)
+                        {
+                            CurrentGame.AllLettersShowed = true;
+                            var answer = CurrentGame.Answer;
+                            CurrentGame.Answer = "";
+                            await client.SendMessageToMainTwitchAsync(
+                                $"@{name}, поздравляем, ты победил! Твой супруг ({waifu.Name}) шепнул(-а) тебе на ушко загаданное слово: {answer}",
+                                logger
+                            );
+                            IsGameRunning = false;
+                            NoWaifuHelpUsers.Clear();
+                        }
+
                         SemaphoreSlim.Release();
                     }
                     catch (Exception ex)

@@ -56,10 +56,18 @@ public class MiniGamesManager : BackgroundService
 
         if (miniGames.Any(e => e.IsGameRunning))
         {
-            await _client.SendMessageToMainTwitchAsync(
-                @$"@{name}, прости но уже другая игра происходит!"
-            );
-            return;
+            var gameCost = _miniGames.Keys.FirstOrDefault(e => e == cost, 0);
+
+            if (gameCost != 0)
+            {
+                var game = _miniGames[gameCost];
+                if (!game.IsReuseRewardForAddMechanic)
+                {
+                    await _client.SendMessageToMainTwitchAsync(
+                        @$"@{name}, прости но уже другая игра происходит!"
+                    );
+                }
+            }
         }
         else
         {
@@ -70,7 +78,6 @@ public class MiniGamesManager : BackgroundService
                 var game = _miniGames[gameCost];
                 game.IsGameRunning = true;
                 await game.GameStart(name, userId);
-                return;
             }
         }
     }

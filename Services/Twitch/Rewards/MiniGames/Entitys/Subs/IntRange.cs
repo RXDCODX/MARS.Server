@@ -9,5 +9,20 @@ public readonly struct IntRange(int start, int end)
 
     public int Length => End - Start + 1;
 
-    public override string ToString() => Start == End ? $"[{Start}]" : $"[{Start}~{End}]";
+    public override string ToString() =>
+        Start == End
+            ? $"[{GetRightNumber(Start)}]"
+            : $"[{GetRightNumber(Start)}~{GetRightNumber(End)}]";
+
+    private string GetRightNumber(int number)
+    {
+        if (number > 0)
+        {
+            return "+" + number;
+        }
+        else
+        {
+            return number.ToString();
+        }
+    }
 }
