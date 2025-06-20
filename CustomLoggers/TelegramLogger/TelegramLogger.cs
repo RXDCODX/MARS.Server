@@ -82,7 +82,7 @@ public class TelegramLogger : ILogger
             return;
         }
 
-        logBuilder ??= new StringBuilder();
+        logBuilder ??= new();
 
         var logLevelString = GetLogLevelString(logLevel);
 

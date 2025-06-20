@@ -141,7 +141,6 @@ public static class MemoryStorage
                 if (removedDescription != null)
                 {
                     Array.Clear(removedDescription.FileContent);
-                    removedDescription.FileContent = [];
                 }
                 break;
             }

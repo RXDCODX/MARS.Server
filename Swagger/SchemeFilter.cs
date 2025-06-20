@@ -1,6 +1,4 @@
-﻿using System.Reflection;
-using System.Runtime.CompilerServices;
-using Microsoft.OpenApi.Models;
+﻿using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace Mars.Server.Swagger;

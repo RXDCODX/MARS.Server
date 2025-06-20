@@ -23,7 +23,7 @@ public class PyroAlertsHelper(ILogger<PyroAlertsHelper> logger) : ITelegramusSer
 
             var mediainfo = new MediaInfo
             {
-                FileInfo = new MediaFileInfo
+                FileInfo = new()
                 {
                     Extension = extension,
                     Type = fileType,
@@ -31,21 +31,21 @@ public class PyroAlertsHelper(ILogger<PyroAlertsHelper> logger) : ITelegramusSer
                     IsLocalFile = true,
                     FilePath = "memory/" + fileInfo.FilePath,
                 },
-                MetaInfo = new MediaMetaInfo
+                MetaInfo = new()
                 {
                     DisplayName = message.Chat.Username ?? string.Empty,
                     IsLooped = fileType == MediaType.Video,
                     VIP = false,
                 },
-                PositionInfo = new MediaPositionInfo()
+                PositionInfo = new()
                 {
                     IsRotated = true,
                     IsResizeRequires = true,
                     Height = 500,
                     Width = 500,
                 },
-                TextInfo = new MediaTextInfo(),
-                StylesInfo = new MediaStylesInfo(),
+                TextInfo = new(),
+                StylesInfo = new(),
             };
 
             switch (fileType)

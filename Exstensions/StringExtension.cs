@@ -123,6 +123,116 @@ public static class StringExtension
             sb.Append(c);
         }
 
-        return isQuoted ? throw new Exception("ты насрал в ковычках") : [.. list];
+        return isQuoted ? throw new("ты насрал в ковычках") : [.. list];
+    }
+}
+
+public static class RussianToEnglishTransliteration
+{
+    private static readonly Dictionary<char, string?> TransliterationMap = new()
+    {
+        { 'А', "A" },
+        { 'Б', "B" },
+        { 'В', "V" },
+        { 'Г', "G" },
+        { 'Д', "D" },
+        { 'Е', "E" }, // Default case, special handling below
+        { 'Ё', "Yo" },
+        { 'Ж', "Zh" },
+        { 'З', "Z" },
+        { 'И', "I" },
+        { 'Й', "Y" },
+        { 'К', "K" },
+        { 'Л', "L" },
+        { 'М', "M" },
+        { 'Н', "N" },
+        { 'О', "O" },
+        { 'П', "P" },
+        { 'Р', "R" },
+        { 'С', "S" },
+        { 'Т', "T" },
+        { 'У', "U" },
+        { 'Ф', "F" },
+        { 'Х', "Kh" },
+        { 'Ц', "Ts" },
+        { 'Ч', "Ch" },
+        { 'Ш', "Sh" },
+        { 'Щ', "Shch" },
+        { 'Ъ', "" },
+        { 'Ы', "Y" },
+        { 'Ь', "" },
+        { 'Э', "E" },
+        { 'Ю', "Yu" },
+        { 'Я', "Ya" },
+        { ' ', " " },
+        //{ (char)769, "" }, // accent mark
+    };
+
+    private static readonly HashSet<char> Vowels =
+    [
+        'А',
+        'Е',
+        'Ё',
+        'И',
+        'І',
+        'О',
+        'У',
+        'Ы',
+        'Э',
+        'Ю',
+        'Я',
+        'Ѣ',
+        'Ѵ',
+    ];
+
+    public static string ToEnglishTransliteration(this string text)
+    {
+        if (string.IsNullOrEmpty(text))
+        {
+            return text;
+        }
+
+        var result = new StringBuilder(text.Length * 2); // Allocate extra space for potential multi-character transliterations
+
+        for (var i = 0; i < text.Length; i++)
+        {
+            var upperChar = char.ToUpper(text[i]);
+
+            if (TransliterationMap.TryGetValue(upperChar, out var englishLetter))
+            {
+                // Special handling for Е and Ѣ (Yat)
+                if (upperChar is 'Е' or (char)1122)
+                {
+                    englishLetter = ShouldUseYe(i, text) ? "Ye" : "E";
+                }
+
+                result.Append(englishLetter);
+            }
+            else
+            {
+                // If character not in our map, keep it as-is
+                result.Append(text[i]);
+            }
+        }
+
+        return result.ToString();
+    }
+
+    private static bool ShouldUseYe(int currentIndex, string text)
+    {
+        return IsAtStart(currentIndex, text)
+            || IsVowel(text[currentIndex - 1])
+            || text[currentIndex - 1] == 'Ъ'
+            || text[currentIndex - 1] == 'Ь';
+    }
+
+    private static bool IsAtStart(int index, string text)
+    {
+        return index == 0 || text[index - 1] == ' ';
+    }
+
+    private static bool IsVowel(char c)
+    {
+        return Vowels.Contains(char.ToUpper(c));
     }
 }

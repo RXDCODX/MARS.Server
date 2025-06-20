@@ -1,5 +1,4 @@
-﻿using System.Diagnostics.Eventing.Reader;
-using System.Reflection;
+﻿using System.Reflection;
 using MARS.Server.Services.Framedata;
 using MARS.Server.Services.PyroAlerts;
 using MARS.Server.Services.RandomMem;

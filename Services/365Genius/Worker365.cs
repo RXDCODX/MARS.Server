@@ -3,7 +3,6 @@ using System.Xml.XPath;
 using HtmlAgilityPack;
 using MARS.Server.Services._365Genius.Entitys;
 using TL;
-using WTelegram;
 
 namespace MARS.Server.Services._365Genius;
 
@@ -176,7 +175,7 @@ public class Worker365(
     private HttpRequestMessage GetFavoritePageRequestMessage(int? pageNumber)
     {
         Uri newUri = pageNumber.HasValue
-            ? new Uri(_site.AbsoluteUri + "favorites/" + pageNumber.Value)
+            ? new(_site.AbsoluteUri + "favorites/" + pageNumber.Value)
             : new Uri(_site.AbsoluteUri + "favorites");
 
         var msg = new HttpRequestMessage(HttpMethod.Get, newUri);
@@ -428,7 +427,7 @@ public class Worker365(
             {
                 if (width != null)
                 {
-                    return new Video365()
+                    return new()
                     {
                         Description = discription,
                         DirectLinkUrl = url.AbsoluteUri,
@@ -460,14 +459,14 @@ public class Worker365(
             );
             if (linkNode == null)
             {
-                throw new Exception("Элемент <link> не найден.");
+                throw new("Элемент <link> не найден.");
             }
 
             // 2. Извлекаем URL изображения
             var imageUrl = linkNode.GetAttributeValue("href", "");
             if (string.IsNullOrEmpty(imageUrl))
             {
-                throw new Exception("Атрибут href не содержит ссылки.");
+                throw new("Атрибут href не содержит ссылки.");
             }
 
             // 3. Скачиваем изображение
@@ -491,7 +490,7 @@ public class Worker365(
         catch (Exception ex)
         {
             // Логируем ошибку (можно заменить на Console.WriteLine или logger)
-            throw new Exception($"Ошибка при сохранении изображения: {ex.Message}");
+            throw new($"Ошибка при сохранении изображения: {ex.Message}");
         }
     }
 

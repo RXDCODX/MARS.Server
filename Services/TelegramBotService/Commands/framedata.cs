@@ -1,5 +1,4 @@
-﻿using Telegram.Bot.Requests;
-using Telegram.Bot.Types.Enums;
+﻿using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
 using Message = Telegram.Bot.Types.Message;
 
@@ -20,7 +19,7 @@ public partial class Commands
             return await SendDefaultResponse();
         }
 
-        var keyWords = split.Skip(1).ToArray();
+        var keyWords = split.Skip(1).Select(e => e.ToEnglishTransliteration().ToLower()).ToArray();
         var response = await HandleTagMoves() ?? await HandleStances() ?? await HandleSingleMove();
         return response ?? await SendDefaultResponse();
 
@@ -99,11 +98,7 @@ public partial class Commands
                 )
                 .ToArray();
 
-            return await SendResponse(
-                text,
-                new InlineKeyboardMarkup(buttons),
-                character.LinkToImage
-            );
+            return await SendResponse(text, new(buttons), character.LinkToImage);
         }
 
         async Task<Message?> HandleSingleMove()
@@ -157,25 +152,21 @@ public partial class Commands
             if (!string.IsNullOrWhiteSpace(move.StanceCode))
             {
                 buttons.Add(
-                    new InlineKeyboardButton(move.StanceName!)
+                    new(move.StanceName!)
                     {
                         CallbackData = $"framedata:{move.Character.Name}:stance:{move.StanceCode}",
                     }
                 );
             }
 
-            return await SendResponse(
-                text,
-                new InlineKeyboardMarkup(buttons),
-                move.Character.LinkToImage
-            );
+            return await SendResponse(text, new(buttons), move.Character.LinkToImage);
 
             void AddButtonIf(bool condition, string textForButton, string callbackSuffix)
             {
                 if (condition)
                 {
                     buttons.Add(
-                        new InlineKeyboardButton(textForButton)
+                        new(textForButton)
                         {
                             CallbackData = $"framedata:{move.Character.Name}:{callbackSuffix}",
                         }

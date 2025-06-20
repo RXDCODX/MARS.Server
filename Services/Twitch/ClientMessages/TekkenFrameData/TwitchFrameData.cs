@@ -14,7 +14,7 @@ public class TwitchFramedate(
 ) : BackgroundService
 {
     private readonly CancellationToken _cancellationToken = lifetime.ApplicationStopping;
-    private static readonly Regex Regex = new Regex(@"\p{C}+");
+    private static readonly Regex Regex = new(@"\p{C}+");
 
     public async void FrameDateMessage(object? sender, OnMessageReceivedArgs args)
     {
@@ -37,6 +37,7 @@ public class TwitchFramedate(
                                     | StringSplitOptions.TrimEntries
                             )
                             .Skip(1)
+                            .Select(e => e.ToEnglishTransliteration().ToLower())
                             .ToArray();
 
                         if (keyWords.Length < 2)

@@ -19,7 +19,7 @@ public class SoundBarFactory
     {
         if (IsRunningAsWindowsService())
         {
-            return InstanceHub ??= new SoundBarFromHub(hubContext);
+            return InstanceHub ??= new(hubContext);
         }
         else
         {

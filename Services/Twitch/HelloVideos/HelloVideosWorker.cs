@@ -1,5 +1,4 @@
-﻿using MARS.Server.Services.PyroAlerts.Entitys;
-using MARS.Server.Services.Twitch.SoundBarService;
+﻿using MARS.Server.Services.Twitch.SoundBarService;
 using TwitchLib.Client.Events;
 
 namespace MARS.Server.Services.Twitch.HelloVideos;

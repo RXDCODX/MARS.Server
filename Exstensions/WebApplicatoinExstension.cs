@@ -1,5 +1,4 @@
-﻿using System.IO;
-using Microsoft.AspNetCore.StaticFiles.Infrastructure;
+﻿using Microsoft.AspNetCore.StaticFiles.Infrastructure;
 using Microsoft.Extensions.FileProviders;
 
 namespace MARS.Server.Exstensions;

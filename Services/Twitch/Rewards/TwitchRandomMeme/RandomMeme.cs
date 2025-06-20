@@ -46,9 +46,7 @@ public class RandomMeme : BackgroundService
 
                     if (media is not null)
                     {
-                        await _hubContext.Clients.All.RandomMem(
-                            new MediaDto(media) { MediaInfo = media }
-                        );
+                        await _hubContext.Clients.All.RandomMem(new(media) { MediaInfo = media });
                     }
 
                     break;
@@ -59,9 +57,7 @@ public class RandomMeme : BackgroundService
 
                     if (sound is not null)
                     {
-                        await _hubContext.Clients.All.RandomMem(
-                            new MediaDto(sound) { MediaInfo = sound }
-                        );
+                        await _hubContext.Clients.All.RandomMem(new(sound) { MediaInfo = sound });
                     }
 
                     break;
@@ -95,27 +91,23 @@ public class RandomMeme : BackgroundService
 
         var mediaInfo = new MediaInfo
         {
-            FileInfo = new MediaFileInfo
+            FileInfo = new()
             {
                 Extension = exst,
                 Type = fileType,
                 FileName = Path.GetFileName(filePath),
                 FilePath = shortPath,
             },
-            MetaInfo = new MediaMetaInfo
-            {
-                DisplayName = displayName ?? string.Empty,
-                IsLooped = false,
-            },
-            PositionInfo = new MediaPositionInfo
+            MetaInfo = new() { DisplayName = displayName ?? string.Empty, IsLooped = false },
+            PositionInfo = new()
             {
                 Height = 400,
                 Width = 400,
                 IsProportion = true,
                 IsResizeRequires = true,
             },
-            StylesInfo = new MediaStylesInfo { IsBorder = false },
-            TextInfo = new MediaTextInfo(),
+            StylesInfo = new() { IsBorder = false },
+            TextInfo = new(),
         };
 
         return mediaInfo;

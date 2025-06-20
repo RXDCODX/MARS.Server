@@ -18,7 +18,7 @@ public sealed class GameBoard
         {
             for (ushort y = 1; y <= Height; y++)
             {
-                board.Board[x - 'a', y - 1] = new Cell
+                board.Board[x - 'a', y - 1] = new()
                 {
                     XCoordinate = x,
                     YCoordinate = y,

@@ -42,7 +42,7 @@ public class ShikimoriService(
         {
             if (recursed)
             {
-                throw new Exception("Рекурсивный вызов GetRandomAnime()");
+                throw new("Рекурсивный вызов GetRandomAnime()");
             }
 
             _accessToken = await shikimoriAuthorizationHelpService.RefreshToken(
@@ -78,7 +78,7 @@ public class ShikimoriService(
         {
             if (recursed)
             {
-                throw new Exception("Рекурсивный вызов GetAnimeById()");
+                throw new("Рекурсивный вызов GetAnimeById()");
             }
 
             _accessToken = await shikimoriAuthorizationHelpService.RefreshToken(
@@ -118,7 +118,7 @@ public class ShikimoriService(
         {
             if (recursed)
             {
-                throw new Exception("Рекурсивный вызов GetRandomManga()");
+                throw new("Рекурсивный вызов GetRandomManga()");
             }
 
             _accessToken = await shikimoriAuthorizationHelpService.RefreshToken(
@@ -154,7 +154,7 @@ public class ShikimoriService(
         {
             if (recursed)
             {
-                throw new Exception("Рекурсивный вызов GetMangaById()");
+                throw new("Рекурсивный вызов GetMangaById()");
             }
 
             _accessToken = await shikimoriAuthorizationHelpService.RefreshToken(
@@ -192,7 +192,7 @@ public class ShikimoriService(
             {
                 var template = "Рекурсивный вызов GetShikiCharacterById";
                 _logger.LogCritical("{0}{1}", template, "! Приложение завершает свою работу");
-                throw new Exception(template);
+                throw new(template);
             }
 
             _accessToken = await shikimoriAuthorizationHelpService.RefreshToken(

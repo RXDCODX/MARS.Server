@@ -1,7 +1,9 @@
 ﻿using MARS.Server.ApplicationState;
+using MARS.Server.CustomLoggers.DatabaseLogger;
 using MARS.Server.Services._365Genius.Entitys;
 using MARS.Server.Services.Framedata.Entitys;
 using MARS.Server.Services.RandomMem.Entity;
+using MARS.Server.Services.SoundRequest.Entitys;
 using MARS.Server.Services.Twitch.ClientMessages.AutoMessages.Entitys;
 using MARS.Server.Services.Twitch.FumoFriday.Entitys;
 using MARS.Server.Services.Twitch.HelloVideos.Entitys;
@@ -58,6 +60,10 @@ public sealed class AppDbContext : DbContext
     public DbSet<TelegramUpdateReceiverOffset> TelegramUpdateReceiverOffset { get; set; } = null!;
     public DbSet<WTelegramAlloweedChannel> WTelegramAlloweedChannels { get; set; } = null!;
     public DbSet<RootState> ApplicationState { get; set; } = null!;
+    public DbSet<BaseTrackInfo> SoundRequestBaseTrackInfos { get; set; } = null!;
+    public DbSet<PlayerState> SoundRequestPlayerState { get; set; } = null!;
+    public DbSet<SoundRequestBackgroundTrackId> SoundRequestBackgroundTracks { get; set; } = null!;
+    public DbSet<UserRequestedTrack> SoundRequestUserQueue { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -96,13 +102,13 @@ public sealed class AppDbContext : DbContext
             .Entity<MemeType>()
             .HasData(
                 [
-                    new MemeType()
+                    new()
                     {
                         Name = "Random Sound",
                         Id = 3,
                         FolderPath = "Alerts\\zvik",
                     },
-                    new MemeType()
+                    new()
                     {
                         Name = "Random Meme",
                         Id = 2,
@@ -110,6 +116,19 @@ public sealed class AppDbContext : DbContext
                     },
                 ]
             );
+
+        modelBuilder
+            .Entity<UserRequestedTrack>()
+            .HasOne(urt => urt.RequestedTrack)
+            .WithOne()
+            .HasForeignKey<UserRequestedTrack>(urt => urt.RequestedTrackId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder
+            .Entity<SoundRequestBackgroundTrackId>()
+            .HasOne(e => e.BaseTrackInfo)
+            .WithOne()
+            .HasForeignKey<SoundRequestBackgroundTrackId>(e => e.TrackId);
 
         modelBuilder.Entity<MediaInfo>(entity =>
         {
@@ -223,11 +242,19 @@ public sealed class AppDbContext : DbContext
         configurationBuilder
             .Properties<DateTimeOffset>()
             .HaveConversion<DateTimeOffsetConversion>();
+
+        configurationBuilder.Properties<DateTime>().HaveConversion<DateTimeToDateTimeUtc>();
     }
 
     public sealed class DateTimeOffsetConversion()
         : ValueConverter<DateTimeOffset, DateTimeOffset>(
             offset => offset.Offset != TimeSpan.Zero ? offset.ToOffset(TimeSpan.Zero) : offset,
             v => v.ToLocalTime()
+        );
+
+    public sealed class DateTimeToDateTimeUtc()
+        : ValueConverter<DateTime, DateTime>(
+            c => DateTime.SpecifyKind(c, DateTimeKind.Utc),
+            c => c
         );
 }

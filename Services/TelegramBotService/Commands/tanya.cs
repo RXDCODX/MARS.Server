@@ -58,11 +58,11 @@ public partial class Commands
         switch (day)
         {
             case 0:
-                return new ValueTask<DateTimeOffset[]>(new[] { today, today.AddDays(1) });
+                return new(new[] { today, today.AddDays(1) });
             case 1:
-                return new ValueTask<DateTimeOffset[]>(new[] { today, today.AddDays(3) });
+                return new(new[] { today, today.AddDays(3) });
             case 2:
-                return new ValueTask<DateTimeOffset[]>(
+                return new(
                     new[] { today.AddDays(cycleLength - day), today.AddDays(cycleLength - day + 1) }
                 );
             case 3:

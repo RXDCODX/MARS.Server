@@ -24,6 +24,7 @@ public class TekkenVictorina(
     public bool IsGameRunning { get; set; } = false;
     private const string? CommandForStop = "!стопвикторина";
     private TekkenVictorinaGame? _currentGame;
+    private readonly SemaphoreSlim _semaphoreSlim = new(1);
 
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -88,6 +89,9 @@ public class TekkenVictorina(
         {
             var randomIndex = Random.Shared.Next(frameData.VictorinaMoves.Count) - 1;
             var randomMove = frameData.VictorinaMoves[randomIndex];
+            //var randomMove = frameData.VictorinaMoves.First(e =>
+            //    e is { CharacterName: "lili", Command: "bt 3,4" }
+            //);
             var awaitTime = TimeSpan.FromSeconds(20);
             var startTime = DateTime.Now;
 
@@ -100,7 +104,7 @@ public class TekkenVictorina(
 
             await api.SendAnnouncementToMainTwitch(prepare, tokenService.Token, null, logger);
             var answer = GetAnswer(randomMove);
-            _currentGame = new TekkenVictorinaGame(answer);
+            _currentGame = new(answer);
             var token = _currentGame.CancellationTokenForRightAnswer.Token;
 
             while (!token.IsCancellationRequested)
@@ -190,13 +194,14 @@ public class TekkenVictorina(
     {
         _currentGame = null;
         IsGameRunning = false;
+        _semaphoreSlim.Release();
     }
 
     private IntRange GetAnswer(Move tekkenMove)
     {
         if (int.TryParse(tekkenMove.BlockFrame, out var answer))
         {
-            return new IntRange(answer, answer);
+            return new(answer, answer);
         }
 
         var split = tekkenMove.BlockFrame!.Split('~');
@@ -204,10 +209,10 @@ public class TekkenVictorina(
         {
             var start = int.Parse(split[0]);
             var end = int.Parse(split[1]);
-            return new IntRange(start, end);
+            return new(start, end);
         }
 
-        throw new Exception(
+        throw new(
             $"Кривой инпут к удара, {tekkenMove.Character?.Name ?? tekkenMove.CharacterName} {tekkenMove.Command}"
         );
     }
@@ -231,7 +236,7 @@ public class TekkenVictorina(
         if (!_currentGame.Users.Contains(userId))
         {
             var chance = Random.Shared.Next(0, 101);
-            if (chance <= 40)
+            if (chance <= 30)
             {
                 await using var dbContext = await dbContextFactory.CreateDbContextAsync();
                 var isHaveWaifu = await dbContext.Hosts.AnyAsync(e =>
@@ -240,6 +245,8 @@ public class TekkenVictorina(
 
                 if (isHaveWaifu)
                 {
+                    await _semaphoreSlim.WaitAsync();
+                    _currentGame.GoodAnswers.Clear();
                     AddOrUpdateGoodAnswer(displayName, answerRange);
                     _currentGame.IsWaifuHelp = true;
                     _currentGame.WaifuId = (await dbContext.Hosts.FindAsync(userId))?.WaifuBrideId;
@@ -262,6 +269,7 @@ public class TekkenVictorina(
 
         if (distance == 0)
         {
+            await _semaphoreSlim.WaitAsync();
             AddOrUpdateGoodAnswer(displayName, userRange.Value);
             _currentGame.CancellationTokenForRightAnswer.Cancel();
             return true;
@@ -334,7 +342,11 @@ public class TekkenVictorina(
     }
 
     // Добавляет или обновляет ответ пользователя
-    private void AddOrUpdateGoodAnswer(string displayName, IntRange answer)
+    private void AddOrUpdateGoodAnswer(
+        string displayName,
+        IntRange answer,
+        bool isWaifuHelp = false
+    )
     {
         if (_currentGame != null)
         {

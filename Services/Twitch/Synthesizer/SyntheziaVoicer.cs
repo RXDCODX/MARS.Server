@@ -1,5 +1,4 @@
-﻿using System.Globalization;
-using System.Runtime.Versioning;
+﻿using System.Runtime.Versioning;
 using System.Speech.Synthesis;
 using System.Text;
 using MARS.Server.Services.Twitch.Synthesizer.Enitity;
@@ -79,7 +78,7 @@ public class SyntheziaVoicer : IVoicer
             }
             else
             {
-                var voices = _speechSynthesizer.GetInstalledVoices(new CultureInfo("ru-RU"));
+                var voices = _speechSynthesizer.GetInstalledVoices(new("ru-RU"));
                 var index = Random.Shared.Next(voices.Count);
                 var voice = voices[index];
                 _linkedVoices.Add(message.Name, voice);

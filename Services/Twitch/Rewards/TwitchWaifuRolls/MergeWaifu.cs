@@ -1,9 +1,7 @@
 ﻿using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.WaifuRoll;
 using MARS.Server.Services.WaifuRoll.helpers;
-using Microsoft.Extensions.Options;
 using TwitchLib.Api.Helix.Models.Chat;
-using static Microsoft.Extensions.Logging.EventSource.LoggingEventSource;
 
 namespace MARS.Server.Services.Twitch.Rewards.TwitchWaifuRolls;
 
@@ -170,7 +168,7 @@ public class MergeWaifu : BackgroundService
                             if (spanaa.HasValue)
                             {
                                 var span = spanaa.Value;
-                                var template9 = GetTimeSpanText(span);
+                                var template9 = GetTimeSpanText(span, waifu);
                                 var message9 = AnswersForTwitchRewards.ReplaceKeywordsInAnswer(
                                     twEvent.UserName,
                                     template9
@@ -178,7 +176,7 @@ public class MergeWaifu : BackgroundService
                                 await _client.SendMessageToMainTwitchAsync(message9, _logger);
                                 return;
 
-                                static string GetTimeSpanText(TimeSpan span)
+                                static string GetTimeSpanText(TimeSpan span, Waifu waifu)
                                 {
                                     var totalDays = span.Days;
 
@@ -237,7 +235,13 @@ public class MergeWaifu : BackgroundService
                                         .Where(part => !string.IsNullOrEmpty(part))
                                         .ToArray();
 
-                                    return $@"{{user}}, ты уже в браке {string.Join(", ", parts)}!";
+                                    var charName = waifu.Name;
+                                    var title = !string.IsNullOrWhiteSpace(waifu.Anime)
+                                        ? " из аниме " + waifu.Anime
+                                        : " из манги " + waifu.Manga;
+                                    var charText = charName + title;
+
+                                    return $@"{{user}}, ты в браке с {charText} уже {string.Join(", ", parts)}!";
                                 }
 
                                 // Вспомогательная функция для склонения слов
@@ -281,12 +285,12 @@ public class MergeWaifu : BackgroundService
                     }
                 }
 
-                host = new Host
+                host = new()
                 {
                     TwitchId = twEvent.UserId,
                     Name = twEvent.UserName,
-                    HostCoolDown = new HostCoolDown() { HostId = twEvent.UserId },
-                    HostGreetings = new HostAutoHello() { HostId = twEvent.UserId },
+                    HostCoolDown = new() { HostId = twEvent.UserId },
+                    HostGreetings = new() { HostId = twEvent.UserId },
                 };
 
                 dbContext.Hosts.Add(host);

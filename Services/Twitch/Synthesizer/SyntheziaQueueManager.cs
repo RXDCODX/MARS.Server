@@ -83,10 +83,10 @@ public class SyntheziaQueueManager : BackgroundService
                 }
                 else
                 {
-                    message = new MessageToSynthezid
+                    message = new()
                     {
                         CreationDateTime = DateTimeOffset.Now,
-                        Guid = new Guid(),
+                        Guid = new(),
                         Message = currentMessage
                             .Trim()
                             .CutTooLongText()

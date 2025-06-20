@@ -1,5 +1,4 @@
 ﻿using MARS.Server.Services.TabletopGames.Entitys;
-using Telegramus.Migrations;
 
 namespace MARS.Server.Services.TabletopGames.Checkers;
 

@@ -50,7 +50,7 @@ public class WaifuRollService(
             }
             else
             {
-                cd = new HostCoolDown() { HostId = id };
+                cd = new() { HostId = id };
 
                 await dbContext.HostsCoolDowns.AddAsync(cd);
 
@@ -59,13 +59,13 @@ public class WaifuRollService(
         }
         else
         {
-            cd = new HostCoolDown() { HostId = id };
+            cd = new() { HostId = id };
 
-            host = new Host
+            host = new()
             {
                 TwitchId = id,
                 Name = displayName,
-                HostGreetings = new HostAutoHello() { HostId = id },
+                HostGreetings = new() { HostId = id },
                 HostCoolDown = cd,
             };
 
@@ -197,7 +197,7 @@ public class WaifuRollService(
             {
                 isChecked = true;
 
-                greet = new HostAutoHello { HostId = id, Time = DateTimeOffset.Now };
+                greet = new() { HostId = id, Time = DateTimeOffset.Now };
 
                 dbContext.Add(greet);
 
@@ -226,7 +226,7 @@ public class WaifuRollService(
                     }
                     else
                     {
-                        hello = new HostAutoHello
+                        hello = new()
                         {
                             HostId = id,
                             Time = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3)),
@@ -254,12 +254,12 @@ public class WaifuRollService(
         }
         else if (host == default)
         {
-            host = new Host
+            host = new()
             {
                 TwitchId = id,
                 Name = displayName,
-                HostCoolDown = new HostCoolDown() { HostId = id },
-                HostGreetings = new HostAutoHello() { HostId = id },
+                HostCoolDown = new() { HostId = id },
+                HostGreetings = new() { HostId = id },
             };
 
             await dbContext.AddAsync(host);

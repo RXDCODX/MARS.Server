@@ -1,11 +1,9 @@
 ﻿using MARS.Server.Services.AutoArts.Entitys;
 using MARS.Server.Services.Twitch.Rewards.TwitchScreenParticles.Entitys;
-using SignalRSwaggerGen.Attributes;
 using TwitchLib.Client.Models;
 
 namespace MARS.Server.Hubs.Interfaces;
 
-[SignalRHub]
 public interface ITelegramusHub
 {
     public Task Alert(MediaDto info);

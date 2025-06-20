@@ -1,6 +1,4 @@
-﻿using System.Text;
-using System.Text.RegularExpressions;
-using TwitchLib.Client.Events;
+﻿using TwitchLib.Client.Events;
 
 namespace MARS.Server.Services.Twitch.ClientMessages.SignalRAlerts;
 

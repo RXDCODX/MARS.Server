@@ -155,25 +155,25 @@ public class RandomMemOnline(
         await MemoryStorage.AddFileAsync(fileName, buffer);
 
         var mediaInfo = new MediaDto(
-            new MediaInfo()
+            new()
             {
-                FileInfo = new MediaFileInfo()
+                FileInfo = new()
                 {
                     FilePath = "memory/" + fileName,
                     Extension = extension,
                     FileName = fileName,
                     Type = MediaType.Video,
                 },
-                MetaInfo = new MediaMetaInfo()
+                MetaInfo = new()
                 {
                     DisplayName = string.Empty,
                     Duration = 999,
                     IsLooped = false,
                     Priority = MediaAlertPriority.Normal,
                 },
-                PositionInfo = new MediaPositionInfo(),
-                StylesInfo = new MediaStylesInfo(),
-                TextInfo = new MediaTextInfo() { Text = message },
+                PositionInfo = new(),
+                StylesInfo = new(),
+                TextInfo = new() { Text = message },
             }
         );
 
@@ -193,24 +193,24 @@ public class RandomMemOnline(
             await MemoryStorage.AddFileAsync($"{photo.ID}.{fileInfo.ToString()}", buffer);
 
             var mediaInfo = new MediaDto(
-                new MediaInfo()
+                new()
                 {
-                    FileInfo = new MediaFileInfo()
+                    FileInfo = new()
                     {
                         FilePath = "memory/" + fileName,
                         Extension = "jpeg",
                         FileName = fileName,
                         Type = MediaType.Image,
                     },
-                    MetaInfo = new MediaMetaInfo()
+                    MetaInfo = new()
                     {
                         DisplayName = string.Empty,
                         IsLooped = false,
                         Priority = MediaAlertPriority.Normal,
                     },
-                    PositionInfo = new MediaPositionInfo(),
-                    StylesInfo = new MediaStylesInfo(),
-                    TextInfo = new MediaTextInfo() { Text = message },
+                    PositionInfo = new(),
+                    StylesInfo = new(),
+                    TextInfo = new() { Text = message },
                 }
             );
 
@@ -230,24 +230,24 @@ public class RandomMemOnline(
         await MemoryStorage.AddFileAsync($"{document.id}.{fileInfo.Split('/')[1]}", buffer);
 
         var mediaInfo = new MediaDto(
-            new MediaInfo()
+            new()
             {
-                FileInfo = new MediaFileInfo()
+                FileInfo = new()
                 {
                     FilePath = "memory/" + fileName,
                     Extension = extension,
                     FileName = fileName,
                     Type = MediaType.Image,
                 },
-                MetaInfo = new MediaMetaInfo()
+                MetaInfo = new()
                 {
                     DisplayName = string.Empty,
                     IsLooped = false,
                     Priority = MediaAlertPriority.Normal,
                 },
-                PositionInfo = new MediaPositionInfo(),
-                StylesInfo = new MediaStylesInfo(),
-                TextInfo = new MediaTextInfo() { Text = message },
+                PositionInfo = new(),
+                StylesInfo = new(),
+                TextInfo = new() { Text = message },
             }
         );
 

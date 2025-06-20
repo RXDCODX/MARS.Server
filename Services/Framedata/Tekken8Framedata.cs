@@ -1,6 +1,5 @@
 ﻿using MARS.Server.Services.Framedata.Entitys;
 using MARS.Server.Services.Framedata.Entitys.Enums;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace MARS.Server.Services.Framedata;

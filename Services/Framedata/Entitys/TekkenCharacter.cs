@@ -8,4 +8,7 @@ public class TekkenCharacter
     public string? LinkToImage { get; set; }
     public IEnumerable<Move>? Movelist { get; set; }
     public DateTimeOffset LastUpdateTime { get; set; } = DateTimeOffset.Now;
+    public string? Description { get; set; }
+    public string[]? Strengths { get; set; }
+    public string[]? Weaknesess { get; set; }
 }
