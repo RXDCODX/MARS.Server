@@ -2,21 +2,16 @@
 
 namespace MARS.Server.CustomLoggers.DatabaseLogger;
 
-public class DbLogger : ILogger
+/// <summary>
+/// Creates a new instance of <see cref="DbLogger" />.
+/// </summary>
+/// <param name="dbLoggerProvider">Instance of <see cref="DbLoggerProvider" />.</param>
+public class DbLogger([NotNull] DbLoggerProvider dbLoggerProvider) : ILogger
 {
     /// <summary>
     /// Instance of <see cref="DbLoggerProvider" />.
     /// </summary>
-    private readonly DbLoggerProvider _dbLoggerProvider;
-
-    /// <summary>
-    /// Creates a new instance of <see cref="DbLogger" />.
-    /// </summary>
-    /// <param name="dbLoggerProvider">Instance of <see cref="DbLoggerProvider" />.</param>
-    public DbLogger([NotNull] DbLoggerProvider dbLoggerProvider)
-    {
-        _dbLoggerProvider = dbLoggerProvider;
-    }
+    private readonly DbLoggerProvider _dbLoggerProvider = dbLoggerProvider;
 #pragma warning disable CS8633 // Nullability in constraints for type parameter doesn't match the constraints for type parameter in implicitly implemented interface method'.
 #pragma warning disable CS8603 // Possible null reference return.
 

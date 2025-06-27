@@ -359,7 +359,7 @@ public partial class Tekken8FrameData
             },
             {
                 "where",
-                $"Move._pageName='{encodedName[0].ToString().ToUpper() + encodedName.Substring(1)}'"
+                $"Move._pageName='{string.Concat(encodedName[0].ToString().ToUpper(), encodedName.AsSpan(1))}'"
             },
             { "format", "table" },
             { "offset", "0" },

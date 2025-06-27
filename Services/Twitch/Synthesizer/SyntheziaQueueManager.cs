@@ -41,7 +41,7 @@ public class SyntheziaQueueManager : BackgroundService
         {
             if (_isAppReady)
             {
-                var isDequeued = false;
+                bool isDequeued;
                 do
                 {
                     isDequeued = _queue.TryDequeue(out var result);

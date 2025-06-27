@@ -151,7 +151,7 @@ public class UpdateHandler : IUpdateHandler
         if (
             message.Type != MessageType.Text
             || message.Text is not { } messageText
-            || !messageText.StartsWith("/")
+            || !messageText.StartsWith('/')
         )
         {
             return;

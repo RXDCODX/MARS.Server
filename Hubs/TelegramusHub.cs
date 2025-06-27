@@ -4,7 +4,17 @@ using SignalRSwaggerGen.Enums;
 
 namespace MARS.Server.Hubs;
 
-[SignalRHub(null, AutoDiscover.MethodsAndParams)]
+[SignalRHub(
+    "/telegramus",
+    AutoDiscover.MethodsAndParams,
+    null,
+    null,
+    null,
+    false,
+    false,
+    null,
+    HubMethodsScan.Default
+)]
 public class TelegramusHub(
     IDbContextFactory<AppDbContext> factory,
     IOptions<ShikimoriClientOptions> shikiOptions,

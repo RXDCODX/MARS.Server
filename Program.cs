@@ -116,7 +116,7 @@ public class Program
         services.AddTwitchEvents(configuration, loggerFactory);
         services.AddTelegramThings(configuration, loggerFactory);
         services.AddConfiguration(configuration);
-        services.AddSoundRequest(configuration);
+        //services.AddSoundRequest(configuration);
         services.AddBaseAspNetMiddlewares();
         services.AddSwaggerServices();
 
@@ -189,7 +189,7 @@ public class Program
 
         if (IsUseSwagger)
         {
-            app.UseSwagger(options => options.OpenApiVersion = OpenApiSpecVersion.OpenApi2_0);
+            app.UseSwagger(options => options.OpenApiVersion = OpenApiSpecVersion.OpenApi3_0);
             app.UseSwaggerUi(settings =>
             {
                 settings.Path = "/ui";
@@ -202,7 +202,8 @@ public class Program
 
         app.UseCors("CorsPolicy");
         app.MapHub<TelegramusHub>("/telegramus");
-        app.MapHub<SoundBarHub>("/soundbar");
+        app.MapHub<TunaHub>("/tuna");
+        //app.MapHub<SoundBarHub>("/soundbar");
         if (IsUseSoundRequest)
         {
             app.MapHub<SoundRequestHub>("/sr");

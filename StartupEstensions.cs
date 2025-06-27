@@ -13,6 +13,7 @@ using MARS.Server.Services.Twitch.FumoFriday;
 using MARS.Server.Services.Twitch.HelloVideos;
 using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.Twitch.MiniGamesStats;
+using MARS.Server.Services.Twitch.Rewards.CloseGameReward;
 using MARS.Server.Services.Twitch.Rewards.MiniGames;
 using MARS.Server.Services.Twitch.Rewards.TwitchAlerts;
 using MARS.Server.Services.Twitch.Rewards.TwitchClipCreator;
@@ -23,6 +24,7 @@ using MARS.Server.Services.Twitch.Rewards.TwitchScreenParticles;
 using MARS.Server.Services.Twitch.Rewards.TwitchWaifuRolls;
 using MARS.Server.Services.Twitch.SoundBarService;
 using MARS.Server.Services.Twitch.StreamBotNotifications;
+using Microsoft.OpenApi.Models;
 using NJsonSchema.Generation;
 using TwitchLib.Api;
 using TwitchLib.Api.Core.Enums;
@@ -244,6 +246,9 @@ public static class StartupEstensions
         services.AddSingleton<TwitchClipCreatorService>();
         services.AddHostedService(sp => sp.GetRequiredService<TwitchClipCreatorService>());
 
+        services.AddSingleton<TwitchCloseTekkenService>();
+        services.AddHostedService(sp => sp.GetRequiredService<TwitchCloseTekkenService>());
+
         return services;
     }
 
@@ -319,11 +324,16 @@ public static class StartupEstensions
     public static IServiceCollection AddSwaggerServices(this IServiceCollection services)
     {
         Program.IsUseSwagger = true;
+        services.AddEndpointsApiExplorer();
         services.AddSwaggerGen(options =>
         {
+            options.SwaggerDoc(
+                "v1",
+                new OpenApiInfo() { Version = "v1", Title = "Telegramus Open Api v3" }
+            );
             options.AddSignalRSwaggerGen();
             options.UseAllOfToExtendReferenceSchemas();
-            options.UseAllOfForInheritance();
+            //options.UseAllOfForInheritance();
             options.SupportNonNullableReferenceTypes();
             options.NonNullableReferenceTypesAsRequired();
             options.UseInlineDefinitionsForEnums();

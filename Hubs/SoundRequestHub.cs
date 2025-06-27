@@ -14,19 +14,19 @@ public class SoundRequestHub(SoundRequestSignalREvents events) : Hub<ISoundReque
         return Groups.AddToGroupAsync(Context.ConnectionId, "client");
     }
 
-    public Task Ended([FromBody] BaseTrackInfo trackInfo)
+    public Task Ended(BaseTrackInfo trackInfo)
     {
         events.Ended(trackInfo);
         return Task.CompletedTask;
     }
 
-    public Task Started([FromBody] BaseTrackInfo trackInfo)
+    public Task Started(BaseTrackInfo trackInfo)
     {
         events.Started(trackInfo);
         return Task.CompletedTask;
     }
 
-    public Task ErrorPlaying([FromBody] BaseTrackInfo trackInfo)
+    public Task ErrorPlaying(BaseTrackInfo trackInfo)
     {
         events.Error(trackInfo);
         return Task.CompletedTask;
