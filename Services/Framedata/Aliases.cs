@@ -83,7 +83,7 @@ public class Aliases
         { "hold", "*" },
     };
 
-    public static Dictionary<string, string> Stances = new()
+    public static readonly Dictionary<string, string> Stances = new()
     {
         { "bkp", "Backup" },
         { "sbt", "Boot" },

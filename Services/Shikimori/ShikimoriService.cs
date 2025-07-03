@@ -34,7 +34,7 @@ public class ShikimoriService(
         );
 
         message.Headers.Add("User-Agent", _options.ClientName);
-        message.Headers.Add("Authorization", _accessToken.Access_Token);
+        message.Headers.Add("Authorization", _accessToken.AccessToken);
 
         var response = _shikiClient.Send(message);
 
@@ -42,7 +42,7 @@ public class ShikimoriService(
         {
             if (recursed)
             {
-                throw new("Рекурсивный вызов GetRandomAnime()");
+                throw new Exception("Рекурсивный вызов GetRandomAnime()");
             }
 
             _accessToken = await shikimoriAuthorizationHelpService.RefreshToken(
@@ -70,7 +70,7 @@ public class ShikimoriService(
         );
 
         message.Headers.Add("User-Agent", _options.ClientName);
-        message.Headers.Add("Authorization", _accessToken.Access_Token);
+        message.Headers.Add("Authorization", _accessToken.AccessToken);
 
         var response = _shikiClient.Send(message);
 
@@ -78,7 +78,7 @@ public class ShikimoriService(
         {
             if (recursed)
             {
-                throw new("Рекурсивный вызов GetAnimeById()");
+                throw new Exception("Рекурсивный вызов GetAnimeById()");
             }
 
             _accessToken = await shikimoriAuthorizationHelpService.RefreshToken(
@@ -110,7 +110,7 @@ public class ShikimoriService(
         );
 
         message.Headers.Add("User-Agent", _options.ClientName);
-        message.Headers.Add("Authorization", _accessToken.Access_Token);
+        message.Headers.Add("Authorization", _accessToken.AccessToken);
 
         var response = _shikiClient.Send(message);
 
@@ -118,7 +118,7 @@ public class ShikimoriService(
         {
             if (recursed)
             {
-                throw new("Рекурсивный вызов GetRandomManga()");
+                throw new Exception("Рекурсивный вызов GetRandomManga()");
             }
 
             _accessToken = await shikimoriAuthorizationHelpService.RefreshToken(
@@ -142,11 +142,11 @@ public class ShikimoriService(
     {
         var message = new HttpRequestMessage(
             HttpMethod.Get,
-            string.Format("{0}{1}{2}", _options.ShikimoriSite, "/api/mangas/", id)
+            $"{_options.ShikimoriSite}/api/mangas/{id}"
         );
 
         message.Headers.Add("User-Agent", _options.ClientName);
-        message.Headers.Add("Authorization", _accessToken.Access_Token);
+        message.Headers.Add("Authorization", _accessToken.AccessToken);
 
         var response = _shikiClient.Send(message);
 
@@ -154,7 +154,7 @@ public class ShikimoriService(
         {
             if (recursed)
             {
-                throw new("Рекурсивный вызов GetMangaById()");
+                throw new Exception("Рекурсивный вызов GetMangaById()");
             }
 
             _accessToken = await shikimoriAuthorizationHelpService.RefreshToken(
@@ -178,11 +178,11 @@ public class ShikimoriService(
     {
         var message = new HttpRequestMessage(
             HttpMethod.Get,
-            string.Format("{0}{1}{2}", _options.ShikimoriSite, "/api/characters/", id)
+            $"{_options.ShikimoriSite}/api/characters/{id}"
         );
 
         message.Headers.Add("User-Agent", _options.ClientName);
-        message.Headers.Add("Authorization", _accessToken.Access_Token);
+        message.Headers.Add("Authorization", _accessToken.AccessToken);
 
         var response = _shikiClient.Send(message);
 
@@ -190,9 +190,13 @@ public class ShikimoriService(
         {
             if (recursed)
             {
-                var template = "Рекурсивный вызов GetShikiCharacterById";
-                _logger.LogCritical("{0}{1}", template, "! Приложение завершает свою работу");
-                throw new(template);
+                const string template = "Рекурсивный вызов GetShikiCharacterById";
+                _logger.LogCritical(
+                    "{template}{message}",
+                    template,
+                    "! Приложение завершает свою работу"
+                );
+                throw new Exception(template);
             }
 
             _accessToken = await shikimoriAuthorizationHelpService.RefreshToken(

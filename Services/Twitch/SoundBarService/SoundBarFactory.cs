@@ -12,22 +12,17 @@ public class SoundBarFactory
     public SoundBarFactory(IHubContext<SoundBarHub, ISoundBarHub> hubContext)
     {
         this.hubContext = hubContext;
-        SoundBarFactory.InstanceHub = new(hubContext);
+        SoundBarFactory.InstanceHub = new SoundBarFromHub(hubContext);
     }
 
     public ISoundBar CreateSoundBar()
     {
-        if (IsRunningAsWindowsService())
-        {
-            return InstanceHub ??= new(hubContext);
-        }
-        else
-        {
-            return Instance;
-        }
+        return IsRunningAsWindowsService()
+            ? (InstanceHub ??= new SoundBarFromHub(hubContext))
+            : Instance;
     }
 
-    private bool IsRunningAsWindowsService()
+    private static bool IsRunningAsWindowsService()
     {
         if (!OperatingSystem.IsWindows())
         {

@@ -123,7 +123,7 @@ public static class StringExtension
             sb.Append(c);
         }
 
-        return isQuoted ? throw new("ты насрал в ковычках") : [.. list];
+        return isQuoted ? throw new Exception("ты насрал в ковычках") : [.. list];
     }
 }
 

@@ -96,7 +96,7 @@ public class SoundRequestHandler(
         throw new NotImplementedException();
     }
 
-    private SoundRequestDomainSource GetDomainType(Uri uri)
+    private static SoundRequestDomainSource GetDomainType(Uri uri)
     {
         return uri.Host switch
         {

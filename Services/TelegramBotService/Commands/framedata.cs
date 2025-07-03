@@ -98,7 +98,11 @@ public partial class Commands
                 )
                 .ToArray();
 
-            return await SendResponse(text, new(buttons), character.LinkToImage);
+            return await SendResponse(
+                text,
+                new InlineKeyboardMarkup(buttons),
+                character.LinkToImage
+            );
         }
 
         async Task<Message?> HandleSingleMove()
@@ -152,21 +156,25 @@ public partial class Commands
             if (!string.IsNullOrWhiteSpace(move.StanceCode))
             {
                 buttons.Add(
-                    new(move.StanceName!)
+                    new InlineKeyboardButton(move.StanceName!)
                     {
                         CallbackData = $"framedata:{move.Character.Name}:stance:{move.StanceCode}",
                     }
                 );
             }
 
-            return await SendResponse(text, new(buttons), move.Character.LinkToImage);
+            return await SendResponse(
+                text,
+                new InlineKeyboardMarkup(buttons),
+                move.Character.LinkToImage
+            );
 
             void AddButtonIf(bool condition, string textForButton, string callbackSuffix)
             {
                 if (condition)
                 {
                     buttons.Add(
-                        new(textForButton)
+                        new InlineKeyboardButton(textForButton)
                         {
                             CallbackData = $"framedata:{move.Character.Name}:{callbackSuffix}",
                         }
@@ -181,26 +189,23 @@ public partial class Commands
             string? imageUrl
         )
         {
-            if (string.IsNullOrWhiteSpace(imageUrl))
-            {
-                return await botClient.SendMessage(
+            return string.IsNullOrWhiteSpace(imageUrl)
+                ? await botClient.SendMessage(
                     message.Chat,
                     text,
                     ParseMode.Html,
                     replyMarkup: markup,
                     cancellationToken: cancellationToken
+                )
+                : await botClient.SendPhoto(
+                    message.Chat,
+                    InputFile.FromUri(imageUrl),
+                    text,
+                    showCaptionAboveMedia: true,
+                    replyMarkup: markup,
+                    parseMode: ParseMode.Html,
+                    cancellationToken: cancellationToken
                 );
-            }
-
-            return await botClient.SendPhoto(
-                message.Chat,
-                InputFile.FromUri(imageUrl),
-                text,
-                showCaptionAboveMedia: true,
-                replyMarkup: markup,
-                parseMode: ParseMode.Html,
-                cancellationToken: cancellationToken
-            );
         }
 
         async Task<Message> SendDefaultResponse()

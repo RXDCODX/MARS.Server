@@ -92,7 +92,7 @@ public class TwitchMediaAlerts : BackgroundService
             var mediaClone = mediaOld.CloneTo();
             mediaClone.FixAlertText(message.DisplayName, message.Message);
 
-            await _hubContext.Clients.All.Alert(new() { MediaInfo = mediaClone });
+            await _hubContext.Clients.All.Alert(new MediaDto { MediaInfo = mediaClone });
         }
     }
 
@@ -145,7 +145,7 @@ public class TwitchMediaAlerts : BackgroundService
             var mediaClone = mediaOld.CloneTo();
             mediaClone.FixAlertText(message.UserName, message.UserInput);
 
-            await _hubContext.Clients.All.Alert(new() { MediaInfo = mediaClone });
+            await _hubContext.Clients.All.Alert(new MediaDto { MediaInfo = mediaClone });
         }
     }
 

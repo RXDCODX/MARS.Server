@@ -15,7 +15,9 @@ public class SoundRequestBackgroundPlaylist
             .SoundRequestBackgroundTracks.Include(e => e.BaseTrackInfo)
             .AsNoTrackingWithIdentityResolution()
             .AsEnumerable();
-        BackGroundPlaylist = new(listTracks.Select(e => e.BaseTrackInfo));
+        BackGroundPlaylist = new ConcurrentQueue<BaseTrackInfo>(
+            listTracks.Select(e => e.BaseTrackInfo)
+        );
     }
 
     private readonly IDbContextFactory<AppDbContext> _factory;

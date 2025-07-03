@@ -18,7 +18,7 @@ public partial class Commands
         {
             if (dbUser == null)
             {
-                dbUser = new()
+                dbUser = new TelegramUser
                 {
                     HonkaiNotifications = true,
                     LastTimeMessage = DateTimeOffset.Now,

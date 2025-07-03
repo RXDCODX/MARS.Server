@@ -26,7 +26,7 @@ public class Program
     public static bool IsUseSoundRequest { get; set; }
     public static bool IsUseSwagger { get; set; }
 
-    public static void Main(string[] args)
+    public static async Task Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
 
@@ -113,8 +113,8 @@ public class Program
 
         /////////////////////////////////////////////////////////////////////////////////////////
 
-        services.AddTwitchEvents(configuration, loggerFactory);
-        services.AddTelegramThings(configuration, loggerFactory);
+        await services.AddTwitchEvents(configuration, loggerFactory);
+        services.AddTelegramThings(loggerFactory);
         services.AddConfiguration(configuration);
         //services.AddSoundRequest(configuration);
         services.AddBaseAspNetMiddlewares();
@@ -129,7 +129,7 @@ public class Program
                 options.EnableThreadSafetyChecks();
                 options.UseNpgsql(configuration.GetConnectionString("Prod_Path"));
 
-                return new() { DbContext = new(options.Options) };
+                return new DbLoggerOptions { DbContext = new LoggerDbContext(options.Options) };
             });
         }
 
@@ -174,9 +174,12 @@ public class Program
             var booruConfiguration =
                 sp.GetService<IOptions<BooruConfiguration>>() ?? throw new NullReferenceException();
 
-            return new()
+            return new Gelbooru
             {
-                Auth = new(booruConfiguration.Value.UserId, booruConfiguration.Value.PwdHash),
+                Auth = new BooruAuth(
+                    booruConfiguration.Value.UserId,
+                    booruConfiguration.Value.PwdHash
+                ),
             };
         });
 
@@ -226,11 +229,11 @@ public class Program
             var appLifeTime = app.Services.GetRequiredService<IHostApplicationLifetime>();
             appLifeTime.ApplicationStopping.Register(MemoryStorage.ClearStorage);
 
-            app.Run();
+            await app.RunAsync();
         }
         catch (Exception e)
         {
-            logger.LogCritical(e, e.Message);
+            logger.LogException(e);
         }
     }
 }

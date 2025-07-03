@@ -23,12 +23,10 @@ public class SoundRequestHistoryService
         events.StartedEvent += SoundRequestHubOnStartedEvent;
     }
 
-    private Task SoundRequestHubOnStartedEvent(BaseTrackInfo trackinfo)
-    {
-        return Task.Factory.StartNew(() => AddTrackToHistory(trackinfo), _cancellationToken);
-    }
+    private Task<Task> SoundRequestHubOnStartedEvent(BaseTrackInfo trackinfo) =>
+        Task.Factory.StartNew(() => AddTrackToHistory(trackinfo), _cancellationToken);
 
-    private Task AddTrackToHistory(BaseTrackInfo info)
+    private static Task AddTrackToHistory(BaseTrackInfo info)
     {
         lock (RemoveLocker)
         {

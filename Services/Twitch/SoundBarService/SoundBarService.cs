@@ -56,7 +56,7 @@ public class SoundBarService : ISoundBar
         }
     }
 
-    private string GetProcessName(AudioSessionControl session)
+    private static string GetProcessName(AudioSessionControl session)
     {
         try
         {

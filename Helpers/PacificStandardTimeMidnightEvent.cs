@@ -5,7 +5,6 @@ public class PacificStandardTimeMidnightEvent : BackgroundService
     // Событие, которое будет вызываться в полночь PST
     public event EventHandler MidnightPstReached = (sender, args) => { };
 
-    private TimeZoneInfo _pstTimeZone;
     private DateTimeOffset _lastMidnight;
 
     public PacificStandardTimeMidnightEvent()
@@ -14,7 +13,6 @@ public class PacificStandardTimeMidnightEvent : BackgroundService
         var timeZoneInfo = TimeZoneInfo.FindSystemTimeZoneById("Pacific Standard Time");
         var ddTime = DateTimeOffset.UtcNow;
         var newDateTime = TimeZoneInfo.ConvertTime(ddTime, timeZoneInfo);
-        _pstTimeZone = timeZoneInfo;
         _lastMidnight = newDateTime;
     }
 

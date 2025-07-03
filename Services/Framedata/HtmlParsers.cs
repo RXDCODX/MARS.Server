@@ -341,7 +341,7 @@ public partial class Tekken8FrameData
         return movelist;
     }
 
-    private string GenerateCargoQueryUrl(string characterName)
+    private static string GenerateCargoQueryUrl(string characterName)
     {
         // Кодируем имя персонажа для URL
         var encodedName = Uri.EscapeDataString(characterName + " movelist");

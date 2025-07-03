@@ -5,15 +5,7 @@ public class DbLoggerOptions
     private LoggerDbContext? _dbContext;
     public required LoggerDbContext DbContext
     {
-        get
-        {
-            if (_dbContext is null)
-            {
-                throw new NullReferenceException();
-            }
-
-            return _dbContext;
-        }
+        get { return _dbContext ?? throw new NullReferenceException(); }
         set { _dbContext = value ?? throw new NullReferenceException(); }
     }
 }

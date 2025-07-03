@@ -9,7 +9,6 @@ public class Confetty : BackgroundService
     private readonly ITwitchClient _client;
 
     public Confetty(
-        EventSubService eventSubService,
         ILogger<Confetty> logger,
         IHubContext<TelegramusHub, ITelegramusHub> hub,
         IHostApplicationLifetime lifetime,
@@ -32,18 +31,14 @@ public class Confetty : BackgroundService
     )
     {
         var twEvent = args.Notification.Payload.Event;
-        if (
+        return
             twEvent.Reward.Cost == 1700
             && twEvent.BroadcasterUserLogin.Equals(
                 TwitchExstension.Channel,
                 StringComparison.OrdinalIgnoreCase
             )
-        )
-        {
-            return _hub.Clients.All.MakeScreenParticles(Entitys.TwitchScreenParticles.Confetty);
-        }
-
-        return Task.CompletedTask;
+            ? _hub.Clients.All.MakeScreenParticles(Entitys.TwitchScreenParticles.Confetty)
+            : Task.CompletedTask;
     }
 
     protected override Task ExecuteAsync(CancellationToken stoppingToken)

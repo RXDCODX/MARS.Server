@@ -46,7 +46,9 @@ public class RandomMeme : BackgroundService
 
                     if (media is not null)
                     {
-                        await _hubContext.Clients.All.RandomMem(new(media) { MediaInfo = media });
+                        await _hubContext.Clients.All.RandomMem(
+                            new MediaDto(media) { MediaInfo = media }
+                        );
                     }
 
                     break;
@@ -57,7 +59,9 @@ public class RandomMeme : BackgroundService
 
                     if (sound is not null)
                     {
-                        await _hubContext.Clients.All.RandomMem(new(sound) { MediaInfo = sound });
+                        await _hubContext.Clients.All.RandomMem(
+                            new MediaDto(sound) { MediaInfo = sound }
+                        );
                     }
 
                     break;
@@ -91,23 +95,27 @@ public class RandomMeme : BackgroundService
 
         var mediaInfo = new MediaInfo
         {
-            FileInfo = new()
+            FileInfo = new MediaFileInfo
             {
                 Extension = exst,
                 Type = fileType,
                 FileName = Path.GetFileName(filePath),
                 FilePath = shortPath,
             },
-            MetaInfo = new() { DisplayName = displayName ?? string.Empty, IsLooped = false },
-            PositionInfo = new()
+            MetaInfo = new MediaMetaInfo
+            {
+                DisplayName = displayName ?? string.Empty,
+                IsLooped = false,
+            },
+            PositionInfo = new MediaPositionInfo
             {
                 Height = 400,
                 Width = 400,
                 IsProportion = true,
                 IsResizeRequires = true,
             },
-            StylesInfo = new() { IsBorder = false },
-            TextInfo = new(),
+            StylesInfo = new MediaStylesInfo { IsBorder = false },
+            TextInfo = new MediaTextInfo(),
         };
 
         return mediaInfo;
@@ -122,15 +130,11 @@ public class RandomMeme : BackgroundService
             .AsEnumerable()
             .First(e => path.Contains(e.FolderPath, StringComparison.OrdinalIgnoreCase));
 
-        var nextVideoOrder = await dbContext
-            .RandomMemeOrder.OrderBy(o => o.Order)
-            .FirstOrDefaultAsync(e => e.MemeTypeId == type.Id, _stoppingToken);
-
-        if (nextVideoOrder is null)
-        {
-            throw new NullReferenceException();
-        }
-
+        var nextVideoOrder =
+            await dbContext
+                .RandomMemeOrder.OrderBy(o => o.Order)
+                .FirstOrDefaultAsync(e => e.MemeTypeId == type.Id, _stoppingToken)
+            ?? throw new NullReferenceException();
         var maxOrder = await dbContext
             .RandomMemeOrder.AsNoTracking()
             .MaxAsync(e => e.Order, _stoppingToken);

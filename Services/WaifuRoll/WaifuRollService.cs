@@ -50,7 +50,7 @@ public class WaifuRollService(
             }
             else
             {
-                cd = new() { HostId = id };
+                cd = new HostCoolDown { HostId = id };
 
                 await dbContext.HostsCoolDowns.AddAsync(cd);
 
@@ -59,13 +59,13 @@ public class WaifuRollService(
         }
         else
         {
-            cd = new() { HostId = id };
+            cd = new HostCoolDown { HostId = id };
 
-            host = new()
+            host = new Host
             {
                 TwitchId = id,
                 Name = displayName,
-                HostGreetings = new() { HostId = id },
+                HostGreetings = new HostAutoHello { HostId = id },
                 HostCoolDown = cd,
             };
 
@@ -118,7 +118,7 @@ public class WaifuRollService(
         return null;
     }
 
-    public async Task<(Waifu? waifu, Host? host)> TelegramRollWaifu(string name)
+    public async Task<(Waifu? waifu, Host? host, Host? husband)> TelegramRollWaifu(string name)
     {
         await using var dbContext = await factory.CreateDbContextAsync();
 
@@ -129,10 +129,19 @@ public class WaifuRollService(
         if (host is not null)
         {
             var waifu = await RollTheWaifu(host.TwitchId, host.Name, true);
-            return (waifu, host);
+
+            if (waifu is { IsPrivated: true })
+            {
+                var husband = await dbContext.Hosts.FirstAsync(e =>
+                    e.WaifuBrideId == waifu.ShikiId
+                );
+                return (waifu, host, husband);
+            }
+
+            return (waifu, host, null);
         }
 
-        return (null, null);
+        return (null, null, null);
     }
 
     public async Task<(Waifu?, bool)> AddNewWaifu(ShikiCharacter character)
@@ -197,7 +206,7 @@ public class WaifuRollService(
             {
                 isChecked = true;
 
-                greet = new() { HostId = id, Time = DateTimeOffset.Now };
+                greet = new HostAutoHello { HostId = id, Time = DateTimeOffset.Now };
 
                 dbContext.Add(greet);
 
@@ -226,7 +235,7 @@ public class WaifuRollService(
                     }
                     else
                     {
-                        hello = new()
+                        hello = new HostAutoHello
                         {
                             HostId = id,
                             Time = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3)),
@@ -254,12 +263,12 @@ public class WaifuRollService(
         }
         else if (host == default)
         {
-            host = new()
+            host = new Host
             {
                 TwitchId = id,
                 Name = displayName,
-                HostCoolDown = new() { HostId = id },
-                HostGreetings = new() { HostId = id },
+                HostCoolDown = new HostCoolDown { HostId = id },
+                HostGreetings = new HostAutoHello { HostId = id },
             };
 
             await dbContext.AddAsync(host);
@@ -297,7 +306,7 @@ public class WaifuRollService(
         return message;
     }
 
-    private ValueTask<string> GetHelloText()
+    private static ValueTask<string> GetHelloText()
     {
         var lines = File.ReadAllLines(
             Path.Combine(Directory.GetCurrentDirectory(), "AutoHelloMessages.txt")

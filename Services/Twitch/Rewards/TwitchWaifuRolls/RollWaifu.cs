@@ -60,16 +60,21 @@ public class RollWaifu : BackgroundService
                 if (waifu is not null)
                 {
                     var color = await _api.Helix.Chat.GetUserChatColorAsync([twEvent.UserId]);
+                    await using AppDbContext dbContext2 = await _factory.CreateDbContextAsync();
+                    var husband =
+                        await dbContext2.Hosts.FindAsync(twEvent.UserId)
+                        ?? throw new NullReferenceException();
                     await _hubContext.Clients.All.WaifuRoll(
                         waifu,
                         twEvent.UserName,
+                        husband,
                         color.Data[0]?.Color
                     );
                     return;
                 }
 
                 await using AppDbContext dbContext = await _factory.CreateDbContextAsync();
-                Host? hostRoolWaifu = await dbContext
+                var hostRoolWaifu = await dbContext
                     .Hosts.Include(host1 => host1.HostCoolDown)
                     .AsNoTracking()
                     .FirstOrDefaultAsync(e => e.TwitchId == twEvent.UserId);

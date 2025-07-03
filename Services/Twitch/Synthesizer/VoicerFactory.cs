@@ -6,10 +6,6 @@ public static class VoicerFactory
 {
     public static IVoicer CreateVoicer(ILogger<IVoicer> logger)
     {
-        if (OperatingSystem.IsWindows())
-        {
-            return new SyntheziaVoicer(logger);
-        }
-        return new NullVoicer(logger);
+        return OperatingSystem.IsWindows() ? new SyntheziaVoicer(logger) : new NullVoicer(logger);
     }
 }

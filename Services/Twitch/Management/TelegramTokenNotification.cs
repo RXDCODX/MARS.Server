@@ -18,7 +18,7 @@ public class TelegramTokenNotification(
         {
             var addressesFeature = server.Features.Get<IServerAddressesFeature>();
 
-            while (!addressesFeature!.Addresses.Any())
+            while (addressesFeature!.Addresses.Count > 0)
             {
                 await Task.Delay(1000);
             }

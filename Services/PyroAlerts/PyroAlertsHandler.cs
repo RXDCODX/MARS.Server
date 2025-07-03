@@ -33,7 +33,7 @@ public class PyroAlertsHandler(
                         if (mediaInfo != null)
                         {
                             await hubContext.Clients.All.Alert(
-                                new(mediaInfo) { MediaInfo = mediaInfo }
+                                new MediaDto(mediaInfo) { MediaInfo = mediaInfo }
                             );
                         }
                     }
@@ -85,7 +85,7 @@ public class PyroAlertsHandler(
                                     mediaInfo.FileInfo.IsLocalFile = true;
 
                                     await hubContext.Clients.All.Alert(
-                                        new() { MediaInfo = mediaInfo }
+                                        new MediaDto { MediaInfo = mediaInfo }
                                     );
                                     break;
                                 }

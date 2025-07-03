@@ -1,35 +1,53 @@
 ﻿#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 using Newtonsoft.Json;
+using System.Text.Json.Serialization;
 
 namespace MARS.Server.Services.Shikimori.Entitys;
 
 public class ShikiCharacter
 {
-    public long? id { get; set; }
-    public string? name { get; set; }
-    public required string russian { get; set; }
-    public ShikiImage image { get; set; }
-    public string? url { get; set; }
+    [JsonPropertyName("id")]
+    public long? Id { get; set; }
+    [JsonPropertyName("name")]
+    public string? Name { get; set; }
+    [JsonPropertyName("russian")]
+    public string Russian { get; set; }
+    [JsonPropertyName("image")]
+    public ShikiImage Image { get; set; }
+    [JsonPropertyName("url")]
+    public string? Url { get; set; }
 
     [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
-    public string? altname { get; set; }
+    [JsonPropertyName("altname")]
+    public string? Altname { get; set; }
 
-    public string? japanese { get; set; }
-
-    [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
-    public string? description { get; set; }
-
-    [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
-    public string? description_html { get; set; }
+    [JsonPropertyName("japanese")]
+    public string? Japanese { get; set; }
 
     [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
-    public string? description_source { get; set; }
+    [JsonPropertyName("description")]
+    public string? Description { get; set; }
 
-    public bool favoured { get; set; }
-    public int? thread_id { get; set; }
-    public int? topic_id { get; set; }
-    public DateTimeOffset updated_at { get; set; }
-    public List<ShikiSeyu> seyu { get; set; }
-    public List<ShikiAnime> animes { get; set; }
-    public List<ShikiMangas> mangas { get; set; }
+    [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+    [JsonPropertyName("description_html")]
+    public string? DescriptionHtml { get; set; }
+
+    [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+    [JsonPropertyName("description_source")]
+    public string? DescriptionSource { get; set; }
+
+    [JsonPropertyName("favoured")]
+    public bool Favoured { get; set; }
+    [JsonPropertyName("thread_id")]
+    public int? ThreadId { get; set; }
+    [JsonPropertyName("topic_id")]
+    public int? TopicId { get; set; }
+    [JsonPropertyName("updated_at")]
+    public DateTimeOffset UpdatedAt { get; set; }
+    [JsonPropertyName("seyu")]
+    public List<ShikiSeyu> Seyu { get; set; }
+    [JsonPropertyName("animes")]
+    public List<ShikiAnime> Animes { get; set; }
+    [JsonPropertyName("mangas")]
+    public List<ShikiMangas> Mangas { get; set; }
 }

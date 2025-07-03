@@ -51,7 +51,7 @@ public sealed class AppDbContext : DbContext
     public DbSet<Log> Logs { get; set; } = null!;
     public DbSet<MemeOrder> RandomMemeOrder { get; set; } = null!;
     public DbSet<MemeType> RandomMemeType { get; set; } = null!;
-    public DbSet<FumoUser> FumoUsers { get; set; }
+    public DbSet<FumoUser> FumoUsers { get; set; } = null!;
     public DbSet<HelloVideosUsers> HelloVideosUsers { get; set; } = null!;
     public DbSet<Video365> Videos365 { get; set; } = null!;
     public DbSet<TekkenCharacter> TekkenCharacters { get; set; } = null!;
@@ -102,13 +102,13 @@ public sealed class AppDbContext : DbContext
             .Entity<MemeType>()
             .HasData(
                 [
-                    new()
+                    new MemeType
                     {
                         Name = "Random Sound",
                         Id = 3,
                         FolderPath = "Alerts\\zvik",
                     },
-                    new()
+                    new MemeType
                     {
                         Name = "Random Meme",
                         Id = 2,

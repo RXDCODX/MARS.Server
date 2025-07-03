@@ -17,7 +17,7 @@ public partial class Commands
         {
             if (dbUser == null)
             {
-                dbUser = new()
+                dbUser = new TelegramUser
                 {
                     Name = message.Chat.Username!,
                     UserId = message.Chat.Id,

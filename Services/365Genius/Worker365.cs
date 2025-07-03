@@ -175,7 +175,7 @@ public class Worker365(
     private HttpRequestMessage GetFavoritePageRequestMessage(int? pageNumber)
     {
         Uri newUri = pageNumber.HasValue
-            ? new(_site.AbsoluteUri + "favorites/" + pageNumber.Value)
+            ? new Uri(_site.AbsoluteUri + "favorites/" + pageNumber.Value)
             : new Uri(_site.AbsoluteUri + "favorites");
 
         var msg = new HttpRequestMessage(HttpMethod.Get, newUri);
@@ -227,28 +227,16 @@ public class Worker365(
         }
     }
 
-    private int GetFavouritePagesCount(HtmlDocument document)
+    private static int GetFavouritePagesCount(HtmlDocument document)
     {
-        var pagenav = document.GetElementbyId("pagenav");
-        if (pagenav == null)
-        {
-            throw new NullReferenceException();
-        }
-
-        var lastPageNode = pagenav.SelectSingleNode(".//ul/li[last()-1]");
-        if (lastPageNode == null)
-        {
-            throw new NullReferenceException();
-        }
-
+        var pagenav = document.GetElementbyId("pagenav") ?? throw new NullReferenceException();
+        var lastPageNode =
+            pagenav.SelectSingleNode(".//ul/li[last()-1]") ?? throw new NullReferenceException();
         var lastPageText = lastPageNode.InnerText.Trim();
 
-        if (int.TryParse(lastPageText, out var pageCount))
-        {
-            return pageCount;
-        }
-
-        throw new NullReferenceException();
+        return int.TryParse(lastPageText, out var pageCount)
+            ? pageCount
+            : throw new NullReferenceException();
     }
 
     private async Task<HtmlDocument> GetFavouritePageHtmlDocument(HttpClient httpClient, int i)
@@ -427,7 +415,7 @@ public class Worker365(
             {
                 if (width != null)
                 {
-                    return new()
+                    return new Video365
                     {
                         Description = discription,
                         DirectLinkUrl = url.AbsoluteUri,
@@ -454,19 +442,15 @@ public class Worker365(
             var saveDirectory = Directory.GetCurrentDirectory();
 
             // 1. Находим элемент <link> с прелоад-изображением
-            var linkNode = document.DocumentNode.SelectSingleNode(
-                "//link[@rel=\"preload\" and @as=\"image\"]"
-            );
-            if (linkNode == null)
-            {
-                throw new("Элемент <link> не найден.");
-            }
+            var linkNode =
+                document.DocumentNode.SelectSingleNode("//link[@rel=\"preload\" and @as=\"image\"]")
+                ?? throw new Exception("Элемент <link> не найден.");
 
             // 2. Извлекаем URL изображения
             var imageUrl = linkNode.GetAttributeValue("href", "");
             if (string.IsNullOrEmpty(imageUrl))
             {
-                throw new("Атрибут href не содержит ссылки.");
+                throw new Exception("Атрибут href не содержит ссылки.");
             }
 
             // 3. Скачиваем изображение
@@ -490,7 +474,7 @@ public class Worker365(
         catch (Exception ex)
         {
             // Логируем ошибку (можно заменить на Console.WriteLine или logger)
-            throw new($"Ошибка при сохранении изображения: {ex.Message}");
+            throw new Exception($"Ошибка при сохранении изображения: {ex.Message}");
         }
     }
 

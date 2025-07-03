@@ -180,12 +180,7 @@ public class UpdateHandler : IUpdateHandler
                     e =>
                     {
                         var aliasAttr = e?.GetCustomAttribute<AliasAttribute>();
-                        if (aliasAttr?.MethodAliases.Contains(commandWithoutSlash) == true)
-                        {
-                            return true;
-                        }
-
-                        return false;
+                        return aliasAttr?.MethodAliases.Contains(commandWithoutSlash) == true;
                     },
                     null
                 );
@@ -240,7 +235,7 @@ public class UpdateHandler : IUpdateHandler
         }
     }
 
-    private Task<Message>? ErrorCommand(
+    private static Task<Message>? ErrorCommand(
         ITelegramBotClient client,
         Message message,
         CancellationToken cancellationToken
@@ -253,7 +248,7 @@ public class UpdateHandler : IUpdateHandler
         );
     }
 
-    private string GetMethodName(string command)
+    private static string GetMethodName(string command)
     {
         return string.Concat(
             "On",

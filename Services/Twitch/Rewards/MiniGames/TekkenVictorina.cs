@@ -104,7 +104,7 @@ public class TekkenVictorina(
 
             await api.SendAnnouncementToMainTwitch(prepare, tokenService.Token, null, logger);
             var answer = GetAnswer(randomMove);
-            _currentGame = new(answer);
+            _currentGame = new TekkenVictorinaGame(answer);
             var token = _currentGame.CancellationTokenForRightAnswer.Token;
 
             while (!token.IsCancellationRequested)
@@ -197,11 +197,11 @@ public class TekkenVictorina(
         _semaphoreSlim.Release();
     }
 
-    private IntRange GetAnswer(Move tekkenMove)
+    private static IntRange GetAnswer(Move tekkenMove)
     {
         if (int.TryParse(tekkenMove.BlockFrame, out var answer))
         {
-            return new(answer, answer);
+            return new IntRange(answer, answer);
         }
 
         var split = tekkenMove.BlockFrame!.Split('~');
@@ -209,10 +209,10 @@ public class TekkenVictorina(
         {
             var start = int.Parse(split[0]);
             var end = int.Parse(split[1]);
-            return new(start, end);
+            return new IntRange(start, end);
         }
 
-        throw new(
+        throw new Exception(
             $"Кривой инпут к удара, {tekkenMove.Character?.Name ?? tekkenMove.CharacterName} {tekkenMove.Command}"
         );
     }
@@ -312,21 +312,17 @@ public class TekkenVictorina(
 
             // Пробуем распарсить как диапазон
             var parts = str.Split('~');
-            if (
+            return
                 parts.Length == 2
                 && int.TryParse(parts[0].Trim(), out var start)
                 && int.TryParse(parts[1].Trim(), out var end)
-            )
-            {
-                return new IntRange(Math.Min(start, end), Math.Max(start, end));
-            }
-
-            return null;
+                ? new IntRange(Math.Min(start, end), Math.Max(start, end))
+                : null;
         }
     }
 
     // Вычисляет минимальное расстояние между диапазонами
-    private int CalculateDistance(IntRange a, IntRange b)
+    private static int CalculateDistance(IntRange a, IntRange b)
     {
         if (a.Start > b.End)
         {
@@ -342,36 +338,29 @@ public class TekkenVictorina(
     }
 
     // Добавляет или обновляет ответ пользователя
-    private void AddOrUpdateGoodAnswer(
-        string displayName,
-        IntRange answer,
-        bool isWaifuHelp = false
-    )
+    private void AddOrUpdateGoodAnswer(string displayName, IntRange answer)
     {
-        if (_currentGame != null)
+        if (_currentGame == null)
         {
-            var existingIndex = _currentGame.GoodAnswers.FindIndex(x =>
-                x.displayName == displayName
-            );
-            if (existingIndex >= 0)
-            {
-                _currentGame.GoodAnswers[existingIndex] = (displayName, answer);
-            }
-            else
-            {
-                _currentGame.GoodAnswers.Add((displayName, answer));
-            }
+            return;
+        }
+
+        var existingIndex = _currentGame.GoodAnswers.FindIndex(x => x.displayName == displayName);
+        if (existingIndex >= 0)
+        {
+            _currentGame.GoodAnswers[existingIndex] = (displayName, answer);
+        }
+        else
+        {
+            _currentGame.GoodAnswers.Add((displayName, answer));
         }
     }
 
     // Получает текущее минимальное расстояние среди лучших ответов
     private int GetCurrentBestDistance()
     {
-        if (_currentGame is { GoodAnswers.Count: 0 })
-        {
-            return int.MaxValue;
-        }
-
-        return _currentGame!.GoodAnswers.Min(x => CalculateDistance(x.answer, _currentGame.Answer));
+        return _currentGame is { GoodAnswers.Count: 0 }
+            ? int.MaxValue
+            : _currentGame!.GoodAnswers.Min(x => CalculateDistance(x.answer, _currentGame.Answer));
     }
 }

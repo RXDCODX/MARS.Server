@@ -256,15 +256,11 @@ public class RandomMemHandler(
     private static string GetDevAlerts()
     {
         var currentDir = Directory.GetCurrentDirectory();
-        var projectRoot = FindProjectRoot(currentDir);
-
-        if (projectRoot == null)
-        {
-            throw new DirectoryNotFoundException(
+        var projectRoot =
+            FindProjectRoot(currentDir)
+            ?? throw new DirectoryNotFoundException(
                 "Не удалось найти корень проекта (папку с .csproj)"
             );
-        }
-
         return Path.Combine(projectRoot, "wwwroot", "Alerts", "random_meme");
     }
 

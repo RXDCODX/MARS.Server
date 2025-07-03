@@ -7,12 +7,7 @@ public class SchemaFilter : ISchemaFilter
 {
     public string ToPascalCase(string str)
     {
-        if (string.IsNullOrEmpty(str))
-        {
-            return str;
-        }
-
-        return char.ToUpper(str[0]) + str.Substring(1);
+        return string.IsNullOrEmpty(str) ? str : char.ToUpper(str[0]) + str.Substring(1);
     }
 
     public void Apply(OpenApiSchema schema, SchemaFilterContext context)

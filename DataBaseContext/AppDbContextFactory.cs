@@ -39,7 +39,7 @@ public class AppDbContextFactory
         if (_options != null && !isMigrations)
         {
             // Используем предварительно настроенные опции (если фабрика создана через DI)
-            return new(_options, isMigrations);
+            return new AppDbContext(_options, isMigrations);
         }
 
         // Настройка вручную (для миграций)
@@ -68,6 +68,6 @@ public class AppDbContextFactory
             optionsBuilder.EnableSensitiveDataLogging();
         }
 
-        return new(optionsBuilder.Options, isMigrations);
+        return new AppDbContext(optionsBuilder.Options, isMigrations);
     }
 }

@@ -15,5 +15,8 @@ public class DbLoggerProvider(DbLoggerOptions options) : ILoggerProvider
         return new DbLogger(this);
     }
 
-    public void Dispose() { }
+    public void Dispose()
+    {
+        GC.SuppressFinalize(this);
+    }
 }

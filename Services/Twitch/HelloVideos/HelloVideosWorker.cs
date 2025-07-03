@@ -6,7 +6,7 @@ namespace MARS.Server.Services.Twitch.HelloVideos;
 public class HelloVideoWorker
 {
     private readonly CancellationToken _token;
-    private readonly List<string> _users = new();
+    private readonly List<string> _users = [];
     private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
     private readonly ILogger<HelloVideoWorker> _logger;
     private readonly IHubContext<TelegramusHub, ITelegramusHub> _hubContext;

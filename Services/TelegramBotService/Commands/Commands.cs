@@ -52,7 +52,7 @@ public partial class Commands(
 
         string usage;
 
-        if (methods.Any())
+        if (methods.Length != 0)
         {
             var names = GetCommandName(methods);
             usage = string.Join(Environment.NewLine, names);
@@ -71,7 +71,7 @@ public partial class Commands(
     }
 
     [Ignore]
-    private string[] GetCommandName(MethodInfo[] methods)
+    private static string[] GetCommandName(MethodInfo[] methods)
     {
         var commandNames = new string[methods.Length];
         const string template = "OnCommandReceived";

@@ -35,7 +35,7 @@ public class TwitchTrivia(
 
     private Task Init()
     {
-        TokenSource = new();
+        TokenSource = new CancellationTokenSource();
         IsStop = false;
 
         return Task.CompletedTask;

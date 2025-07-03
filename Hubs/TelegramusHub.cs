@@ -53,6 +53,7 @@ public class TelegramusHub(
                 Text = e.Name,
             })
             .ToListAsync();
+
         return prizes;
     }
 

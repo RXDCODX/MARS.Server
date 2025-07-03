@@ -23,7 +23,7 @@ public class PyroAlertsHelper(ILogger<PyroAlertsHelper> logger) : ITelegramusSer
 
             var mediainfo = new MediaInfo
             {
-                FileInfo = new()
+                FileInfo = new MediaFileInfo
                 {
                     Extension = extension,
                     Type = fileType,
@@ -31,21 +31,21 @@ public class PyroAlertsHelper(ILogger<PyroAlertsHelper> logger) : ITelegramusSer
                     IsLocalFile = true,
                     FilePath = "memory/" + fileInfo.FilePath,
                 },
-                MetaInfo = new()
+                MetaInfo = new MediaMetaInfo
                 {
                     DisplayName = message.Chat.Username ?? string.Empty,
                     IsLooped = fileType == MediaType.Video,
                     VIP = false,
                 },
-                PositionInfo = new()
+                PositionInfo = new MediaPositionInfo
                 {
                     IsRotated = true,
                     IsResizeRequires = true,
                     Height = 500,
                     Width = 500,
                 },
-                TextInfo = new(),
-                StylesInfo = new(),
+                TextInfo = new MediaTextInfo(),
+                StylesInfo = new MediaStylesInfo(),
             };
 
             switch (fileType)
@@ -193,12 +193,9 @@ public class PyroAlertsHelper(ILogger<PyroAlertsHelper> logger) : ITelegramusSer
                     return await client.GetFile(message.Animation.FileId);
                 }
 
-                if (message.Document != null)
-                {
-                    return await client.GetFile(message.Document.FileId);
-                }
-
-                return null;
+                return message.Document != null
+                    ? await client.GetFile(message.Document.FileId)
+                    : null;
             }
         }
         catch (Exception)

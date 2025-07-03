@@ -16,13 +16,18 @@ public interface ITelegramusHub
     public Task UpdateWaifuPrizes(ICollection<PrizeType> prizes);
 
     [SignalRMethod]
-    public Task WaifuRoll(Waifu content, string? displayName, string? color = default);
+    public Task WaifuRoll(
+        Waifu content,
+        string displayName,
+        Host? waifuHusband,
+        string? color = default
+    );
 
     [SignalRMethod]
-    public Task AddNewWaifu(Waifu content, string? displayName, string? color = default);
+    public Task AddNewWaifu(Waifu content, string displayName, string? color = default);
     public Task MergeWaifu(
         Waifu content,
-        string? displayName,
+        Host host,
         string? avatar = default,
         string? color = default
     );

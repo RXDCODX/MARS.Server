@@ -34,7 +34,7 @@ public class TelegramLoggerProvider : ILoggerProvider
 
         _filter = filter;
         _options = options;
-        _messageQueue = new(botClient, options.ChatId);
+        _messageQueue = new TelegramLoggerSender(botClient, options.ChatId);
     }
 
     public void Dispose()
@@ -50,6 +50,6 @@ public class TelegramLoggerProvider : ILoggerProvider
 
     private TelegramLogger CreateLoggerImplementation(string categoryName)
     {
-        return new(categoryName, _messageQueue, _options, _filter);
+        return new TelegramLogger(categoryName, _messageQueue, _options, _filter);
     }
 }

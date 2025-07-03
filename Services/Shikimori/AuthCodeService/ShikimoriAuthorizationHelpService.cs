@@ -26,13 +26,9 @@ public class ShikimoriAuthorizationHelpService : ITelegramusService
         if (File.Exists(_options.AuthFilePath))
         {
             var text = await File.ReadAllTextAsync(_options.AuthFilePath);
-            var token = JsonConvert.DeserializeObject<ShikiAccessToken>(text);
-
-            if (token is null)
-            {
-                throw new NullReferenceException();
-            }
-
+            var token =
+                JsonConvert.DeserializeObject<ShikiAccessToken>(text)
+                ?? throw new NullReferenceException();
             return token;
         }
 

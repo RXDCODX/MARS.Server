@@ -25,7 +25,6 @@ public class MergeWaifu : BackgroundService
         IHubContext<TelegramusHub, ITelegramusHub> hubContext,
         IDbContextFactory<AppDbContext> factory,
         ITwitchAPI api,
-        EventSubService eventSubService,
         TokenService tokenService,
         IHostApplicationLifetime lifetime,
         WaifuRollDataBaseHelper waifuDbHelper,
@@ -68,7 +67,7 @@ public class MergeWaifu : BackgroundService
                 await using AppDbContext dbContext = await _factory.CreateDbContextAsync(
                     _cancellationToken
                 );
-                var host = await dbContext.Hosts.FindAsync(twEvent.UserId);
+                var host = await dbContext.Hosts.FindAsync(twEvent.UserId, _cancellationToken);
                 if (host is not null)
                 {
                     host.TwitchId = twEvent.UserId;
@@ -76,7 +75,10 @@ public class MergeWaifu : BackgroundService
 
                     if (!host.IsPrivated)
                     {
-                        var waifu = dbContext.Waifus.Find(host.WaifuRollId);
+                        var waifu = await dbContext.Waifus.FindAsync(
+                            host.WaifuRollId,
+                            _cancellationToken
+                        );
                         if (waifu is { IsPrivated: false })
                         {
                             var isMerged =
@@ -113,7 +115,7 @@ public class MergeWaifu : BackgroundService
                                 );
                                 await _hubContext.Clients.All.MergeWaifu(
                                     waifu,
-                                    twEvent.UserName,
+                                    host,
                                     avatarUrl.Users[0]?.ProfileImageUrl,
                                     color.Data[0]?.Color
                                 );
@@ -265,12 +267,7 @@ public class MergeWaifu : BackgroundService
                                         return form2;
                                     }
 
-                                    if (remainder == 1)
-                                    {
-                                        return form1;
-                                    }
-
-                                    return form5;
+                                    return remainder == 1 ? form1 : form5;
                                 }
                             }
                         }
@@ -285,12 +282,12 @@ public class MergeWaifu : BackgroundService
                     }
                 }
 
-                host = new()
+                host = new Host
                 {
                     TwitchId = twEvent.UserId,
                     Name = twEvent.UserName,
-                    HostCoolDown = new() { HostId = twEvent.UserId },
-                    HostGreetings = new() { HostId = twEvent.UserId },
+                    HostCoolDown = new HostCoolDown { HostId = twEvent.UserId },
+                    HostGreetings = new HostAutoHello { HostId = twEvent.UserId },
                 };
 
                 dbContext.Hosts.Add(host);

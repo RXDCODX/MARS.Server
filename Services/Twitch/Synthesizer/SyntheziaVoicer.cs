@@ -1,4 +1,5 @@
-﻿using System.Runtime.Versioning;
+﻿using System.Globalization;
+using System.Runtime.Versioning;
 using System.Speech.Synthesis;
 using System.Text;
 using MARS.Server.Services.Twitch.Synthesizer.Enitity;
@@ -8,7 +9,7 @@ namespace MARS.Server.Services.Twitch.Synthesizer;
 [SupportedOSPlatform("windows")]
 public class SyntheziaVoicer : IVoicer
 {
-    private readonly Dictionary<string, InstalledVoice> _linkedVoices = new();
+    private readonly Dictionary<string, InstalledVoice> _linkedVoices = [];
     private readonly ILogger<IVoicer> _logger;
     private readonly SpeechSynthesizer _speechSynthesizer = new();
     private readonly SemaphoreSlim _semaphore = new(1);
@@ -78,7 +79,7 @@ public class SyntheziaVoicer : IVoicer
             }
             else
             {
-                var voices = _speechSynthesizer.GetInstalledVoices(new("ru-RU"));
+                var voices = _speechSynthesizer.GetInstalledVoices(new CultureInfo("ru-RU"));
                 var index = Random.Shared.Next(voices.Count);
                 var voice = voices[index];
                 _linkedVoices.Add(message.Name, voice);

@@ -8,7 +8,7 @@ public class FumoFridayWorker : BackgroundService
 {
     private readonly CancellationToken _cancellationToken;
 
-    private readonly List<string> _users = new();
+    private readonly List<string> _users = [];
     private readonly IHubContext<TelegramusHub, ITelegramusHub> _alertsHub;
     private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
     private readonly ILogger<FumoFridayWorker> _logger;

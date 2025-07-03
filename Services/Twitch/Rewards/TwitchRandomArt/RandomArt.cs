@@ -108,9 +108,9 @@ public class RandomArt : BackgroundService
 
                     var mediaDto = new MediaDto()
                     {
-                        MediaInfo = new()
+                        MediaInfo = new MediaInfo
                         {
-                            FileInfo = new()
+                            FileInfo = new MediaFileInfo
                             {
                                 Extension = extension,
                                 FileName = fileName,
@@ -118,10 +118,10 @@ public class RandomArt : BackgroundService
                                 Type = mediaType,
                                 IsLocalFile = false,
                             },
-                            MetaInfo = new() { DisplayName = twEvent.UserName },
-                            PositionInfo = new(),
-                            StylesInfo = new(),
-                            TextInfo = new(),
+                            MetaInfo = new MediaMetaInfo { DisplayName = twEvent.UserName },
+                            PositionInfo = new MediaPositionInfo(),
+                            StylesInfo = new MediaStylesInfo(),
+                            TextInfo = new MediaTextInfo(),
                         },
                     };
 

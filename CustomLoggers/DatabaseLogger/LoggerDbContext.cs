@@ -5,9 +5,9 @@ namespace MARS.Server.CustomLoggers.DatabaseLogger;
 public sealed class LoggerDbContext : IdentityDbContext
 {
     private bool _isMigrated;
-    private bool _isMigrations;
+    private readonly bool _isMigrations;
     private readonly Lock _locker = new();
-    public DbSet<Log> Errors { get; set; }
+    public DbSet<Log> Errors { get; set; } = null!;
 
     public LoggerDbContext(DbContextOptions<LoggerDbContext> options)
         : base(options) { }
@@ -30,15 +30,15 @@ public sealed class LoggerDbContext : IdentityDbContext
 
             // Включаем детализированные ошибки в Development
             var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
-            var connectionString = "";
+            string connectionString;
 
             switch (environment)
             {
                 case "Development":
-                    connectionString = configuration.GetConnectionString("Dev_Path");
+                    connectionString = configuration.GetConnectionString("Dev_Path")!;
                     break;
                 case "Production":
-                    connectionString = configuration.GetConnectionString("Prod_Path");
+                    connectionString = configuration.GetConnectionString("Prod_Path")!;
                     break;
                 default:
                     return;

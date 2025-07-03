@@ -17,13 +17,17 @@ public partial class Commands
 
             try
             {
-                var waifu = await waifoRollService.TelegramRollWaifu(niname);
+                var resultRoll = await waifoRollService.TelegramRollWaifu(niname);
 
-                if (waifu is { host: not null, waifu: not null })
+                if (resultRoll is { host: not null, waifu: not null })
                 {
                     result =
-                        $"Вайфу ролл с вайфучкой {waifu.waifu.Name} для {waifu.host.Name} выполнен!";
-                    await alertsHub.Clients.All.WaifuRoll(waifu.waifu, waifu.host.Name);
+                        $"Вайфу ролл с вайфучкой {resultRoll.waifu.Name} для {resultRoll.host.Name} выполнен!";
+                    await alertsHub.Clients.All.WaifuRoll(
+                        resultRoll.waifu,
+                        resultRoll.host.Name ?? throw new NullReferenceException(),
+                        resultRoll.husband
+                    );
                 }
             }
             catch (Exception e)

@@ -77,7 +77,6 @@ public static class StartupEstensions
 
     internal static IServiceCollection AddTelegramThings(
         this IServiceCollection services,
-        IConfigurationManager manager,
         ILoggerFactory factory
     )
     {
@@ -105,7 +104,7 @@ public static class StartupEstensions
                     "bin/WTelegram.session"
                 );
                 var logger = factory.CreateLogger("WTelegram");
-                WTelegram.Helpers.Log = (i, v) => logger.Log((LogLevel)i, v);
+                WTelegram.Helpers.Log = (i, v) => logger.Log((LogLevel)i, message: v);
                 client.LoginUserIfNeeded();
                 //DoLogin(client, options.PhoneNumber, options).GetAwaiter().GetResult();
 
@@ -149,7 +148,7 @@ public static class StartupEstensions
         return services;
     }
 
-    internal static IServiceCollection AddTwitchEvents(
+    internal static async Task<IServiceCollection> AddTwitchEvents(
         this IServiceCollection services,
         IConfigurationManager manager,
         ILoggerFactory factory
@@ -163,10 +162,7 @@ public static class StartupEstensions
         services.Configure<TwitchConfiguration>(twitchConfigSection);
         twitchConfigSection.Bind(twitchConfig);
         var twitchApi = new TwitchAPI { Settings = { ClientId = twitchConfig.ClientId } };
-        twitchApi.Settings.AccessToken = twitchApi
-            .Auth.GetAccessTokenAsync()
-            .GetAwaiter()
-            .GetResult();
+        twitchApi.Settings.AccessToken = await twitchApi.Auth.GetAccessTokenAsync();
         twitchApi.Settings.Secret = twitchConfig.ClientSecret;
         twitchApi.Settings.Scopes = [AuthScopes.Any];
 
@@ -249,6 +245,9 @@ public static class StartupEstensions
         services.AddSingleton<TwitchCloseTekkenService>();
         services.AddHostedService(sp => sp.GetRequiredService<TwitchCloseTekkenService>());
 
+        services.AddSingleton<TwitchNameActualizer>();
+        services.AddHostedService(sp => sp.GetRequiredService<TwitchNameActualizer>());
+
         return services;
     }
 
@@ -303,10 +302,7 @@ public static class StartupEstensions
         return services;
     }
 
-    public static IServiceCollection AddSoundRequest(
-        this IServiceCollection services,
-        IConfiguration configuration
-    )
+    public static IServiceCollection AddSoundRequest(this IServiceCollection services)
     {
         Program.IsUseSoundRequest = true;
         services.AddSingleton<SoundRequestBackendPlayer>();

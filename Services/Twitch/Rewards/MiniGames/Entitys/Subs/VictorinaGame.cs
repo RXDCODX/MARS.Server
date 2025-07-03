@@ -20,7 +20,7 @@ public class VictorinaGame(ILogger<TwitchTrivia> logger, ITwitchClient client, T
 
         foreach (var t in Answer)
         {
-            _listLetters.Add(new() { Letter = t, Showed = false });
+            _listLetters.Add(new VictorinaLetter { Letter = t, Showed = false });
         }
 
         await client.SendMessageToMainTwitchAsync(

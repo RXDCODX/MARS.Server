@@ -31,18 +31,14 @@ public class Fireworks : BackgroundService
     )
     {
         var twEvent = args.Notification.Payload.Event;
-        if (
+        return
             twEvent.Reward.Cost == 1701
             && twEvent.BroadcasterUserLogin.Equals(
                 TwitchExstension.Channel,
                 StringComparison.OrdinalIgnoreCase
             )
-        )
-        {
-            return _hub.Clients.All.MakeScreenParticles(Entitys.TwitchScreenParticles.Fireworks);
-        }
-
-        return Task.CompletedTask;
+            ? _hub.Clients.All.MakeScreenParticles(Entitys.TwitchScreenParticles.Fireworks)
+            : Task.CompletedTask;
     }
 
     protected override Task ExecuteAsync(CancellationToken stoppingToken)

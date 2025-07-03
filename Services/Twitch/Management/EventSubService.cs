@@ -10,7 +10,7 @@ public class EventSubService(
     ITelegramBotClient client
 )
 {
-    public static EventSubWebsocketClient WsClient = new();
+    public static readonly EventSubWebsocketClient WsClient = new();
 
     private bool _firstActivation = true;
 

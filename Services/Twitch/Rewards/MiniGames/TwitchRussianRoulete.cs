@@ -42,7 +42,7 @@ public class TwitchRussianRoulete : BackgroundService, ITwitchMiniGame
         _api = api;
         _dbContextFactory = dbContextFactory;
         _tokenService = tokenService;
-        _cancellationTokenSource = new();
+        _cancellationTokenSource = new CancellationTokenSource();
 
         applicationLifetime.ApplicationStarted.Register(() =>
         {
@@ -53,8 +53,8 @@ public class TwitchRussianRoulete : BackgroundService, ITwitchMiniGame
 
     private Task InitializeGame()
     {
-        _listOfPlayers = new();
-        _cancellationTokenSource = new();
+        _listOfPlayers = [];
+        _cancellationTokenSource = new CancellationTokenSource();
         _isAwaitingNewPlayers = false;
 
         return Task.CompletedTask;
@@ -65,7 +65,7 @@ public class TwitchRussianRoulete : BackgroundService, ITwitchMiniGame
         if (!IsGameRunning)
         {
             _cancellationTokenSource.Cancel();
-            _listOfPlayers = new();
+            _listOfPlayers = [];
             _isAwaitingNewPlayers = false;
         }
 
@@ -99,7 +99,7 @@ public class TwitchRussianRoulete : BackgroundService, ITwitchMiniGame
                 $"@{name}, ты был добавлен в русскую рулетку!",
                 _logger
             );
-            _listOfPlayers.Add(new() { Name = name, TwitchId = userId });
+            _listOfPlayers.Add(new RouletePlayer { Name = name, TwitchId = userId });
         }
     }
 
@@ -164,7 +164,9 @@ public class TwitchRussianRoulete : BackgroundService, ITwitchMiniGame
 
             await WaitForPlayers();
 
-            listPlayers.AddRange([.. _listOfPlayers, new() { Name = name, TwitchId = userId }]);
+            listPlayers.AddRange(
+                [.. _listOfPlayers, new RouletePlayer { Name = name, TwitchId = userId }]
+            );
             _listOfPlayers.Clear();
 
             if (listPlayers.Count > MaxPlayers)

@@ -10,12 +10,9 @@ public class MemoryFile
     {
         get
         {
-            if (_fileContent is not { Length: > 0 })
-            {
-                throw new NullReferenceException("Trying get empty content");
-            }
-
-            return _fileContent;
+            return _fileContent is not { Length: > 0 }
+                ? throw new NullReferenceException("Trying get empty content")
+                : _fileContent;
         }
         set
         {
@@ -30,15 +27,7 @@ public class MemoryFile
     private string? _exstension;
     public required string Exstension
     {
-        get
-        {
-            if (string.IsNullOrWhiteSpace(_exstension))
-            {
-                return string.Empty;
-            }
-
-            return _exstension;
-        }
+        get { return string.IsNullOrWhiteSpace(_exstension) ? string.Empty : _exstension; }
         set
         {
             if (string.IsNullOrWhiteSpace(value))
@@ -79,15 +68,8 @@ public class MemoryFile
 
     public override bool Equals(object? obj)
     {
-        if (obj is MemoryFile newDescription)
-        {
-            return FileName.Equals(
-                newDescription.FileName.Trim(),
-                StringComparison.OrdinalIgnoreCase
-            );
-        }
-
-        return false;
+        return obj is MemoryFile newDescription
+            && FileName.Equals(newDescription.FileName.Trim(), StringComparison.OrdinalIgnoreCase);
     }
 
     public override int GetHashCode()
