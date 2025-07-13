@@ -19,6 +19,22 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
+:: Проверяем, запущена ли служба "!ZYZ"
+sc query "!ZYZ" | find "RUNNING" >nul 2>&1
+if %errorlevel% equ 0 (
+    echo Служба "!ZYZ" запущена. Останавливаем...
+    sc stop "!ZYZ"
+    if %errorlevel% equ 0 (
+        echo Служба "!ZYZ" успешно остановлена.
+    ) else (
+        echo Ошибка при остановке службы "!ZYZ".
+        pause
+        exit /b 1
+    )
+    :: Ждем немного для корректного завершения
+    timeout /t 3 /nobreak >nul
+)
+
 :: Удаляем службу "!ZYZ"
 echo Удаление службы "!ZYZ"...
 sc delete "!ZYZ"

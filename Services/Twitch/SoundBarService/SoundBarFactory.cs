@@ -3,24 +3,28 @@ using MARS.Server.Services.Twitch.SoundBarService.Entitys;
 
 namespace MARS.Server.Services.Twitch.SoundBarService;
 
-public class SoundBarFactory
+public class SoundBarFactory(
+    IHostEnvironment environment,
+    IHttpClientFactory factory,
+    ILogger<SoundBarFactory> logger
+)
 {
-    private static readonly SoundBarService SoundBarService = new();
-    private static readonly SoundBarService Instance = SoundBarService;
-    private static SoundBarFromHub? _instanceHub;
-    private readonly IHubContext<SoundBarHub, ISoundBarHub> _hubContext;
-
-    public SoundBarFactory(IHubContext<SoundBarHub, ISoundBarHub> hubContext)
-    {
-        _hubContext = hubContext;
-        _instanceHub ??= new SoundBarFromHub(hubContext);
-    }
+    private static readonly SoundBarServiceLocal SoundBarService = new();
+    private static readonly SoundBarServiceLocal Instance = SoundBarService;
+    private static SoundBarHttpClient? _instanceHttp;
 
     public ISoundBar CreateSoundBar()
     {
-        return IsRunningAsWindowsService()
-            ? (_instanceHub ??= new SoundBarFromHub(_hubContext))
-            : Instance;
+        var url = GetAudioControllerUrl();
+        return (_instanceHttp ??= new SoundBarHttpClient(url, factory, logger));
+        //return IsRunningAsWindowsService()
+        //    ? (_instanceHttp ??= new SoundBarHttpClient(GetAudioControllerUrl(), logger))
+        //    : Instance;
+    }
+
+    private string GetAudioControllerUrl()
+    {
+        return environment.IsProduction() ? "http://localhost:30695" : "http://localhost:30691";
     }
 
     private static bool IsRunningAsWindowsService()
@@ -49,5 +53,30 @@ public class SoundBarFactory
         {
             return false;
         }
+    }
+}
+
+// Локальная реализация для разработки
+public class SoundBarServiceLocal : ISoundBar
+{
+    public Task Mute(params string[] args)
+    {
+        // Локальная заглушка для разработки
+        Console.WriteLine($"Local SoundBar: Muting processes: {string.Join(", ", args)}");
+        return Task.CompletedTask;
+    }
+
+    public Task Unmute()
+    {
+        // Локальная заглушка для разработки
+        Console.WriteLine("Local SoundBar: Unmuting all processes");
+        return Task.CompletedTask;
+    }
+
+    public Task<string> GetBagCount()
+    {
+        // Локальная заглушка для разработки
+        Console.WriteLine("Local SoundBar: GetBagCount called");
+        return Task.FromResult("Local: Bag count not available");
     }
 }

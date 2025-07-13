@@ -25,8 +25,33 @@ if not exist "%currentDir%MARS.Server.exe" (
 sc query "!ZYZ" >nul 2>&1
 if %errorlevel% equ 0 (
     echo Служба "!ZYZ" уже существует.
-    pause
-    exit /b 1
+    
+    :: Проверяем, запущена ли служба
+    sc query "!ZYZ" | find "RUNNING" >nul 2>&1
+    if %errorlevel% equ 0 (
+        echo Служба запущена. Останавливаем для перезапуска...
+        sc stop "!ZYZ"
+        if %errorlevel% equ 0 (
+            echo Служба "!ZYZ" успешно остановлена.
+        ) else (
+            echo Ошибка при остановке службы "!ZYZ".
+            pause
+            exit /b 1
+        )
+        :: Ждем немного для корректного завершения
+        timeout /t 3 /nobreak >nul
+    )
+    
+    :: Удаляем существующую службу
+    echo Удаление существующей службы "!ZYZ"...
+    sc delete "!ZYZ"
+    if %errorlevel% equ 0 (
+        echo Существующая служба "!ZYZ" успешно удалена.
+    ) else (
+        echo Ошибка при удалении существующей службы "!ZYZ".
+        pause
+        exit /b 1
+    )
 )
 
 :: Добавляем переменную окружения ZYZ_SERVICE_PATH

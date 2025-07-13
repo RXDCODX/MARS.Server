@@ -103,9 +103,11 @@
     <ItemGroup>
         <None Update="!create_service.bat">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+            <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
         </None>
         <None Update="!delete_service.bat">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+            <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
         </None>
         <None Update="AutoHelloMessages.txt">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -126,6 +128,8 @@
       <Folder Include="Services\TabletopGames\Entitys\Enums\" />
     </ItemGroup>
 
+
+
     <Target Name="BuildClientApp" BeforeTargets="Build">
         <Message Importance="high" Text="Сборка фронта через yarn build..." />
         <Exec WorkingDirectory="..\mars.client" Command="yarn install" />
@@ -134,6 +138,7 @@
 
     <Target Name="CopyClientDistToWwwroot" AfterTargets="Build">
         <Message Importance="high" Text="Копирование dist в wwwroot..." />
+        <RemoveDir Directories="wwwroot/assets/**/*" />
         <Copy SourceFiles="@(DistFiles)" DestinationFolder="wwwroot\%(RecursiveDir)" SkipUnchangedFiles="true" />
     </Target>
 
