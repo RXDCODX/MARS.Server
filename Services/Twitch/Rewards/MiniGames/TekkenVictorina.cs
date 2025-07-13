@@ -1,5 +1,6 @@
 ﻿using MARS.Server.Services.Framedata;
 using MARS.Server.Services.Framedata.Entitys;
+using MARS.Server.Services.ServiceManager;
 using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.Twitch.MiniGamesStats;
 using MARS.Server.Services.Twitch.Rewards.MiniGames.Entitys.Interfaces;
@@ -17,22 +18,36 @@ public class TekkenVictorina(
     ILogger<TekkenVictorina> logger,
     IDbContextFactory<AppDbContext> dbContextFactory,
     TekkenVictorinaLeaderbord tekkenVictorinaLeaderbord
-) : BackgroundService, ITwitchMiniGame
+) : ManagedServiceBase(logger), ITwitchMiniGame
 {
-    private CancellationToken? _cancellationToken = lifetime.ApplicationStopping;
+    public override string ServiceName => "tekkenvictorina";
+    public override string DisplayName => "Tekken Victorina";
+    public override string Description => "Мини-игра Tekken Victorina на Twitch";
+    public override bool IsServiceActive { get; set; }
     public bool IsReuseRewardForAddMechanic { get; set; } = false;
     public bool IsGameRunning { get; set; } = false;
     private const string? CommandForStop = "!стопвикторина";
     private TekkenVictorinaGame? _currentGame;
     private readonly SemaphoreSlim _semaphoreSlim = new(1);
 
-    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    public override async Task StartAsync(CancellationToken cancellationToken = default)
     {
-        lifetime.ApplicationStarted.Register(() =>
+        await base.StartAsync(cancellationToken);
+
+        if (IsServiceActive)
         {
-            client.OnMessageReceived += TwitchClientOnOnMessageReceived;
-        });
-        return Task.CompletedTask;
+            lifetime.ApplicationStarted.Register(() =>
+            {
+                client.OnMessageReceived += TwitchClientOnOnMessageReceived;
+            });
+        }
+    }
+
+    public override Task StopAsync(CancellationToken cancellationToken = default)
+    {
+        client.OnMessageReceived -= TwitchClientOnOnMessageReceived;
+
+        return base.StopAsync(cancellationToken);
     }
 
     private async void TwitchClientOnOnMessageReceived(
@@ -40,6 +55,11 @@ public class TekkenVictorina(
         OnMessageReceivedArgs onMessageReceivedArgs
     )
     {
+        if (!IsServiceActive)
+        {
+            return;
+        }
+
         await Task.Factory.StartNew(async () =>
         {
             var name = onMessageReceivedArgs.ChatMessage.Username;
@@ -85,13 +105,15 @@ public class TekkenVictorina(
 
     public async Task GameStart(string userName, string userId)
     {
+        if (!IsServiceActive)
+        {
+            return;
+        }
+
         if (_currentGame is null)
         {
             var randomIndex = Random.Shared.Next(frameData.VictorinaMoves.Count) - 1;
             var randomMove = frameData.VictorinaMoves[randomIndex];
-            //var randomMove = frameData.VictorinaMoves.First(e =>
-            //    e is { CharacterName: "lili", Command: "bt 3,4" }
-            //);
             var awaitTime = TimeSpan.FromSeconds(20);
             var startTime = DateTime.Now;
 
@@ -300,7 +322,7 @@ public class TekkenVictorina(
         return isIntersect;
 
         // Парсит строку в IntRange (число или диапазон)
-        IntRange? TryParseInput(string str)
+        static IntRange? TryParseInput(string str)
         {
             str = str.Trim();
 

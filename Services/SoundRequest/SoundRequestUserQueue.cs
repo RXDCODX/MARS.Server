@@ -2,6 +2,9 @@
 
 namespace MARS.Server.Services.SoundRequest;
 
+/// <summary>
+/// Manages the queue of users for sound requests.
+/// </summary>
 public class SoundRequestUserQueue(
     IDbContextFactory<AppDbContext> contextFactory,
     IHostApplicationLifetime lifetime

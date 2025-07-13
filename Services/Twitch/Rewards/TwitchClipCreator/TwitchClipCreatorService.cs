@@ -1,26 +1,42 @@
-﻿using MARS.Server.Services.Twitch.Management;
+﻿using MARS.Server.Services.ServiceManager;
+using MARS.Server.Services.Twitch.Management;
 
 namespace MARS.Server.Services.Twitch.Rewards.TwitchClipCreator;
 
+/// <inheritdoc />
 public class TwitchClipCreatorService(
     ITwitchClient client,
     ITwitchAPI api,
     IHostApplicationLifetime lifetime,
     TokenService tokenService,
     ILogger<TwitchClipCreatorService> logger
-) : BackgroundService
+) : ManagedServiceBase(logger)
 {
+    public override string ServiceName => "twitchclipcreator";
+    public override string DisplayName => "Twitch Clip Creator";
+    public override string Description => "Создание клипов Twitch";
+    public override bool IsServiceActive { get; set; }
+
     private readonly CancellationToken _cancellationToken = lifetime.ApplicationStopping;
 
-    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    public override async Task StartAsync(CancellationToken cancellationToken = default)
     {
-        lifetime.ApplicationStarted.Register(() =>
-        {
-            EventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd +=
-                WsClientOnChannelPointsCustomRewardRedemptionAdd;
-        });
+        await base.StartAsync(cancellationToken);
 
-        return Task.CompletedTask;
+        if (IsServiceActive)
+        {
+            lifetime.ApplicationStarted.Register(() =>
+            {
+                EventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd += WsClientOnChannelPointsCustomRewardRedemptionAdd;
+            });
+        }
+    }
+
+    public override Task StopAsync(CancellationToken cancellationToken = default)
+    {
+        EventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd -=
+            WsClientOnChannelPointsCustomRewardRedemptionAdd;
+        return base.StopAsync(cancellationToken);
     }
 
     private async Task WsClientOnChannelPointsCustomRewardRedemptionAdd(
@@ -32,7 +48,7 @@ public class TwitchClipCreatorService(
         var userName = twEvent.UserName;
         var cost = twEvent.Reward.Cost;
 
-        if (cost == 1)
+        if (cost == 1 && IsServiceActive)
         {
             await Task.Factory.StartNew(
                 async () =>

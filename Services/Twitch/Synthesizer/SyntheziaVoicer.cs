@@ -107,4 +107,12 @@ public class SyntheziaVoicer : IVoicer
     {
         return Task.FromResult(_speechSynthesizer.SpeakAsyncCancelAll);
     }
+
+    public void InterruptSpeech()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            _speechSynthesizer.SpeakAsyncCancelAll();
+        }
+    }
 }

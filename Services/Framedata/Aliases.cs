@@ -1,6 +1,9 @@
 ﻿namespace MARS.Server.Services.Framedata;
 
-public class Aliases
+/// <summary>
+/// Provides alias mappings for Tekken characters or moves.
+/// </summary>
+public static class Aliases
 {
     public static readonly Dictionary<string, string[]> CharacterNameAliases = new()
     {

@@ -1,5 +1,8 @@
 ﻿namespace MARS.Server.Services.Framedata.Entitys;
 
+/// <summary>
+/// Represents a move in Tekken, including its command, properties, and effects.
+/// </summary>
 public class Move
 {
     [Key]

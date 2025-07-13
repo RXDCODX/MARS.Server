@@ -1,29 +1,32 @@
 ﻿using System.Collections.Frozen;
+using MARS.Server.Services.ServiceManager;
 using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.Twitch.Rewards.MiniGames.Entitys.Interfaces;
+using Telegramus.Migrations;
 
 namespace MARS.Server.Services.Twitch.Rewards.MiniGames;
 
-public class MiniGamesManager : BackgroundService
+public class MiniGamesManager(
+    TekkenVictorina tekkenVictorina,
+    TwitchRussianRoulete russianRoulete,
+    TwitchTrivia twitchTrivia,
+    IHostApplicationLifetime lifetime,
+    ITwitchClient client,
+    ILogger<MiniGamesManager> logger
+) : ManagedServiceBase(logger)
 {
+    public override string ServiceName => "minigames";
+    public override string DisplayName => "Mini Games";
+    public override string Description => "Менеджер мини-игр Twitch";
+    public override bool IsServiceActive { get; set; }
+
     private static FrozenDictionary<int, ITwitchMiniGame> _miniGames = FrozenDictionary<
         int,
         ITwitchMiniGame
     >.Empty;
-    private readonly IHostApplicationLifetime _lifetime;
-    private readonly ITwitchClient _client;
 
-    public MiniGamesManager(
-        TekkenVictorina tekkenVictorina,
-        TwitchRussianRoulete russianRoulete,
-        TwitchTrivia twitchTrivia,
-        IHostApplicationLifetime lifetime,
-        ITwitchClient client
-    )
+    public override Task StartAsync(CancellationToken cancellationToken = default)
     {
-        _lifetime = lifetime;
-        _client = client;
-
         var miniGames = new Dictionary<int, ITwitchMiniGame>
         {
             { tekkenVictorina.GetGameCost(), tekkenVictorina },
@@ -31,17 +34,22 @@ public class MiniGamesManager : BackgroundService
             { twitchTrivia.GetGameCost(), twitchTrivia },
         };
         _miniGames = miniGames.ToFrozenDictionary();
-    }
-
-    protected override Task ExecuteAsync(CancellationToken stoppingToken)
-    {
-        _lifetime.ApplicationStarted.Register(() =>
+        lifetime.ApplicationStarted.Register(() =>
         {
             EventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd +=
                 WsClientOnChannelPointsCustomRewardRedemptionAdd;
         });
 
-        return Task.CompletedTask;
+        return base.StartAsync(cancellationToken);
+    }
+
+    public override Task StopAsync(CancellationToken cancellationToken = default)
+    {
+        _miniGames = FrozenDictionary<int, ITwitchMiniGame>.Empty;
+        EventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd -=
+            WsClientOnChannelPointsCustomRewardRedemptionAdd;
+
+        return base.StopAsync(cancellationToken);
     }
 
     private async Task WsClientOnChannelPointsCustomRewardRedemptionAdd(
@@ -49,6 +57,11 @@ public class MiniGamesManager : BackgroundService
         ChannelPointsCustomRewardRedemptionArgs args
     )
     {
+        if (!IsServiceActive)
+        {
+            return;
+        }
+
         var cost = args.Notification.Payload.Event.Reward.Cost;
         var miniGames = _miniGames.Values;
         var name = args.Notification.Payload.Event.UserName;
@@ -63,7 +76,7 @@ public class MiniGamesManager : BackgroundService
                 var game = _miniGames[gameCost];
                 if (!game.IsReuseRewardForAddMechanic)
                 {
-                    await _client.SendMessageToMainTwitchAsync(
+                    await client.SendMessageToMainTwitchAsync(
                         @$"@{name}, прости но уже другая игра происходит!"
                     );
                 }

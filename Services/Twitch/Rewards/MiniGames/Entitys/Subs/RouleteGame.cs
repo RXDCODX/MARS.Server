@@ -5,15 +5,15 @@ namespace MARS.Server.Services.Twitch.Rewards.MiniGames.Entitys.Subs;
 public class RouleteGame(
     List<RouletePlayer> players,
     GameType type,
-    CancellationToken token,
     ITwitchClient client,
     ILogger<TwitchRussianRoulete> logger,
     IDbContextFactory<AppDbContext> factory,
-    TwitchRussianRoulete roulette
+    TwitchRussianRoulete roulette,
+    CancellationToken token
 )
 {
     private const int ChanceToBeSaved = 40;
-    private List<RouletePlayer> Players { get; } = players.ToList();
+    private List<RouletePlayer> Players { get; } = [.. players];
     private GameType Type { get; } = type;
     private readonly List<string> _noWaifuHelpUsers = [];
 
@@ -25,7 +25,7 @@ public class RouleteGame(
 
         if (numPlayers == 1)
         {
-            await AloneRoulette(Players[0].Name, token);
+            await AloneRoulette(Players[0].Name);
             roulette.IsGameRunning = false;
             return;
         }
@@ -136,7 +136,7 @@ public class RouleteGame(
         return false;
     }
 
-    private async Task AloneRoulette(string username, CancellationToken token)
+    private async Task AloneRoulette(string username)
     {
         await client.SendMessageToMainTwitchAsync($"@{username}, я взвожу курок...", logger);
         await Task.Delay(3000, token);

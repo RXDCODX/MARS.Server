@@ -2,6 +2,9 @@
 
 namespace MARS.Server.Services.Framedata;
 
+/// <summary>
+/// Provides helper methods for the Tekken8FrameData class.
+/// </summary>
 public partial class Tekken8FrameData
 {
     private static Task<bool> IsDateInCurrentWeek(DateTimeOffset date)

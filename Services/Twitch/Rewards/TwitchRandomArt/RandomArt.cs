@@ -1,34 +1,22 @@
 ﻿using BooruSharp.Booru;
 using BooruSharp.Search.Post;
+using MARS.Server.Services.ServiceManager;
 using MARS.Server.Services.Twitch.Management;
 
 namespace MARS.Server.Services.Twitch.Rewards.TwitchRandomArt;
 
-public class RandomArt : BackgroundService
+public class RandomArt(
+    IHubContext<TelegramusHub, ITelegramusHub> hub,
+    IHostApplicationLifetime lifetime,
+    ITwitchClient client,
+    Gelbooru site,
+    ILogger<RandomArt> logger
+) : ManagedServiceBase(logger)
 {
-    private readonly IHubContext<TelegramusHub, ITelegramusHub> _hub;
-    private readonly ITwitchClient _client;
-    private readonly Gelbooru _site;
-    private readonly ILogger<RandomArt> _logger;
-
-    public RandomArt(
-        IHubContext<TelegramusHub, ITelegramusHub> hub,
-        IHostApplicationLifetime lifetime,
-        ITwitchClient client,
-        Gelbooru site,
-        ILogger<RandomArt> logger
-    )
-    {
-        _hub = hub;
-        _client = client;
-        _site = site;
-        _logger = logger;
-        lifetime.ApplicationStarted.Register(() =>
-        {
-            EventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd +=
-                WsClientOnChannelPointsCustomRewardRedemptionAdd;
-        });
-    }
+    public override string ServiceName => "randomart";
+    public override string DisplayName => "Random Art";
+    public override string Description => "Случайное искусство на Twitch";
+    public override bool IsServiceActive { get; set; }
 
     private async Task WsClientOnChannelPointsCustomRewardRedemptionAdd(
         object sender,
@@ -42,15 +30,16 @@ public class RandomArt : BackgroundService
                 TwitchExstension.Channel,
                 StringComparison.OrdinalIgnoreCase
             )
+            && IsServiceActive
         )
         {
             await Task.Factory.StartNew(async () =>
             {
                 if (twEvent.UserInput.Contains("rating", StringComparison.OrdinalIgnoreCase))
                 {
-                    await _client.SendMessageToMainTwitchAsync(
+                    await client.SendMessageToMainTwitchAsync(
                         @$"@{twEvent.UserName}, ты охуел?",
-                        _logger
+                        logger
                     );
                     return;
                 }
@@ -61,7 +50,7 @@ public class RandomArt : BackgroundService
                 {
                     do
                     {
-                        var answer = await _site.GetRandomPostsAsync(10, "rating:general");
+                        var answer = await site.GetRandomPostsAsync(10, "rating:general");
 
                         var posts = answer.Where(e =>
                             e.Rating is Rating.General or Rating.Questionable
@@ -75,16 +64,16 @@ public class RandomArt : BackgroundService
                     do
                     {
                         var tagParams = (twEvent.UserInput + " rating:general").Split(' ');
-                        var answer = await _site.GetRandomPostsAsync(
+                        var answer = await site.GetRandomPostsAsync(
                             10,
                             string.Join(' ', tagParams)
                         );
 
                         if (answer.Length == 0)
                         {
-                            await _client.SendMessageToMainTwitchAsync(
+                            await client.SendMessageToMainTwitchAsync(
                                 @$"@{twEvent.UserName}, плохой запрос, нету артов(",
-                                _logger
+                                logger
                             );
                             return;
                         }
@@ -97,7 +86,7 @@ public class RandomArt : BackgroundService
 
                 var mediaDtos = new MediaDto[result.Count];
                 var index = 0;
-                result = result.DistinctBy(e => e.ID).ToList();
+                result = [.. result.DistinctBy(e => e.ID)];
 
                 foreach (var sr in result)
                 {
@@ -128,13 +117,26 @@ public class RandomArt : BackgroundService
                     mediaDtos[index++] = mediaDto;
                 }
 
-                await _hub.Clients.All.Alerts(mediaDtos);
+                await hub.Clients.All.Alerts(mediaDtos);
             });
         }
     }
 
-    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    public override Task StartAsync(CancellationToken cancellationToken = default)
     {
-        return Task.CompletedTask;
+        lifetime.ApplicationStarted.Register(() =>
+        {
+            EventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd +=
+                WsClientOnChannelPointsCustomRewardRedemptionAdd;
+        });
+
+        return base.StartAsync(cancellationToken);
+    }
+
+    public override Task StopAsync(CancellationToken cancellationToken = default)
+    {
+        EventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd -=
+            WsClientOnChannelPointsCustomRewardRedemptionAdd;
+        return base.StopAsync(cancellationToken);
     }
 }

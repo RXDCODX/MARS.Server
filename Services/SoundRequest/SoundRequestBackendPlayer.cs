@@ -2,6 +2,9 @@
 
 namespace MARS.Server.Services.SoundRequest;
 
+/// <summary>
+/// Handles background processing and playback of sound requests.
+/// </summary>
 public class SoundRequestBackendPlayer : BackgroundService
 {
     private readonly IHostApplicationLifetime _lifetime;

@@ -1,5 +1,8 @@
 ﻿namespace MARS.Server.Services.MemoryStorageService.Entitys;
 
+/// <summary>
+/// Represents a file stored in memory, used by the memory storage service.
+/// </summary>
 public class MemoryFile
 {
     public required string FileName { get; init; }

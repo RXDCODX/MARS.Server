@@ -59,6 +59,7 @@
         <PackageReference Include="SignalRSwaggerGen.Core" Version="1.5.0" />
         <PackageReference Include="SignalRSwaggerGen.Utils" Version="1.7.0" />
         <PackageReference Include="SigSpec.AspNetCore" Version="0.3.2" />
+        <PackageReference Include="SoundCloudExplode" Version="1.6.6" />
         <PackageReference Include="Swashbuckle.AspNetCore" Version="9.0.1" />
         <PackageReference Include="Swashbuckle.AspNetCore.Swagger" Version="9.0.1" />
         <PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" Version="9.0.1" />
@@ -78,6 +79,7 @@
         <PackageReference Include="TwitchLib.EventSub.Core" Version="2.6.0" />
         <PackageReference Include="TwitchLib.EventSub.Websockets" Version="0.6.0" />
         <PackageReference Include="WTelegramClient" Version="4.3.5" />
+        <PackageReference Include="YandexMusicResolver" Version="7.1.1" />
     </ItemGroup>
 
     <ItemGroup>
@@ -121,6 +123,22 @@
     <ItemGroup>
       <Folder Include="Services\SoundRequest\Platforms\SoundCloud\" />
       <Folder Include="Services\SoundRequest\Platforms\YouTube\" />
+      <Folder Include="Services\TabletopGames\Entitys\Enums\" />
+    </ItemGroup>
+
+    <Target Name="BuildClientApp" BeforeTargets="Build">
+        <Message Importance="high" Text="Сборка фронта через yarn build..." />
+        <Exec WorkingDirectory="..\mars.client" Command="yarn install" />
+        <Exec WorkingDirectory="..\mars.client" Command="yarn build" />
+    </Target>
+
+    <Target Name="CopyClientDistToWwwroot" AfterTargets="Build">
+        <Message Importance="high" Text="Копирование dist в wwwroot..." />
+        <Copy SourceFiles="@(DistFiles)" DestinationFolder="wwwroot\%(RecursiveDir)" SkipUnchangedFiles="true" />
+    </Target>
+
+    <ItemGroup>
+        <DistFiles Include="..\mars.client\dist\**\*" />
     </ItemGroup>
 
 </Project>

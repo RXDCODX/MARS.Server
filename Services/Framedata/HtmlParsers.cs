@@ -4,6 +4,9 @@ using MARS.Server.Services.Framedata.Entitys;
 
 namespace MARS.Server.Services.Framedata;
 
+/// <summary>
+/// Provides methods for scraping and processing Tekken 8 frame data from web sources and updating the database.
+/// </summary>
 public partial class Tekken8FrameData
 {
     internal async Task StartScrupFrameData(Chat? chat = default)
@@ -106,8 +109,8 @@ public partial class Tekken8FrameData
                         {
                             Name = name,
                             Description = description,
-                            Weaknesess = listWknss.ToArray(),
-                            Strengths = listStr.ToArray(),
+                            Weaknesess = [.. listWknss],
+                            Strengths = [.. listStr],
                         };
 
                         try

@@ -1,37 +1,24 @@
-﻿using MARS.Server.Services.Twitch.Management;
-using MARS.Server.Services.Twitch.SoundBarService;
+﻿using MARS.Server.Services.ServiceManager;
+using MARS.Server.Services.Twitch.Management;
 using TwitchLib.Client.Events;
 using TwitchLib.EventSub.Core.SubscriptionTypes.Channel;
 
 namespace MARS.Server.Services.Twitch.Rewards.TwitchAlerts;
 
-public class TwitchMediaAlerts : BackgroundService
+public class TwitchMediaAlerts(
+    IHubContext<TelegramusHub, ITelegramusHub> hubContext,
+    IDbContextFactory<AppDbContext> dbContextFactory,
+    ITwitchClient client,
+    IHostApplicationLifetime applicationLifetime,
+    ILogger<TwitchMediaAlerts> logger
+) : ManagedServiceBase(logger)
 {
-    private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
-    private readonly IHubContext<TelegramusHub, ITelegramusHub> _hubContext;
-    private readonly SoundBarFactory _soundBarFactory;
-    private readonly CancellationToken _token;
+    private readonly CancellationToken _token = applicationLifetime.ApplicationStopping;
 
-    public TwitchMediaAlerts(
-        IHubContext<TelegramusHub, ITelegramusHub> hubContext,
-        IDbContextFactory<AppDbContext> dbContextFactory,
-        ITwitchClient client,
-        IHostApplicationLifetime applicationLifetime,
-        SoundBarFactory soundBarFactory
-    )
-    {
-        _hubContext = hubContext;
-        _dbContextFactory = dbContextFactory;
-        _soundBarFactory = soundBarFactory;
-        _token = applicationLifetime.ApplicationStopping;
-
-        applicationLifetime.ApplicationStarted.Register(() =>
-        {
-            client.OnMessageReceived += TwitchClientOnNormalMessage;
-            EventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd +=
-                TwitchClientOnOnMessageSend;
-        });
-    }
+    public override string ServiceName => "twitchmediaalerts";
+    public override string DisplayName => "Twitch Media Alerts";
+    public override string Description => "Медиа-алерты Twitch";
+    public override bool IsServiceActive { get; set; }
 
     internal async void TwitchClientOnNormalMessage(object? sender, OnMessageReceivedArgs args)
     {
@@ -43,12 +30,13 @@ public class TwitchMediaAlerts : BackgroundService
             && !TwitchExstension.BlackList.Any(u =>
                 u.Equals(args.ChatMessage.Username, StringComparison.OrdinalIgnoreCase)
             )
+            && IsServiceActive
         )
         {
             await Task.Run(
                 async () =>
                 {
-                    var context = await _dbContextFactory.CreateDbContextAsync(_token);
+                    var context = await dbContextFactory.CreateDbContextAsync(_token);
 
                     var alert = context.Alerts.FirstOrDefault(e =>
                         e.MetaInfo.TwitchGuid.ToString() == args.ChatMessage.CustomRewardId
@@ -68,7 +56,7 @@ public class TwitchMediaAlerts : BackgroundService
     {
         var message = args.ChatMessage;
 
-        await using AppDbContext dbContext = await _dbContextFactory.CreateDbContextAsync(_token);
+        await using AppDbContext dbContext = await dbContextFactory.CreateDbContextAsync(_token);
         var mediaList = dbContext
             .Alerts.AsNoTracking()
             .AsEnumerable()
@@ -77,14 +65,17 @@ public class TwitchMediaAlerts : BackgroundService
 
         MediaInfo? mediaOld = null;
 
-        if (mediaList.Count == 1)
+        switch (mediaList.Count)
         {
-            mediaOld = mediaList[0];
-        }
-        else if (mediaList.Count > 1)
-        {
-            var index = Random.Shared.Next(mediaList.Count);
-            mediaOld = mediaList[index];
+            case 1:
+                mediaOld = mediaList[0];
+                break;
+            case > 1:
+            {
+                var index = Random.Shared.Next(mediaList.Count);
+                mediaOld = mediaList[index];
+                break;
+            }
         }
 
         if (mediaOld != null)
@@ -92,7 +83,7 @@ public class TwitchMediaAlerts : BackgroundService
             var mediaClone = mediaOld.CloneTo();
             mediaClone.FixAlertText(message.DisplayName, message.Message);
 
-            await _hubContext.Clients.All.Alert(new MediaDto { MediaInfo = mediaClone });
+            await hubContext.Clients.All.Alert(new MediaDto { MediaInfo = mediaClone });
         }
     }
 
@@ -105,7 +96,7 @@ public class TwitchMediaAlerts : BackgroundService
             args.Notification.Payload.Event.BroadcasterUserId.Equals(
                 TwitchExstension.ChannelId,
                 StringComparison.OrdinalIgnoreCase
-            )
+            ) && IsServiceActive
         )
         {
             var value = args.Notification.Payload.Event;
@@ -121,7 +112,7 @@ public class TwitchMediaAlerts : BackgroundService
     {
         var message = value;
 
-        await using AppDbContext dbContext = await _dbContextFactory.CreateDbContextAsync(_token);
+        await using AppDbContext dbContext = await dbContextFactory.CreateDbContextAsync(_token);
         var mediaList = dbContext
             .Alerts.AsNoTracking()
             .AsEnumerable()
@@ -130,14 +121,17 @@ public class TwitchMediaAlerts : BackgroundService
 
         MediaInfo? mediaOld = null;
 
-        if (mediaList.Count == 1)
+        switch (mediaList.Count)
         {
-            mediaOld = mediaList[0];
-        }
-        else if (mediaList.Count > 1)
-        {
-            var index = Random.Shared.Next(mediaList.Count);
-            mediaOld = mediaList[index];
+            case 1:
+                mediaOld = mediaList[0];
+                break;
+            case > 1:
+            {
+                var index = Random.Shared.Next(mediaList.Count);
+                mediaOld = mediaList[index];
+                break;
+            }
         }
 
         if (mediaOld != null)
@@ -145,12 +139,30 @@ public class TwitchMediaAlerts : BackgroundService
             var mediaClone = mediaOld.CloneTo();
             mediaClone.FixAlertText(message.UserName, message.UserInput);
 
-            await _hubContext.Clients.All.Alert(new MediaDto { MediaInfo = mediaClone });
+            await hubContext.Clients.All.Alert(new MediaDto { MediaInfo = mediaClone });
         }
     }
 
-    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    public override async Task StartAsync(CancellationToken cancellationToken = default)
     {
-        return Task.CompletedTask;
+        await base.StartAsync(cancellationToken);
+
+        if (IsServiceActive)
+        {
+            applicationLifetime.ApplicationStarted.Register(() =>
+            {
+                client.OnMessageReceived += TwitchClientOnNormalMessage;
+                EventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd +=
+                    TwitchClientOnOnMessageSend;
+            });
+        }
+    }
+
+    public override Task StopAsync(CancellationToken cancellationToken = default)
+    {
+        client.OnMessageReceived -= TwitchClientOnNormalMessage;
+        EventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd -=
+            TwitchClientOnOnMessageSend;
+        return base.StopAsync(cancellationToken);
     }
 }

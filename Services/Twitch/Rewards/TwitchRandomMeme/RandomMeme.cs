@@ -1,32 +1,22 @@
 ﻿using MARS.Server.Services.RandomMem.Entity;
+using MARS.Server.Services.ServiceManager;
 using MARS.Server.Services.Twitch.Management;
 
 namespace MARS.Server.Services.Twitch.Rewards.TwitchRandomMeme;
 
-public class RandomMeme : BackgroundService
+public class RandomMeme(
+    IHubContext<TelegramusHub, ITelegramusHub> hubContext,
+    IWebHostEnvironment webHostEnvironment,
+    IDbContextFactory<AppDbContext> dbContextFactory,
+    IHostApplicationLifetime applicationLifetime,
+    ILogger<RandomMeme> logger
+) : ManagedServiceBase(logger)
 {
-    private readonly CancellationToken _stoppingToken;
-    private readonly IHubContext<TelegramusHub, ITelegramusHub> _hubContext;
-    private readonly IWebHostEnvironment _webHostEnvironment;
-    private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
-
-    public RandomMeme(
-        IHubContext<TelegramusHub, ITelegramusHub> hubContext,
-        IWebHostEnvironment webHostEnvironment,
-        IDbContextFactory<AppDbContext> dbContextFactory,
-        IHostApplicationLifetime applicationLifetime
-    )
-    {
-        _hubContext = hubContext;
-        _webHostEnvironment = webHostEnvironment;
-        _dbContextFactory = dbContextFactory;
-        _stoppingToken = applicationLifetime.ApplicationStopping;
-
-        applicationLifetime.ApplicationStarted.Register(() =>
-        {
-            EventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd += RandomMemeHandler;
-        });
-    }
+    public override string ServiceName => "randommeme";
+    public override string DisplayName => "Random Meme";
+    public override string Description => "Случайные мемы Twitch";
+    public override bool IsServiceActive { get; set; }
+    private readonly CancellationToken _stoppingToken = applicationLifetime.ApplicationStopping;
 
     public async Task RandomMemeHandler(object sender, ChannelPointsCustomRewardRedemptionArgs args)
     {
@@ -35,7 +25,7 @@ public class RandomMeme : BackgroundService
             twEvent.BroadcasterUserId.Equals(
                 TwitchExstension.ChannelId,
                 StringComparison.OrdinalIgnoreCase
-            )
+            ) && IsServiceActive
         )
         {
             switch (twEvent.Reward.Cost)
@@ -46,7 +36,7 @@ public class RandomMeme : BackgroundService
 
                     if (media is not null)
                     {
-                        await _hubContext.Clients.All.RandomMem(
+                            await hubContext.Clients.All.RandomMem(
                             new MediaDto(media) { MediaInfo = media }
                         );
                     }
@@ -59,7 +49,7 @@ public class RandomMeme : BackgroundService
 
                     if (sound is not null)
                     {
-                        await _hubContext.Clients.All.RandomMem(
+                            await hubContext.Clients.All.RandomMem(
                             new MediaDto(sound) { MediaInfo = sound }
                         );
                     }
@@ -72,13 +62,13 @@ public class RandomMeme : BackgroundService
 
     private Task<MediaInfo?> GetRandomSound(string? displayName)
     {
-        var path = Path.Combine(_webHostEnvironment.WebRootPath, "Alerts", "zvik");
+        var path = Path.Combine(webHostEnvironment.WebRootPath, "Alerts", "zvik");
         return GetAlert(path, displayName);
     }
 
     private Task<MediaInfo?> GetMeme(string? displayName)
     {
-        var path = Path.Combine(_webHostEnvironment.WebRootPath, "Alerts", "random_meme");
+        var path = Path.Combine(webHostEnvironment.WebRootPath, "Alerts", "random_meme");
         return GetAlert(path, displayName);
     }
 
@@ -123,7 +113,7 @@ public class RandomMeme : BackgroundService
 
     public async Task<MemeOrder> GetNextVideoOrderAsync(string path)
     {
-        await using var dbContext = await _dbContextFactory.CreateDbContextAsync(_stoppingToken);
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(_stoppingToken);
 
         var type = dbContext
             .RandomMemeType.AsNoTracking()
@@ -156,8 +146,23 @@ public class RandomMeme : BackgroundService
         return nextVideoOrder;
     }
 
-    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    public override async Task StartAsync(CancellationToken cancellationToken = default)
     {
-        return Task.CompletedTask;
+        await base.StartAsync(cancellationToken);
+
+        if (IsServiceActive)
+        {
+            applicationLifetime.ApplicationStarted.Register(() =>
+            {
+                EventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd += RandomMemeHandler;
+            });
+        }
+    }
+
+    public override Task StopAsync(CancellationToken cancellationToken = default)
+    {
+        EventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd -= RandomMemeHandler;
+
+        return base.StopAsync(cancellationToken);
     }
 }

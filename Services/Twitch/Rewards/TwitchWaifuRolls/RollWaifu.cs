@@ -1,41 +1,25 @@
 ﻿using System.Globalization;
+using MARS.Server.Services.ServiceManager;
 using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.WaifuRoll;
 using TwitchLib.EventSub.Core.SubscriptionTypes.Channel;
 
 namespace MARS.Server.Services.Twitch.Rewards.TwitchWaifuRolls;
 
-public class RollWaifu : BackgroundService
+public class RollWaifu(
+    ILogger<RollWaifu> logger,
+    ITwitchClient client,
+    WaifuRollService waifuRollService,
+    IHubContext<TelegramusHub, ITelegramusHub> hubContext,
+    IDbContextFactory<AppDbContext> factory,
+    ITwitchAPI api,
+    IHostApplicationLifetime lifetime
+) : ManagedServiceBase(logger)
 {
-    private readonly ILogger<RollWaifu> _logger;
-    private readonly ITwitchClient _client;
-    private readonly WaifuRollService _waifuRollService;
-    private readonly IHubContext<TelegramusHub, ITelegramusHub> _hubContext;
-    private readonly IDbContextFactory<AppDbContext> _factory;
-    private readonly ITwitchAPI _api;
-
-    public RollWaifu(
-        ILogger<RollWaifu> logger,
-        ITwitchClient client,
-        WaifuRollService waifuRollService,
-        IHubContext<TelegramusHub, ITelegramusHub> hubContext,
-        IDbContextFactory<AppDbContext> factory,
-        ITwitchAPI api,
-        IHostApplicationLifetime lifetime
-    )
-    {
-        _logger = logger;
-        _client = client;
-        _waifuRollService = waifuRollService;
-        _hubContext = hubContext;
-        _factory = factory;
-        _api = api;
-
-        lifetime.ApplicationStarted.Register(() =>
-        {
-            EventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd += RollWaifuTwitchEvent;
-        });
-    }
+    public override string ServiceName => "rollwaifu";
+    public override string DisplayName => "Roll Waifu";
+    public override string Description => "Ролл вайфу через Twitch";
+    public override bool IsServiceActive { get; set; }
 
     public async Task RollWaifuTwitchEvent(
         object sender,
@@ -47,24 +31,24 @@ public class RollWaifu : BackgroundService
             twEvent.BroadcasterUserId.Equals(
                 TwitchExstension.ChannelId,
                 StringComparison.OrdinalIgnoreCase
-            )
+            ) && IsServiceActive
         )
         {
             if (twEvent.Reward.Cost == 4)
             {
-                Waifu? waifu = await _waifuRollService.RollTheWaifu(
+                Waifu? waifu = await waifuRollService.RollTheWaifu(
                     twEvent.UserId,
                     twEvent.UserName
                 );
 
                 if (waifu is not null)
                 {
-                    var color = await _api.Helix.Chat.GetUserChatColorAsync([twEvent.UserId]);
-                    await using AppDbContext dbContext2 = await _factory.CreateDbContextAsync();
+                    var color = await api.Helix.Chat.GetUserChatColorAsync([twEvent.UserId]);
+                    await using AppDbContext dbContext2 = await factory.CreateDbContextAsync();
                     var husband =
                         await dbContext2.Hosts.FindAsync(twEvent.UserId)
                         ?? throw new NullReferenceException();
-                    await _hubContext.Clients.All.WaifuRoll(
+                    await hubContext.Clients.All.WaifuRoll(
                         waifu,
                         twEvent.UserName,
                         husband,
@@ -73,7 +57,7 @@ public class RollWaifu : BackgroundService
                     return;
                 }
 
-                await using AppDbContext dbContext = await _factory.CreateDbContextAsync();
+                await using AppDbContext dbContext = await factory.CreateDbContextAsync();
                 var hostRoolWaifu = await dbContext
                     .Hosts.Include(host1 => host1.HostCoolDown)
                     .AsNoTracking()
@@ -97,14 +81,29 @@ public class RollWaifu : BackgroundService
                         null,
                         waifu
                     );
-                    await _client.SendMessageToMainTwitchAsync(message, _logger);
+                    await client.SendMessageToMainTwitchAsync(message, logger);
                 }
             }
         }
     }
 
-    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    public override async Task StartAsync(CancellationToken cancellationToken = default)
     {
-        return Task.CompletedTask;
+        await base.StartAsync(cancellationToken);
+
+        if (IsServiceActive)
+        {
+            lifetime.ApplicationStarted.Register(() =>
+            {
+                EventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd += RollWaifuTwitchEvent;
+            });
+        }
+    }
+
+    public override Task StopAsync(CancellationToken cancellationToken = default)
+    {
+        EventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd -= RollWaifuTwitchEvent;
+
+        return base.StopAsync(cancellationToken);
     }
 }

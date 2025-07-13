@@ -1,5 +1,8 @@
 ﻿namespace MARS.Server.Services.SoundRequest.Entitys;
 
+/// <summary>
+/// Provides base information for a track in the sound request system.
+/// </summary>
 public class BaseTrackInfo
 {
     [Key]
@@ -13,6 +16,8 @@ public class BaseTrackInfo
     public string[]? Genre { get; set; }
     public required string Url { get; init; }
     public DateTime LastTimePlays { get; set; } = DateTime.UnixEpoch;
+    public SoundRequestDomainSource Domain { get; set; } = SoundRequestDomainSource.None;
+    public YandexTrackAdditionalInfo? YandexSpecificInfo { get; set; }
 
     [NotMapped]
     public string Title

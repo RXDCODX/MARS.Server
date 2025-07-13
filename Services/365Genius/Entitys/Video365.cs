@@ -1,5 +1,8 @@
 ﻿namespace MARS.Server.Services._365Genius.Entitys;
 
+/// <summary>
+/// Represents a video entity for the 365Genius service.
+/// </summary>
 public class Video365
 {
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]

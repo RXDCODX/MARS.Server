@@ -1,13 +1,23 @@
 ﻿using MARS.Server.Services.SoundRequest.Entitys;
+using MARS.Server.Services.SoundRequest.Entitys.Exceptions;
+using MARS.Server.Services.SoundRequest.Platforms.SoundCloud;
+using MARS.Server.Services.SoundRequest.Platforms.YouTube;
 using MARS.Server.Services.Twitch.Management;
 
 namespace MARS.Server.Services.SoundRequest;
 
+/// <summary>
+/// Handles the logic for processing and managing sound requests.
+/// </summary>
 public class SoundRequestHandler(
     IHostApplicationLifetime lifetime,
-    //IDbContextFactory<AppDbContext> factory,
     ITwitchClient client,
-    IHttpClientFactory httpClientFactory
+    ILogger<SoundRequestHandler> logger,
+    IOptions<YouTubeConfig> youtubeConfig,
+    YouTubeApiService youTubeApiService,
+    SoundCloudApiService soundCloudApiService,
+    SoundCloudTextSearchService soundCloudTextSearchService,
+    SoundRequestUserQueue userQueue
 ) : BackgroundService
 {
     private readonly CancellationToken _cancellationToken = lifetime.ApplicationStopping;
@@ -30,70 +40,122 @@ public class SoundRequestHandler(
     {
         var twEvent = args.Notification.Payload.Event;
         var channel = twEvent.BroadcasterUserLogin;
-        var url = twEvent.UserInput;
+        var userInput = twEvent.UserInput;
 
-        if (channel.Equals(TwitchExstension.Channel))
+        if (!channel.Equals(TwitchExstension.Channel))
         {
-            await Task.Factory.StartNew(
-                async () =>
+            return;
+        }
+
+        await Task.Factory.StartNew(
+            async () =>
+            {
+                if (string.IsNullOrWhiteSpace(userInput))
                 {
-                    if (
-                        string.IsNullOrWhiteSpace(url)
-                        || !Uri.TryCreate(url, UriKind.Absolute, out var result)
-                    )
-                    {
-                        await client.SendMessageToMainTwitchAsync("Кривая ссылка");
-                        return;
-                    }
+                    await client.SendMessageToMainTwitchAsync("Пустой запрос");
+                    return;
+                }
 
-                    SoundRequestDomainSource soundRequestDomainSource = GetDomainType(result);
-                    if (soundRequestDomainSource == SoundRequestDomainSource.None)
-                    {
-                        await client.SendMessageToMainTwitchAsync("Кривая ссылка");
-                        return;
-                    }
+                if (Uri.TryCreate(userInput, UriKind.Absolute, out var uri))
+                {
+                    await HandleUrlRequest(uri, userInput, twEvent.UserId, twEvent.UserName);
+                }
+                else
+                {
+                    await HandleTextRequest(userInput, twEvent.UserId, twEvent.UserName);
+                }
+            },
+            _cancellationToken
+        );
+    }
 
-                    using var httpClient = httpClientFactory.CreateClient();
-                    var baseTrackInfo = soundRequestDomainSource switch
-                    {
-                        SoundRequestDomainSource.Youtube => await GetYoutubeBaseTrackInfo(
-                            httpClient
-                        ),
-                        //SoundRequestDomainSource.SoundCloud => await GetSoundCloudBaseTrackInfo(
-                        //    httpClient
-                        //),
-                        //SoundRequestDomainSource.YandexMusic => await GetYandexMusicBaseTrackInfo(
-                        //    httpClient
-                        //),
-                        //SoundRequestDomainSource.VkMusic => await GetVkMusicBaseTrackInfo(
-                        //    httpClient
-                        //),
-                        _ => throw new InvalidOperationException(),
-                    };
-                },
-                _cancellationToken
+    private async Task HandleUrlRequest(Uri uri, string url, string userId, string userName)
+    {
+        var domainType = GetDomainType(uri);
+        if (domainType == SoundRequestDomainSource.None)
+        {
+            await client.SendMessageToMainTwitchAsync("Кривая или неподдерживаемая ссылка");
+            return;
+        }
+
+        try
+        {
+            var baseTrackInfo = domainType switch
+            {
+                SoundRequestDomainSource.Youtube =>
+                    await youTubeApiService.GetYoutubeBaseTrackInfoAsync(
+                        url,
+                        youtubeConfig.Value.Token,
+                        _cancellationToken
+                    ),
+                SoundRequestDomainSource.SoundCloud =>
+                    await soundCloudApiService.GetSoundCloudBaseTrackInfoAsync(
+                        url,
+                        _cancellationToken
+                    ),
+                //SoundRequestDomainSource.YandexMusic =>
+                //    await yandexMusicApiService.GetYandexMusicBaseTrackInfoAsync(
+                //        url,
+                //        _cancellationToken
+                //    ),
+                // SoundRequestDomainSource.VkMusic => await GetVkMusicBaseTrackInfo(...),
+                _ => throw new InvalidOperationException(),
+            };
+
+            await userQueue.AddToQueueAsync(
+                new UserRequestedTrack
+                {
+                    RequestedTrack = baseTrackInfo,
+                    TwitchId = userId,
+                    TwitchDisplayName = userName,
+                    RequestedTrackId = baseTrackInfo.Id,
+                }
             );
+        }
+        catch (Exception ex)
+        {
+            await client.SendMessageToMainTwitchAsync($"Ошибка при обработке ссылки: {ex.Message}");
+            logger.LogException(ex);
         }
     }
 
-    private Task<BaseTrackInfo> GetVkMusicBaseTrackInfo(HttpClient httpClient)
+    private async Task HandleTextRequest(string query, string userId, string userName)
     {
-        throw new NotImplementedException();
-    }
+        try
+        {
+            BaseTrackInfo? baseTrackInfo = null;
+            // Если не найдено в Яндекс.Музыке, ищем в SoundCloud
+            try
+            {
+                baseTrackInfo = await soundCloudTextSearchService.SearchTrackAsync(
+                    query,
+                    _cancellationToken
+                );
+            }
+            catch (TrackNotFoundException scEx)
+            {
+                await client.SendMessageToMainTwitchAsync(
+                    $"Трек не найден ни в Яндекс.Музыке, ни в SoundCloud: {scEx.Message}"
+                );
+                logger.LogException(scEx);
+                return;
+            }
 
-    private Task<BaseTrackInfo> GetYandexMusicBaseTrackInfo(HttpClient httpClient)
-    {
-        throw new NotImplementedException();
-    }
-
-    private Task<BaseTrackInfo> GetSoundCloudBaseTrackInfo(HttpClient httpClient)
-    {
-        throw new NotImplementedException();
-    }
-
-    private Task<BaseTrackInfo> GetYoutubeBaseTrackInfo(HttpClient httpClient)
-    {
-        throw new NotImplementedException();
+            await userQueue.AddToQueueAsync(
+                new UserRequestedTrack
+                {
+                    RequestedTrack = baseTrackInfo,
+                    TwitchId = userId,
+                    TwitchDisplayName = userName,
+                    RequestedTrackId = baseTrackInfo.Id,
+                }
+            );
+        }
+        catch (Exception ex)
+        {
+            await client.SendMessageToMainTwitchAsync($"Ошибка поиска по тексту: {ex.Message}");
+            logger.LogException(ex);
+        }
     }
 
     private static SoundRequestDomainSource GetDomainType(Uri uri)
@@ -103,7 +165,7 @@ public class SoundRequestHandler(
             "youtu.be" or "youtube.com" => SoundRequestDomainSource.Youtube,
             "soundcloud.com" => SoundRequestDomainSource.SoundCloud,
             "music.yandex.ru" => SoundRequestDomainSource.YandexMusic,
-            "vk.com" => SoundRequestDomainSource.VkMusic,
+            //"vk.com" => SoundRequestDomainSource.VkMusic,
             _ => SoundRequestDomainSource.None,
         };
     }

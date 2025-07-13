@@ -17,7 +17,7 @@ namespace Telegramus.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.4")
+                .HasAnnotation("ProductVersion", "9.0.6")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -239,6 +239,52 @@ namespace Telegramus.Migrations
                     b.ToTable("WTelegramAlloweedChannels");
                 });
 
+            modelBuilder.Entity("MARS.Server.Services.ServiceManager.Entitys.ServiceState", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ConfigurationJson")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsServiceActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("LastActivity")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("LastStartTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ServiceName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ServiceStates");
+                });
+
             modelBuilder.Entity("MARS.Server.Services.SoundRequest.Entitys.BaseTrackInfo", b =>
                 {
                     b.Property<Guid>("Id")
@@ -247,6 +293,9 @@ namespace Telegramus.Migrations
 
                     b.PrimitiveCollection<string[]>("Authors")
                         .HasColumnType("text[]");
+
+                    b.Property<int>("Domain")
+                        .HasColumnType("integer");
 
                     b.Property<TimeSpan>("Duration")
                         .HasColumnType("interval");
@@ -913,6 +962,32 @@ namespace Telegramus.Migrations
                         .HasForeignKey("MemeTypeId");
 
                     b.Navigation("Type");
+                });
+
+            modelBuilder.Entity("MARS.Server.Services.SoundRequest.Entitys.BaseTrackInfo", b =>
+                {
+                    b.OwnsOne("MARS.Server.Services.SoundRequest.Entitys.YandexTrackAdditionalInfo", "YandexSpecificInfo", b1 =>
+                        {
+                            b1.Property<Guid>("BaseTrackInfoId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<string>("ArtworkUrl")
+                                .HasColumnType("text")
+                                .HasColumnName("YandexInfo_ArtworkUrl");
+
+                            b1.Property<string>("Mp3TrackUrl")
+                                .HasColumnType("text")
+                                .HasColumnName("YandexInfo_MP3Url");
+
+                            b1.HasKey("BaseTrackInfoId");
+
+                            b1.ToTable("SoundRequestBaseTrackInfos");
+
+                            b1.WithOwner()
+                                .HasForeignKey("BaseTrackInfoId");
+                        });
+
+                    b.Navigation("YandexSpecificInfo");
                 });
 
             modelBuilder.Entity("MARS.Server.Services.SoundRequest.Entitys.PlayerState", b =>

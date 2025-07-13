@@ -3,6 +3,7 @@ using MARS.Server.CustomLoggers.DatabaseLogger;
 using MARS.Server.Services._365Genius.Entitys;
 using MARS.Server.Services.Framedata.Entitys;
 using MARS.Server.Services.RandomMem.Entity;
+using MARS.Server.Services.ServiceManager.Entitys;
 using MARS.Server.Services.SoundRequest.Entitys;
 using MARS.Server.Services.Twitch.ClientMessages.AutoMessages.Entitys;
 using MARS.Server.Services.Twitch.FumoFriday.Entitys;
@@ -64,6 +65,7 @@ public sealed class AppDbContext : DbContext
     public DbSet<PlayerState> SoundRequestPlayerState { get; set; } = null!;
     public DbSet<SoundRequestBackgroundTrackId> SoundRequestBackgroundTracks { get; set; } = null!;
     public DbSet<UserRequestedTrack> SoundRequestUserQueue { get; set; } = null!;
+    public DbSet<ServiceState> ServiceStates { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -207,9 +209,18 @@ public sealed class AppDbContext : DbContext
 
             entity.OwnsOne(
                 e => e.StylesInfo,
-                metaInfo =>
+                metaInfo => metaInfo.Property(p => p.IsBorder).HasColumnName("StylesInfo_IsBorder")
+            );
+        });
+
+        modelBuilder.Entity<BaseTrackInfo>(entitys =>
+        {
+            entitys.OwnsOne(
+                e => e.YandexSpecificInfo,
+                a =>
                 {
-                    metaInfo.Property(p => p.IsBorder).HasColumnName("StylesInfo_IsBorder");
+                    a.Property(t => t.ArtworkUrl).HasColumnName("YandexInfo_ArtworkUrl");
+                    a.Property(t => t.Mp3TrackUrl).HasColumnName("YandexInfo_MP3Url");
                 }
             );
         });

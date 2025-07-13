@@ -1,5 +1,8 @@
-﻿namespace MARS.Server.Services.PyroAlerts.Entitys;
+﻿using System.Diagnostics.CodeAnalysis;
 
+namespace MARS.Server.Services.PyroAlerts.Entitys;
+
+[method: SetsRequiredMembers]
 public struct MediaDto(MediaInfo mediaInfo)
 {
     [Required]

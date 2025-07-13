@@ -1,5 +1,8 @@
 ﻿namespace MARS.Server.Services.SoundRequest.Entitys;
 
+/// <summary>
+/// Represents a track requested by a user in the sound request system.
+/// </summary>
 public class UserRequestedTrack
 {
     [Key]

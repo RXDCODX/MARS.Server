@@ -13,7 +13,7 @@ public partial class Commands
     {
         // Дата последнего рабочего дня Тани
         var lastWorkDay1 = new DateTimeOffset(2024, 1, 22, default, default, default, default);
-        var lastWorkDay2 = new DateTimeOffset(2024, 1, 23, default, default, default, default);
+        //var lastWorkDay2 = new DateTimeOffset(2024, 1, 23, default, default, default, default);
 
         // Текущая дата
         var today = DateTimeOffset.Now;
@@ -55,12 +55,12 @@ public partial class Commands
         switch (day)
         {
             case 0:
-                return new ValueTask<DateTimeOffset[]>(new[] { today, today.AddDays(1) });
+                return new ValueTask<DateTimeOffset[]>([today, today.AddDays(1)]);
             case 1:
-                return new ValueTask<DateTimeOffset[]>(new[] { today, today.AddDays(3) });
+                return new ValueTask<DateTimeOffset[]>([today, today.AddDays(3)]);
             case 2:
                 return new ValueTask<DateTimeOffset[]>(
-                    new[] { today.AddDays(cycleLength - day), today.AddDays(cycleLength - day + 1) }
+                    [today.AddDays(cycleLength - day), today.AddDays(cycleLength - day + 1)]
                 );
             case 3:
                 goto case 2;

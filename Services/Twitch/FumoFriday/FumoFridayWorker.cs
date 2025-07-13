@@ -1,45 +1,36 @@
-﻿using MARS.Server.Services.Twitch.FumoFriday.Entitys;
+﻿using MARS.Server.Services.ServiceManager;
+using MARS.Server.Services.Twitch.FumoFriday.Entitys;
 using MARS.Server.Services.Twitch.Management;
 using TwitchLib.Client.Events;
 
 namespace MARS.Server.Services.Twitch.FumoFriday;
 
-public class FumoFridayWorker : BackgroundService
+public class FumoFridayWorker(
+    IHubContext<TelegramusHub, ITelegramusHub> alertsHub,
+    IDbContextFactory<AppDbContext> dbContextFactory,
+    ILogger<FumoFridayWorker> logger,
+    IHostApplicationLifetime hostApplicationLifetime,
+    ITwitchClient twitchClient,
+    ITwitchAPI twitchApi
+) : ManagedServiceBase(logger)
 {
-    private readonly CancellationToken _cancellationToken;
+    public override string ServiceName => "fumofriday";
+    public override string DisplayName => "Fumo Friday";
+    public override string Description => "Fumo Friday Twitch интеграция";
+    public override bool IsServiceActive { get; set; }
+
+    private readonly CancellationToken _cancellationToken =
+        hostApplicationLifetime.ApplicationStopping;
 
     private readonly List<string> _users = [];
-    private readonly IHubContext<TelegramusHub, ITelegramusHub> _alertsHub;
-    private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
-    private readonly ILogger<FumoFridayWorker> _logger;
-    private readonly ITwitchClient _twitchClient;
-    private readonly ITwitchAPI _twitchApi;
-
-    public FumoFridayWorker(
-        IHubContext<TelegramusHub, ITelegramusHub> alertsHub,
-        IDbContextFactory<AppDbContext> dbContextFactory,
-        ILogger<FumoFridayWorker> logger,
-        IHostApplicationLifetime hostApplicationLifetime,
-        ITwitchClient twitchClient,
-        ITwitchAPI twitchApi
-    )
-    {
-        _alertsHub = alertsHub;
-        _dbContextFactory = dbContextFactory;
-        _logger = logger;
-        _twitchClient = twitchClient;
-        _twitchApi = twitchApi;
-        _cancellationToken = hostApplicationLifetime.ApplicationStopping;
-
-        hostApplicationLifetime.ApplicationStarted.Register(() =>
-        {
-            twitchClient.OnMessageReceived += OnMessageReceived;
-            EventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd += OnRewardRedemption;
-        });
-    }
 
     public async void OnMessageReceived(object? sender, OnMessageReceivedArgs e)
     {
+        if (!IsServiceActive)
+        {
+            return;
+        }
+
         var name = e.ChatMessage.DisplayName;
         var id = e.ChatMessage.UserId;
         var now = DateTimeOffset.Now;
@@ -49,7 +40,7 @@ public class FumoFridayWorker : BackgroundService
             await Task.Factory.StartNew(
                 async () =>
                 {
-                    await using var dbContext = await _dbContextFactory.CreateDbContextAsync(
+                    await using var dbContext = await dbContextFactory.CreateDbContextAsync(
                         _cancellationToken
                     );
 
@@ -64,7 +55,7 @@ public class FumoFridayWorker : BackgroundService
                         var color = string.IsNullOrWhiteSpace(e.ChatMessage.ColorHex)
                             ? (await GetColor(e.ChatMessage.UserId))
                             : e.ChatMessage.ColorHex;
-                        await _alertsHub.Clients.All.FumoFriday(name, color);
+                        await alertsHub.Clients.All.FumoFriday(name, color);
                         _users.Add(id);
 
                         fumoUser.LastTime = now;
@@ -81,6 +72,11 @@ public class FumoFridayWorker : BackgroundService
         ChannelPointsCustomRewardRedemptionArgs args
     )
     {
+        if (!IsServiceActive)
+        {
+            return;
+        }
+
         if (args.Notification.Payload.Event.BroadcasterUserLogin != TwitchExstension.Channel)
         {
             return;
@@ -96,16 +92,16 @@ public class FumoFridayWorker : BackgroundService
 
                     if (_users.Contains(name))
                     {
-                        await _twitchClient.SendMessageToMainTwitchAsync(
+                        await twitchClient.SendMessageToMainTwitchAsync(
                             "Ты уже подписан на Fumo Friday",
-                            _logger
+                            logger
                         );
                         return;
                     }
 
                     try
                     {
-                        await using var dbContext = await _dbContextFactory.CreateDbContextAsync(
+                        await using var dbContext = await dbContextFactory.CreateDbContextAsync(
                             _cancellationToken
                         );
                         var now = DateTimeOffset.Now;
@@ -130,21 +126,21 @@ public class FumoFridayWorker : BackgroundService
                             if (now.DayOfWeek == DayOfWeek.Friday)
                             {
                                 var color = await GetColor(id);
-                                await _alertsHub.Clients.All.FumoFriday(name, color);
+                                await alertsHub.Clients.All.FumoFriday(name, color);
                                 _users.Add(id);
                             }
                         }
                         else
                         {
-                            await _twitchClient.SendMessageToMainTwitchAsync(
+                            await twitchClient.SendMessageToMainTwitchAsync(
                                 $"@{name}, Ты уже счастливый фанат фум!",
-                                _logger
+                                logger
                             );
                         }
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogException(ex);
+                        logger.LogException(ex);
                     }
                 }
             },
@@ -156,7 +152,7 @@ public class FumoFridayWorker : BackgroundService
     {
         try
         {
-            var aa = await _twitchApi.Helix.Chat.GetUserChatColorAsync([id]);
+            var aa = await twitchApi.Helix.Chat.GetUserChatColorAsync([id]);
             return aa.Data[0].Color;
         }
         catch (Exception)
@@ -165,8 +161,22 @@ public class FumoFridayWorker : BackgroundService
         }
     }
 
-    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    public override Task StartAsync(CancellationToken cancellationToken = default)
     {
-        return Task.CompletedTask;
+        hostApplicationLifetime.ApplicationStarted.Register(() =>
+        {
+            twitchClient.OnMessageReceived += OnMessageReceived;
+            EventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd += OnRewardRedemption;
+        });
+
+        return base.StartAsync(cancellationToken);
+    }
+
+    public override Task StopAsync(CancellationToken cancellationToken = default)
+    {
+        twitchClient.OnMessageReceived -= OnMessageReceived;
+        EventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd -= OnRewardRedemption;
+
+        return base.StopAsync(cancellationToken);
     }
 }

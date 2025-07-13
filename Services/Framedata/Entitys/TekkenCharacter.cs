@@ -1,5 +1,8 @@
 ﻿namespace MARS.Server.Services.Framedata.Entitys;
 
+/// <summary>
+/// Represents a Tekken character with properties such as name, description, strengths, and weaknesses.
+/// </summary>
 public class TekkenCharacter
 {
     [Key]

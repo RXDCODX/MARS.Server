@@ -1,39 +1,27 @@
-﻿using TwitchLib.Client.Events;
+﻿using MARS.Server.Services.ServiceManager;
+using TwitchLib.Client.Events;
 
 namespace MARS.Server.Services.Twitch.Rewards.TwitchScreenParticles;
 
-public class Emojis : BackgroundService
+public class Emojis(
+    ILogger<Confetty> logger,
+    IHubContext<TelegramusHub, ITelegramusHub> hub,
+    IHostApplicationLifetime lifetime,
+    ITwitchClient client
+) : ManagedServiceBase(logger)
 {
-    private readonly ILogger<Confetty> _logger;
-    private readonly IHubContext<TelegramusHub, ITelegramusHub> _hub;
-    private readonly ITwitchClient _client;
-    private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
-    private readonly CancellationToken _token;
+    public override string ServiceName => "emojis";
+    public override string DisplayName => "Emojis";
+    public override string Description => "Эмодзи на Twitch";
+    public override bool IsServiceActive { get; set; }
 
-    private readonly Guid Guid = System.Guid.Parse("22db3d35-1b76-4674-beb7-cc7546356a84");
+    private readonly CancellationToken _token = lifetime.ApplicationStopping;
 
-    public Emojis(
-        ILogger<Confetty> logger,
-        IHubContext<TelegramusHub, ITelegramusHub> hub,
-        IHostApplicationLifetime lifetime,
-        ITwitchClient client,
-        IDbContextFactory<AppDbContext> dbContextFactory
-    )
-    {
-        _logger = logger;
-        _hub = hub;
-        _client = client;
-        _dbContextFactory = dbContextFactory;
-        _token = lifetime.ApplicationStopping;
-        lifetime.ApplicationStarted.Register(() =>
-        {
-            client.OnMessageReceived += ClientOnOnMessageReceived;
-        });
-    }
+    private readonly Guid _guid = System.Guid.Parse("22db3d35-1b76-4674-beb7-cc7546356a84");
 
     private async void ClientOnOnMessageReceived(object? sender, OnMessageReceivedArgs e)
     {
-        if (!string.IsNullOrWhiteSpace(e.ChatMessage.CustomRewardId))
+        if (!string.IsNullOrWhiteSpace(e.ChatMessage.CustomRewardId) && IsServiceActive)
         {
             await Task.Factory.StartNew(
                 async () =>
@@ -41,14 +29,14 @@ public class Emojis : BackgroundService
                     var message = e.ChatMessage;
 
                     if (
-                        message.CustomRewardId == Guid.ToString()
+                        message.CustomRewardId == _guid.ToString()
                         && message.Channel.Equals(
                             TwitchExstension.Channel,
                             StringComparison.OrdinalIgnoreCase
                         )
                     )
                     {
-                        await _hub.Clients.All.MakeScreenEmojisParticles(message);
+                        await hub.Clients.All.MakeScreenEmojisParticles(message);
                     }
                 },
                 _token
@@ -56,8 +44,22 @@ public class Emojis : BackgroundService
         }
     }
 
-    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    public override async Task StartAsync(CancellationToken cancellationToken = default)
     {
-        return Task.CompletedTask;
+        await base.StartAsync(cancellationToken);
+
+        if (IsServiceActive)
+        {
+            lifetime.ApplicationStarted.Register(() =>
+            {
+                client.OnMessageReceived += ClientOnOnMessageReceived;
+            });
+        }
+    }
+
+    public override Task StopAsync(CancellationToken cancellationToken = default)
+    {
+        client.OnMessageReceived -= ClientOnOnMessageReceived;
+        return base.StopAsync(cancellationToken);
     }
 }

@@ -1,4 +1,5 @@
 ﻿using System.Text.RegularExpressions;
+using MARS.Server.Services.ServiceManager;
 using MARS.Server.Services.Shikimori;
 using MARS.Server.Services.Shikimori.Entitys;
 using MARS.Server.Services.Twitch.Management;
@@ -8,47 +9,27 @@ using TwitchLib.Client.Events;
 
 namespace MARS.Server.Services.Twitch.Rewards.TwitchWaifuRolls;
 
-public class AddNewWaifu : BackgroundService
+public class AddNewWaifu(
+    ILogger<AddNewWaifu> logger,
+    ITwitchClient client,
+    ShikimoriService shikimoriService,
+    IOptions<ShikimoriClientOptions> options,
+    WaifuRollService waifuRollService,
+    IHubContext<TelegramusHub, ITelegramusHub> hubContext,
+    ITwitchAPI api,
+    IHostApplicationLifetime lifetime,
+    TokenService tokenService
+) : ManagedServiceBase(logger)
 {
-    private readonly ITwitchAPI _api;
-    private readonly ITwitchClient _client;
-    private readonly IHubContext<TelegramusHub, ITelegramusHub> _hubContext;
-    private readonly ILogger<AddNewWaifu> _logger;
-    private readonly ShikimoriClientOptions _options;
-    private readonly ShikimoriService _shikimoriService;
-    private readonly WaifuRollService _waifuRollService;
-    private readonly TokenService _tokenService;
+    private readonly ShikimoriClientOptions _options = options.Value;
 
     private static Guid RewardGuid => Guid.Parse("a0c9d421-cf76-4f76-9bc6-3cf28da1ffaf");
     private const int VipChance = 5;
 
-    public AddNewWaifu(
-        ILogger<AddNewWaifu> logger,
-        ITwitchClient client,
-        ShikimoriService shikimoriService,
-        IOptions<ShikimoriClientOptions> options,
-        WaifuRollService waifuRollService,
-        IHubContext<TelegramusHub, ITelegramusHub> hubContext,
-        ITwitchAPI api,
-        IHostApplicationLifetime lifetime,
-        TokenService tokenService
-    )
-    {
-        _logger = logger;
-        _client = client;
-        _shikimoriService = shikimoriService;
-        _waifuRollService = waifuRollService;
-        _hubContext = hubContext;
-
-        _api = api;
-        _tokenService = tokenService;
-        _options = options.Value;
-
-        lifetime.ApplicationStarted.Register(() =>
-        {
-            client.OnMessageReceived += AddNewWaifuTwitchEvent;
-        });
-    }
+    public override string ServiceName => "addnewwaifu";
+    public override string DisplayName => "Add New Waifu";
+    public override string Description => "Добавление новой вайфу через Twitch";
+    public override bool IsServiceActive { get; set; }
 
     private async void AddNewWaifuTwitchEvent(
         object? sender,
@@ -88,11 +69,11 @@ public class AddNewWaifu : BackgroundService
                         template
                     );
 
-                    await _client.SendMessageToMainTwitchAsync(message, _logger);
+                    await client.SendMessageToMainTwitchAsync(message, logger);
                     return;
                 }
 
-                ShikiCharacter? character = await _shikimoriService.GetShikiCharacterById(id);
+                ShikiCharacter? character = await shikimoriService.GetShikiCharacterById(id);
 
                 if (character is null)
                 {
@@ -103,11 +84,11 @@ public class AddNewWaifu : BackgroundService
                         template
                     );
 
-                    await _client.SendMessageToMainTwitchAsync(message, _logger);
+                    await client.SendMessageToMainTwitchAsync(message, logger);
                     return;
                 }
 
-                var (waifu, isException) = await _waifuRollService.AddNewWaifu(character);
+                var (waifu, isException) = await waifuRollService.AddNewWaifu(character);
 
                 if (waifu is null && !isException)
                 {
@@ -117,7 +98,7 @@ public class AddNewWaifu : BackgroundService
                         template
                     );
 
-                    await _client.SendMessageToMainTwitchAsync(message, _logger);
+                    await client.SendMessageToMainTwitchAsync(message, logger);
                     return;
                 }
 
@@ -126,37 +107,33 @@ public class AddNewWaifu : BackgroundService
                     waifu.IsAdded = true;
                     waifu.ImageUrl = _options.ShikimoriSite + waifu.ImageUrl;
 
-                    var color = await _api.Helix.Chat.GetUserChatColorAsync([userId]);
+                    var color = await api.Helix.Chat.GetUserChatColorAsync([userId]);
 
-                    await _hubContext.Clients.All.AddNewWaifu(
-                        waifu,
-                        userName,
-                        color.Data[0]?.Color
-                    );
+                    await hubContext.Clients.All.AddNewWaifu(waifu, userName, color.Data[0]?.Color);
 
                     if (!isVip)
                     {
                         var chance = Random.Shared.Next(0, 101);
                         if (chance >= 100 - VipChance)
                         {
-                            if (_tokenService.Token == null)
+                            if (tokenService.Token == null)
                             {
                                 return;
                             }
 
                             var message =
                                 $"@{userName}! Поздравляю, ты получил VIP -статус за добавление персонажей!";
-                            await _api.Helix.Chat.SendChatAnnouncementAsync(
+                            await api.Helix.Chat.SendChatAnnouncementAsync(
                                 TwitchExstension.ChannelId,
                                 TwitchExstension.ChannelId,
                                 message,
                                 AnnouncementColors.Primary,
-                                _tokenService.Token.AccessToken
+                                tokenService.Token.AccessToken
                             );
-                            await _api.Helix.Channels.AddChannelVIPAsync(
+                            await api.Helix.Channels.AddChannelVIPAsync(
                                 TwitchExstension.ChannelId,
                                 userId,
-                                _tokenService.Token.AccessToken
+                                tokenService.Token.AccessToken
                             );
                         }
                         else
@@ -172,7 +149,7 @@ public class AddNewWaifu : BackgroundService
                                 + "Тебе выпало число "
                                 + chance
                                 + " !";
-                            await _client.SendMessageToMainTwitchAsync(message);
+                            await client.SendMessageToMainTwitchAsync(message);
                         }
                     }
                     else
@@ -184,7 +161,7 @@ public class AddNewWaifu : BackgroundService
                             null,
                             waifu
                         );
-                        await _client.SendMessageToMainTwitchAsync(message);
+                        await client.SendMessageToMainTwitchAsync(message);
                     }
 
                     return;
@@ -198,7 +175,7 @@ public class AddNewWaifu : BackgroundService
                     null,
                     waifu
                 );
-                await _client.SendMessageToMainTwitchAsync(resultMessage, _logger);
+                await client.SendMessageToMainTwitchAsync(resultMessage, logger);
             });
         }
     }
@@ -209,17 +186,32 @@ public class AddNewWaifu : BackgroundService
 
         Match match = regex.Match(url);
 
-        if (match.Success)
+        if (!match.Success)
         {
-            var characterId = match.Groups[1].Value;
-            return ValueTask.FromResult(characterId);
+            return ValueTask.FromResult(string.Empty);
         }
 
-        return ValueTask.FromResult(string.Empty);
+        var characterId = match.Groups[1].Value;
+        return ValueTask.FromResult(characterId);
     }
 
-    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    public override async Task StartAsync(CancellationToken cancellationToken = default)
     {
-        return Task.CompletedTask;
+        await base.StartAsync(cancellationToken);
+
+        if (IsServiceActive)
+        {
+            lifetime.ApplicationStarted.Register(() =>
+            {
+                client.OnMessageReceived += AddNewWaifuTwitchEvent;
+            });
+        }
+    }
+
+    public override Task StopAsync(CancellationToken cancellationToken = default)
+    {
+        client.OnMessageReceived -= AddNewWaifuTwitchEvent;
+
+        return base.StopAsync(cancellationToken);
     }
 }

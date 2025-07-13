@@ -21,7 +21,7 @@ namespace MARS.Server;
 
 public class WTelegramClient(int item1, string item2, string item3) : Client(item1, item2, item3);
 
-public class Program
+public static class Program
 {
     public static bool IsUseSoundRequest { get; set; }
     public static bool IsUseSwagger { get; set; }
@@ -116,7 +116,8 @@ public class Program
         await services.AddTwitchEvents(configuration, loggerFactory);
         services.AddTelegramThings(loggerFactory);
         services.AddConfiguration(configuration);
-        //services.AddSoundRequest(configuration);
+        //services.AddYandexMusic();
+        //services.AddSoundRequest();
         services.AddBaseAspNetMiddlewares();
         services.AddSwaggerServices();
 
@@ -183,6 +184,9 @@ public class Program
             };
         });
 
+        services.AddSingleton<WaifuRollWorker>();
+        services.AddHostedService(sp => sp.GetRequiredService<WaifuRollWorker>());
+
         services.AddSingleton(loggerFactory);
 
         var app = builder.Build();
@@ -216,7 +220,7 @@ public class Program
 
         app.MapControllers();
 
-        if (isWithSpa)
+        if (isWithSpa || app.Environment.IsProduction())
         {
             app.MapFallbackToFile("index.html");
         }

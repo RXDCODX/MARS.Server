@@ -1,7 +1,9 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 using MARS.Server.Services.Framedata;
+using MARS.Server.Services.ServiceManager;
 using MARS.Server.Services.SoundRequest;
+using MARS.Server.Services.SoundRequest.Platforms.YouTube;
 using MARS.Server.Services.TelegramBotService;
 using MARS.Server.Services.TelegramBotService.Commands;
 using MARS.Server.Services.Twitch.AutoInfoFetch;
@@ -30,6 +32,8 @@ using TwitchLib.Api;
 using TwitchLib.Api.Core.Enums;
 using TwitchLib.Client;
 using TwitchLib.Client.Models;
+using YandexMusicResolver;
+using YandexMusicResolver.Config;
 
 namespace MARS.Server;
 
@@ -104,7 +108,7 @@ public static class StartupEstensions
                     "bin/WTelegram.session"
                 );
                 var logger = factory.CreateLogger("WTelegram");
-                WTelegram.Helpers.Log = (i, v) => logger.Log((LogLevel)i, message: v);
+                WTelegram.Helpers.Log = (i, v) => logger.Log((LogLevel)i, "{Message}", [v]);
                 client.LoginUserIfNeeded();
                 //DoLogin(client, options.PhoneNumber, options).GetAwaiter().GetResult();
 
@@ -248,6 +252,8 @@ public static class StartupEstensions
         services.AddSingleton<TwitchNameActualizer>();
         services.AddHostedService(sp => sp.GetRequiredService<TwitchNameActualizer>());
 
+        services.AddSingleton<IServiceManager, ServiceManager>();
+
         return services;
     }
 
@@ -298,6 +304,9 @@ public static class StartupEstensions
         services.Configure<HoyolabConfiguration>(
             configuration.GetSection(AppBase.Base).GetSection(HoyolabConfiguration.Section)
         );
+        services.Configure<YandexMusicConfiguration>(
+            configuration.GetSection(AppBase.Base).GetSection(YandexMusicConfiguration.SectionName)
+        );
 
         return services;
     }
@@ -305,10 +314,14 @@ public static class StartupEstensions
     public static IServiceCollection AddSoundRequest(this IServiceCollection services)
     {
         Program.IsUseSoundRequest = true;
+
+        services.AddSingleton<YouTubeApiService>();
+
         services.AddSingleton<SoundRequestBackendPlayer>();
         services.AddHostedService(sp => sp.GetRequiredService<SoundRequestBackendPlayer>());
 
         services.AddSingleton<SoundRequestBackgroundPlaylist>();
+        services.AddHostedService(sp => sp.GetRequiredService<SoundRequestBackgroundPlaylist>());
         services.AddSingleton<SoundRequestHistoryService>();
         services.AddSingleton<SoundRequestHandler>();
         services.AddSingleton<SoundRequestUserQueue>();
@@ -339,6 +352,34 @@ public static class StartupEstensions
             configure.Title = "Telegramus";
             configure.DefaultResponseReferenceTypeNullHandling = ReferenceTypeNullHandling.NotNull;
             configure.AllowNullableBodyParameters = false;
+        });
+
+        return services;
+    }
+
+    internal static IServiceCollection AddYandexMusic(this IServiceCollection services)
+    {
+        services.AddSingleton<IYandexMusicMainResolver>(sp =>
+        {
+            var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
+            var httpClient = httpClientFactory.CreateClient("YandexMusicResolver");
+            var config = sp.GetRequiredService<IOptions<YandexMusicConfiguration>>();
+            var authService = YandexMusicAuthService.Create(httpClient);
+            var result = authService
+                .LoginAsync(config.Value.Login, config.Value.Password)
+                .GetAwaiter()
+                .GetResult();
+            var credentialProvider = YandexCredentialsProvider.Create(
+                authService,
+                config.Value.Login,
+                config.Value.Password
+            );
+            var yandexMusicMainResolver = YandexMusicMainResolver.Create(
+                credentialProvider,
+                httpClient
+            );
+
+            return yandexMusicMainResolver;
         });
 
         return services;

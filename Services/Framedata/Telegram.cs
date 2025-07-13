@@ -3,6 +3,9 @@ using Telegram.Bot.Types.Enums;
 
 namespace MARS.Server.Services.Framedata;
 
+/// <summary>
+/// Provides Telegram-related functionality for the Tekken8FrameData class.
+/// </summary>
 public partial class Tekken8FrameData
 {
     public async Task HandAlert(ITelegramBotClient telegramClient, Update update)

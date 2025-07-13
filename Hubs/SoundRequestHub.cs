@@ -1,75 +1,85 @@
 ﻿using MARS.Server.Services.SoundRequest;
 using MARS.Server.Services.SoundRequest.Entitys;
-using Microsoft.AspNetCore.Mvc;
 using SignalRSwaggerGen.Attributes;
 using SignalRSwaggerGen.Enums;
 
 namespace MARS.Server.Hubs;
 
 [SignalRHub(null, AutoDiscover.MethodsAndParams)]
-public class SoundRequestHub : Hub<ISoundRequestHub>
+public class SoundRequestHub(
+    SoundRequestBackendPlayer player,
+    SoundRequestUserQueue userQueue,
+    SoundRequestHistoryService history
+) : Hub<ISoundRequestHub>
 {
-    private readonly SoundRequestBackendPlayer _player;
-    private readonly SoundRequestUserQueue _userQueue;
-    private readonly SoundRequestHistoryService _history;
+    public Task JoinAsClient() => Groups.AddToGroupAsync(Context.ConnectionId, "client");
 
-    public SoundRequestHub(SoundRequestBackendPlayer player, SoundRequestUserQueue userQueue, SoundRequestHistoryService history)
+    public Task Play()
     {
-        _player = player;
-        _userQueue = userQueue;
-        _history = history;
+        player.ResumePlayer();
+        return Task.CompletedTask;
     }
 
-    public Task JoinAsClient()
+    public Task Pause()
     {
-        return Groups.AddToGroupAsync(Context.ConnectionId, "client");
+        player.PausePlayer();
+        return Task.CompletedTask;
     }
 
-    public Task Play() { _player.ResumePlayer(); return Task.CompletedTask; }
-    public Task Pause() { _player.PausePlayer(); return Task.CompletedTask; }
-    public Task Resume() { _player.ResumePlayer(); return Task.CompletedTask; }
-    public Task Stop() { _player.StopPlayer(); return Task.CompletedTask; }
-    public Task Skip() { return _player.SkipTrack(); }
-    public Task Mute() { _player.MutePlayer(); return Task.CompletedTask; }
-    public Task Unmute() { _player.UnmutePlayer(); return Task.CompletedTask; }
-    public Task SetVolume(int volume) { _player.SetVolume(volume); return Task.CompletedTask; }
-
-    public async Task AddTrackToQueue(UserRequestedTrack track)
+    public Task Resume()
     {
-        await _userQueue.AddToQueueAsync(track);
+        player.ResumePlayer();
+        return Task.CompletedTask;
     }
 
-    public async Task<List<UserRequestedTrack>> GetQueue()
+    public Task Stop()
     {
-        return await _userQueue.GetQueueAsync();
+        player.StopPlayer();
+        return Task.CompletedTask;
     }
+
+    public Task Skip() => player.SkipTrack();
+
+    public Task Mute()
+    {
+        player.MutePlayer();
+        return Task.CompletedTask;
+    }
+
+    public Task Unmute()
+    {
+        player.UnmutePlayer();
+        return Task.CompletedTask;
+    }
+
+    public Task SetVolume(int volume)
+    {
+        player.SetVolume(volume);
+        return Task.CompletedTask;
+    }
+
+    public async Task AddTrackToQueue(UserRequestedTrack track) =>
+        await userQueue.AddToQueueAsync(track);
+
+    public async Task<List<UserRequestedTrack>> GetQueue() => await userQueue.GetQueueAsync();
 
     public async Task<List<BaseTrackInfo>> GetHistory(int count = 20)
     {
-        var arr = await _history.GetLastPlayedTracks(count);
-        return arr.ToList();
+        var arr = await history.GetLastPlayedTracks(count);
+        return [.. arr];
     }
 
-    public Task<PlayerState> GetPlayerState()
-    {
-        return Task.FromResult(_player.PlayerState);
-    }
+    public Task<PlayerState> GetPlayerState() => Task.FromResult(player.PlayerState);
 
-    public Task Ended(BaseTrackInfo trackInfo)
-    {
+    public Task Ended() =>
         // Implementation of Ended method
-        return Task.CompletedTask;
-    }
+        Task.CompletedTask;
 
-    public Task Started(BaseTrackInfo trackInfo)
-    {
+    public Task Started() =>
         // Implementation of Started method
-        return Task.CompletedTask;
-    }
+        Task.CompletedTask;
 
-    public Task ErrorPlaying(BaseTrackInfo trackInfo)
-    {
+    public Task ErrorPlaying() =>
         // Implementation of ErrorPlaying method
-        return Task.CompletedTask;
-    }
+        Task.CompletedTask;
 }

@@ -190,7 +190,7 @@ public class RandomMemOnline(
             var fileInfo = await client.DownloadFileAsync(photo, fs, size);
             var fileName = $"{photo.id}.jpeg";
 
-            await MemoryStorage.AddFileAsync($"{photo.ID}.{fileInfo.ToString()}", buffer);
+            await MemoryStorage.AddFileAsync($"{photo.ID}.{fileInfo}", buffer);
 
             var mediaInfo = new MediaDto(
                 new MediaInfo

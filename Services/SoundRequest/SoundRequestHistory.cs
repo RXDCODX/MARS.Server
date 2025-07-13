@@ -2,6 +2,9 @@
 
 namespace MARS.Server.Services.SoundRequest;
 
+/// <summary>
+/// Manages the history of sound requests, including logging and retrieval.
+/// </summary>
 public class SoundRequestHistoryService
 {
     private readonly CancellationToken _cancellationToken;

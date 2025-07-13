@@ -12,7 +12,7 @@ namespace Telegramus.Migrations
 {
     [DbContext(typeof(AppDbContext))]
     [Migration("20241101203524_add365videos")]
-    partial class add365videos
+    partial class Add365videos
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

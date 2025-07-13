@@ -3,6 +3,9 @@ using MARS.Server.Services.Framedata.Entitys.Enums;
 
 namespace MARS.Server.Services.Framedata;
 
+/// <summary>
+/// Provides additional properties for the Tekken8FrameData class.
+/// </summary>
 public partial class Tekken8FrameData
 {
     private readonly CancellationToken _cancellationToken = lifetime.ApplicationStopping;

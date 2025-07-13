@@ -44,10 +44,14 @@ public partial class Commands(
         }
         else
         {
-            methods = commands
-                .GetMethods(BindingFlags.DeclaredOnly | BindingFlags.Instance | BindingFlags.Public)
-                .Where(method => method.GetCustomAttribute<AdminAttribute>() == null)
-                .ToArray();
+            methods =
+            [
+                .. commands
+                    .GetMethods(
+                        BindingFlags.DeclaredOnly | BindingFlags.Instance | BindingFlags.Public
+                    )
+                    .Where(method => method.GetCustomAttribute<AdminAttribute>() == null),
+            ];
         }
 
         string usage;

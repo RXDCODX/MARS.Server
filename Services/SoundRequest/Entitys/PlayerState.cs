@@ -1,5 +1,8 @@
 ﻿namespace MARS.Server.Services.SoundRequest.Entitys;
 
+/// <summary>
+/// Represents the state of the sound request player, including playback status and current track.
+/// </summary>
 public class PlayerState : ICloneable
 {
     [Key]

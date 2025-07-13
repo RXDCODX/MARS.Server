@@ -2,6 +2,9 @@
 
 namespace MARS.Server.Services.SoundRequest;
 
+/// <summary>
+/// Handles SignalR events related to sound requests.
+/// </summary>
 public delegate Task PlayerAction(BaseTrackInfo trackInfo);
 
 public class SoundRequestSignalREvents

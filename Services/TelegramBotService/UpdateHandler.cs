@@ -89,7 +89,6 @@ public class UpdateHandler : IUpdateHandler
     }
 
     public async Task HandlePollingErrorAsync(
-        ITelegramBotClient botClient,
         Exception exception,
         CancellationToken cancellationToken
     )
@@ -271,10 +270,10 @@ public class UpdateHandler : IUpdateHandler
         );
 
         InlineQueryResult[] results =
-        {
+        [
             // displayed result
             new InlineQueryResultArticle("1", "TgBots", new InputTextMessageContent("hello")),
-        };
+        ];
 
         await _botClient.AnswerInlineQuery(
             inlineQuery.Id,
