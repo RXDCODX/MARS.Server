@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Telegramus.Migrations;
 
 /// <inheritdoc />
-public partial class add365videos : Migration
+public partial class Add365videos : Migration
 {
     /// <inheritdoc />
     protected override void Up(MigrationBuilder migrationBuilder)

@@ -1,43 +1,50 @@
 ﻿using MARS.Server.Services.RandomMem.Entity;
+using MARS.Server.Services.ServiceManager;
 
 namespace MARS.Server.Services.RandomMem;
 
 public class RandomMemeWorker(
     IDbContextFactory<AppDbContext> contextFactory,
-    IWebHostEnvironment webHostEnvironment
-) : BackgroundService
+    IWebHostEnvironment webHostEnvironment,
+    ILogger<RandomMemeWorker> logger
+) : ManagedServiceBase(logger)
 {
-    private readonly string folderPath = Path.Combine(webHostEnvironment.WebRootPath, "Alerts");
+    public override string ServiceName => "randommemeworker";
+    public override string DisplayName => "Random Meme Worker";
+    public override string Description => "Фоновый обработчик очереди мемов";
+    public override bool IsServiceActive { get; set; }
+    private readonly string _folderPath = Path.Combine(webHostEnvironment.WebRootPath, "Alerts");
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    private static Task? _timerTask;
+
+    public override Task StartAsync(CancellationToken cancellationToken = default)
     {
-        //TODO: добавить миграцию
-        await Task.Factory.StartNew(
+        _timerTask = Task.Factory.StartNew(
             async () =>
             {
-                while (!stoppingToken.IsCancellationRequested)
+                while (!cancellationToken.IsCancellationRequested && IsServiceActive)
                 {
                     await using var dbContext = await contextFactory.CreateDbContextAsync(
-                        stoppingToken
+                        cancellationToken
                     );
 
                     var files = Directory
-                        .GetFiles(folderPath, "*", SearchOption.AllDirectories)
+                        .GetFiles(_folderPath, "*", SearchOption.AllDirectories)
                         .ToHashSet();
-                    var orders = await dbContext.RandomMemeOrder.ToListAsync(stoppingToken);
+                    var orders = await dbContext.RandomMemeOrder.ToListAsync(cancellationToken);
 
                     var fileNamesInDb = orders.Select(o => o.FilePath).ToHashSet();
 
                     // Remove missing files from queue
                     var missingFiles = fileNamesInDb.Except(files).ToList();
-                    if (missingFiles.Any())
+                    if (missingFiles.Count != 0)
                     {
                         orders.RemoveAll(o => missingFiles.Contains(o.FilePath));
 
                         dbContext.RandomMemeOrder.RemoveRange(
                             await dbContext
                                 .RandomMemeOrder.Where(o => missingFiles.Contains(o.FilePath))
-                                .ToListAsync(stoppingToken)
+                                .ToListAsync(cancellationToken)
                         );
                     }
 
@@ -45,7 +52,7 @@ public class RandomMemeWorker(
                     var memeTypes = await dbContext
                         .RandomMemeType.AsNoTracking()
                         .OrderByDescending(e => e.FolderPath.Length)
-                        .ToArrayAsync(stoppingToken);
+                        .ToArrayAsync(cancellationToken);
 
                     foreach (var memeOrder in orders.Where(e => e.MemeTypeId is null))
                     {
@@ -84,7 +91,7 @@ public class RandomMemeWorker(
                                 )
                                 .ToArray();
 
-                            newFiles = newFiles.Except(typedNewFiles).ToArray();
+                            newFiles = [.. newFiles.Except(typedNewFiles)];
 
                             var counter = 1;
 
@@ -119,15 +126,19 @@ public class RandomMemeWorker(
                         );
                     }
 
-                    if (missingFiles.Any() || newFiles.Any())
+                    if (missingFiles.Count != 0 || newFiles.Length != 0)
                     {
-                        await dbContext.SaveChangesAsync(stoppingToken);
+                        await dbContext.SaveChangesAsync(cancellationToken);
                     }
 
-                    await Task.Delay(TimeSpan.FromMinutes(30), stoppingToken);
+                    await Task.Delay(TimeSpan.FromMinutes(30), cancellationToken);
                 }
             },
-            TaskCreationOptions.LongRunning
+            cancellationToken,
+            TaskCreationOptions.LongRunning,
+            TaskScheduler.Default
         );
+
+        return base.StartAsync(cancellationToken);
     }
 }

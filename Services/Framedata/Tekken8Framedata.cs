@@ -1,6 +1,5 @@
 ﻿using MARS.Server.Services.Framedata.Entitys;
 using MARS.Server.Services.Framedata.Entitys.Enums;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace MARS.Server.Services.Framedata;
@@ -192,7 +191,7 @@ public partial class Tekken8FrameData(
         {
             var move =
                 await GetMoveFromMovelistByCommandAsync(input, movelist)
-                ?? (await GetMoveFromMovelistByTagAsync(input, movelist)).Item2;
+                ?? (await GetMoveFromMovelistByTagAsync(input, movelist)).move;
 
             return move;
         }
@@ -267,9 +266,12 @@ public partial class Tekken8FrameData(
 
         if (typeWithoutStance == TekkenMoveTag.None)
         {
-            moves = movelist
-                .Where(e => (e.StanceName?.Equals(input) ?? false) || e.StanceCode.Equals(input))
-                .ToArray();
+            moves =
+            [
+                .. movelist.Where(e =>
+                    (e.StanceName?.Equals(input) ?? false) || e.StanceCode.Equals(input)
+                ),
+            ];
 
             return Task.FromResult<(TekkenMoveTag tag, Move[])?>((TekkenMoveTag.None, moves));
         }
@@ -277,25 +279,25 @@ public partial class Tekken8FrameData(
         switch (typeWithoutStance)
         {
             case TekkenMoveTag.HeatBurst:
-                moves = movelist.Where(e => e is { HeatBurst: true }).ToArray();
+                moves = [.. movelist.Where(e => e is { HeatBurst: true })];
                 break;
             case TekkenMoveTag.HeatEngage:
-                moves = movelist.Where(e => e is { HeatEngage: true }).ToArray();
+                moves = [.. movelist.Where(e => e is { HeatEngage: true })];
                 break;
             case TekkenMoveTag.HeatSmash:
-                moves = movelist.Where(e => e is { HeatSmash: true }).ToArray();
+                moves = [.. movelist.Where(e => e is { HeatSmash: true })];
                 break;
             case TekkenMoveTag.Homing:
-                moves = movelist.Where(e => e is { Homing: true }).ToArray();
+                moves = [.. movelist.Where(e => e is { Homing: true })];
                 break;
             case TekkenMoveTag.PowerCrush:
-                moves = movelist.Where(e => e is { PowerCrush: true }).ToArray();
+                moves = [.. movelist.Where(e => e is { PowerCrush: true })];
                 break;
             case TekkenMoveTag.Throw:
-                moves = movelist.Where(e => e is { Throw: true }).ToArray();
+                moves = [.. movelist.Where(e => e is { Throw: true })];
                 break;
             case TekkenMoveTag.Tornado:
-                moves = movelist.Where(e => e is { Tornado: true }).ToArray();
+                moves = [.. movelist.Where(e => e is { Tornado: true })];
                 break;
         }
 

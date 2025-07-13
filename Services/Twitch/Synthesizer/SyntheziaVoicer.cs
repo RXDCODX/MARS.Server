@@ -9,7 +9,7 @@ namespace MARS.Server.Services.Twitch.Synthesizer;
 [SupportedOSPlatform("windows")]
 public class SyntheziaVoicer : IVoicer
 {
-    private readonly Dictionary<string, InstalledVoice> _linkedVoices = new();
+    private readonly Dictionary<string, InstalledVoice> _linkedVoices = [];
     private readonly ILogger<IVoicer> _logger;
     private readonly SpeechSynthesizer _speechSynthesizer = new();
     private readonly SemaphoreSlim _semaphore = new(1);
@@ -106,5 +106,13 @@ public class SyntheziaVoicer : IVoicer
     public Task Stop()
     {
         return Task.FromResult(_speechSynthesizer.SpeakAsyncCancelAll);
+    }
+
+    public void InterruptSpeech()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            _speechSynthesizer.SpeakAsyncCancelAll();
+        }
     }
 }

@@ -7,16 +7,16 @@ public static class ShikiMethods
         var shortestAnime = "";
         var shortestManga = "";
 
-        shortestAnime = character.animes.Exists(e => e.russian != null)
-            ? character.animes.Min(Anime => Anime.russian)
+        shortestAnime = character.Animes.Exists(e => !string.IsNullOrWhiteSpace(e.Russian))
+            ? character.Animes.Min(anime => anime.Russian)
             : null;
 
-        if (character.mangas.Exists(e => e.russian != null))
+        if (character.Mangas.Exists(e => !string.IsNullOrWhiteSpace(e.Russian)))
         {
-            var minLength = character.mangas.Min(e => e.russian.Length);
+            var minLength = character.Mangas.Min(e => e.Russian.Length);
             shortestManga = character
-                .mangas.FirstOrDefault(x => x.russian.Length == minLength)
-                ?.russian;
+                .Mangas.FirstOrDefault(x => x.Russian.Length == minLength)
+                ?.Russian;
         }
         else
         {
@@ -30,12 +30,12 @@ public static class ShikiMethods
 
         var waifu = new Waifu
         {
-            Name = character.russian,
+            Name = character.Russian,
             Anime = shortestAnime,
             Manga = shortestManga,
             WhenAdded = moscowTime,
-            ShikiId = character.id.ToString() ?? throw new NullReferenceException(),
-            ImageUrl = character.image.original,
+            ShikiId = character.Id.ToString() ?? throw new NullReferenceException(),
+            ImageUrl = character.Image.Original,
             LastOrder = moscowTime,
             IsPrivated = false,
             OrderCount = 0,

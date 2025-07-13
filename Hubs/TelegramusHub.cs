@@ -1,7 +1,20 @@
 ﻿using MARS.Server.Services.Twitch.SoundBarService;
+using SignalRSwaggerGen.Attributes;
+using SignalRSwaggerGen.Enums;
 
 namespace MARS.Server.Hubs;
 
+[SignalRHub(
+    "/telegramus",
+    AutoDiscover.MethodsAndParams,
+    null,
+    null,
+    null,
+    false,
+    false,
+    null,
+    HubMethodsScan.Default
+)]
 public class TelegramusHub(
     IDbContextFactory<AppDbContext> factory,
     IOptions<ShikimoriClientOptions> shikiOptions,
@@ -40,6 +53,7 @@ public class TelegramusHub(
                 Text = e.Name,
             })
             .ToListAsync();
+
         return prizes;
     }
 

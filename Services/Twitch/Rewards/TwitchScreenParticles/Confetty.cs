@@ -1,22 +1,24 @@
 ﻿using MARS.Server.Services.Twitch.Management;
+using MARS.Server.Services.ServiceManager;
 
 namespace MARS.Server.Services.Twitch.Rewards.TwitchScreenParticles;
 
-public class Confetty : BackgroundService
+public class Confetty : ManagedServiceBase
 {
-    private readonly ILogger<Confetty> _logger;
+    public override string ServiceName => "confetty";
+    public override string DisplayName => "Confetty";
+    public override string Description => "Конфетти на Twitch";
+    public override bool IsServiceActive { get; set; }
     private readonly IHubContext<TelegramusHub, ITelegramusHub> _hub;
     private readonly ITwitchClient _client;
 
     public Confetty(
-        EventSubService eventSubService,
         ILogger<Confetty> logger,
         IHubContext<TelegramusHub, ITelegramusHub> hub,
         IHostApplicationLifetime lifetime,
         ITwitchClient client
-    )
+    ) : base(logger)
     {
-        _logger = logger;
         _hub = hub;
         _client = client;
         lifetime.ApplicationStarted.Register(() =>
@@ -26,28 +28,31 @@ public class Confetty : BackgroundService
         });
     }
 
+    public override Task StartAsync(CancellationToken cancellationToken = default)
+    {
+        // Здесь можно добавить инициализацию, если потребуется
+        return base.StartAsync(cancellationToken);
+    }
+
+    public override Task StopAsync(CancellationToken cancellationToken = default)
+    {
+        // Здесь можно добавить очистку ресурсов, если потребуется
+        return base.StopAsync(cancellationToken);
+    }
+
     private Task WsClientOnChannelPointsCustomRewardRedemptionAdd(
         object sender,
         ChannelPointsCustomRewardRedemptionArgs args
     )
     {
         var twEvent = args.Notification.Payload.Event;
-        if (
+        return
             twEvent.Reward.Cost == 1700
             && twEvent.BroadcasterUserLogin.Equals(
                 TwitchExstension.Channel,
                 StringComparison.OrdinalIgnoreCase
             )
-        )
-        {
-            return _hub.Clients.All.MakeScreenParticles(Entitys.TwitchScreenParticles.Confetty);
-        }
-
-        return Task.CompletedTask;
-    }
-
-    protected override Task ExecuteAsync(CancellationToken stoppingToken)
-    {
-        return Task.CompletedTask;
+            ? _hub.Clients.All.MakeScreenParticles(Entitys.TwitchScreenParticles.Confetty)
+            : Task.CompletedTask;
     }
 }

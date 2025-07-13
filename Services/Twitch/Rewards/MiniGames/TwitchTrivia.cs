@@ -1,4 +1,5 @@
-﻿using MARS.Server.Services.Twitch.Management;
+﻿using MARS.Server.Services.ServiceManager;
+using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.Twitch.Rewards.MiniGames.Entitys.Interfaces;
 using MARS.Server.Services.Twitch.Rewards.MiniGames.Entitys.Subs;
 using TwitchLib.Client.Events;
@@ -12,8 +13,12 @@ public class TwitchTrivia(
     ILogger<TwitchTrivia> logger,
     IDbContextFactory<AppDbContext> dbContextFactory,
     IHostApplicationLifetime applicationLifetime
-) : BackgroundService, ITwitchMiniGame
+) : ManagedServiceBase(logger), ITwitchMiniGame
 {
+    public override string ServiceName => "twitchtrivia";
+    public override string DisplayName => "Twitch Trivia";
+    public override string Description => "Мини-игра Trivia на Twitch";
+    public override bool IsServiceActive { get; set; }
     public bool IsReuseRewardForAddMechanic { get; set; } = false;
     public bool IsGameRunning { get; set; }
     public string CommandForStop { get; set; } = "!викторинастоп";
@@ -31,30 +36,6 @@ public class TwitchTrivia(
     internal string FilenameTrivia =>
         Path.Combine(environment.ContentRootPath, "Trivia", "bot_trivia_questions.txt");
     private VictorinaGame? CurrentGame { get; set; }
-    private bool IsStop { get; set; } = true;
-
-    private Task Init()
-    {
-        TokenSource = new CancellationTokenSource();
-        IsStop = false;
-
-        return Task.CompletedTask;
-    }
-
-    private Task Closing(object sender, StreamOfflineArgs args)
-    {
-        if (!IsStop)
-        {
-            if (CurrentGame != null)
-            {
-                CurrentGame.Active = false;
-            }
-        }
-
-        IsStop = true;
-
-        return Task.CompletedTask;
-    }
 
     private async void NewMessage(object? sender, OnMessageReceivedArgs onMessageReceivedArgs)
     {
@@ -65,7 +46,7 @@ public class TwitchTrivia(
                 var message = onMessageReceivedArgs.ChatMessage.Message.Trim();
                 var id = onMessageReceivedArgs.ChatMessage.UserId;
 
-                if (name == TwitchExstension.BotName || IsStop)
+                if (name == TwitchExstension.BotName || !IsServiceActive)
                 {
                     return;
                 }
@@ -167,7 +148,7 @@ public class TwitchTrivia(
 
     public Task GameStart(string userName, string userId)
     {
-        if (!IsStop)
+        if (IsServiceActive)
         {
             try
             {
@@ -185,15 +166,35 @@ public class TwitchTrivia(
         return Task.CompletedTask;
     }
 
-    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    public override async Task StartAsync(CancellationToken cancellationToken = default)
     {
-        CountQuestions = File.ReadAllLines(FilenameTrivia).Length;
-        applicationLifetime.ApplicationStarted.Register(() =>
-        {
-            client.OnMessageReceived += NewMessage;
-            EventSubService.WsClient.StreamOffline += Closing;
-        });
+        CountQuestions = (await File.ReadAllLinesAsync(FilenameTrivia, cancellationToken)).Length;
+        TokenSource = new CancellationTokenSource();
+        IsServiceActive = true;
+        await base.StartAsync(cancellationToken);
 
-        return Init();
+        if (IsServiceActive)
+        {
+            applicationLifetime.ApplicationStarted.Register(() =>
+            {
+                client.OnMessageReceived += NewMessage;
+                EventSubService.WsClient.StreamOffline += WsClientOnStreamOffline;
+            });
+        }
+    }
+
+    public override Task StopAsync(CancellationToken cancellationToken = default)
+    {
+        TokenSource = new CancellationTokenSource();
+        IsServiceActive = false;
+        CountQuestions = 0;
+        client.OnMessageReceived -= NewMessage;
+        EventSubService.WsClient.StreamOffline -= WsClientOnStreamOffline;
+        return base.StopAsync(cancellationToken);
+    }
+
+    private Task WsClientOnStreamOffline(object sender, StreamOfflineArgs args)
+    {
+        return StopAsync(applicationLifetime.ApplicationStopping);
     }
 }

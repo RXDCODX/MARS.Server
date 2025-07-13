@@ -46,7 +46,7 @@ public class WaifuRollDataBaseHelper(
         }
 
         var character = await shikiService.GetShikiCharacterById(waifu.ShikiId);
-        waifu.ImageUrl = character!.image.original;
+        waifu.ImageUrl = character!.Image.Original;
         return waifu;
     }
 }

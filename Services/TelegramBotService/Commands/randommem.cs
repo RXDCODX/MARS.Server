@@ -11,9 +11,7 @@ public partial class Commands
         CancellationToken cancellationToken
     )
     {
-        string usage = null!;
-
-        usage = RandomMemOnline.IsStop
+        var usage = RandomMemOnline.IsStop
             ? "Включил рандом мем онлайн!"
             : "Выключил рандом мем онлайн!";
 

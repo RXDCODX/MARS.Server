@@ -1,42 +1,43 @@
-﻿using MARS.Server.Services.PyroAlerts.Entitys;
-using MARS.Server.Services.Twitch.SoundBarService;
+﻿using MARS.Server.Services.ServiceManager;
 using TwitchLib.Client.Events;
 
 namespace MARS.Server.Services.Twitch.HelloVideos;
 
-public class HelloVideoWorker
+public class HelloVideoWorker(
+    IDbContextFactory<AppDbContext> dbContextFactory,
+    ILogger<HelloVideoWorker> logger,
+    IHostApplicationLifetime hostApplicationLifetime,
+    IHubContext<TelegramusHub, ITelegramusHub> hubContext,
+    ITwitchClient client
+) : ManagedServiceBase(logger)
 {
-    private readonly CancellationToken _token;
-    private readonly List<string> _users = new();
-    private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
-    private readonly ILogger<HelloVideoWorker> _logger;
-    private readonly IHubContext<TelegramusHub, ITelegramusHub> _hubContext;
-    private readonly SoundBarFactory _soundBarFactory;
+    private readonly CancellationToken _token = hostApplicationLifetime.ApplicationStopping;
+    private readonly List<string> _users = [];
+    public override string ServiceName => "hellovideo";
+    public override string DisplayName => "Hello Videos";
+    public override string Description => "Hello Videos Twitch интеграция";
+    public override bool IsServiceActive { get; set; }
 
-    public HelloVideoWorker(
-        IDbContextFactory<AppDbContext> dbContextFactory,
-        ILogger<HelloVideoWorker> logger,
-        IHostApplicationLifetime hostApplicationLifetime,
-        IHubContext<TelegramusHub, ITelegramusHub> hubContext,
-        ITwitchClient client,
-        SoundBarFactory soundBarFactory
-    )
+    public override Task StartAsync(CancellationToken cancellationToken = default)
     {
-        _dbContextFactory = dbContextFactory;
-        _logger = logger;
-        _hubContext = hubContext;
-        this._soundBarFactory = soundBarFactory;
-        _token = hostApplicationLifetime.ApplicationStopping;
-
         hostApplicationLifetime.ApplicationStarted.Register(() =>
         {
             client.OnMessageReceived += OnMessageReceived;
         });
+
+        return base.StartAsync(cancellationToken);
+    }
+
+    public override Task StopAsync(CancellationToken cancellationToken = default)
+    {
+        client.OnMessageReceived -= OnMessageReceived;
+
+        return base.StopAsync(cancellationToken);
     }
 
     public async void OnMessageReceived(object? sender, OnMessageReceivedArgs args)
     {
-        if (args.ChatMessage.Channel != TwitchExstension.Channel)
+        if (args.ChatMessage.Channel != TwitchExstension.Channel || !IsServiceActive)
         {
             return;
         }
@@ -47,9 +48,7 @@ public class HelloVideoWorker
                 try
                 {
                     var now = DateTimeOffset.Now;
-                    await using var dbContext = await _dbContextFactory.CreateDbContextAsync(
-                        _token
-                    );
+                    await using var dbContext = await dbContextFactory.CreateDbContextAsync(_token);
                     var user = await dbContext.FumoUsers.FindAsync(args.ChatMessage.UserId, _token);
                     var notifUser = await dbContext
                         .HelloVideosUsers.Include(e => e.MediaInfo)
@@ -81,7 +80,7 @@ public class HelloVideoWorker
 
                             var mediaDto = new MediaDto { MediaInfo = notifUser.MediaInfo };
 
-                            await _hubContext.Clients.All.Alert(mediaDto);
+                            await hubContext.Clients.All.Alert(mediaDto);
                         }
 
                         _users.Add(args.ChatMessage.Id);
@@ -89,23 +88,16 @@ public class HelloVideoWorker
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogException(ex);
+                    logger.LogException(ex);
                 }
             },
             _token
         );
     }
 
-    /// <summary>
-    ///
-    /// </summary>
-    /// <param name="name"></param>
-    /// <param name="color"></param>
-    /// <returns></returns>
-    /// <exception cref="NullReferenceException"></exception>
     public async Task<string?> TestVideo(string name, string? color = "white")
     {
-        await using var dbContext = await _dbContextFactory.CreateDbContextAsync(_token);
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(_token);
         var user = dbContext
             .HelloVideosUsers.AsNoTracking()
             .Include(e => e.MediaInfo)
@@ -122,7 +114,7 @@ public class HelloVideoWorker
 
         var mediaDto = new MediaDto() { MediaInfo = user.MediaInfo };
 
-        await _hubContext.Clients.All.Alert(mediaDto);
+        await hubContext.Clients.All.Alert(mediaDto);
         return user.Name;
     }
 }

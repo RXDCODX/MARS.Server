@@ -1,5 +1,4 @@
-﻿using Telegram.Bot.Requests;
-using Telegram.Bot.Types.Enums;
+﻿using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
 using Message = Telegram.Bot.Types.Message;
 
@@ -20,7 +19,7 @@ public partial class Commands
             return await SendDefaultResponse();
         }
 
-        var keyWords = split.Skip(1).ToArray();
+        var keyWords = split.Skip(1).Select(e => e.ToEnglishTransliteration().ToLower()).ToArray();
         var response = await HandleTagMoves() ?? await HandleStances() ?? await HandleSingleMove();
         return response ?? await SendDefaultResponse();
 
@@ -190,26 +189,23 @@ public partial class Commands
             string? imageUrl
         )
         {
-            if (string.IsNullOrWhiteSpace(imageUrl))
-            {
-                return await botClient.SendMessage(
+            return string.IsNullOrWhiteSpace(imageUrl)
+                ? await botClient.SendMessage(
                     message.Chat,
                     text,
                     ParseMode.Html,
                     replyMarkup: markup,
                     cancellationToken: cancellationToken
+                )
+                : await botClient.SendPhoto(
+                    message.Chat,
+                    InputFile.FromUri(imageUrl),
+                    text,
+                    showCaptionAboveMedia: true,
+                    replyMarkup: markup,
+                    parseMode: ParseMode.Html,
+                    cancellationToken: cancellationToken
                 );
-            }
-
-            return await botClient.SendPhoto(
-                message.Chat,
-                InputFile.FromUri(imageUrl),
-                text,
-                showCaptionAboveMedia: true,
-                replyMarkup: markup,
-                parseMode: ParseMode.Html,
-                cancellationToken: cancellationToken
-            );
         }
 
         async Task<Message> SendDefaultResponse()

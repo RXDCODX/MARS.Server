@@ -5,29 +5,25 @@ namespace MARS.Server.Services.Twitch.SoundBarService;
 
 public class SoundBarFactory
 {
-    public static SoundBarService Instance = new();
-    public static SoundBarFromHub? InstanceHub;
-    private readonly IHubContext<SoundBarHub, ISoundBarHub> hubContext;
+    private static readonly SoundBarService SoundBarService = new();
+    private static readonly SoundBarService Instance = SoundBarService;
+    private static SoundBarFromHub? _instanceHub;
+    private readonly IHubContext<SoundBarHub, ISoundBarHub> _hubContext;
 
     public SoundBarFactory(IHubContext<SoundBarHub, ISoundBarHub> hubContext)
     {
-        this.hubContext = hubContext;
-        SoundBarFactory.InstanceHub = new(hubContext);
+        _hubContext = hubContext;
+        _instanceHub ??= new SoundBarFromHub(hubContext);
     }
 
     public ISoundBar CreateSoundBar()
     {
-        if (IsRunningAsWindowsService())
-        {
-            return InstanceHub ??= new SoundBarFromHub(hubContext);
-        }
-        else
-        {
-            return Instance;
-        }
+        return IsRunningAsWindowsService()
+            ? (_instanceHub ??= new SoundBarFromHub(_hubContext))
+            : Instance;
     }
 
-    private bool IsRunningAsWindowsService()
+    private static bool IsRunningAsWindowsService()
     {
         if (!OperatingSystem.IsWindows())
         {

@@ -1,4 +1,4 @@
-﻿namespace MARS.Server.DataBaseContext;
+﻿namespace MARS.Server.CustomLoggers.DatabaseLogger;
 
 public class Log
 {
@@ -6,6 +6,6 @@ public class Log
     [Key]
     public Guid Id { get; set; }
     public DateTimeOffset WhenLogged { get; set; } = DateTimeOffset.Now;
-    public string Message { get; set; } = string.Empty;
+    public required string Message { get; set; } = string.Empty;
     public string? StackTrace { get; set; }
 }

@@ -34,7 +34,7 @@ public class ShikimoriService(
         );
 
         message.Headers.Add("User-Agent", _options.ClientName);
-        message.Headers.Add("Authorization", _accessToken.Access_Token);
+        message.Headers.Add("Authorization", _accessToken.AccessToken);
 
         var response = _shikiClient.Send(message);
 
@@ -70,7 +70,7 @@ public class ShikimoriService(
         );
 
         message.Headers.Add("User-Agent", _options.ClientName);
-        message.Headers.Add("Authorization", _accessToken.Access_Token);
+        message.Headers.Add("Authorization", _accessToken.AccessToken);
 
         var response = _shikiClient.Send(message);
 
@@ -110,7 +110,7 @@ public class ShikimoriService(
         );
 
         message.Headers.Add("User-Agent", _options.ClientName);
-        message.Headers.Add("Authorization", _accessToken.Access_Token);
+        message.Headers.Add("Authorization", _accessToken.AccessToken);
 
         var response = _shikiClient.Send(message);
 
@@ -142,11 +142,11 @@ public class ShikimoriService(
     {
         var message = new HttpRequestMessage(
             HttpMethod.Get,
-            string.Format("{0}{1}{2}", _options.ShikimoriSite, "/api/mangas/", id)
+            $"{_options.ShikimoriSite}/api/mangas/{id}"
         );
 
         message.Headers.Add("User-Agent", _options.ClientName);
-        message.Headers.Add("Authorization", _accessToken.Access_Token);
+        message.Headers.Add("Authorization", _accessToken.AccessToken);
 
         var response = _shikiClient.Send(message);
 
@@ -178,11 +178,11 @@ public class ShikimoriService(
     {
         var message = new HttpRequestMessage(
             HttpMethod.Get,
-            string.Format("{0}{1}{2}", _options.ShikimoriSite, "/api/characters/", id)
+            $"{_options.ShikimoriSite}/api/characters/{id}"
         );
 
         message.Headers.Add("User-Agent", _options.ClientName);
-        message.Headers.Add("Authorization", _accessToken.Access_Token);
+        message.Headers.Add("Authorization", _accessToken.AccessToken);
 
         var response = _shikiClient.Send(message);
 
@@ -190,8 +190,12 @@ public class ShikimoriService(
         {
             if (recursed)
             {
-                var template = "Рекурсивный вызов GetShikiCharacterById";
-                _logger.LogCritical("{0}{1}", template, "! Приложение завершает свою работу");
+                const string template = "Рекурсивный вызов GetShikiCharacterById";
+                _logger.LogCritical(
+                    "{template}{message}",
+                    template,
+                    "! Приложение завершает свою работу"
+                );
                 throw new Exception(template);
             }
 

@@ -1,5 +1,6 @@
 ﻿using MARS.Server.Services.Framedata;
 using MARS.Server.Services.Framedata.Entitys;
+using MARS.Server.Services.ServiceManager;
 using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.Twitch.MiniGamesStats;
 using MARS.Server.Services.Twitch.Rewards.MiniGames.Entitys.Interfaces;
@@ -17,21 +18,36 @@ public class TekkenVictorina(
     ILogger<TekkenVictorina> logger,
     IDbContextFactory<AppDbContext> dbContextFactory,
     TekkenVictorinaLeaderbord tekkenVictorinaLeaderbord
-) : BackgroundService, ITwitchMiniGame
+) : ManagedServiceBase(logger), ITwitchMiniGame
 {
-    private CancellationToken? _cancellationToken = lifetime.ApplicationStopping;
+    public override string ServiceName => "tekkenvictorina";
+    public override string DisplayName => "Tekken Victorina";
+    public override string Description => "Мини-игра Tekken Victorina на Twitch";
+    public override bool IsServiceActive { get; set; }
     public bool IsReuseRewardForAddMechanic { get; set; } = false;
     public bool IsGameRunning { get; set; } = false;
     private const string? CommandForStop = "!стопвикторина";
     private TekkenVictorinaGame? _currentGame;
+    private readonly SemaphoreSlim _semaphoreSlim = new(1);
 
-    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    public override async Task StartAsync(CancellationToken cancellationToken = default)
     {
-        lifetime.ApplicationStarted.Register(() =>
+        await base.StartAsync(cancellationToken);
+
+        if (IsServiceActive)
         {
-            client.OnMessageReceived += TwitchClientOnOnMessageReceived;
-        });
-        return Task.CompletedTask;
+            lifetime.ApplicationStarted.Register(() =>
+            {
+                client.OnMessageReceived += TwitchClientOnOnMessageReceived;
+            });
+        }
+    }
+
+    public override Task StopAsync(CancellationToken cancellationToken = default)
+    {
+        client.OnMessageReceived -= TwitchClientOnOnMessageReceived;
+
+        return base.StopAsync(cancellationToken);
     }
 
     private async void TwitchClientOnOnMessageReceived(
@@ -39,6 +55,11 @@ public class TekkenVictorina(
         OnMessageReceivedArgs onMessageReceivedArgs
     )
     {
+        if (!IsServiceActive)
+        {
+            return;
+        }
+
         await Task.Factory.StartNew(async () =>
         {
             var name = onMessageReceivedArgs.ChatMessage.Username;
@@ -84,6 +105,11 @@ public class TekkenVictorina(
 
     public async Task GameStart(string userName, string userId)
     {
+        if (!IsServiceActive)
+        {
+            return;
+        }
+
         if (_currentGame is null)
         {
             var randomIndex = Random.Shared.Next(frameData.VictorinaMoves.Count) - 1;
@@ -190,9 +216,10 @@ public class TekkenVictorina(
     {
         _currentGame = null;
         IsGameRunning = false;
+        _semaphoreSlim.Release();
     }
 
-    private IntRange GetAnswer(Move tekkenMove)
+    private static IntRange GetAnswer(Move tekkenMove)
     {
         if (int.TryParse(tekkenMove.BlockFrame, out var answer))
         {
@@ -231,7 +258,7 @@ public class TekkenVictorina(
         if (!_currentGame.Users.Contains(userId))
         {
             var chance = Random.Shared.Next(0, 101);
-            if (chance <= 40)
+            if (chance <= 30)
             {
                 await using var dbContext = await dbContextFactory.CreateDbContextAsync();
                 var isHaveWaifu = await dbContext.Hosts.AnyAsync(e =>
@@ -240,6 +267,8 @@ public class TekkenVictorina(
 
                 if (isHaveWaifu)
                 {
+                    await _semaphoreSlim.WaitAsync();
+                    _currentGame.GoodAnswers.Clear();
                     AddOrUpdateGoodAnswer(displayName, answerRange);
                     _currentGame.IsWaifuHelp = true;
                     _currentGame.WaifuId = (await dbContext.Hosts.FindAsync(userId))?.WaifuBrideId;
@@ -262,6 +291,7 @@ public class TekkenVictorina(
 
         if (distance == 0)
         {
+            await _semaphoreSlim.WaitAsync();
             AddOrUpdateGoodAnswer(displayName, userRange.Value);
             _currentGame.CancellationTokenForRightAnswer.Cancel();
             return true;
@@ -292,7 +322,7 @@ public class TekkenVictorina(
         return isIntersect;
 
         // Парсит строку в IntRange (число или диапазон)
-        IntRange? TryParseInput(string str)
+        static IntRange? TryParseInput(string str)
         {
             str = str.Trim();
 
@@ -304,21 +334,17 @@ public class TekkenVictorina(
 
             // Пробуем распарсить как диапазон
             var parts = str.Split('~');
-            if (
+            return
                 parts.Length == 2
                 && int.TryParse(parts[0].Trim(), out var start)
                 && int.TryParse(parts[1].Trim(), out var end)
-            )
-            {
-                return new IntRange(Math.Min(start, end), Math.Max(start, end));
-            }
-
-            return null;
+                ? new IntRange(Math.Min(start, end), Math.Max(start, end))
+                : null;
         }
     }
 
     // Вычисляет минимальное расстояние между диапазонами
-    private int CalculateDistance(IntRange a, IntRange b)
+    private static int CalculateDistance(IntRange a, IntRange b)
     {
         if (a.Start > b.End)
         {
@@ -336,30 +362,27 @@ public class TekkenVictorina(
     // Добавляет или обновляет ответ пользователя
     private void AddOrUpdateGoodAnswer(string displayName, IntRange answer)
     {
-        if (_currentGame != null)
+        if (_currentGame == null)
         {
-            var existingIndex = _currentGame.GoodAnswers.FindIndex(x =>
-                x.displayName == displayName
-            );
-            if (existingIndex >= 0)
-            {
-                _currentGame.GoodAnswers[existingIndex] = (displayName, answer);
-            }
-            else
-            {
-                _currentGame.GoodAnswers.Add((displayName, answer));
-            }
+            return;
+        }
+
+        var existingIndex = _currentGame.GoodAnswers.FindIndex(x => x.displayName == displayName);
+        if (existingIndex >= 0)
+        {
+            _currentGame.GoodAnswers[existingIndex] = (displayName, answer);
+        }
+        else
+        {
+            _currentGame.GoodAnswers.Add((displayName, answer));
         }
     }
 
     // Получает текущее минимальное расстояние среди лучших ответов
     private int GetCurrentBestDistance()
     {
-        if (_currentGame is { GoodAnswers.Count: 0 })
-        {
-            return int.MaxValue;
-        }
-
-        return _currentGame!.GoodAnswers.Min(x => CalculateDistance(x.answer, _currentGame.Answer));
+        return _currentGame is { GoodAnswers.Count: 0 }
+            ? int.MaxValue
+            : _currentGame!.GoodAnswers.Min(x => CalculateDistance(x.answer, _currentGame.Answer));
     }
 }

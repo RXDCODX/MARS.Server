@@ -3,6 +3,9 @@ using MARS.Server.Services.MemoryStorageService.Entitys;
 
 namespace MARS.Server.Services.MemoryStorageService;
 
+/// <summary>
+/// Provides in-memory storage functionality for the application.
+/// </summary>
 public static class MemoryStorage
 {
     // Приватное поле для хранения файлов в памяти (имя файла -> содержимое)
@@ -23,9 +26,10 @@ public static class MemoryStorage
     /// <param name="fileContent">Содержимое файла в виде массива байт</param>
     /// <exception cref="ArgumentNullException">Выбрасывается, если имя файла или содержимое null</exception>
     /// <exception cref="ArgumentException">Выбрасывается, если файл с таким именем уже существует</exception>
-    public static Task AddFileAsync(string fileName, byte[] fileContent)
+    /// <returns>Relative url for file download</returns>
+    public static async Task<string> AddFileAsync(string fileName, byte[] fileContent)
     {
-        return Task.Factory.StartNew(() =>
+        await Task.Factory.StartNew(() =>
         {
             if (string.IsNullOrWhiteSpace(fileName))
             {
@@ -52,6 +56,8 @@ public static class MemoryStorage
 
             return Task.CompletedTask;
         });
+
+        return "/memory" + fileName;
     }
 
     private static async Task IncrementUseCounterAsync(string fileName)
@@ -141,7 +147,6 @@ public static class MemoryStorage
                 if (removedDescription != null)
                 {
                     Array.Clear(removedDescription.FileContent);
-                    removedDescription.FileContent = [];
                 }
                 break;
             }

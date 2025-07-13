@@ -1,7 +1,10 @@
 ﻿using MARS.Server.ApplicationState;
+using MARS.Server.CustomLoggers.DatabaseLogger;
 using MARS.Server.Services._365Genius.Entitys;
 using MARS.Server.Services.Framedata.Entitys;
 using MARS.Server.Services.RandomMem.Entity;
+using MARS.Server.Services.ServiceManager.Entitys;
+using MARS.Server.Services.SoundRequest.Entitys;
 using MARS.Server.Services.Twitch.ClientMessages.AutoMessages.Entitys;
 using MARS.Server.Services.Twitch.FumoFriday.Entitys;
 using MARS.Server.Services.Twitch.HelloVideos.Entitys;
@@ -49,7 +52,7 @@ public sealed class AppDbContext : DbContext
     public DbSet<Log> Logs { get; set; } = null!;
     public DbSet<MemeOrder> RandomMemeOrder { get; set; } = null!;
     public DbSet<MemeType> RandomMemeType { get; set; } = null!;
-    public DbSet<FumoUser> FumoUsers { get; set; }
+    public DbSet<FumoUser> FumoUsers { get; set; } = null!;
     public DbSet<HelloVideosUsers> HelloVideosUsers { get; set; } = null!;
     public DbSet<Video365> Videos365 { get; set; } = null!;
     public DbSet<TekkenCharacter> TekkenCharacters { get; set; } = null!;
@@ -58,6 +61,11 @@ public sealed class AppDbContext : DbContext
     public DbSet<TelegramUpdateReceiverOffset> TelegramUpdateReceiverOffset { get; set; } = null!;
     public DbSet<WTelegramAlloweedChannel> WTelegramAlloweedChannels { get; set; } = null!;
     public DbSet<RootState> ApplicationState { get; set; } = null!;
+    public DbSet<BaseTrackInfo> SoundRequestBaseTrackInfos { get; set; } = null!;
+    public DbSet<PlayerState> SoundRequestPlayerState { get; set; } = null!;
+    public DbSet<SoundRequestBackgroundTrackId> SoundRequestBackgroundTracks { get; set; } = null!;
+    public DbSet<UserRequestedTrack> SoundRequestUserQueue { get; set; } = null!;
+    public DbSet<ServiceState> ServiceStates { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -96,13 +104,13 @@ public sealed class AppDbContext : DbContext
             .Entity<MemeType>()
             .HasData(
                 [
-                    new MemeType()
+                    new MemeType
                     {
                         Name = "Random Sound",
                         Id = 3,
                         FolderPath = "Alerts\\zvik",
                     },
-                    new MemeType()
+                    new MemeType
                     {
                         Name = "Random Meme",
                         Id = 2,
@@ -110,6 +118,19 @@ public sealed class AppDbContext : DbContext
                     },
                 ]
             );
+
+        modelBuilder
+            .Entity<UserRequestedTrack>()
+            .HasOne(urt => urt.RequestedTrack)
+            .WithOne()
+            .HasForeignKey<UserRequestedTrack>(urt => urt.RequestedTrackId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder
+            .Entity<SoundRequestBackgroundTrackId>()
+            .HasOne(e => e.BaseTrackInfo)
+            .WithOne()
+            .HasForeignKey<SoundRequestBackgroundTrackId>(e => e.TrackId);
 
         modelBuilder.Entity<MediaInfo>(entity =>
         {
@@ -188,9 +209,18 @@ public sealed class AppDbContext : DbContext
 
             entity.OwnsOne(
                 e => e.StylesInfo,
-                metaInfo =>
+                metaInfo => metaInfo.Property(p => p.IsBorder).HasColumnName("StylesInfo_IsBorder")
+            );
+        });
+
+        modelBuilder.Entity<BaseTrackInfo>(entitys =>
+        {
+            entitys.OwnsOne(
+                e => e.YandexSpecificInfo,
+                a =>
                 {
-                    metaInfo.Property(p => p.IsBorder).HasColumnName("StylesInfo_IsBorder");
+                    a.Property(t => t.ArtworkUrl).HasColumnName("YandexInfo_ArtworkUrl");
+                    a.Property(t => t.Mp3TrackUrl).HasColumnName("YandexInfo_MP3Url");
                 }
             );
         });
@@ -223,11 +253,19 @@ public sealed class AppDbContext : DbContext
         configurationBuilder
             .Properties<DateTimeOffset>()
             .HaveConversion<DateTimeOffsetConversion>();
+
+        configurationBuilder.Properties<DateTime>().HaveConversion<DateTimeToDateTimeUtc>();
     }
 
     public sealed class DateTimeOffsetConversion()
         : ValueConverter<DateTimeOffset, DateTimeOffset>(
             offset => offset.Offset != TimeSpan.Zero ? offset.ToOffset(TimeSpan.Zero) : offset,
             v => v.ToLocalTime()
+        );
+
+    public sealed class DateTimeToDateTimeUtc()
+        : ValueConverter<DateTime, DateTime>(
+            c => DateTime.SpecifyKind(c, DateTimeKind.Utc),
+            c => c
         );
 }

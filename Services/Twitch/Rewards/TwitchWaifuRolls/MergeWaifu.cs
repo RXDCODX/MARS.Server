@@ -1,56 +1,30 @@
-﻿using MARS.Server.Services.Twitch.Management;
+﻿using MARS.Server.Services.ServiceManager;
+using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.WaifuRoll;
 using MARS.Server.Services.WaifuRoll.helpers;
-using Microsoft.Extensions.Options;
 using TwitchLib.Api.Helix.Models.Chat;
-using static Microsoft.Extensions.Logging.EventSource.LoggingEventSource;
 
 namespace MARS.Server.Services.Twitch.Rewards.TwitchWaifuRolls;
 
-public class MergeWaifu : BackgroundService
+public class MergeWaifu(
+    ILogger<MergeWaifu> logger,
+    ITwitchClient client,
+    WaifuRollService waifuRollService,
+    IHubContext<TelegramusHub, ITelegramusHub> hubContext,
+    IDbContextFactory<AppDbContext> factory,
+    ITwitchAPI api,
+    TokenService tokenService,
+    IHostApplicationLifetime lifetime,
+    WaifuRollDataBaseHelper waifuDbHelper,
+    IOptions<ShikimoriClientOptions> options
+) : ManagedServiceBase(logger)
 {
-    private readonly ITwitchAPI _api;
-    private readonly ITwitchClient _client;
-    private readonly IDbContextFactory<AppDbContext> _factory;
-    private readonly IHubContext<TelegramusHub, ITelegramusHub> _hubContext;
-    private readonly ILogger<MergeWaifu> _logger;
-    private readonly WaifuRollService _waifuRollService;
-    private readonly TokenService _tokenService;
-    private readonly CancellationToken _cancellationToken;
-    private readonly WaifuRollDataBaseHelper _waifuDbHelper;
-    private readonly IOptions<ShikimoriClientOptions> _options;
+    private readonly CancellationToken _cancellationToken = lifetime.ApplicationStopping;
 
-    public MergeWaifu(
-        ILogger<MergeWaifu> logger,
-        ITwitchClient client,
-        WaifuRollService waifuRollService,
-        IHubContext<TelegramusHub, ITelegramusHub> hubContext,
-        IDbContextFactory<AppDbContext> factory,
-        ITwitchAPI api,
-        EventSubService eventSubService,
-        TokenService tokenService,
-        IHostApplicationLifetime lifetime,
-        WaifuRollDataBaseHelper waifuDbHelper,
-        IOptions<ShikimoriClientOptions> options
-    )
-    {
-        _logger = logger;
-        _client = client;
-        _waifuRollService = waifuRollService;
-        _hubContext = hubContext;
-        _factory = factory;
-        _api = api;
-        _tokenService = tokenService;
-        _waifuDbHelper = waifuDbHelper;
-        _options = options;
-        _cancellationToken = lifetime.ApplicationStopping;
-
-        lifetime.ApplicationStarted.Register(() =>
-        {
-            EventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd +=
-                MergeWaifuTwitchEvent;
-        });
-    }
+    public override string ServiceName => "mergewaifu";
+    public override string DisplayName => "Merge Waifu";
+    public override string Description => "Свадьба вайфу через Twitch";
+    public override bool IsServiceActive { get; set; }
 
     public async Task MergeWaifuTwitchEvent(
         object sender,
@@ -62,15 +36,15 @@ public class MergeWaifu : BackgroundService
             twEvent.BroadcasterUserId.Equals(
                 TwitchExstension.ChannelId,
                 StringComparison.OrdinalIgnoreCase
-            )
+            ) && IsServiceActive
         )
         {
             if (twEvent.Reward.Cost == 2)
             {
-                await using AppDbContext dbContext = await _factory.CreateDbContextAsync(
+                await using AppDbContext dbContext = await factory.CreateDbContextAsync(
                     _cancellationToken
                 );
-                var host = await dbContext.Hosts.FindAsync(twEvent.UserId);
+                var host = await dbContext.Hosts.FindAsync(twEvent.UserId, _cancellationToken);
                 if (host is not null)
                 {
                     host.TwitchId = twEvent.UserId;
@@ -78,11 +52,14 @@ public class MergeWaifu : BackgroundService
 
                     if (!host.IsPrivated)
                     {
-                        var waifu = dbContext.Waifus.Find(host.WaifuRollId);
+                        var waifu = await dbContext.Waifus.FindAsync(
+                            host.WaifuRollId,
+                            _cancellationToken
+                        );
                         if (waifu is { IsPrivated: false })
                         {
                             var isMerged =
-                                await _waifuRollService.MergeTheWaifu(host, waifu)
+                                await waifuRollService.MergeTheWaifu(host, waifu)
                                 || twEvent.Id == TwitchExstension.ChannelId;
 
                             if (isMerged)
@@ -97,7 +74,7 @@ public class MergeWaifu : BackgroundService
 
                                 if (string.IsNullOrWhiteSpace(waifu.ImageUrl))
                                 {
-                                    waifu = await _waifuDbHelper.EnsureWaifuHaveImageIrl(waifu);
+                                    waifu = await waifuDbHelper.EnsureWaifuHaveImageIrl(waifu);
 
                                     dbContext.Waifus.Update(waifu);
                                 }
@@ -105,29 +82,29 @@ public class MergeWaifu : BackgroundService
                                 await dbContext.SaveChangesAsync(_cancellationToken);
 
                                 waifu.IsMerged = true;
-                                waifu.ImageUrl = _options.Value.ShikimoriSite + waifu.ImageUrl;
+                                waifu.ImageUrl = options.Value.ShikimoriSite + waifu.ImageUrl;
 
-                                var color = await _api.Helix.Chat.GetUserChatColorAsync(
+                                var color = await api.Helix.Chat.GetUserChatColorAsync(
                                     [twEvent.UserId]
                                 );
-                                var avatarUrl = await _api.Helix.Users.GetUsersAsync(
+                                var avatarUrl = await api.Helix.Users.GetUsersAsync(
                                     [twEvent.UserId]
                                 );
-                                await _hubContext.Clients.All.MergeWaifu(
+                                await hubContext.Clients.All.MergeWaifu(
                                     waifu,
-                                    twEvent.UserName,
+                                    host,
                                     avatarUrl.Users[0]?.ProfileImageUrl,
                                     color.Data[0]?.Color
                                 );
 
-                                if (_tokenService.Token != null)
+                                if (tokenService.Token != null)
                                 {
-                                    await _api.Helix.Chat.SendChatAnnouncementAsync(
+                                    await api.Helix.Chat.SendChatAnnouncementAsync(
                                         TwitchExstension.ChannelId,
                                         TwitchExstension.ChannelId,
                                         message,
                                         AnnouncementColors.Primary,
-                                        _tokenService.Token.AccessToken
+                                        tokenService.Token.AccessToken
                                     );
                                 }
 
@@ -141,7 +118,7 @@ public class MergeWaifu : BackgroundService
                                 twEvent.UserName,
                                 tempLate3
                             );
-                            await _client.SendMessageToMainTwitchAsync(message, _logger);
+                            await client.SendMessageToMainTwitchAsync(message, logger);
 
                             return;
                         }
@@ -152,7 +129,7 @@ public class MergeWaifu : BackgroundService
                                 twEvent.UserName,
                                 tempLate3
                             );
-                            await _client.SendMessageToMainTwitchAsync(message, _logger);
+                            await client.SendMessageToMainTwitchAsync(message, logger);
 
                             return;
                         }
@@ -170,15 +147,15 @@ public class MergeWaifu : BackgroundService
                             if (spanaa.HasValue)
                             {
                                 var span = spanaa.Value;
-                                var template9 = GetTimeSpanText(span);
+                                var template9 = GetTimeSpanText(span, waifu);
                                 var message9 = AnswersForTwitchRewards.ReplaceKeywordsInAnswer(
                                     twEvent.UserName,
                                     template9
                                 );
-                                await _client.SendMessageToMainTwitchAsync(message9, _logger);
+                                await client.SendMessageToMainTwitchAsync(message9, logger);
                                 return;
 
-                                static string GetTimeSpanText(TimeSpan span)
+                                static string GetTimeSpanText(TimeSpan span, Waifu waifu)
                                 {
                                     var totalDays = span.Days;
 
@@ -237,7 +214,13 @@ public class MergeWaifu : BackgroundService
                                         .Where(part => !string.IsNullOrEmpty(part))
                                         .ToArray();
 
-                                    return $@"{{user}}, ты уже в браке {string.Join(", ", parts)}!";
+                                    var charName = waifu.Name;
+                                    var title = !string.IsNullOrWhiteSpace(waifu.Anime)
+                                        ? " из аниме " + waifu.Anime
+                                        : " из манги " + waifu.Manga;
+                                    var charText = charName + title;
+
+                                    return $@"{{user}}, ты в браке с {charText} уже {string.Join(", ", parts)}!";
                                 }
 
                                 // Вспомогательная функция для склонения слов
@@ -251,22 +234,10 @@ public class MergeWaifu : BackgroundService
                                     number = Math.Abs(number) % 100;
                                     var remainder = number % 10;
 
-                                    if (number is > 10 and < 20)
-                                    {
-                                        return form5;
-                                    }
-
-                                    if (remainder is > 1 and < 5)
-                                    {
-                                        return form2;
-                                    }
-
-                                    if (remainder == 1)
-                                    {
-                                        return form1;
-                                    }
-
-                                    return form5;
+                                    return number is > 10 and < 20 ? form5
+                                        : remainder is > 1 and < 5 ? form2
+                                        : remainder == 1 ? form1
+                                        : form5;
                                 }
                             }
                         }
@@ -276,7 +247,7 @@ public class MergeWaifu : BackgroundService
                             twEvent.UserName,
                             tempLate2
                         );
-                        await _client.SendMessageToMainTwitchAsync(message, _logger);
+                        await client.SendMessageToMainTwitchAsync(message, logger);
                         return;
                     }
                 }
@@ -285,8 +256,8 @@ public class MergeWaifu : BackgroundService
                 {
                     TwitchId = twEvent.UserId,
                     Name = twEvent.UserName,
-                    HostCoolDown = new HostCoolDown() { HostId = twEvent.UserId },
-                    HostGreetings = new HostAutoHello() { HostId = twEvent.UserId },
+                    HostCoolDown = new HostCoolDown { HostId = twEvent.UserId },
+                    HostGreetings = new HostAutoHello { HostId = twEvent.UserId },
                 };
 
                 dbContext.Hosts.Add(host);
@@ -298,7 +269,7 @@ public class MergeWaifu : BackgroundService
                     twEvent.UserName,
                     tempLate4
                 );
-                await _client.SendMessageToMainTwitchAsync(message3, _logger);
+                await client.SendMessageToMainTwitchAsync(message3, logger);
                 return;
             }
         }
@@ -306,7 +277,7 @@ public class MergeWaifu : BackgroundService
 
     public async Task<(Waifu? waifu, Host? host)> Unmerge(string nickname)
     {
-        await using var dbContext = await _factory.CreateDbContextAsync(_cancellationToken);
+        await using var dbContext = await factory.CreateDbContextAsync(_cancellationToken);
         var host = await dbContext.Hosts.SingleOrDefaultAsync(
             e => e.Name != null && EF.Functions.Like(e.Name, $"%{nickname}%"),
             _cancellationToken
@@ -348,7 +319,7 @@ public class MergeWaifu : BackgroundService
 
     public async Task<(Waifu? waifu, Host? host)> Unmerge(int id)
     {
-        await using var dbContext = await _factory.CreateDbContextAsync(_cancellationToken);
+        await using var dbContext = await factory.CreateDbContextAsync(_cancellationToken);
 
         var host = await dbContext.Hosts.SingleOrDefaultAsync(
             e => e.TwitchId == id.ToString(),
@@ -389,8 +360,22 @@ public class MergeWaifu : BackgroundService
         return (null, null);
     }
 
-    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    public override async Task StartAsync(CancellationToken cancellationToken = default)
     {
-        return Task.CompletedTask;
+        await base.StartAsync(cancellationToken);
+
+        if (IsServiceActive)
+        {
+            lifetime.ApplicationStarted.Register(() =>
+            {
+                EventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd += MergeWaifuTwitchEvent;
+            });
+        }
+    }
+
+    public override Task StopAsync(CancellationToken cancellationToken = default)
+    {
+        EventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd -= MergeWaifuTwitchEvent;
+        return base.StopAsync(cancellationToken);
     }
 }

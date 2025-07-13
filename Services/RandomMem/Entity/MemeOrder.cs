@@ -16,12 +16,7 @@ public class MemeOrder
 
     public override bool Equals(object? obj)
     {
-        if (obj is MemeOrder newOrder)
-        {
-            return this.Equals(newOrder);
-        }
-
-        return false;
+        return obj is MemeOrder newOrder && Equals(newOrder);
     }
 
     protected bool Equals(MemeOrder other)

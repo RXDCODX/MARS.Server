@@ -27,17 +27,16 @@ public class AutoMessagesController : BackgroundService
         _logger = logger;
         _dbContextFactory = dbContextFactory;
 
-        if (
-            !_client.JoinedChannels.Any(e =>
-                e.Channel.Equals(Channel, StringComparison.OrdinalIgnoreCase)
-            )
-        )
-        {
-            _client.JoinChannel(Channel);
-        }
-
         applicationLifetime.ApplicationStarted.Register(() =>
         {
+            if (
+                !_client.JoinedChannels.Any(e =>
+                    e.Channel.Equals(Channel, StringComparison.OrdinalIgnoreCase)
+                )
+            )
+            {
+                _client.JoinChannel(Channel);
+            }
             client.OnMessageReceived += OnMessageReceived;
         });
     }

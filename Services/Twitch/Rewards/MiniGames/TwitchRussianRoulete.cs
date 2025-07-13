@@ -1,4 +1,5 @@
-﻿using MARS.Server.Services.Twitch.Management;
+﻿using MARS.Server.Services.ServiceManager;
+using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.Twitch.Rewards.MiniGames.Entitys.Interfaces;
 using MARS.Server.Services.Twitch.Rewards.MiniGames.Entitys.Subs;
 using TwitchLib.Api.Helix.Models.Chat;
@@ -6,21 +7,26 @@ using TwitchLib.EventSub.Websockets.Core.EventArgs.Stream;
 
 namespace MARS.Server.Services.Twitch.Rewards.MiniGames;
 
-public class TwitchRussianRoulete : BackgroundService, ITwitchMiniGame
+public class TwitchRussianRoulete(
+    ITwitchClient client,
+    ILogger<TwitchRussianRoulete> logger,
+    ITwitchAPI api,
+    IDbContextFactory<AppDbContext> dbContextFactory,
+    IHostApplicationLifetime applicationLifetime,
+    TokenService tokenService
+) : ManagedServiceBase(logger), ITwitchMiniGame
 {
+    public override string ServiceName => "russianroulete";
+    public override string DisplayName => "Russian Roulete";
+    public override string Description => "Мини-игра Russian Roulete на Twitch";
+    public override bool IsServiceActive { get; set; }
     public bool IsReuseRewardForAddMechanic { get; set; } = true;
     public bool IsGameRunning { get; set; }
 
     private const int MaxPlayers = 50;
-    private readonly ITwitchAPI _api;
-    private readonly double _awaitingTimeForNewPlayersInMilliseconds = 1000 * 60;
-    private readonly ITwitchClient _client;
-    private readonly TokenService _tokenService;
-
-    private readonly int _costOfRoulette = 6;
-    private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
-    private readonly ILogger<TwitchRussianRoulete> _logger;
-    private CancellationTokenSource _cancellationTokenSource;
+    private const double AwaitingTimeForNewPlayersInMilliseconds = 1000 * 60;
+    private const int CostOfRoulette = 6;
+    private CancellationTokenSource _cancellationTokenSource = new();
     private DateTimeOffset _gameStartDateTime;
     private bool _gameStillActive;
 
@@ -28,44 +34,12 @@ public class TwitchRussianRoulete : BackgroundService, ITwitchMiniGame
 
     private List<RouletePlayer> _listOfPlayers = [];
 
-    public TwitchRussianRoulete(
-        ITwitchClient client,
-        ILogger<TwitchRussianRoulete> logger,
-        ITwitchAPI api,
-        IDbContextFactory<AppDbContext> dbContextFactory,
-        IHostApplicationLifetime applicationLifetime,
-        TokenService tokenService
-    )
-    {
-        _client = client;
-        _logger = logger;
-        _api = api;
-        _dbContextFactory = dbContextFactory;
-        _tokenService = tokenService;
-        _cancellationTokenSource = new CancellationTokenSource();
-
-        applicationLifetime.ApplicationStarted.Register(() =>
-        {
-            EventSubService.WsClient.StreamOffline += Closing;
-            EventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd += NewAlert;
-        });
-    }
-
-    private Task InitializeGame()
-    {
-        _listOfPlayers = new List<RouletePlayer>();
-        _cancellationTokenSource = new CancellationTokenSource();
-        _isAwaitingNewPlayers = false;
-
-        return Task.CompletedTask;
-    }
-
     private Task Closing(object sender, StreamOfflineArgs args)
     {
         if (!IsGameRunning)
         {
             _cancellationTokenSource.Cancel();
-            _listOfPlayers = new List<RouletePlayer>();
+            _listOfPlayers = [];
             _isAwaitingNewPlayers = false;
         }
 
@@ -79,12 +53,12 @@ public class TwitchRussianRoulete : BackgroundService, ITwitchMiniGame
         var name = args.Notification.Payload.Event.UserName;
         var userId = args.Notification.Payload.Event.UserId;
 
-        if (!IsGameRunning)
+        if (!IsGameRunning || !IsServiceActive)
         {
             return;
         }
 
-        if (cost == _costOfRoulette && _isAwaitingNewPlayers && !_gameStillActive)
+        if (cost == CostOfRoulette && _isAwaitingNewPlayers && !_gameStillActive)
         {
             if (
                 _listOfPlayers.Any(e =>
@@ -95,9 +69,9 @@ public class TwitchRussianRoulete : BackgroundService, ITwitchMiniGame
                 return;
             }
 
-            await _client.SendMessageToMainTwitchAsync(
+            await client.SendMessageToMainTwitchAsync(
                 $"@{name}, ты был добавлен в русскую рулетку!",
-                _logger
+                logger
             );
             _listOfPlayers.Add(new RouletePlayer { Name = name, TwitchId = userId });
         }
@@ -111,24 +85,24 @@ public class TwitchRussianRoulete : BackgroundService, ITwitchMiniGame
         {
             if (
                 DateTimeOffset.Now - _gameStartDateTime
-                >= TimeSpan.FromMilliseconds(_awaitingTimeForNewPlayersInMilliseconds)
+                >= TimeSpan.FromMilliseconds(AwaitingTimeForNewPlayersInMilliseconds)
             )
             {
                 _isAwaitingNewPlayers = false;
             }
 
             if (
-                TimeSpan.FromMilliseconds(_awaitingTimeForNewPlayersInMilliseconds)
+                TimeSpan.FromMilliseconds(AwaitingTimeForNewPlayersInMilliseconds)
                     - (DateTimeOffset.Now - _gameStartDateTime)
                     < TimeSpan.FromSeconds(10)
                 && !tenSecAuth
             )
             {
-                await _api.SendAnnouncementToMainTwitch(
+                await api.SendAnnouncementToMainTwitch(
                     "Осталось меньше 10 секунд до начала рулетки!",
-                    _tokenService.Token,
+                    tokenService.Token,
                     AnnouncementColors.Primary,
-                    _logger
+                    logger
                 );
                 tenSecAuth = true;
             }
@@ -139,7 +113,7 @@ public class TwitchRussianRoulete : BackgroundService, ITwitchMiniGame
 
     public int GetGameCost()
     {
-        return _costOfRoulette;
+        return CostOfRoulette;
     }
 
     public async Task GameStart(string userName, string userId)
@@ -149,15 +123,15 @@ public class TwitchRussianRoulete : BackgroundService, ITwitchMiniGame
         if (!_isAwaitingNewPlayers && !_gameStillActive)
         {
             var listPlayers = new List<RouletePlayer>();
-            var seconds = TimeSpan.FromMilliseconds(_awaitingTimeForNewPlayersInMilliseconds);
+            var seconds = TimeSpan.FromMilliseconds(AwaitingTimeForNewPlayersInMilliseconds);
 
             var text =
-                $"@{name} запускает русскую рулетку, у вас есть {seconds.TotalSeconds} секунд! Чтобы принять участие нажмите на награду за баллы канала стоимостью {_costOfRoulette}!";
-            await _api.SendAnnouncementToMainTwitch(
+                $"@{name} запускает русскую рулетку, у вас есть {seconds.TotalSeconds} секунд! Чтобы принять участие нажмите на награду за баллы канала стоимостью {CostOfRoulette}!";
+            await api.SendAnnouncementToMainTwitch(
                 text,
-                _tokenService.Token,
+                tokenService.Token,
                 AnnouncementColors.Primary,
-                _logger
+                logger
             );
             _gameStartDateTime = DateTimeOffset.Now;
             _isAwaitingNewPlayers = true;
@@ -192,19 +166,36 @@ public class TwitchRussianRoulete : BackgroundService, ITwitchMiniGame
             var qwe = new RouleteGame(
                 listPlayers,
                 gameType,
-                _cancellationTokenSource.Token,
-                _client,
-                _logger,
-                _dbContextFactory,
-                this
+                client,
+                logger,
+                dbContextFactory,
+                this,
+                _cancellationTokenSource.Token
             );
             await qwe.RussianRoulette();
             _gameStillActive = false;
         }
     }
 
-    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    public override Task StartAsync(CancellationToken cancellationToken = default)
     {
-        return InitializeGame();
+        _listOfPlayers = [];
+        _cancellationTokenSource = new CancellationTokenSource();
+        _isAwaitingNewPlayers = false;
+        applicationLifetime.ApplicationStarted.Register(() =>
+        {
+            EventSubService.WsClient.StreamOffline += Closing;
+            EventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd += NewAlert;
+        });
+
+        return base.StartAsync(cancellationToken);
+    }
+
+    public override Task StopAsync(CancellationToken cancellationToken = default)
+    {
+        EventSubService.WsClient.StreamOffline -= Closing;
+        EventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd -= NewAlert;
+
+        return base.StopAsync(cancellationToken);
     }
 }

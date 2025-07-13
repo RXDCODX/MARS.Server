@@ -1,5 +1,6 @@
 ﻿using MARS.Server.Services.PyroAlerts;
 using MARS.Server.Services.RandomMem.Entity;
+using MARS.Server.Services.ServiceManager;
 using Telegram.Bot.Types.Enums;
 using File = System.IO.File;
 
@@ -11,23 +12,26 @@ public class RandomMemHandler(
     ILogger<RandomMemHandler> logger,
     IDbContextFactory<AppDbContext> contextFactory,
     IHostApplicationLifetime applicationLifetime
-) : ITelegramusService
+) : ManagedServiceBase(logger), ITelegramusService
 {
+    public override string ServiceName => "randommemhandler";
+    public override string DisplayName => "Random Meme Handler";
+    public override string Description => "Обработчик мемов Telegram";
+    public override bool IsServiceActive { get; set; } = true;
+
     public readonly string[] AlertsPaths = environment.IsProduction()
         ? [Path.Combine(environment.WebRootPath, "Alerts", "random_meme"), GetDevAlerts()]
         : [Path.Combine(environment.WebRootPath, "Alerts", "random_meme")];
-
     private string? LastMediaGroupId { get; set; }
     private bool IsGoldMediaGroup { get; set; }
     private CancellationToken CancellationToken { get; set; } =
         applicationLifetime.ApplicationStopping;
-
     private List<long> BlockedUsers { get; set; } = [];
     private List<long> AllowdUsers { get; set; } = [];
 
     public Task HandMessage(ITelegramBotClient client, Update update)
     {
-        if (update.Type == UpdateType.Message)
+        if (update.Type == UpdateType.Message && IsServiceActive)
         {
             var message = update.Message!;
             var chatId = message.Chat.Id;
@@ -195,7 +199,7 @@ public class RandomMemHandler(
         }
         catch (Exception e)
         {
-            logger.LogException(e);
+            Logger.LogException(e);
         }
     }
 
@@ -256,15 +260,11 @@ public class RandomMemHandler(
     private static string GetDevAlerts()
     {
         var currentDir = Directory.GetCurrentDirectory();
-        var projectRoot = FindProjectRoot(currentDir);
-
-        if (projectRoot == null)
-        {
-            throw new DirectoryNotFoundException(
+        var projectRoot =
+            FindProjectRoot(currentDir)
+            ?? throw new DirectoryNotFoundException(
                 "Не удалось найти корень проекта (папку с .csproj)"
             );
-        }
-
         return Path.Combine(projectRoot, "wwwroot", "Alerts", "random_meme");
     }
 

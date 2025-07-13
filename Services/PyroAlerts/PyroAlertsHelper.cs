@@ -37,7 +37,7 @@ public class PyroAlertsHelper(ILogger<PyroAlertsHelper> logger) : ITelegramusSer
                     IsLooped = fileType == MediaType.Video,
                     VIP = false,
                 },
-                PositionInfo = new MediaPositionInfo()
+                PositionInfo = new MediaPositionInfo
                 {
                     IsRotated = true,
                     IsResizeRequires = true,
@@ -168,37 +168,14 @@ public class PyroAlertsHelper(ILogger<PyroAlertsHelper> logger) : ITelegramusSer
         {
             if (message != null)
             {
-                if (message.Photo != null)
-                {
-                    return await client.GetFile(message.Photo.LastOrDefault()!.FileId);
-                }
-
-                if (message.Video != null)
-                {
-                    return await client.GetFile(message.Video.FileId);
-                }
-
-                if (message.Voice != null)
-                {
-                    return await client.GetFile(message.Voice.FileId);
-                }
-
-                if (message.Sticker != null)
-                {
-                    return await client.GetFile(message.Sticker.FileId);
-                }
-
-                if (message.Animation != null)
-                {
-                    return await client.GetFile(message.Animation.FileId);
-                }
-
-                if (message.Document != null)
-                {
-                    return await client.GetFile(message.Document.FileId);
-                }
-
-                return null;
+                return message.Photo != null
+                        ? await client.GetFile(message.Photo.LastOrDefault()!.FileId)
+                    : message.Video != null ? await client.GetFile(message.Video.FileId)
+                    : message.Voice != null ? await client.GetFile(message.Voice.FileId)
+                    : message.Sticker != null ? await client.GetFile(message.Sticker.FileId)
+                    : message.Animation != null ? await client.GetFile(message.Animation.FileId)
+                    : message.Document != null ? await client.GetFile(message.Document.FileId)
+                    : null;
             }
         }
         catch (Exception)

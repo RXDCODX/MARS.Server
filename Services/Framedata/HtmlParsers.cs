@@ -1,89 +1,169 @@
-﻿using HtmlAgilityPack;
+﻿using System.Text;
+using HtmlAgilityPack;
 using MARS.Server.Services.Framedata.Entitys;
 
 namespace MARS.Server.Services.Framedata;
 
+/// <summary>
+/// Provides methods for scraping and processing Tekken 8 frame data from web sources and updating the database.
+/// </summary>
 public partial class Tekken8FrameData
 {
     internal async Task StartScrupFrameData(Chat? chat = default)
     {
         var docW = new HtmlWeb();
-        var doc = await docW.LoadFromWebAsync(BasePath.AbsoluteUri, _cancellationToken);
+        var doc = await docW.LoadFromWebAsync(
+            BasePath.AbsoluteUri + "t/Main_Page",
+            _cancellationToken
+        );
 
-        var ulNode = doc.DocumentNode.SelectSingleNode("//ul");
+        // Find the character selection container
+        var charSelectContainer = doc.DocumentNode.SelectSingleNode(
+            "//div[@class='char-select-t8']"
+        );
 
-        var liNodes = ulNode?.SelectNodes(".//li[@class='cursor-pointer']");
-
-        if (liNodes != null)
+        if (charSelectContainer != null)
         {
-            foreach (HtmlNode liNode in liNodes)
+            // Get all character divs
+            var charDivs = charSelectContainer.SelectNodes(
+                ".//div[contains(@class, 'char-select-t8-img')]"
+            );
+
+            if (charDivs != null)
             {
-                var aNode = liNode.SelectSingleNode(".//a[@class='cursor-pointer']");
-                var href = aNode?.GetAttributeValue("href", string.Empty);
-
-                var nameNode = liNode.SelectSingleNode(".//div[contains(@class, 'text-center')]");
-                var name = nameNode?.InnerText.Trim();
-
-                if (name?.Equals("mokujin", StringComparison.OrdinalIgnoreCase) ?? false)
+                foreach (HtmlNode charDiv in charDivs)
                 {
-                    continue;
-                }
+                    await Task.Delay(TimeSpan.FromSeconds(2), _cancellationToken);
 
-                var imgNode = liNode.SelectSingleNode(".//img");
-                var imageUrl = imgNode?.GetAttributeValue("src", "");
-                var imagePath = new Uri(BasePath, imageUrl);
+                    // Get the link node
+                    var aNode = charDiv.SelectSingleNode(".//a");
+                    var href = aNode?.GetAttributeValue("href", string.Empty);
 
-                if (name != null)
-                {
-                    var character = new TekkenCharacter
+                    var charDoc = new HtmlWeb();
+                    var duDoc = await charDoc.LoadFromWebAsync(
+                        BasePath.AbsoluteUri + href,
+                        _cancellationToken
+                    );
+
+                    var divOutput =
+                        duDoc.DocumentNode.SelectSingleNode(
+                            "/html/body/div[1]/main/div/div[2]/div[2]/div[1]"
+                        ) ?? throw new HtmlWebException("miss");
+                    var pS = divOutput.SelectNodes("./p") ?? throw new HtmlWebException("miss");
+
+                    var stringBuilder = new StringBuilder();
+
+                    foreach (var nodeb in pS)
                     {
-                        LinkToImage = imagePath.AbsoluteUri,
-                        Name = name,
-                    };
+                        stringBuilder.Append(nodeb.InnerText);
+                    }
 
-                    try
+                    var description = stringBuilder.ToString();
+                    stringBuilder.Clear();
+
+                    var federa =
+                        divOutput.SelectSingleNode("./div[contains(@style, 'display: grid;')]")
+                        ?? throw new HtmlWebException("miss");
+                    var strAndWkns =
+                        federa.SelectNodes(".//ul") ?? throw new HtmlWebException("miss");
+
+                    var listStr = new List<string>();
+                    var listWknss = new List<string>();
+
+                    for (var index = 0; index < strAndWkns.Count; index++)
                     {
-                        await Task.Delay(TimeSpan.FromSeconds(5), _cancellationToken);
-                        var movelist = await GetMoveList(
-                            character,
-                            "https://tekkendocs.com" + href
-                        );
-
-                        var sortedMovelist = await ConsolidateMoveGroups(movelist);
-
-                        await using AppDbContext dbContext =
-                            await dbContextFactory.CreateDbContextAsync(_cancellationToken);
-                        foreach (Move move in sortedMovelist)
+                        HtmlNode? za = strAndWkns[index];
+                        var twfs = za.SelectNodes("./li") ?? throw new HtmlWebException("miss");
+                        foreach (var htmlNode in twfs)
                         {
-                            if (
-                                dbContext.TekkenMoves.Any(e =>
-                                    e.CharacterName == move.CharacterName
-                                    && e.Command == move.Command
-                                )
-                            )
+                            var innerGrps = htmlNode.InnerText;
+                            if (index == 0)
                             {
-                                dbContext.TekkenMoves.Update(move);
+                                listStr.Add(innerGrps);
+                            }
+                            else if (index == 1)
+                            {
+                                listWknss.Add(innerGrps);
                             }
                             else
                             {
-                                dbContext.TekkenMoves.Add(move);
+                                throw new HtmlWebException("sosal?");
                             }
                         }
-
-                        if (dbContext.TekkenCharacters.Any(e => e.Equals(character)))
-                        {
-                            dbContext.TekkenCharacters.Update(character);
-                        }
-                        else
-                        {
-                            dbContext.TekkenCharacters.Add(character);
-                        }
-
-                        await dbContext.SaveChangesAsync(_cancellationToken);
                     }
-                    catch (Exception ex)
+
+                    // Get character name from the sibling div
+                    var nameNode = charDiv.ParentNode.SelectSingleNode(
+                        ".//div[@class='char-select-t8-text']/a"
+                    );
+                    var name = nameNode?.InnerText.Trim().ToLower();
+
+                    if (name?.Equals("mokujin", StringComparison.OrdinalIgnoreCase) ?? false)
                     {
-                        logger.LogException(ex);
+                        continue;
+                    }
+
+                    if (name != null)
+                    {
+                        var character = new TekkenCharacter
+                        {
+                            Name = name,
+                            Description = description,
+                            Weaknesess = [.. listWknss],
+                            Strengths = [.. listStr],
+                        };
+
+                        try
+                        {
+                            await Task.Delay(TimeSpan.FromSeconds(5), _cancellationToken);
+                            var cargoQuery =
+                                BasePath.AbsoluteUri + GenerateCargoQueryUrl(character.Name);
+                            var movelist = await GetMoveList(character, cargoQuery);
+
+                            var sortedMovelist = await ConsolidateMoveGroups(movelist);
+
+                            await using AppDbContext dbContext =
+                                await dbContextFactory.CreateDbContextAsync(_cancellationToken);
+
+                            if (dbContext.TekkenCharacters.Any(e => e.Equals(character)))
+                            {
+                                dbContext.TekkenCharacters.Update(character);
+                            }
+                            else
+                            {
+                                dbContext.TekkenCharacters.Add(character);
+                            }
+
+                            foreach (Move move in sortedMovelist)
+                            {
+                                if (
+                                    dbContext.TekkenMoves.Any(e =>
+                                        e.CharacterName == move.CharacterName
+                                        && e.Command == move.Command
+                                    )
+                                )
+                                {
+                                    dbContext.TekkenMoves.Update(move);
+                                }
+                                else
+                                {
+                                    dbContext.TekkenMoves.Add(move);
+                                }
+                            }
+
+                            var rowInt = await dbContext.SaveChangesAsync(_cancellationToken);
+
+                            if (rowInt != sortedMovelist.Length + 1)
+                            {
+                                logger.LogCritical(
+                                    "Было обновленно не верное количетсво теккен ударов!"
+                                );
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            logger.LogException(ex);
+                        }
                     }
                 }
             }
@@ -97,7 +177,7 @@ public partial class Tekken8FrameData
         );
     }
 
-    public static Task<Move[]> ConsolidateMoveGroups(List<Move> moves)
+    private static Task<Move[]> ConsolidateMoveGroups(List<Move> moves)
     {
         var groupedMoves = moves.GroupBy(m => new { m.CharacterName, m.Command });
 
@@ -157,61 +237,49 @@ public partial class Tekken8FrameData
         var doc = await web.LoadFromWebAsync(url, _cancellationToken);
 
         // Находим таблицу с мувлистом
-        var tableNode = doc.DocumentNode.SelectSingleNode("//tbody");
+        var tableNode = doc.DocumentNode.SelectSingleNode(
+            "//table[contains(@class, 'cargoTable')]/tbody"
+        );
 
         // Проверяем, что таблица найдена
-        var rowNodes = tableNode?.SelectNodes(".//tr[@class='rt-TableRow']");
+        var rowNodes = tableNode?.SelectNodes(".//tr");
 
         // Проверяем, что строки таблицы найдены
         if (rowNodes != null)
         {
             foreach (var rowNode in rowNodes)
             {
-                //character.Movelist = movelist; !important
-
                 // Получаем ячейки (столбцы) текущей строки
-                var cellNodes = rowNode.SelectNodes(".//td[@class='rt-TableCell']");
+                var cellNodes = rowNode.SelectNodes(".//td[@class]");
 
-                // Извлекаем текст из тега <a> в ячейке command
-                if (cellNodes != null)
+                if (cellNodes != null && cellNodes.Count >= 9) // Проверяем, что есть все нужные столбцы
                 {
-                    var command = cellNodes[0].SelectSingleNode(".//a")?.InnerText.Trim().ToLower();
+                    var command = cellNodes[0].InnerText.Trim();
 
                     // Создаем новый объект Move
-                    if (command != null)
+                    if (!string.IsNullOrWhiteSpace(command))
                     {
                         var move = new Move
                         {
                             Character = character,
                             CharacterName = character.Name,
-                            Command = command,
+                            Command = command.Split('-').Last().Trim().ToLower(),
                         };
 
-                        if (string.IsNullOrWhiteSpace(move.Command))
-                        {
-                            continue;
-                        }
-
-                        move.Command = move.Command!.Replace(".", " ");
-
-                        var noteDivs = cellNodes[7].SelectNodes(".//div");
-                        if (noteDivs is { Count: > 0 })
-                        {
-                            move.Notes = string.Join(
-                                Environment.NewLine,
-                                noteDivs.Select(div => div.InnerText.Trim().ToLower())
-                            );
-                        }
+                        move.Command = move.Command.Replace(".", " ");
 
                         // Заполняем остальные свойства объекта Move данными из остальных ячеек
-                        move.HitLevel = cellNodes[1].InnerText.Trim().ToLower();
-                        move.Damage = cellNodes[2].InnerText.Trim().ToLower();
-                        move.StartUpFrame = cellNodes[3].InnerText.Trim().ToLower();
+                        move.StartUpFrame = cellNodes[1].InnerText.Trim().ToLower();
+                        move.HitLevel = cellNodes[2].InnerText.Trim().ToLower();
+                        move.Damage = cellNodes[3].InnerText.Trim().ToLower();
                         move.BlockFrame = cellNodes[4].InnerText.Trim().ToLower();
                         move.HitFrame = cellNodes[5].InnerText.Trim().ToLower();
                         move.CounterHitFrame = cellNodes[6].InnerText.Trim().ToLower();
+                        move.Notes = cellNodes[8].InnerText.Trim().ToLower();
 
-                        var notes = move.Notes;
+                        // Parse states if needed (cellNodes[7])
+
+                        var notes = move.Notes.ToLower();
                         if (!string.IsNullOrWhiteSpace(notes))
                         {
                             if (notes.Contains("power crush"))
@@ -250,7 +318,7 @@ public partial class Tekken8FrameData
                             }
                         }
 
-                        if (move.HitLevel.Contains("th") || move.HitLevel.Contains('t'))
+                        if (move.HitLevel.Contains("th") || move.HitLevel.ToLower().Contains('t'))
                         {
                             move.Throw = true;
                         }
@@ -274,5 +342,35 @@ public partial class Tekken8FrameData
         }
 
         return movelist;
+    }
+
+    private static string GenerateCargoQueryUrl(string characterName)
+    {
+        // Кодируем имя персонажа для URL
+        var encodedName = Uri.EscapeDataString(characterName + " movelist");
+
+        // Формируем базовый URL запроса
+        var baseUrl = "/w/index.php?title=Special:CargoQuery";
+
+        // Параметры запроса
+        var queryParams = new Dictionary<string, string>
+        {
+            { "tables", "Move" },
+            {
+                "fields",
+                "CONCAT(id,'')=Move,startup=Startup,target=Hit Level,damage=Damage,CONCAT(block,'')=On Block,CONCAT(hit,'')=On Hit,CONCAT(ch,'')=On CH,crush=States,notes=Notes"
+            },
+            {
+                "where",
+                $"Move._pageName='{string.Concat(encodedName[0].ToString().ToUpper(), encodedName.AsSpan(1))}'"
+            },
+            { "format", "table" },
+            { "offset", "0" },
+            { "limit", "500" }, // Увеличиваем лимит, чтобы получить все движения
+        };
+
+        // Собираем URL
+        var queryString = string.Join("&", queryParams.Select(kv => $"{kv.Key}={kv.Value}"));
+        return $"{baseUrl}&{queryString}";
     }
 }

@@ -1,5 +1,4 @@
 ﻿using MARS.Server.Services.Twitch.Management.Entitys;
-using TwitchLib.Api.Auth;
 
 namespace MARS.Server.Services.Twitch.Management;
 

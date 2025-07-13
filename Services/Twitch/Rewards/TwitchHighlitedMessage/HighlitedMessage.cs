@@ -71,7 +71,7 @@ public class HighlitedMessage : BackgroundService
             filePath.IndexOf("wwwroot", StringComparison.Ordinal) + "wwwroot".Length
         );
 
-        return new Image() { URL = filePath, Extension = exstension };
+        return new Image { URL = filePath, Extension = exstension };
     }
 
     protected override Task ExecuteAsync(CancellationToken stoppingToken)

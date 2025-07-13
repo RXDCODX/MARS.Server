@@ -58,7 +58,7 @@ public class RandomMemOnline(
                 {
                     if (update is UpdateNewChannelMessage message)
                     {
-                        await Task.Factory.StartNew(() => OnUpdate(message, @base), stoppingToken);
+                        await Task.Factory.StartNew(() => OnUpdate(message), stoppingToken);
                     }
                 }
             };
@@ -67,7 +67,7 @@ public class RandomMemOnline(
         return Task.CompletedTask;
     }
 
-    private async Task OnUpdate(UpdateNewChannelMessage arg1, UpdatesBase? arg2)
+    private async Task OnUpdate(UpdateNewChannelMessage arg1)
     {
         if (arg1.message is Message message)
         {
@@ -155,16 +155,16 @@ public class RandomMemOnline(
         await MemoryStorage.AddFileAsync(fileName, buffer);
 
         var mediaInfo = new MediaDto(
-            new MediaInfo()
+            new MediaInfo
             {
-                FileInfo = new MediaFileInfo()
+                FileInfo = new MediaFileInfo
                 {
                     FilePath = "memory/" + fileName,
                     Extension = extension,
                     FileName = fileName,
                     Type = MediaType.Video,
                 },
-                MetaInfo = new MediaMetaInfo()
+                MetaInfo = new MediaMetaInfo
                 {
                     DisplayName = string.Empty,
                     Duration = 999,
@@ -173,7 +173,7 @@ public class RandomMemOnline(
                 },
                 PositionInfo = new MediaPositionInfo(),
                 StylesInfo = new MediaStylesInfo(),
-                TextInfo = new MediaTextInfo() { Text = message },
+                TextInfo = new MediaTextInfo { Text = message },
             }
         );
 
@@ -190,19 +190,19 @@ public class RandomMemOnline(
             var fileInfo = await client.DownloadFileAsync(photo, fs, size);
             var fileName = $"{photo.id}.jpeg";
 
-            await MemoryStorage.AddFileAsync($"{photo.ID}.{fileInfo.ToString()}", buffer);
+            await MemoryStorage.AddFileAsync($"{photo.ID}.{fileInfo}", buffer);
 
             var mediaInfo = new MediaDto(
-                new MediaInfo()
+                new MediaInfo
                 {
-                    FileInfo = new MediaFileInfo()
+                    FileInfo = new MediaFileInfo
                     {
                         FilePath = "memory/" + fileName,
                         Extension = "jpeg",
                         FileName = fileName,
                         Type = MediaType.Image,
                     },
-                    MetaInfo = new MediaMetaInfo()
+                    MetaInfo = new MediaMetaInfo
                     {
                         DisplayName = string.Empty,
                         IsLooped = false,
@@ -210,7 +210,7 @@ public class RandomMemOnline(
                     },
                     PositionInfo = new MediaPositionInfo(),
                     StylesInfo = new MediaStylesInfo(),
-                    TextInfo = new MediaTextInfo() { Text = message },
+                    TextInfo = new MediaTextInfo { Text = message },
                 }
             );
 
@@ -230,16 +230,16 @@ public class RandomMemOnline(
         await MemoryStorage.AddFileAsync($"{document.id}.{fileInfo.Split('/')[1]}", buffer);
 
         var mediaInfo = new MediaDto(
-            new MediaInfo()
+            new MediaInfo
             {
-                FileInfo = new MediaFileInfo()
+                FileInfo = new MediaFileInfo
                 {
                     FilePath = "memory/" + fileName,
                     Extension = extension,
                     FileName = fileName,
                     Type = MediaType.Image,
                 },
-                MetaInfo = new MediaMetaInfo()
+                MetaInfo = new MediaMetaInfo
                 {
                     DisplayName = string.Empty,
                     IsLooped = false,
@@ -247,7 +247,7 @@ public class RandomMemOnline(
                 },
                 PositionInfo = new MediaPositionInfo(),
                 StylesInfo = new MediaStylesInfo(),
-                TextInfo = new MediaTextInfo() { Text = message },
+                TextInfo = new MediaTextInfo { Text = message },
             }
         );
 

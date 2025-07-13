@@ -17,7 +17,7 @@ namespace Telegramus.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.4")
+                .HasAnnotation("ProductVersion", "9.0.6")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -45,7 +45,7 @@ namespace Telegramus.Migrations
                         });
                 });
 
-            modelBuilder.Entity("MARS.Server.DataBaseContext.Log", b =>
+            modelBuilder.Entity("MARS.Server.CustomLoggers.DatabaseLogger.Log", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -136,11 +136,20 @@ namespace Telegramus.Migrations
                     b.Property<string>("Name")
                         .HasColumnType("text");
 
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
                     b.Property<DateTimeOffset>("LastUpdateTime")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("LinkToImage")
                         .HasColumnType("text");
+
+                    b.PrimitiveCollection<string[]>("Strengths")
+                        .HasColumnType("text[]");
+
+                    b.PrimitiveCollection<string[]>("Weaknesess")
+                        .HasColumnType("text[]");
 
                     b.HasKey("Name");
 
@@ -228,6 +237,163 @@ namespace Telegramus.Migrations
                         .HasColumnType("bigint");
 
                     b.ToTable("WTelegramAlloweedChannels");
+                });
+
+            modelBuilder.Entity("MARS.Server.Services.ServiceManager.Entitys.ServiceState", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ConfigurationJson")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsServiceActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("LastActivity")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("LastStartTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ServiceName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ServiceStates");
+                });
+
+            modelBuilder.Entity("MARS.Server.Services.SoundRequest.Entitys.BaseTrackInfo", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.PrimitiveCollection<string[]>("Authors")
+                        .HasColumnType("text[]");
+
+                    b.Property<int>("Domain")
+                        .HasColumnType("integer");
+
+                    b.Property<TimeSpan>("Duration")
+                        .HasColumnType("interval");
+
+                    b.PrimitiveCollection<string[]>("FeatAuthors")
+                        .HasColumnType("text[]");
+
+                    b.PrimitiveCollection<string[]>("Genre")
+                        .HasColumnType("text[]");
+
+                    b.Property<DateTime>("LastTimePlays")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("TrackName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Url")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("SoundRequestBaseTrackInfos");
+                });
+
+            modelBuilder.Entity("MARS.Server.Services.SoundRequest.Entitys.PlayerState", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<TimeSpan?>("CurrentTrackDuration")
+                        .HasColumnType("interval");
+
+                    b.Property<Guid?>("CurrentTrackId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsMuted")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsPaused")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsStoped")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid?>("NextTrackId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Volume")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CurrentTrackId");
+
+                    b.HasIndex("NextTrackId");
+
+                    b.ToTable("SoundRequestPlayerState");
+                });
+
+            modelBuilder.Entity("MARS.Server.Services.SoundRequest.Entitys.SoundRequestBackgroundTrackId", b =>
+                {
+                    b.Property<Guid>("TrackId")
+                        .HasColumnType("uuid");
+
+                    b.HasIndex("TrackId")
+                        .IsUnique();
+
+                    b.ToTable("SoundRequestBackgroundTracks");
+                });
+
+            modelBuilder.Entity("MARS.Server.Services.SoundRequest.Entitys.UserRequestedTrack", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("RequestedTrackId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("TwitchDisplayName")
+                        .HasColumnType("text");
+
+                    b.Property<string>("TwitchId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RequestedTrackId")
+                        .IsUnique();
+
+                    b.ToTable("SoundRequestUserQueue");
                 });
 
             modelBuilder.Entity("MARS.Server.Services.TelegramBotService.Entitys.TelegramUpdateReceiverOffset", b =>
@@ -796,6 +962,69 @@ namespace Telegramus.Migrations
                         .HasForeignKey("MemeTypeId");
 
                     b.Navigation("Type");
+                });
+
+            modelBuilder.Entity("MARS.Server.Services.SoundRequest.Entitys.BaseTrackInfo", b =>
+                {
+                    b.OwnsOne("MARS.Server.Services.SoundRequest.Entitys.YandexTrackAdditionalInfo", "YandexSpecificInfo", b1 =>
+                        {
+                            b1.Property<Guid>("BaseTrackInfoId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<string>("ArtworkUrl")
+                                .HasColumnType("text")
+                                .HasColumnName("YandexInfo_ArtworkUrl");
+
+                            b1.Property<string>("Mp3TrackUrl")
+                                .HasColumnType("text")
+                                .HasColumnName("YandexInfo_MP3Url");
+
+                            b1.HasKey("BaseTrackInfoId");
+
+                            b1.ToTable("SoundRequestBaseTrackInfos");
+
+                            b1.WithOwner()
+                                .HasForeignKey("BaseTrackInfoId");
+                        });
+
+                    b.Navigation("YandexSpecificInfo");
+                });
+
+            modelBuilder.Entity("MARS.Server.Services.SoundRequest.Entitys.PlayerState", b =>
+                {
+                    b.HasOne("MARS.Server.Services.SoundRequest.Entitys.BaseTrackInfo", "CurrentTrack")
+                        .WithMany()
+                        .HasForeignKey("CurrentTrackId");
+
+                    b.HasOne("MARS.Server.Services.SoundRequest.Entitys.BaseTrackInfo", "NextTrack")
+                        .WithMany()
+                        .HasForeignKey("NextTrackId");
+
+                    b.Navigation("CurrentTrack");
+
+                    b.Navigation("NextTrack");
+                });
+
+            modelBuilder.Entity("MARS.Server.Services.SoundRequest.Entitys.SoundRequestBackgroundTrackId", b =>
+                {
+                    b.HasOne("MARS.Server.Services.SoundRequest.Entitys.BaseTrackInfo", "BaseTrackInfo")
+                        .WithOne()
+                        .HasForeignKey("MARS.Server.Services.SoundRequest.Entitys.SoundRequestBackgroundTrackId", "TrackId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("BaseTrackInfo");
+                });
+
+            modelBuilder.Entity("MARS.Server.Services.SoundRequest.Entitys.UserRequestedTrack", b =>
+                {
+                    b.HasOne("MARS.Server.Services.SoundRequest.Entitys.BaseTrackInfo", "RequestedTrack")
+                        .WithOne()
+                        .HasForeignKey("MARS.Server.Services.SoundRequest.Entitys.UserRequestedTrack", "RequestedTrackId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("RequestedTrack");
                 });
 
             modelBuilder.Entity("MARS.Server.Services.Twitch.HelloVideos.Entitys.HelloVideosUsers", b =>

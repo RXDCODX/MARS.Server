@@ -13,14 +13,14 @@ public class AnswersForTwitchRewards
         { Command.RollWaifu, "@{user}, тебе выпал(-а) {waifuName} из {waifuTitle}!" },
     };
 
-    private static readonly IEnumerable<string> Keywords = new List<string>
-    {
+    private static readonly IEnumerable<string> Keywords =
+    [
         "{user}",
         "{waifuName}",
         "{animeTitle}",
         "{mangaTitle}",
         "{waifuTitle}",
-    };
+    ];
 
     public static string ReplaceKeywordsInAnswer(
         string displayName,
@@ -50,14 +50,14 @@ public class AnswersForTwitchRewards
                     case "{animeTitle}":
                         message = message.Replace(
                             keyword,
-                            shikiAnime!.russian
+                            shikiAnime!.Russian
                                 ?? throw new NullReferenceException("shikiAnime был null")
                         );
                         break;
                     case "{mangaTitle}":
                         message = message.Replace(
                             keyword,
-                            shikiMangas!.russian
+                            shikiMangas!.Russian
                                 ?? throw new NullReferenceException("shikiMangas был null")
                         );
                         break;

@@ -14,15 +14,8 @@ public readonly struct IntRange(int start, int end)
             ? $"[{GetRightNumber(Start)}]"
             : $"[{GetRightNumber(Start)}~{GetRightNumber(End)}]";
 
-    private string GetRightNumber(int number)
+    private static string GetRightNumber(int number)
     {
-        if (number > 0)
-        {
-            return "+" + number;
-        }
-        else
-        {
-            return number.ToString();
-        }
+        return number > 0 ? "+" + number : number.ToString();
     }
 }

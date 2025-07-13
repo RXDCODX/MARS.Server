@@ -14,7 +14,7 @@ public class TwitchFramedate(
 ) : BackgroundService
 {
     private readonly CancellationToken _cancellationToken = lifetime.ApplicationStopping;
-    private static readonly Regex Regex = new Regex(@"\p{C}+");
+    private static readonly Regex Regex = new(@"\p{C}+");
 
     public async void FrameDateMessage(object? sender, OnMessageReceivedArgs args)
     {
@@ -37,6 +37,7 @@ public class TwitchFramedate(
                                     | StringSplitOptions.TrimEntries
                             )
                             .Skip(1)
+                            .Select(e => e.ToEnglishTransliteration().ToLower())
                             .ToArray();
 
                         if (keyWords.Length < 2)
@@ -81,13 +82,10 @@ public class TwitchFramedate(
         }
 
         var character = await frameData.GetTekkenCharacter(string.Join(' ', keyWords.SkipLast(1)));
-        if (character == null)
-        {
-            return null;
-        }
-
-        return $"\u2705 {character.Name} \u2705 {Enum.GetName(result.Value.Tag)} | "
-            + $"Команды: {string.Join(", ", result.Value.Moves.Select(e => e.Command))}";
+        return character == null
+            ? null
+            : $"\u2705 {character.Name} \u2705 {Enum.GetName(result.Value.Tag)} | "
+                + $"Команды: {string.Join(", ", result.Value.Moves.Select(e => e.Command))}";
     }
 
     private async Task<string?> HandleStances(string[] keyWords)
@@ -106,13 +104,10 @@ public class TwitchFramedate(
 
         await using var dbContext = await factory.CreateDbContextAsync(_cancellationToken);
         var character = await frameData.FindCharacterInDatabaseAsync(charName, dbContext);
-        if (character == null)
-        {
-            return null;
-        }
-
-        return $"\u2705 {character.Name} \u2705 Стойки: "
-            + string.Join(", ", stances.Select(e => $"{e.Key} - {e.Value}"));
+        return character == null
+            ? null
+            : $"\u2705 {character.Name} \u2705 Стойки: "
+                + string.Join(", ", stances.Select(e => $"{e.Key} - {e.Value}"));
     }
 
     private async Task<string?> HandleSingleMove(string[] keyWords)

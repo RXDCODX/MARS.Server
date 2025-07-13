@@ -1,5 +1,4 @@
-﻿using System.Diagnostics.Eventing.Reader;
-using System.Reflection;
+﻿using System.Reflection;
 using MARS.Server.Services.Framedata;
 using MARS.Server.Services.PyroAlerts;
 using MARS.Server.Services.RandomMem;
@@ -90,7 +89,6 @@ public class UpdateHandler : IUpdateHandler
     }
 
     public async Task HandlePollingErrorAsync(
-        ITelegramBotClient botClient,
         Exception exception,
         CancellationToken cancellationToken
     )
@@ -152,7 +150,7 @@ public class UpdateHandler : IUpdateHandler
         if (
             message.Type != MessageType.Text
             || message.Text is not { } messageText
-            || !messageText.StartsWith("/")
+            || !messageText.StartsWith('/')
         )
         {
             return;
@@ -181,12 +179,7 @@ public class UpdateHandler : IUpdateHandler
                     e =>
                     {
                         var aliasAttr = e?.GetCustomAttribute<AliasAttribute>();
-                        if (aliasAttr?.MethodAliases.Contains(commandWithoutSlash) == true)
-                        {
-                            return true;
-                        }
-
-                        return false;
+                        return aliasAttr?.MethodAliases.Contains(commandWithoutSlash) == true;
                     },
                     null
                 );
@@ -241,7 +234,7 @@ public class UpdateHandler : IUpdateHandler
         }
     }
 
-    private Task<Message>? ErrorCommand(
+    private static Task<Message>? ErrorCommand(
         ITelegramBotClient client,
         Message message,
         CancellationToken cancellationToken
@@ -254,7 +247,7 @@ public class UpdateHandler : IUpdateHandler
         );
     }
 
-    private string GetMethodName(string command)
+    private static string GetMethodName(string command)
     {
         return string.Concat(
             "On",
@@ -277,10 +270,10 @@ public class UpdateHandler : IUpdateHandler
         );
 
         InlineQueryResult[] results =
-        {
+        [
             // displayed result
             new InlineQueryResultArticle("1", "TgBots", new InputTextMessageContent("hello")),
-        };
+        ];
 
         await _botClient.AnswerInlineQuery(
             inlineQuery.Id,
