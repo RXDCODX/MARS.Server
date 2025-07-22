@@ -2,6 +2,7 @@
 
 public partial class Commands
 {
+    [Description("Включает пользователя в список рейд-хелперов")]
     public async Task<Message> OnRaidHelpCommandReceived(
         ITelegramBotClient botClient,
         Message message,

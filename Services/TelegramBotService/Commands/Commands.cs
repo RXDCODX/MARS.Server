@@ -26,6 +26,7 @@ public partial class Commands(
     public const string Template =
         "Не получилось получить комманды бота, сообщите об этой ошибке разработчику";
 
+    [Description("Показывает список всех доступных команд бота")]
     public async Task<Message> OnCommandsCommandReceived(
         ITelegramBotClient botClient,
         Message message,
@@ -58,7 +59,7 @@ public partial class Commands(
 
         if (methods.Length != 0)
         {
-            var names = GetCommandName(methods);
+            var names = GetCommandNameWithDescription(methods);
             usage = string.Join(Environment.NewLine, names);
         }
         else
@@ -75,7 +76,7 @@ public partial class Commands(
     }
 
     [Ignore]
-    private static string[] GetCommandName(MethodInfo[] methods)
+    private static string[] GetCommandNameWithDescription(MethodInfo[] methods)
     {
         var commandNames = new string[methods.Length];
         const string template = "OnCommandReceived";
@@ -85,7 +86,16 @@ public partial class Commands(
             MethodInfo method = methods[i];
             var length = method.Name.Length - template.Length;
             var name = method.Name.Substring(2, length);
-            commandNames[i] = "/" + name.ToLower();
+            var command = "/" + name.ToLower();
+            var description = method.GetCustomAttribute<DescriptionAttribute>()?.Description;
+            if (!string.IsNullOrWhiteSpace(description))
+            {
+                commandNames[i] = $"{command} - {description}";
+            }
+            else
+            {
+                commandNames[i] = command;
+            }
         }
 
         return commandNames;

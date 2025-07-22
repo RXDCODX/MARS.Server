@@ -1,4 +1,5 @@
-﻿using MARS.Server.Services.Shikimori;
+﻿using ShikimoriSharp.Classes;
+using MARS.Server.Services.Shikimori;
 
 namespace MARS.Server.Services.WaifuRoll.helpers;
 
@@ -45,7 +46,7 @@ public class WaifuRollDataBaseHelper(
             return waifu;
         }
 
-        var character = await shikiService.GetShikiCharacterById(waifu.ShikiId);
+        var character = await shikiService.GetShikiCharacterById(long.Parse(waifu.ShikiId)); // FullCharacter
         waifu.ImageUrl = character!.Image.Original;
         return waifu;
     }

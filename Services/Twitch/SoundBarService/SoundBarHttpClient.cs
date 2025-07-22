@@ -48,9 +48,9 @@ public class SoundBarHttpClient(
                 );
             }
         }
-        catch (Exception ex)
+        catch
         {
-            logger.LogError(ex, "HTTP call failed for mute operation");
+            logger.LogError("HTTP call failed for mute operation");
         }
     }
 
@@ -78,9 +78,9 @@ public class SoundBarHttpClient(
                 );
             }
         }
-        catch (Exception ex)
+        catch
         {
-            logger.LogError(ex, "HTTP call failed for unmute operation");
+            logger.LogError("HTTP call failed for unmute operation");
         }
     }
 
@@ -110,7 +110,7 @@ public class SoundBarHttpClient(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "HTTP call failed for GetBagCount operation");
+            logger.LogError("HTTP call failed for GetBagCount operation");
             return $"Error: {ex.Message}";
         }
     }

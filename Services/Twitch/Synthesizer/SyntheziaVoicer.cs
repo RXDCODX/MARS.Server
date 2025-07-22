@@ -14,6 +14,8 @@ public class SyntheziaVoicer : IVoicer
     private readonly SpeechSynthesizer _speechSynthesizer = new();
     private readonly SemaphoreSlim _semaphore = new(1);
 
+    public bool IsActive { get; set; }
+
     public SyntheziaVoicer(ILogger<IVoicer> logger)
     {
         _logger = logger;
@@ -38,7 +40,7 @@ public class SyntheziaVoicer : IVoicer
 
     public async Task Sound(MessageToSynthezid message)
     {
-        if (!OperatingSystem.IsWindows())
+        if (!OperatingSystem.IsWindows() || !IsActive)
         {
             return;
         }
@@ -108,11 +110,16 @@ public class SyntheziaVoicer : IVoicer
         return Task.FromResult(_speechSynthesizer.SpeakAsyncCancelAll);
     }
 
-    public void InterruptSpeech()
+    public Task Block()
     {
-        if (OperatingSystem.IsWindows())
-        {
-            _speechSynthesizer.SpeakAsyncCancelAll();
-        }
+        IsActive = false;
+
+        return Stop();
+    }
+
+    public Task Unlock()
+    {
+        IsActive = true;
+        return Task.CompletedTask;
     }
 }

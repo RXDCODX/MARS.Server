@@ -8,7 +8,6 @@ using MARS.Server.Services.MemoryStorageService;
 using MARS.Server.Services.PyroAlerts;
 using MARS.Server.Services.RandomMem;
 using MARS.Server.Services.Shikimori;
-using MARS.Server.Services.Shikimori.AuthCodeService;
 using MARS.Server.Services.Twitch.Rewards;
 using MARS.Server.Services.Twitch.SoundBarService;
 using MARS.Server.Services.Twitch.Synthesizer;
@@ -150,7 +149,6 @@ public static class Program
 
         services.AddSingleton<AnswersForTwitchRewards>();
 
-        services.AddSingleton<ShikimoriAuthorizationHelpService>();
         services.AddSingleton<ShikimoriService>();
 
         services.AddSingleton<WaifuRollService>();
@@ -238,7 +236,7 @@ public static class Program
             {
                 var aa = app.Services.GetRequiredService<SoundBarFactory>();
                 var bb = aa.CreateSoundBar();
-                await bb.Mute();
+                //await bb.Mute();
             }
 
             await app.RunAsync();

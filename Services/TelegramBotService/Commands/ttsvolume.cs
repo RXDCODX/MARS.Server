@@ -4,6 +4,9 @@ namespace MARS.Server.Services.TelegramBotService.Commands;
 
 public partial class Commands
 {
+    [Description(
+        "Устанавливает или показывает текущую громкость TTS. Если поставить 0 - то блокирует ттс полностью!"
+    )]
     [AdminAttribute]
     public async Task<Message> OnTTSVolumeCommandReceived(
         ITelegramBotClient botClient,
@@ -20,6 +23,11 @@ public partial class Commands
             {
                 if (OperatingSystem.IsWindows())
                 {
+                    if (volume == 0)
+                    {
+                        await syntheziaVoicer.Block();
+                    }
+
                     syntheziaVoicer.ChangeVolume(volume);
                     returnMessage = $"Громкость была установленнна на {volume}";
                 }

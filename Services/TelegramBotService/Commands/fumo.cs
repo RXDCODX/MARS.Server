@@ -2,6 +2,7 @@
 
 public partial class Commands
 {
+    [Description("Объявляет Fumo Friday для пользователя")]
     [AdminAttribute]
     public async Task<Message> OnFumoCommandReceived(
         ITelegramBotClient botClient,

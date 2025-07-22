@@ -2,6 +2,7 @@
 
 public partial class Commands
 {
+    [Description("Добавляет пользователя в список ежедневных уведомлений Honkai")]
     public async Task<Message> OnHonkaiCommandReceived(
         ITelegramBotClient botClient,
         Message message,

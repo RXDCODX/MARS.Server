@@ -4,6 +4,7 @@ namespace MARS.Server.Services.TelegramBotService.Commands;
 
 public partial class Commands
 {
+    [Description("Выполняет реконнект EventSub Twitch")]
     [AdminAttribute]
     public async Task<Message> OnTwitchSubRecCommandReceived(
         ITelegramBotClient botClient,
@@ -11,8 +12,11 @@ public partial class Commands
         CancellationToken cancellationToken
     )
     {
-        await eventSubService.ReconnectAsync(string.Empty);
-        var text = "Отправлена попытка реконекта";
+        await Task.Factory.StartNew(
+            async () => await eventSubService.ReconnectAsync(),
+            cancellationToken
+        );
+        const string text = "Отправлена попытка реконекта";
 
         return await botClient.SendMessage(
             message.Chat.Id,

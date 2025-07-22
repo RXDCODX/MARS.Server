@@ -4,6 +4,7 @@ namespace MARS.Server.Services.TelegramBotService.Commands;
 
 public partial class Commands
 {
+    [Description("Показывает список пользователей с ежедневными уведомлениями Honkai")]
     public async Task<Message> OnHonkaiUsersCommandReceived(
         ITelegramBotClient botClient,
         Message message,

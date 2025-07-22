@@ -4,6 +4,7 @@ namespace MARS.Server.Services.TelegramBotService.Commands;
 
 public partial class Commands
 {
+    [Description("Запускает парсинг фреймдаты Tekken 8 с сайта")]
     [Admin]
     public async Task<Message> OnScrupFrameDataCommandReceived(
         ITelegramBotClient botClient,

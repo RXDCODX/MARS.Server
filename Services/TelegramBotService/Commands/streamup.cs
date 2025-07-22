@@ -2,6 +2,7 @@
 
 public partial class Commands
 {
+    [Description("Включает уведомления о начале стрима для пользователя")]
     public async Task<Message> OnStreamupCommandReceived(
         ITelegramBotClient botClient,
         Message message,

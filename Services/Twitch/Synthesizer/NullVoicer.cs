@@ -4,6 +4,8 @@ namespace MARS.Server.Services.Twitch.Synthesizer;
 
 public class NullVoicer(ILogger<IVoicer> logger) : IVoicer
 {
+    public bool IsActive { get; set; }
+
     public int GetVolume()
     {
         logger.LogWarning("Changing volume is not supported on this platform.");
@@ -19,6 +21,20 @@ public class NullVoicer(ILogger<IVoicer> logger) : IVoicer
     {
         return Task.FromResult(
             () => logger.LogWarning("Speech synthesis is not supported on this platform.")
+        );
+    }
+
+    public Task Block()
+    {
+        return Task.FromResult(
+            () => logger.LogWarning("Speech block is not supported on this platform.")
+        );
+    }
+
+    public Task Unlock()
+    {
+        return Task.FromResult(
+            () => logger.LogWarning("Speech unblock is not supported on this platform.")
         );
     }
 

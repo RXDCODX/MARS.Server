@@ -75,5 +75,6 @@ public partial class Tekken8FrameData
     };
 
     public readonly Uri BasePath = new("https://wavu.wiki");
+    public readonly Uri SecondBasePath = new("https://tekkendocs.com");
     public List<Move> VictorinaMoves = [];
 }

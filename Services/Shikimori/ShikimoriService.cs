@@ -1,218 +1,72 @@
-﻿using System.Net;
-using System.Text.Json;
-using MARS.Server.Services.Shikimori.AuthCodeService;
-using MARS.Server.Services.Shikimori.Entitys;
+﻿using ShikimoriSharp;
+using ShikimoriSharp.Bases;
+using ShikimoriSharp.Classes;
+using ShikimoriSharp.Settings;
 
 namespace MARS.Server.Services.Shikimori;
 
-public class ShikimoriService(
-    ILogger<ShikimoriService> logger,
-    IOptions<ShikimoriClientOptions> configuration,
-    ShikimoriAuthorizationHelpService shikimoriAuthorizationHelpService,
-    IHttpClientFactory factory
-) : ITelegramusService
+public class ShikimoriService : ITelegramusService
 {
-    private readonly ILogger _logger = logger;
-    private readonly ShikimoriClientOptions _options =
-        configuration.Value ?? throw new NullReferenceException();
-    private readonly HttpClient _shikiClient = factory.CreateClient("ShikimoriClient");
-    private ShikiAccessToken _accessToken = shikimoriAuthorizationHelpService
-        .GetCodeFromFile()
-        .ConfigureAwait(false)
-        .GetAwaiter()
-        .GetResult();
+    private readonly ILogger _logger;
+    private readonly ShikimoriClientOptions _options;
+    private readonly ShikimoriClient _client;
 
-    public async Task<ShikiAnime> GetRandomAnime(bool recursed = false)
+    public ShikimoriService(
+        ILogger<ShikimoriService> logger,
+        IOptions<ShikimoriClientOptions> configuration
+    )
     {
-        var message = new HttpRequestMessage(
-            HttpMethod.Get,
-            string.Format(
-                "{0}{1}",
-                _options.ShikimoriSite,
-                "/api/animes?rating=r_plus&order=random&limit=1&score=7"
-            )
+        _logger = logger;
+        _options = configuration.Value ?? throw new NullReferenceException();
+        var settings = new ClientSettings(
+            _options.ClientName,
+            _options.ClientId,
+            _options.ClientSecret
         );
-
-        message.Headers.Add("User-Agent", _options.ClientName);
-        message.Headers.Add("Authorization", _accessToken.AccessToken);
-
-        var response = _shikiClient.Send(message);
-
-        if (response.StatusCode == HttpStatusCode.Unauthorized)
-        {
-            if (recursed)
-            {
-                throw new Exception("Рекурсивный вызов GetRandomAnime()");
-            }
-
-            _accessToken = await shikimoriAuthorizationHelpService.RefreshToken(
-                _shikiClient,
-                _accessToken
-            );
-            return await GetRandomAnime(true);
-        }
-
-        if (response.IsSuccessStatusCode)
-        {
-            var responseContent = await response.Content.ReadAsStringAsync();
-            return JsonSerializer.Deserialize<ShikiAnime[]>(responseContent)?.FirstOrDefault()
-                ?? throw new InvalidOperationException();
-        }
-
-        throw new InvalidOperationException();
+        _client = new ShikimoriClient(logger, settings);
     }
 
-    public async Task<ShikiAnime> GetAnimeById(long id, bool recursed = false)
+    public async Task<Anime?> GetRandomAnime()
     {
-        var message = new HttpRequestMessage(
-            HttpMethod.Get,
-            string.Format("{0}{1}{2}", _options.ShikimoriSite, "/api/animes/", id)
-        );
-
-        message.Headers.Add("User-Agent", _options.ClientName);
-        message.Headers.Add("Authorization", _accessToken.AccessToken);
-
-        var response = _shikiClient.Send(message);
-
-        if (response.StatusCode == HttpStatusCode.Unauthorized)
-        {
-            if (recursed)
+        var animes = await _client.Animes.GetAnime(
+            new AnimeRequestSettings
             {
-                throw new Exception("Рекурсивный вызов GetAnimeById()");
+                order = ShikimoriSharp.Enums.Order.random,
+                limit = 1,
+                score = 7,
             }
-
-            _accessToken = await shikimoriAuthorizationHelpService.RefreshToken(
-                _shikiClient,
-                _accessToken
-            );
-            return await GetAnimeById(id, true);
-        }
-
-        if (response.IsSuccessStatusCode)
-        {
-            var responseContent = await response.Content.ReadAsStringAsync();
-            return JsonSerializer.Deserialize<ShikiAnime[]>(responseContent)?.FirstOrDefault()
-                ?? throw new InvalidOperationException();
-        }
-
-        throw new InvalidOperationException();
+        );
+        return animes?.FirstOrDefault();
     }
 
-    public async Task<ShikiMangas> GetRandomManga(bool recursed = false)
+    public async Task<AnimeID?> GetAnimeById(long id)
     {
-        var message = new HttpRequestMessage(
-            HttpMethod.Get,
-            string.Format(
-                "{0}{1}",
-                _options.ShikimoriSite,
-                "/api/mangas?censored=true&order=random&limit=1&score=7"
-            )
-        );
-
-        message.Headers.Add("User-Agent", _options.ClientName);
-        message.Headers.Add("Authorization", _accessToken.AccessToken);
-
-        var response = _shikiClient.Send(message);
-
-        if (response.StatusCode == HttpStatusCode.Unauthorized)
-        {
-            if (recursed)
-            {
-                throw new Exception("Рекурсивный вызов GetRandomManga()");
-            }
-
-            _accessToken = await shikimoriAuthorizationHelpService.RefreshToken(
-                _shikiClient,
-                _accessToken
-            );
-            return await GetRandomManga(true);
-        }
-
-        if (response.IsSuccessStatusCode)
-        {
-            var responseContent = await response.Content.ReadAsStringAsync();
-            return JsonSerializer.Deserialize<ShikiMangas[]>(responseContent)?.FirstOrDefault()
-                ?? throw new InvalidOperationException();
-        }
-
-        throw new InvalidOperationException();
+        var anime = await _client.Animes.GetAnime(id);
+        return anime;
     }
 
-    public async Task<ShikiMangas> GetMangaById(long id, bool recursed = false)
+    public async Task<Manga?> GetRandomManga()
     {
-        var message = new HttpRequestMessage(
-            HttpMethod.Get,
-            $"{_options.ShikimoriSite}/api/mangas/{id}"
-        );
-
-        message.Headers.Add("User-Agent", _options.ClientName);
-        message.Headers.Add("Authorization", _accessToken.AccessToken);
-
-        var response = _shikiClient.Send(message);
-
-        if (response.StatusCode == HttpStatusCode.Unauthorized)
-        {
-            if (recursed)
+        var mangas = await _client.Mangas.GetBySearch(
+            new ShikimoriSharp.Settings.MangaRequestSettings
             {
-                throw new Exception("Рекурсивный вызов GetMangaById()");
+                order = ShikimoriSharp.Enums.Order.random,
+                limit = 1,
+                score = 7,
             }
-
-            _accessToken = await shikimoriAuthorizationHelpService.RefreshToken(
-                _shikiClient,
-                _accessToken
-            );
-            return await GetMangaById(id, true);
-        }
-
-        if (response.IsSuccessStatusCode)
-        {
-            var responseContent = await response.Content.ReadAsStringAsync();
-            return JsonSerializer.Deserialize<ShikiMangas[]>(responseContent)?.FirstOrDefault()
-                ?? throw new InvalidOperationException();
-        }
-
-        throw new InvalidOperationException();
+        );
+        return mangas?.FirstOrDefault();
     }
 
-    public async Task<ShikiCharacter?> GetShikiCharacterById(string id, bool recursed = false)
+    public async Task<MangaID?> GetMangaById(long id)
     {
-        var message = new HttpRequestMessage(
-            HttpMethod.Get,
-            $"{_options.ShikimoriSite}/api/characters/{id}"
-        );
+        var manga = await _client.Mangas.GetById(id);
+        return manga;
+    }
 
-        message.Headers.Add("User-Agent", _options.ClientName);
-        message.Headers.Add("Authorization", _accessToken.AccessToken);
-
-        var response = _shikiClient.Send(message);
-
-        if (response.StatusCode == HttpStatusCode.Unauthorized)
-        {
-            if (recursed)
-            {
-                const string template = "Рекурсивный вызов GetShikiCharacterById";
-                _logger.LogCritical(
-                    "{template}{message}",
-                    template,
-                    "! Приложение завершает свою работу"
-                );
-                throw new Exception(template);
-            }
-
-            _accessToken = await shikimoriAuthorizationHelpService.RefreshToken(
-                _shikiClient,
-                _accessToken
-            );
-            return await GetShikiCharacterById(id, true);
-        }
-
-        if (response.IsSuccessStatusCode)
-        {
-            var responseContent = await response.Content.ReadAsStringAsync();
-            var waifu = JsonSerializer.Deserialize<ShikiCharacter>(responseContent);
-            return waifu;
-        }
-
-        return null;
+    public async Task<FullCharacter?> GetShikiCharacterById(long id)
+    {
+        var character = await _client.Characters.GetCharacterById(id);
+        return character;
     }
 }

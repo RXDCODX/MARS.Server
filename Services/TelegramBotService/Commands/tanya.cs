@@ -4,6 +4,7 @@ namespace MARS.Server.Services.TelegramBotService.Commands;
 
 public partial class Commands
 {
+    [Description("Показывает ближайший рабочий день Тани")]
     [AdminAttribute]
     public async Task<Message> OnTanyaCommandReceived(
         ITelegramBotClient botClient,

@@ -1,4 +1,4 @@
-﻿using MARS.Server.Services.Shikimori.Entitys;
+﻿using ShikimoriSharp.Classes;
 
 namespace MARS.Server.Services.WaifuRoll;
 
@@ -15,7 +15,7 @@ public class WaifuRollService(WaifuRollWorker worker) : ITelegramusService
     public Task<(Waifu? waifu, Host? host, Host? husband)> TelegramRollWaifu(string name) =>
         _worker.TelegramRollWaifu(name);
 
-    public Task<(Waifu?, bool)> AddNewWaifu(ShikiCharacter character) =>
+    public Task<(Waifu?, bool)> AddNewWaifu(FullCharacter character) =>
         _worker.AddNewWaifu(character);
 
     public Task<bool> MergeTheWaifu(Host host, Waifu waifu, bool makeprivate = true) =>

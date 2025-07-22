@@ -4,6 +4,7 @@ namespace MARS.Server.Services.TelegramBotService.Commands;
 
 public partial class Commands
 {
+    [Description("Показывает справку по возможностям бота и форматам медиа")]
     public async Task<Message> OnHelpCommandReceived(
         ITelegramBotClient botClient,
         Message message,
