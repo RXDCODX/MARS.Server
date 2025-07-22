@@ -1,4 +1,4 @@
-﻿using MARS.Server.Services.Shikimori.Entitys;
+﻿using ShikimoriSharp.Classes;
 
 namespace MARS.Server.Services.Twitch.Rewards;
 
@@ -25,8 +25,8 @@ public class AnswersForTwitchRewards
     public static string ReplaceKeywordsInAnswer(
         string displayName,
         string message,
-        ShikiAnime? shikiAnime = null,
-        ShikiMangas? shikiMangas = null,
+        AnimeID? shikiAnime = null,
+        MangaID? shikiMangas = null,
         Waifu? waifu = null
     )
     {
@@ -50,14 +50,14 @@ public class AnswersForTwitchRewards
                     case "{animeTitle}":
                         message = message.Replace(
                             keyword,
-                            shikiAnime!.Russian
+                            shikiAnime?.Russian
                                 ?? throw new NullReferenceException("shikiAnime был null")
                         );
                         break;
                     case "{mangaTitle}":
                         message = message.Replace(
                             keyword,
-                            shikiMangas!.Russian
+                            shikiMangas?.Russian
                                 ?? throw new NullReferenceException("shikiMangas был null")
                         );
                         break;

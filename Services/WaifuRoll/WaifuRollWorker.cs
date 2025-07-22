@@ -1,7 +1,7 @@
 ﻿using MARS.Server.Services.ServiceManager;
-using MARS.Server.Services.Shikimori.Entitys;
 using MARS.Server.Services.Twitch.Rewards;
 using MARS.Server.Services.WaifuRoll.helpers;
+using ShikimoriSharp.Classes;
 
 namespace MARS.Server.Services.WaifuRoll;
 
@@ -148,7 +148,7 @@ public class WaifuRollWorker(
         return (null, null, null);
     }
 
-    public async Task<(Waifu?, bool)> AddNewWaifu(ShikiCharacter character)
+    public async Task<(Waifu?, bool)> AddNewWaifu(FullCharacter character)
     {
         try
         {
@@ -159,7 +159,16 @@ public class WaifuRollWorker(
                 return (null, false);
             }
 
-            var waifu = character.CreateWaifu();
+            var waifu = new Waifu
+            {
+                ShikiId = character.Id.ToString(),
+                Name = character.Name ?? character.Russian ?? "Unknown",
+                ImageUrl = character.Image?.Original ?? string.Empty,
+                WhenAdded = DateTimeOffset.Now,
+                LastOrder = DateTimeOffset.Now,
+                OrderCount = 0,
+                IsPrivated = false
+            };
             waifu = await waifuDbHelper.EnsureWaifuHaveImageIrl(waifu);
             await dbContext.Waifus.AddAsync(waifu);
             await dbContext.SaveChangesAsync();

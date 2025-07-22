@@ -1,7 +1,7 @@
 ﻿using System.Text.RegularExpressions;
 using MARS.Server.Services.ServiceManager;
 using MARS.Server.Services.Shikimori;
-using MARS.Server.Services.Shikimori.Entitys;
+using ShikimoriSharp.Classes;
 using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.WaifuRoll;
 using TwitchLib.Api.Helix.Models.Chat;
@@ -60,7 +60,7 @@ public class AddNewWaifu(
 
                 var id = await GetShikimoriCharacterIdFromLink(userInput);
 
-                if (string.IsNullOrWhiteSpace(id))
+                if (id == 0)
                 {
                     const string template =
                         "@{user}, не удалось добавить твоего супруга, кривая ссылка! :-(";
@@ -73,7 +73,7 @@ public class AddNewWaifu(
                     return;
                 }
 
-                ShikiCharacter? character = await shikimoriService.GetShikiCharacterById(id);
+                FullCharacter? character = await shikimoriService.GetShikiCharacterById(id);
 
                 if (character is null)
                 {
@@ -180,7 +180,7 @@ public class AddNewWaifu(
         }
     }
 
-    private ValueTask<string> GetShikimoriCharacterIdFromLink(string url)
+    private ValueTask<long> GetShikimoriCharacterIdFromLink(string url)
     {
         var regex = new Regex($"{_options.ShikimoriSite}/characters/([a-zA-Z]*\\d+)");
 
@@ -188,11 +188,11 @@ public class AddNewWaifu(
 
         if (!match.Success)
         {
-            return ValueTask.FromResult(string.Empty);
+            return ValueTask.FromResult(0L);
         }
 
         var characterId = match.Groups[1].Value;
-        return ValueTask.FromResult(characterId);
+        return ValueTask.FromResult(long.Parse(characterId));
     }
 
     public override async Task StartAsync(CancellationToken cancellationToken = default)

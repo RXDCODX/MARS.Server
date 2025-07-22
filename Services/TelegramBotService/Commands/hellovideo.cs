@@ -4,6 +4,7 @@ namespace MARS.Server.Services.TelegramBotService.Commands;
 
 public partial class Commands
 {
+    [Description("Отправляет приветственное видео пользователю или с указанным цветом")]
     public async Task<Message> OnHelloVideoCommandReceived(
         ITelegramBotClient botClient,
         Message message,

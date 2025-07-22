@@ -2,6 +2,7 @@
 
 public partial class Commands
 {
+    [Description("Останавливает все текущие TTS-фразы")]
     public async Task<Message> OnTTSStopCommandReceived(
         ITelegramBotClient botClient,
         Message message,

@@ -1,6 +1,11 @@
 ﻿using System.Text;
-using HtmlAgilityPack;
+using AngleSharp;
+using AngleSharp.Dom;
+using AngleSharp.XPath;
 using MARS.Server.Services.Framedata.Entitys;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
 
 namespace MARS.Server.Services.Framedata;
 
@@ -11,170 +16,393 @@ public partial class Tekken8FrameData
 {
     internal async Task StartScrupFrameData(Chat? chat = default)
     {
-        var docW = new HtmlWeb();
-        var doc = await docW.LoadFromWebAsync(
-            BasePath.AbsoluteUri + "t/Main_Page",
-            _cancellationToken
-        );
+        var config = AngleSharp.Configuration.Default.WithDefaultLoader();
+        var context = BrowsingContext.New(config);
 
-        // Find the character selection container
-        var charSelectContainer = doc.DocumentNode.SelectSingleNode(
-            "//div[@class='char-select-t8']"
-        );
+        var doc = await context.OpenAsync(BasePath.AbsoluteUri + "t/Main_Page", _cancellationToken);
+
+        // Найти контейнер выбора персонажа
+        var charSelectContainer = doc.QuerySelector("div.char-select-t8");
+
+        var parsedCharacters = new List<string>(); // <--- Новый лист для успешно спарсенных
 
         if (charSelectContainer != null)
         {
-            // Get all character divs
-            var charDivs = charSelectContainer.SelectNodes(
-                ".//div[contains(@class, 'char-select-t8-img')]"
-            );
+            // Все div с персонажами
+            var charDivs = charSelectContainer.QuerySelectorAll("div.char-select-t8-img");
 
-            if (charDivs != null)
+            // --- Скачать спрайт-лист один раз ---
+            const string spriteUrl = "https://wavu.wiki/w/images/5/55/T8-spritesheet.webp";
+            byte[]? spriteBytes = null;
+            var fileExtension = Path.GetExtension(spriteUrl);
+            using var httpClient = new HttpClient();
+            spriteBytes = await httpClient.GetByteArrayAsync(spriteUrl, _cancellationToken);
+
+            foreach (var charDiv in charDivs)
             {
-                foreach (HtmlNode charDiv in charDivs)
+                await Task.Delay(TimeSpan.FromSeconds(2), _cancellationToken);
+
+                // Получить ссылку на страницу персонажа
+                var aNode = charDiv.QuerySelector("a");
+                var href = aNode?.GetAttribute("href");
+                var charPagePath = BasePath.AbsoluteUri + href;
+                if (string.IsNullOrWhiteSpace(href))
                 {
-                    await Task.Delay(TimeSpan.FromSeconds(2), _cancellationToken);
+                    continue;
+                }
 
-                    // Get the link node
-                    var aNode = charDiv.SelectSingleNode(".//a");
-                    var href = aNode?.GetAttributeValue("href", string.Empty);
+                var charPage = await context.OpenAsync(charPagePath, _cancellationToken);
 
-                    var charDoc = new HtmlWeb();
-                    var duDoc = await charDoc.LoadFromWebAsync(
-                        BasePath.AbsoluteUri + href,
-                        _cancellationToken
-                    );
-
-                    var divOutput =
-                        duDoc.DocumentNode.SelectSingleNode(
-                            "/html/body/div[1]/main/div/div[2]/div[2]/div[1]"
-                        ) ?? throw new HtmlWebException("miss");
-                    var pS = divOutput.SelectNodes("./p") ?? throw new HtmlWebException("miss");
-
-                    var stringBuilder = new StringBuilder();
-
-                    foreach (var nodeb in pS)
+                var divOutput =
+                    charPage.Body.SelectSingleNode("//*[@id=\"mw-content-text\"]/div[1]")
+                    ?? throw new Exception("miss");
+                var divOutputElement =
+                    divOutput as IElement ?? throw new Exception("divOutput is not IElement");
+                var pS = divOutputElement.QuerySelectorAll("p") ?? throw new Exception("miss");
+                var stringBuilder = new StringBuilder();
+                foreach (var nodeb in pS)
+                {
+                    if (!nodeb.TextContent.Contains("This page is"))
                     {
-                        stringBuilder.Append(nodeb.InnerText);
+                        stringBuilder.Append(nodeb.TextContent);
                     }
+                }
+                var description = stringBuilder.ToString();
+                stringBuilder.Clear();
 
-                    var description = stringBuilder.ToString();
-                    stringBuilder.Clear();
+                var federa =
+                    divOutputElement.SelectSingleNode(".//div[contains(@style, 'display: grid;')]")
+                    ?? throw new Exception("miss");
+                var federaElement =
+                    federa as IElement ?? throw new Exception("federa is not IElement");
+                var strAndWkns =
+                    federaElement.QuerySelectorAll("ul") ?? throw new Exception("miss");
+                var listStr = new List<string>();
+                var listWknss = new List<string>();
 
-                    var federa =
-                        divOutput.SelectSingleNode("./div[contains(@style, 'display: grid;')]")
-                        ?? throw new HtmlWebException("miss");
-                    var strAndWkns =
-                        federa.SelectNodes(".//ul") ?? throw new HtmlWebException("miss");
-
-                    var listStr = new List<string>();
-                    var listWknss = new List<string>();
-
-                    for (var index = 0; index < strAndWkns.Count; index++)
+                for (var index = 0; index < strAndWkns.Length; index++)
+                {
+                    var za = strAndWkns[index];
+                    var twfs = za.QuerySelectorAll("li") ?? throw new Exception("miss");
+                    foreach (var htmlNode in twfs)
                     {
-                        HtmlNode? za = strAndWkns[index];
-                        var twfs = za.SelectNodes("./li") ?? throw new HtmlWebException("miss");
-                        foreach (var htmlNode in twfs)
+                        var innerGrps = htmlNode.TextContent;
+                        switch (index)
                         {
-                            var innerGrps = htmlNode.InnerText;
-                            if (index == 0)
-                            {
+                            case 0:
                                 listStr.Add(innerGrps);
-                            }
-                            else if (index == 1)
-                            {
+                                break;
+                            case 1:
                                 listWknss.Add(innerGrps);
-                            }
-                            else
-                            {
-                                throw new HtmlWebException("sosal?");
-                            }
+                                break;
+                            default:
+                                throw new Exception("sosal?");
                         }
                     }
+                }
 
-                    // Get character name from the sibling div
-                    var nameNode = charDiv.ParentNode.SelectSingleNode(
-                        ".//div[@class='char-select-t8-text']/a"
+                // Имя персонажа
+                var nameNode = charDiv.ParentElement?.QuerySelector("div.char-select-t8-text > a");
+                var name = nameNode?.TextContent.Trim().ToLower();
+
+                if (name?.Equals("mokujin", StringComparison.OrdinalIgnoreCase) ?? false)
+                {
+                    continue;
+                }
+
+                if (name == null)
+                {
+                    continue;
+                }
+
+                // --- Получение изображения персонажа ---
+                // Получаем имя класса персонажа (например, alisa)
+                var classList = charDiv.ClassList;
+                var charClass = classList.FirstOrDefault(c => c != "char-select-t8-img");
+                var x = 0;
+                var y = 0;
+                if (!string.IsNullOrWhiteSpace(charClass))
+                {
+                    // Ищем <style data-mw-deduplicate>
+                    var styleNodes = doc.QuerySelectorAll("style[data-mw-deduplicate]");
+                    foreach (var styleNode in styleNodes)
+                    {
+                        var css = styleNode.TextContent;
+                        // Пример: .mw-parser-output .char-select-t8-img.alisa img { background-position: -1px -1px!important }
+                        var pattern =
+                            $@".mw-parser-output\s*.char-select-t8-img.{charClass}\s*img\s*\{{[^}}]*?background-position:\s*(-?\d+)px\s*(-?\d+)px";
+                        var match = System.Text.RegularExpressions.Regex.Match(
+                            css,
+                            pattern,
+                            System.Text.RegularExpressions.RegexOptions.Singleline
+                        );
+                        if (match.Success)
+                        {
+                            x = int.Parse(match.Groups[1].Value);
+                            y = int.Parse(match.Groups[2].Value);
+                            break;
+                        }
+                    }
+                }
+                // Если не нашли — x и y = 0
+
+                if (x == 0 || y == 0)
+                {
+                    continue;
+                }
+
+                // Получаем width и height из img внутри charDiv
+                int width = 72,
+                    height = 88; // значения по умолчанию
+                var imgNode = charDiv.QuerySelector("img");
+                if (imgNode != null)
+                {
+                    var widthAttr = imgNode.GetAttribute("data-file-width");
+                    var heightAttr = imgNode.GetAttribute("data-file-height");
+                    if (!string.IsNullOrWhiteSpace(widthAttr))
+                    {
+                        width = int.Parse(widthAttr);
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(heightAttr))
+                    {
+                        height = int.Parse(heightAttr);
+                    }
+                }
+                byte[]? imageBytes = null;
+                try
+                {
+                    using var image = Image.Load<Rgba32>(spriteBytes);
+                    var spriteWidth = image.Width;
+                    var spriteHeight = image.Height;
+
+                    if (x < 0)
+                    {
+                        x = Math.Abs(x);
+                    }
+
+                    if (y < 0)
+                    {
+                        y = Math.Abs(y);
+                    }
+
+                    if (x + width > spriteWidth)
+                    {
+                        width = spriteWidth - x;
+                    }
+
+                    if (y + height > spriteHeight)
+                    {
+                        height = spriteHeight - y;
+                    }
+
+                    if (width <= 0 || height <= 0)
+                    {
+                        throw new Exception(
+                            $"Некорректные размеры обрезки: x={x}, y={y}, width={width}, height={height}, spriteWidth={spriteWidth}, spriteHeight={spriteHeight}"
+                        );
+                    }
+
+                    logger.LogInformation(
+                        message: "Crop: x={x}, y={y}, width={width}, height={height}, spriteWidth={spriteWidth}, spriteHeight={spriteHeight}",
+                        x,
+                        y,
+                        width,
+                        height,
+                        spriteWidth,
+                        spriteHeight
                     );
-                    var name = nameNode?.InnerText.Trim().ToLower();
+                    using var cropped = image.Clone(ctx =>
+                        ctx.Crop(new Rectangle(x, y, width, height))
+                    );
+                    await using var croppedMs = new MemoryStream();
+                    await cropped.SaveAsPngAsync(croppedMs, _cancellationToken);
+                    imageBytes = croppedMs.ToArray();
+                }
+                catch (Exception ex)
+                {
+                    logger.LogException(ex);
+                }
 
-                    if (name?.Equals("mokujin", StringComparison.OrdinalIgnoreCase) ?? false)
+                var character = new TekkenCharacter
+                {
+                    Name = name,
+                    Description = description,
+                    Weaknesess = [.. listWknss],
+                    Strengths = [.. listStr],
+                    Image = imageBytes,
+                    ImageExtension = fileExtension,
+                    PageUrl = charPagePath,
+                };
+
+                try
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(5), _cancellationToken);
+                    var cargoQuery = BasePath.AbsoluteUri + GenerateCargoQueryUrl(character.Name);
+                    var movelist = await GetMoveList(character, cargoQuery);
+
+                    var sortedMovelist = await ConsolidateMoveGroups(movelist);
+
+                    await using AppDbContext dbContext =
+                        await dbContextFactory.CreateDbContextAsync(_cancellationToken);
+
+                    if (dbContext.TekkenCharacters.Any(e => e.Equals(character)))
                     {
-                        continue;
+                        dbContext.TekkenCharacters.Update(character);
+                    }
+                    else
+                    {
+                        dbContext.TekkenCharacters.Add(character);
                     }
 
-                    if (name != null)
+                    foreach (Move move in sortedMovelist)
                     {
-                        var character = new TekkenCharacter
+                        if (
+                            dbContext.TekkenMoves.Any(e =>
+                                e.CharacterName == move.CharacterName && e.Command == move.Command
+                            )
+                        )
                         {
-                            Name = name,
-                            Description = description,
-                            Weaknesess = [.. listWknss],
-                            Strengths = [.. listStr],
-                        };
-
-                        try
-                        {
-                            await Task.Delay(TimeSpan.FromSeconds(5), _cancellationToken);
-                            var cargoQuery =
-                                BasePath.AbsoluteUri + GenerateCargoQueryUrl(character.Name);
-                            var movelist = await GetMoveList(character, cargoQuery);
-
-                            var sortedMovelist = await ConsolidateMoveGroups(movelist);
-
-                            await using AppDbContext dbContext =
-                                await dbContextFactory.CreateDbContextAsync(_cancellationToken);
-
-                            if (dbContext.TekkenCharacters.Any(e => e.Equals(character)))
-                            {
-                                dbContext.TekkenCharacters.Update(character);
-                            }
-                            else
-                            {
-                                dbContext.TekkenCharacters.Add(character);
-                            }
-
-                            foreach (Move move in sortedMovelist)
-                            {
-                                if (
-                                    dbContext.TekkenMoves.Any(e =>
-                                        e.CharacterName == move.CharacterName
-                                        && e.Command == move.Command
-                                    )
-                                )
-                                {
-                                    dbContext.TekkenMoves.Update(move);
-                                }
-                                else
-                                {
-                                    dbContext.TekkenMoves.Add(move);
-                                }
-                            }
-
-                            var rowInt = await dbContext.SaveChangesAsync(_cancellationToken);
-
-                            if (rowInt != sortedMovelist.Length + 1)
-                            {
-                                logger.LogCritical(
-                                    "Было обновленно не верное количетсво теккен ударов!"
-                                );
-                            }
+                            dbContext.TekkenMoves.Update(move);
                         }
-                        catch (Exception ex)
+                        else
                         {
-                            logger.LogException(ex);
+                            dbContext.TekkenMoves.Add(move);
                         }
                     }
+
+                    var rowInt = await dbContext.SaveChangesAsync(_cancellationToken);
+
+                    if (rowInt != sortedMovelist.Length + 1)
+                    {
+                        logger.LogCritical("Было обновленно не верное количетсво теккен ударов!");
+                    }
+
+                    // Добавляем имя в список успешно спарсенных
+                    parsedCharacters.Add(name);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogException(ex);
                 }
             }
         }
 
+        // После основного парсинга — допарсить недостающих
+        await ParseNotParsedCharacters(parsedCharacters);
+
         await UpdateMovesForVictorina();
         await client.SendMessage(
-            chat is not null ? chat : TelegramExstension.Rxdcodx,
+            chat switch
+            {
+                not null => chat,
+                _ => TelegramExstension.Rxdcodx,
+            },
             "Парсинг теккен фрейм даты закончено!",
             cancellationToken: _cancellationToken
         );
+    }
+
+    // Новый метод для допарсивания недостающих персонажей
+    private async Task ParseNotParsedCharacters(List<string> parsedCharacters)
+    {
+        var allCharacterKeys = Aliases
+            .CharacterNameAliases.Keys.Select(x => x.ToLower())
+            .ToHashSet();
+        var parsedSet = parsedCharacters.Select(x => x.ToLower()).ToHashSet();
+        var missingCharacters = allCharacterKeys.Except(parsedSet).ToList();
+
+        if (missingCharacters.Count > 0)
+        {
+            await StartScrupFrameDataFromSecondSiteForCharacters(missingCharacters);
+        }
+    }
+
+    // Новый вспомогательный метод для парсинга только указанных персонажей через второй сайт
+    private async Task StartScrupFrameDataFromSecondSiteForCharacters(
+        List<string> characterNamesToParse
+    )
+    {
+        var docW = new HtmlAgilityPack.HtmlWeb();
+        var doc = await docW.LoadFromWebAsync(SecondBasePath.AbsoluteUri, _cancellationToken);
+
+        var ulNode = doc.DocumentNode.SelectSingleNode("//ul");
+        var liNodes = ulNode?.SelectNodes(".//li[@class='cursor-pointer']");
+
+        if (liNodes != null)
+        {
+            foreach (var liNode in liNodes)
+            {
+                var aNode = liNode.SelectSingleNode(".//a[@class='cursor-pointer']");
+                var href = aNode?.GetAttributeValue("href", string.Empty);
+
+                var nameNode = liNode.SelectSingleNode(".//div[contains(@class, 'text-center')]");
+                var name = nameNode?.InnerText.Trim().ToLower();
+
+                if (name == null || !characterNamesToParse.Contains(name))
+                {
+                    continue;
+                }
+
+                if (name.Equals("mokujin", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                var imgNode = liNode.SelectSingleNode(".//img");
+                var imageUrl = imgNode?.GetAttributeValue("src", "");
+                var imagePath = new Uri(SecondBasePath, imageUrl);
+
+                var chatPage = "https://tekkendocs.com" + href;
+
+                var character = new TekkenCharacter
+                {
+                    LinkToImage = imagePath.AbsoluteUri,
+                    Name = name,
+                    PageUrl = chatPage,
+                };
+
+                try
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(5), _cancellationToken);
+                    var movelist = await GetMoveListFromSecondSite(character, chatPage);
+                    var sortedMovelist = await ConsolidateMoveGroups(movelist);
+
+                    await using AppDbContext dbContext =
+                        await dbContextFactory.CreateDbContextAsync(_cancellationToken);
+                    foreach (Move move in sortedMovelist)
+                    {
+                        if (
+                            dbContext.TekkenMoves.Any(e =>
+                                e.CharacterName == move.CharacterName && e.Command == move.Command
+                            )
+                        )
+                        {
+                            dbContext.TekkenMoves.Update(move);
+                        }
+                        else
+                        {
+                            dbContext.TekkenMoves.Add(move);
+                        }
+                    }
+
+                    if (dbContext.TekkenCharacters.Any(e => e.Equals(character)))
+                    {
+                        dbContext.TekkenCharacters.Update(character);
+                    }
+                    else
+                    {
+                        dbContext.TekkenCharacters.Add(character);
+                    }
+
+                    await dbContext.SaveChangesAsync(_cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogException(ex);
+                }
+            }
+        }
     }
 
     private static Task<Move[]> ConsolidateMoveGroups(List<Move> moves)
@@ -232,113 +460,117 @@ public partial class Tekken8FrameData
     {
         var movelist = new List<Move>();
 
-        // Загрузка HTML страницы
-        var web = new HtmlWeb();
-        var doc = await web.LoadFromWebAsync(url, _cancellationToken);
+        var config = AngleSharp.Configuration.Default.WithDefaultLoader();
+        var context = BrowsingContext.New(config);
+        var doc = await context.OpenAsync(url, _cancellationToken);
 
         // Находим таблицу с мувлистом
-        var tableNode = doc.DocumentNode.SelectSingleNode(
-            "//table[contains(@class, 'cargoTable')]/tbody"
-        );
+        var tableNode = doc.QuerySelector("table.cargoTable > tbody");
 
         // Проверяем, что таблица найдена
-        var rowNodes = tableNode?.SelectNodes(".//tr");
+        var rowNodes = tableNode?.QuerySelectorAll("tr");
 
         // Проверяем, что строки таблицы найдены
-        if (rowNodes != null)
+        if (rowNodes == null)
         {
-            foreach (var rowNode in rowNodes)
+            return movelist;
+        }
+
+        foreach (var rowNode in rowNodes)
+        {
+            // Получаем ячейки (столбцы) текущей строки
+            var cellNodes = rowNode.QuerySelectorAll("td[class]");
+
+            if (cellNodes is not { Length: >= 9 })
             {
-                // Получаем ячейки (столбцы) текущей строки
-                var cellNodes = rowNode.SelectNodes(".//td[@class]");
+                continue;
+            }
 
-                if (cellNodes != null && cellNodes.Count >= 9) // Проверяем, что есть все нужные столбцы
+            var command = cellNodes[0].TextContent.Trim();
+
+            // Создаем новый объект Move
+            if (string.IsNullOrWhiteSpace(command))
+            {
+                continue;
+            }
+
+            var move = new Move
+            {
+                Character = character,
+                CharacterName = character.Name,
+                Command = command.Split('-').Last().Trim().ToLower(),
+            };
+
+            move.Command = move.Command.Replace(".", " ");
+
+            // Заполняем остальные свойства объекта Move данными из остальных ячеек
+            move.StartUpFrame = cellNodes[1].TextContent.Trim().ToLower();
+            move.HitLevel = cellNodes[2].TextContent.Trim().ToLower();
+            move.Damage = cellNodes[3].TextContent.Trim().ToLower();
+            move.BlockFrame = cellNodes[4].TextContent.Trim().ToLower();
+            move.HitFrame = cellNodes[5].TextContent.Trim().ToLower();
+            move.CounterHitFrame = cellNodes[6].TextContent.Trim().ToLower();
+            move.Notes = cellNodes[8].TextContent.Trim().ToLower();
+
+            // Parse states if needed (cellNodes[7])
+
+            var notes = move.Notes.ToLower();
+            if (!string.IsNullOrWhiteSpace(notes))
+            {
+                if (notes.Contains("power crush"))
                 {
-                    var command = cellNodes[0].InnerText.Trim();
+                    move.PowerCrush = true;
+                }
 
-                    // Создаем новый объект Move
-                    if (!string.IsNullOrWhiteSpace(command))
-                    {
-                        var move = new Move
-                        {
-                            Character = character,
-                            CharacterName = character.Name,
-                            Command = command.Split('-').Last().Trim().ToLower(),
-                        };
+                if (notes.Contains("heat burst"))
+                {
+                    move.HeatBurst = true;
+                }
 
-                        move.Command = move.Command.Replace(".", " ");
+                if (notes.Contains("heat engager"))
+                {
+                    move.HeatEngage = true;
+                }
 
-                        // Заполняем остальные свойства объекта Move данными из остальных ячеек
-                        move.StartUpFrame = cellNodes[1].InnerText.Trim().ToLower();
-                        move.HitLevel = cellNodes[2].InnerText.Trim().ToLower();
-                        move.Damage = cellNodes[3].InnerText.Trim().ToLower();
-                        move.BlockFrame = cellNodes[4].InnerText.Trim().ToLower();
-                        move.HitFrame = cellNodes[5].InnerText.Trim().ToLower();
-                        move.CounterHitFrame = cellNodes[6].InnerText.Trim().ToLower();
-                        move.Notes = cellNodes[8].InnerText.Trim().ToLower();
+                if (notes.Contains("heat smash"))
+                {
+                    move.HeatSmash = true;
+                }
 
-                        // Parse states if needed (cellNodes[7])
+                if (move.Command.StartsWith('h'))
+                {
+                    move.RequiresHeat = true;
+                }
 
-                        var notes = move.Notes.ToLower();
-                        if (!string.IsNullOrWhiteSpace(notes))
-                        {
-                            if (notes.Contains("power crush"))
-                            {
-                                move.PowerCrush = true;
-                            }
+                if (notes.Contains("tornado"))
+                {
+                    move.Tornado = true;
+                }
 
-                            if (notes.Contains("heat burst"))
-                            {
-                                move.HeatBurst = true;
-                            }
-
-                            if (notes.Contains("heat engager"))
-                            {
-                                move.HeatEngage = true;
-                            }
-
-                            if (notes.Contains("heat smash"))
-                            {
-                                move.HeatSmash = true;
-                            }
-
-                            if (move.Command.StartsWith('h'))
-                            {
-                                move.RequiresHeat = true;
-                            }
-
-                            if (notes.Contains("tornado"))
-                            {
-                                move.Tornado = true;
-                            }
-
-                            if (notes.Contains("homing"))
-                            {
-                                move.Homing = true;
-                            }
-                        }
-
-                        if (move.HitLevel.Contains("th") || move.HitLevel.ToLower().Contains('t'))
-                        {
-                            move.Throw = true;
-                        }
-
-                        var pair = Aliases.Stances.FirstOrDefault(
-                            e => move.Command.StartsWith(e.Key, StringComparison.OrdinalIgnoreCase),
-                            DefaultValuePair
-                        );
-
-                        if (!string.IsNullOrWhiteSpace(pair.Key))
-                        {
-                            move.StanceCode = pair.Key;
-                            move.StanceName = pair.Value;
-                        }
-
-                        // Добавляем объект Move в список
-                        movelist.Add(move);
-                    }
+                if (notes.Contains("homing"))
+                {
+                    move.Homing = true;
                 }
             }
+
+            if (move.HitLevel.Contains("th") || move.HitLevel.ToLower().Contains('t'))
+            {
+                move.Throw = true;
+            }
+
+            var pair = Aliases.Stances.FirstOrDefault(
+                e => move.Command.StartsWith(e.Key, StringComparison.OrdinalIgnoreCase),
+                DefaultValuePair
+            );
+
+            if (!string.IsNullOrWhiteSpace(pair.Key))
+            {
+                move.StanceCode = pair.Key;
+                move.StanceName = pair.Value;
+            }
+
+            // Добавляем объект Move в список
+            movelist.Add(move);
         }
 
         return movelist;
@@ -350,7 +582,7 @@ public partial class Tekken8FrameData
         var encodedName = Uri.EscapeDataString(characterName + " movelist");
 
         // Формируем базовый URL запроса
-        var baseUrl = "/w/index.php?title=Special:CargoQuery";
+        const string baseUrl = "/w/index.php?title=Special:CargoQuery";
 
         // Параметры запроса
         var queryParams = new Dictionary<string, string>

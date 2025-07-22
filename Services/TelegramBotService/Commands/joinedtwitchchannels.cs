@@ -4,6 +4,7 @@ namespace MARS.Server.Services.TelegramBotService.Commands;
 
 public partial class Commands
 {
+    [Description("Показывает список Twitch-каналов, к которым подключён бот")]
     public async Task<Message> OnJoinedTwitchChannelsCommandReceived(
         ITelegramBotClient botClient,
         Message message,

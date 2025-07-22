@@ -4,6 +4,7 @@ namespace MARS.Server.Services.TelegramBotService.Commands;
 
 public partial class Commands
 {
+    [Description("Показывает приветственное сообщение и основную информацию о боте")]
     public async Task<Message> OnStartCommandReceived(
         ITelegramBotClient botClient,
         Message message,

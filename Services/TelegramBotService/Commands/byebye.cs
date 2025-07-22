@@ -2,6 +2,7 @@
 
 public partial class Commands
 {
+    [Description("Включает ежедневные пожелания спокойной ночи для пользователя")]
     public async Task<Message> OnByeByeCommandReceived(
         ITelegramBotClient botClient,
         Message message,

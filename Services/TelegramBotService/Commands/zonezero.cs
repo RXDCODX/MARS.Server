@@ -2,6 +2,7 @@
 
 public partial class Commands
 {
+    [Description("Включает ежедневные уведомления Zenless Zone Zero для пользователя")]
     public async Task<Message> OnZoneZeroCommandReceived(
         ITelegramBotClient botClient,
         Message message,

@@ -50,20 +50,13 @@ public partial class Tekken8FrameData(
 
             return result;
         }
-        else
-        {
-            (TekkenMoveTag tag, Move? move) = await GetMoveFromMovelistByTagAsync(
-                lastSplit,
-                characterMovelist
-            );
 
-            if (move != null)
-            {
-                return (Tag: tag, [move]);
-            }
-        }
+        (TekkenMoveTag tag, Move? move) = await GetMoveFromMovelistByTagAsync(
+            lastSplit,
+            characterMovelist
+        );
 
-        return null;
+        return move != null ? (Tag: tag, [move]) : null;
     }
 
     public async Task<IDictionary<string, string>?> GetCharacterStances(

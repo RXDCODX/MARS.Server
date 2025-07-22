@@ -242,6 +242,11 @@ public sealed class AppDbContext : DbContext
             .OnDelete(DeleteBehavior.NoAction);
 
         modelBuilder
+            .Entity<TekkenCharacter>()
+            .Property(e => e.Image)
+            .HasColumnType("varbinary(max)");
+
+        modelBuilder
             .Entity<RootState>()
             .HasData(new RootState() { Id = 1, RandomMemeOnlineIsStop = false });
     }

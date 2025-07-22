@@ -58,12 +58,6 @@ public class SyntheziaQueueManager(
     /// </summary>
     public async Task StopAndBlockAsync()
     {
-#if WINDOWS
-        if (voicer is SyntheziaVoicer synthVoicer)
-        {
-            synthVoicer.InterruptSpeech();
-        }
-#endif
         await voicer.Stop();
         logger.LogInformation("Озвучка остановлена и заблокирована.");
     }
@@ -79,6 +73,7 @@ public class SyntheziaQueueManager(
                 e.Equals(args.ChatMessage.Username, StringComparison.OrdinalIgnoreCase)
             )
             && IsServiceActive
+            && voicer.IsActive
         )
         {
             await Task.Run(async () =>

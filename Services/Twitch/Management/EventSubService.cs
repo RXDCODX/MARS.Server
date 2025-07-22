@@ -1,4 +1,5 @@
-﻿using TwitchLib.Api.Core.Enums;
+﻿using MARS.Server.Services.Twitch.Management.Entitys;
+using TwitchLib.Api.Core.Enums;
 using TwitchLib.Api.Helix.Models.EventSub;
 using TwitchLib.EventSub.Websockets;
 
@@ -7,14 +8,16 @@ namespace MARS.Server.Services.Twitch.Management;
 public class EventSubService(
     ITwitchAPI api,
     ILogger<EventSubService> logger,
-    ITelegramBotClient client
+    ITelegramBotClient client,
+    TokenService tokenService
 )
 {
     public static readonly EventSubWebsocketClient WsClient = new();
 
+    private static readonly SemaphoreSlim SemaphoreSlim = new(1);
     private bool _firstActivation = true;
 
-    public async Task UpdateEventSubbAsync(string? token = null)
+    public async Task UpdateEventSubbAsync(TokenInfo? token = null)
     {
         if (!_firstActivation)
         {
@@ -38,17 +41,20 @@ public class EventSubService(
         {
             WsClient.WebsocketConnected += (_, _) => ReconnectAsync(token);
 
-            WsClient.ErrorOccurred += (_, args) =>
+            WsClient.ErrorOccurred += async (_, args) =>
             {
                 logger.LogException(args.Exception);
-                return Task.CompletedTask;
+
+                while (!await WsClient.ReconnectAsync())
+                {
+                    await Task.Delay(30 * 1000);
+                }
             };
 
             WsClient.WebsocketReconnected += async (sender, args) =>
             {
                 if (token != null)
                 {
-                    await DeleteAllSubs(token);
                     await ReconnectAsync(token);
                 }
 
@@ -78,7 +84,7 @@ public class EventSubService(
         }
     }
 
-    private async Task DeleteAllSubs(string token)
+    private async Task DeleteAllSubs(TokenInfo token)
     {
         var response = await GetEventSubsAsync(token);
 
@@ -89,14 +95,26 @@ public class EventSubService(
                 await api.Helix.EventSub.DeleteEventSubSubscriptionAsync(
                     subscription.Id,
                     api.Settings.ClientId,
-                    token
+                    token.AccessToken
                 );
             }
         }
     }
 
-    public async Task ReconnectAsync(string? token)
+    public async Task ReconnectAsync(TokenInfo? token = default)
     {
+        token ??= tokenService.Token;
+        ArgumentException.ThrowIfNullOrWhiteSpace(token?.AccessToken);
+        ArgumentException.ThrowIfNullOrWhiteSpace(token?.RefreshToken);
+
+        if (SemaphoreSlim.CurrentCount == 0)
+        {
+            return;
+        }
+
+        await SemaphoreSlim.WaitAsync();
+        await DeleteAllSubs(token);
+
         var condition = new Dictionary<string, string>
         {
             { "to_broadcaster_user_id", TwitchExstension.ChannelId },
@@ -111,7 +129,7 @@ public class EventSubService(
             null,
             null,
             api.Settings.ClientId,
-            token
+            token.AccessToken
         );
 
         condition.Clear();
@@ -126,7 +144,7 @@ public class EventSubService(
             null,
             null,
             api.Settings.ClientId,
-            token
+            token.AccessToken
         );
 
         await api.Helix.EventSub.CreateEventSubSubscriptionAsync(
@@ -138,7 +156,7 @@ public class EventSubService(
             null,
             null,
             api.Settings.ClientId,
-            token
+            token.AccessToken
         );
 
         await api.Helix.EventSub.CreateEventSubSubscriptionAsync(
@@ -150,7 +168,7 @@ public class EventSubService(
             null,
             null,
             api.Settings.ClientId,
-            token
+            token.AccessToken
         );
 
         condition.Add("moderator_user_id", TwitchExstension.ChannelId);
@@ -164,15 +182,19 @@ public class EventSubService(
             null,
             null,
             api.Settings.ClientId,
-            token
+            token.AccessToken
         );
 
         condition.Clear();
 
-        var response = await api.Helix.EventSub.GetEventSubSubscriptionsAsync(
-            clientId: api.Settings.ClientId,
-            accessToken: token
-        );
+        var response = await api
+            .Helix.EventSub.GetEventSubSubscriptionsAsync(
+                clientId: api.Settings.ClientId,
+                accessToken: token.AccessToken
+            )
+            .ConfigureAwait(false);
+
+        SemaphoreSlim.Release(1);
 
         if (response.Subscriptions.Length < 1)
         {
@@ -183,19 +205,19 @@ public class EventSubService(
             var aa = response.Subscriptions.Select(e => e.Type).Distinct();
             var message = string.Join(Environment.NewLine, aa);
             await client.SendMessage(
-                402763435,
+                TelegramExstension.Rxdcodx,
                 "Подключенные ивенты для твича: " + Environment.NewLine + message
             );
         }
     }
 
-    public async Task<GetEventSubSubscriptionsResponse?> GetEventSubsAsync(string acctoken)
+    public async Task<GetEventSubSubscriptionsResponse?> GetEventSubsAsync(TokenInfo token)
     {
         try
         {
             return await api.Helix.EventSub.GetEventSubSubscriptionsAsync(
                 clientId: api.Settings.ClientId,
-                accessToken: acctoken
+                accessToken: token.AccessToken
             );
         }
         catch (Exception e)

@@ -2,6 +2,7 @@
 
 public partial class Commands
 {
+    [Description("Отправляет сообщение на Twitch-канал через бота")]
     public async Task<Message> OnCatisaCommandReceived(
         ITelegramBotClient botClient,
         Message message,

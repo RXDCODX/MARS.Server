@@ -4,6 +4,7 @@ namespace MARS.Server.Services.TelegramBotService.Commands;
 
 public partial class Commands
 {
+    [Description("Показывает список активных подписок Twitch EventSub")]
     [AdminAttribute]
     public async Task<Message> OnTwitchEventsCommandReceived(
         ITelegramBotClient botClient,
@@ -21,7 +22,7 @@ public partial class Commands
             );
         }
 
-        var response = await eventSubService.GetEventSubsAsync(tokenService.Token.AccessToken);
+        var response = await eventSubService.GetEventSubsAsync(tokenService.Token);
 
         if (response == null)
         {

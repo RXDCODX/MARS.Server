@@ -2,6 +2,7 @@
 
 public partial class Commands
 {
+    [Description("Развести супругов")]
     [AdminAttribute]
     public async Task<Message> OnWaifuUnMergeCommandReceived(
         ITelegramBotClient botClient,

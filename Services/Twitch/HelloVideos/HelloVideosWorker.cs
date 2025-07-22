@@ -50,9 +50,6 @@ public class HelloVideoWorker(
                     var now = DateTimeOffset.Now;
                     await using var dbContext = await dbContextFactory.CreateDbContextAsync(_token);
                     var user = await dbContext.FumoUsers.FindAsync(args.ChatMessage.UserId, _token);
-                    var notifUser = await dbContext
-                        .HelloVideosUsers.Include(e => e.MediaInfo)
-                        .FirstOrDefaultAsync(e => e.TwitchId == args.ChatMessage.UserId, _token);
 
                     if (now.DayOfWeek == DayOfWeek.Friday && user != null)
                     {
@@ -63,6 +60,10 @@ public class HelloVideoWorker(
                     {
                         return;
                     }
+
+                    var notifUser = await dbContext
+                        .HelloVideosUsers.Include(e => e.MediaInfo)
+                        .FirstOrDefaultAsync(e => e.TwitchId == args.ChatMessage.UserId, _token);
 
                     if (notifUser != null)
                     {

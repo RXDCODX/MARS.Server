@@ -1,11 +1,17 @@
-﻿namespace MARS.Server.Services.Framedata;
+﻿using System.Collections.Frozen;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+
+namespace MARS.Server.Services.Framedata;
 
 /// <summary>
 /// Provides alias mappings for Tekken characters or moves.
 /// </summary>
 public static class Aliases
 {
-    public static readonly Dictionary<string, string[]> CharacterNameAliases = new()
+    public static readonly FrozenDictionary<string, string[]> CharacterNameAliases = new Dictionary<
+        string,
+        string[]
+    >()
     {
         { "alisa", ["ali", "als"] },
         { "anna", ["ann", "annochka", "anya"] },
@@ -20,7 +26,7 @@ public static class Aliases
         //{ "eliza", new string[] { "elz" } },
         { "feng", ["fen"] },
         { "hwoarang", ["hwo"] },
-        { "jack 8", ["j8", "jack-8", "jack", "jack7", "j7"] },
+        { "jack-8", ["j8", "jack 8", "jack", "jack7", "j7"] },
         { "jin", ["jim"] },
         { "jun", [""] },
         //{ "julia", new string[] { "jul" } },
@@ -44,7 +50,7 @@ public static class Aliases
         { "yoshimitsu", ["yoshi", "manji", "yos"] },
         { "xiaoyu", ["xiao", "ling"] },
         { "zafina", ["zaffy", "zaf"] },
-        //{"fahkumram", new string[]{"fah", "fahkum", "fahk", "fak"}},
+        { "fahkumram", new[] { "fah", "fahkum", "fahk", "fak" } },
         { "leroy", ["ler"] },
         //{"ganryu", new string[]{"gan", "ganny"}},
         //{"kunimitsu", new string[]{"kun", "kuni"}},
@@ -52,10 +58,13 @@ public static class Aliases
         { "victor", ["vic", "victorian", "viktoriues"] },
         { "reina", ["rheina"] },
         { "heihachi", ["hei", "hachi"] },
-        { "mokujin", ["mokujin", "mokuj"] },
-    };
+        //{ "mokujin", ["mokujin", "mokuj"] },
+    }.ToFrozenDictionary();
 
-    public static readonly Dictionary<string, string> MoveInputReplacer = new()
+    public static readonly FrozenDictionary<string, string> MoveInputReplacer = new Dictionary<
+        string,
+        string
+    >()
     {
         { "cd+", "fnddf" },
         { "cd", "fnddf" },
@@ -84,9 +93,12 @@ public static class Aliases
         { ")", "" },
         { "*+", "*" },
         { "hold", "*" },
-    };
+    }.ToFrozenDictionary();
 
-    public static readonly Dictionary<string, string> Stances = new()
+    public static readonly FrozenDictionary<string, string> Stances = new Dictionary<
+        string,
+        string
+    >()
     {
         { "bkp", "Backup" },
         { "sbt", "Boot" },
@@ -176,5 +188,5 @@ public static class Aliases
         { "tom", "Pleasure Time" },
         { "cjm", "Chaos Judgement" },
         { "ham", "Hammer Chance" },
-    };
+    }.ToFrozenDictionary();
 }

@@ -1,45 +1,25 @@
 ﻿using MARS.Server.Services.Twitch.ClientMessages.AutoMessages.Entitys;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Hosting.Internal;
 using TwitchLib.Client.Events;
+using TwitchLib.Communication.Events;
 
 namespace MARS.Server.Services.Twitch.ClientMessages.AutoMessages;
 
-public class AutoMessagesController : BackgroundService
+public class AutoMessagesController(
+    ITwitchClient client,
+    ILogger<AutoMessagesController> logger,
+    IDbContextFactory<AppDbContext> dbContextFactory,
+    IHostApplicationLifetime applicationLifetime
+) : BackgroundService
 {
     private const string Channel = TwitchExstension.Channel;
-    private readonly ITwitchClient _client;
-    private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
-    private readonly ILogger<AutoMessagesController> _logger;
 
     /// <summary>
     /// Не делать меньше 2
     /// </summary>
     private const int Capacity = 3;
     private readonly Queue<AutoMessage> _queue = new(Capacity);
-
-    public AutoMessagesController(
-        ITwitchClient client,
-        ILogger<AutoMessagesController> logger,
-        IDbContextFactory<AppDbContext> dbContextFactory,
-        IHostApplicationLifetime applicationLifetime
-    )
-    {
-        _client = client;
-        _logger = logger;
-        _dbContextFactory = dbContextFactory;
-
-        applicationLifetime.ApplicationStarted.Register(() =>
-        {
-            if (
-                !_client.JoinedChannels.Any(e =>
-                    e.Channel.Equals(Channel, StringComparison.OrdinalIgnoreCase)
-                )
-            )
-            {
-                _client.JoinChannel(Channel);
-            }
-            client.OnMessageReceived += OnMessageReceived;
-        });
-    }
 
     private int MessagesCounter { get; set; }
     private DateTimeOffset LastPostDateTime { get; set; } = DateTimeOffset.MinValue;
@@ -59,7 +39,7 @@ public class AutoMessagesController : BackgroundService
                 {
                     try
                     {
-                        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+                        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
                         var messages = dbContext
                             .AutoMessages.AsNoTracking()
                             .AsEnumerable()
@@ -71,7 +51,7 @@ public class AutoMessagesController : BackgroundService
                             var index = Random.Shared.Next(0, messages.Length - 1);
                             var message = messages.ElementAt(index);
 
-                            _client.SendMessage(Channel, message.Message);
+                            client.SendMessage(Channel, message.Message);
 
                             while (_queue.Count > Capacity - 1)
                             {
@@ -92,7 +72,7 @@ public class AutoMessagesController : BackgroundService
                     }
                     catch (Exception exception)
                     {
-                        _logger.LogException(exception);
+                        logger.LogException(exception);
                     }
                 });
             }
@@ -101,6 +81,32 @@ public class AutoMessagesController : BackgroundService
 
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        if (!client.IsConnected)
+        {
+            client.OnConnected += Connect;
+        }
+        else
+        {
+            Connect(client, new OnConnectedArgs());
+        }
+
+        applicationLifetime.ApplicationStarted.Register(() =>
+        {
+            client.OnMessageReceived += OnMessageReceived;
+        });
         return Task.CompletedTask;
+
+        void Connect(object? sender, OnConnectedArgs onConnectedArgs)
+        {
+            if (
+                !client.JoinedChannels.Any(e =>
+                    e.Channel.Equals(Channel, StringComparison.OrdinalIgnoreCase)
+                )
+            )
+            {
+                client.JoinChannel(Channel);
+                client.OnConnected -= Connect;
+            }
+        }
     }
 }

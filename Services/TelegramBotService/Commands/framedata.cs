@@ -6,6 +6,7 @@ namespace MARS.Server.Services.TelegramBotService.Commands;
 
 public partial class Commands
 {
+    [Description("Показывает фреймдату по персонажам Tekken 8 и их ударам")]
     [Alias("fd")]
     public async Task<Message> OnFramedataCommandReceived(
         ITelegramBotClient botClient,

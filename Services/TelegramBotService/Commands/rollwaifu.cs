@@ -2,6 +2,7 @@
 
 public partial class Commands
 {
+    [Description("Выполняет вайфу-ролл для пользователя")]
     public async Task<Message> OnWaifuRollCommandReceived(
         ITelegramBotClient botClient,
         Message message,

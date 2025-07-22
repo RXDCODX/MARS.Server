@@ -4,6 +4,7 @@ namespace MARS.Server.Services.TelegramBotService.Commands;
 
 public partial class Commands
 {
+    [Description("Включает или выключает онлайн-режим рандомных мемов")]
     [Admin]
     public async Task<Message> OnRandomMemOnlineCommandReceived(
         ITelegramBotClient botClient,

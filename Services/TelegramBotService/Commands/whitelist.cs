@@ -4,6 +4,7 @@ namespace MARS.Server.Services.TelegramBotService.Commands;
 
 public partial class Commands
 {
+    [Description("Показывает список пользователей с доступом к PyroAlerts")]
     public async Task<Message> OnWhiteListCommandReceived(
         ITelegramBotClient botClient,
         Message message,

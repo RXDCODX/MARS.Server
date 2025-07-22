@@ -2,6 +2,7 @@
 
 public partial class Commands
 {
+    [Description("Включает ежедневные уведомления Genshin Impact для пользователя")]
     public async Task<Message> OnGenshinCommandReceived(
         ITelegramBotClient botClient,
         Message message,

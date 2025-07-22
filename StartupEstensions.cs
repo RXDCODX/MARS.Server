@@ -212,6 +212,7 @@ public static class StartupEstensions
         services.AddSingleton<FumoFridayWorker>();
         services.AddHostedService(sp => sp.GetRequiredService<FumoFridayWorker>());
         services.AddSingleton<HelloVideoWorker>();
+        services.AddHostedService(sp => sp.GetRequiredService<HelloVideoWorker>());
 
         services.AddSingleton<Confetty>();
         services.AddSingleton<Fireworks>();
