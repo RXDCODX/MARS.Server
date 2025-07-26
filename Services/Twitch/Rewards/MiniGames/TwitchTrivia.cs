@@ -3,6 +3,7 @@ using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.Twitch.Rewards.MiniGames.Entitys.Interfaces;
 using MARS.Server.Services.Twitch.Rewards.MiniGames.Entitys.Subs;
 using TwitchLib.Client.Events;
+using TwitchLib.EventSub.Websockets;
 using TwitchLib.EventSub.Websockets.Core.EventArgs.Stream;
 
 namespace MARS.Server.Services.Twitch.Rewards.MiniGames;
@@ -12,7 +13,8 @@ public class TwitchTrivia(
     IWebHostEnvironment environment,
     ILogger<TwitchTrivia> logger,
     IDbContextFactory<AppDbContext> dbContextFactory,
-    IHostApplicationLifetime applicationLifetime
+    IHostApplicationLifetime applicationLifetime,
+    EventSubWebsocketClient wsClient
 ) : ManagedServiceBase(logger), ITwitchMiniGame
 {
     public override string ServiceName => "twitchtrivia";
@@ -178,7 +180,7 @@ public class TwitchTrivia(
             applicationLifetime.ApplicationStarted.Register(() =>
             {
                 client.OnMessageReceived += NewMessage;
-                EventSubService.WsClient.StreamOffline += WsClientOnStreamOffline;
+                wsClient.StreamOffline += WsClientOnStreamOffline;
             });
         }
     }
@@ -189,7 +191,7 @@ public class TwitchTrivia(
         IsServiceActive = false;
         CountQuestions = 0;
         client.OnMessageReceived -= NewMessage;
-        EventSubService.WsClient.StreamOffline -= WsClientOnStreamOffline;
+        wsClient.StreamOffline -= WsClientOnStreamOffline;
         return base.StopAsync(cancellationToken);
     }
 

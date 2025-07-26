@@ -1,5 +1,6 @@
 ﻿using MARS.Server.Services.ServiceManager;
 using MARS.Server.Services.Twitch.Management;
+using TwitchLib.EventSub.Websockets;
 
 namespace MARS.Server.Services.Twitch.Rewards.TwitchClipCreator;
 
@@ -9,7 +10,8 @@ public class TwitchClipCreatorService(
     ITwitchAPI api,
     IHostApplicationLifetime lifetime,
     TokenService tokenService,
-    ILogger<TwitchClipCreatorService> logger
+    ILogger<TwitchClipCreatorService> logger,
+    EventSubWebsocketClient wsClient
 ) : ManagedServiceBase(logger)
 {
     public override string ServiceName => "twitchclipcreator";
@@ -27,14 +29,15 @@ public class TwitchClipCreatorService(
         {
             lifetime.ApplicationStarted.Register(() =>
             {
-                EventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd += WsClientOnChannelPointsCustomRewardRedemptionAdd;
+                wsClient.ChannelPointsCustomRewardRedemptionAdd +=
+                    WsClientOnChannelPointsCustomRewardRedemptionAdd;
             });
         }
     }
 
     public override Task StopAsync(CancellationToken cancellationToken = default)
     {
-        EventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd -=
+        wsClient.ChannelPointsCustomRewardRedemptionAdd -=
             WsClientOnChannelPointsCustomRewardRedemptionAdd;
         return base.StopAsync(cancellationToken);
     }

@@ -2,6 +2,7 @@
 using MARS.Server.Services.Twitch.FumoFriday.Entitys;
 using MARS.Server.Services.Twitch.Management;
 using TwitchLib.Client.Events;
+using TwitchLib.EventSub.Websockets;
 
 namespace MARS.Server.Services.Twitch.FumoFriday;
 
@@ -11,7 +12,8 @@ public class FumoFridayWorker(
     ILogger<FumoFridayWorker> logger,
     IHostApplicationLifetime hostApplicationLifetime,
     ITwitchClient twitchClient,
-    ITwitchAPI twitchApi
+    ITwitchAPI twitchApi,
+    EventSubWebsocketClient wsClient
 ) : ManagedServiceBase(logger)
 {
     public override string ServiceName => "fumofriday";
@@ -166,7 +168,7 @@ public class FumoFridayWorker(
         hostApplicationLifetime.ApplicationStarted.Register(() =>
         {
             twitchClient.OnMessageReceived += OnMessageReceived;
-            EventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd += OnRewardRedemption;
+            wsClient.ChannelPointsCustomRewardRedemptionAdd += OnRewardRedemption;
         });
 
         return base.StartAsync(cancellationToken);
@@ -175,7 +177,7 @@ public class FumoFridayWorker(
     public override Task StopAsync(CancellationToken cancellationToken = default)
     {
         twitchClient.OnMessageReceived -= OnMessageReceived;
-        EventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd -= OnRewardRedemption;
+        wsClient.ChannelPointsCustomRewardRedemptionAdd -= OnRewardRedemption;
 
         return base.StopAsync(cancellationToken);
     }

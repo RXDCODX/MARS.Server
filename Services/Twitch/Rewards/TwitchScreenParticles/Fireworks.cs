@@ -1,5 +1,6 @@
 ﻿using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.ServiceManager;
+using TwitchLib.EventSub.Websockets;
 
 namespace MARS.Server.Services.Twitch.Rewards.TwitchScreenParticles;
 
@@ -11,19 +12,22 @@ public class Fireworks : ManagedServiceBase
     public override bool IsServiceActive { get; set; }
     private readonly IHubContext<TelegramusHub, ITelegramusHub> _hub;
     private readonly ITwitchClient _client;
+    private readonly EventSubWebsocketClient _wsClient;
 
     public Fireworks(
         ILogger<Fireworks> logger,
         IHubContext<TelegramusHub, ITelegramusHub> hub,
         IHostApplicationLifetime lifetime,
-        ITwitchClient client
+        ITwitchClient client,
+        EventSubWebsocketClient wsClient
     ) : base(logger)
     {
         _hub = hub;
         _client = client;
+        _wsClient = wsClient;
         lifetime.ApplicationStarted.Register(() =>
         {
-            EventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd +=
+            _wsClient.ChannelPointsCustomRewardRedemptionAdd +=
                 WsClientOnChannelPointsCustomRewardRedemptionAdd;
         });
     }

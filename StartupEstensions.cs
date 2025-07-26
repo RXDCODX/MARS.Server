@@ -32,6 +32,7 @@ using TwitchLib.Api;
 using TwitchLib.Api.Core.Enums;
 using TwitchLib.Client;
 using TwitchLib.Client.Models;
+using TwitchLib.EventSub.Websockets.Extensions;
 using YandexMusicResolver;
 using YandexMusicResolver.Config;
 
@@ -180,6 +181,8 @@ public static class StartupEstensions
         client.Connect();
         services.AddSingleton<ITwitchClient>(client);
 
+        services.AddTwitchLibEventSubWebsockets();
+
         services.AddSingleton<TwitchStreamStartupNotifications>();
         services.AddSingleton<TwitchMediaAlerts>();
         services.AddHostedService(sp => sp.GetRequiredService<TwitchMediaAlerts>());
@@ -253,7 +256,8 @@ public static class StartupEstensions
         services.AddSingleton<TwitchNameActualizer>();
         services.AddHostedService(sp => sp.GetRequiredService<TwitchNameActualizer>());
 
-        services.AddSingleton<IServiceManager, ServiceManager>();
+        services.AddSingleton<ServiceManager>();
+        services.AddSingleton<IServiceManager>(sp => sp.GetRequiredService<ServiceManager>());
 
         return services;
     }

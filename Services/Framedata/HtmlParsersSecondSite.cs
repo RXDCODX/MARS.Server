@@ -5,7 +5,7 @@ namespace MARS.Server.Services.Framedata;
 
 public partial class Tekken8FrameData
 {
-    internal async Task StartScrupFrameDataFromSecondSite(Chat? chat = default)
+    internal async Task StartScrupFrameDataFromSecondSite()
     {
         var docW = new HtmlWeb();
         var doc = await docW.LoadFromWebAsync(SecondBasePath.AbsoluteUri, _cancellationToken);
@@ -35,7 +35,7 @@ public partial class Tekken8FrameData
 
                 if (name != null)
                 {
-                    var chatPage = "https://tekkendocs.com" + href;
+                    var chatPage = SecondBasePath.AbsoluteUri + href;
 
                     var character = new TekkenCharacter
                     {

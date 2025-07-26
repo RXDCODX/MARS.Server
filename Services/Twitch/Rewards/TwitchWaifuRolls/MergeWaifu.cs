@@ -3,6 +3,7 @@ using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.WaifuRoll;
 using MARS.Server.Services.WaifuRoll.helpers;
 using TwitchLib.Api.Helix.Models.Chat;
+using TwitchLib.EventSub.Websockets;
 
 namespace MARS.Server.Services.Twitch.Rewards.TwitchWaifuRolls;
 
@@ -16,7 +17,8 @@ public class MergeWaifu(
     TokenService tokenService,
     IHostApplicationLifetime lifetime,
     WaifuRollDataBaseHelper waifuDbHelper,
-    IOptions<ShikimoriClientOptions> options
+    IOptions<ShikimoriClientOptions> options,
+    EventSubWebsocketClient wsClient
 ) : ManagedServiceBase(logger)
 {
     private readonly CancellationToken _cancellationToken = lifetime.ApplicationStopping;
@@ -368,14 +370,14 @@ public class MergeWaifu(
         {
             lifetime.ApplicationStarted.Register(() =>
             {
-                EventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd += MergeWaifuTwitchEvent;
+                wsClient.ChannelPointsCustomRewardRedemptionAdd += MergeWaifuTwitchEvent;
             });
         }
     }
 
     public override Task StopAsync(CancellationToken cancellationToken = default)
     {
-        EventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd -= MergeWaifuTwitchEvent;
+        wsClient.ChannelPointsCustomRewardRedemptionAdd -= MergeWaifuTwitchEvent;
         return base.StopAsync(cancellationToken);
     }
 }

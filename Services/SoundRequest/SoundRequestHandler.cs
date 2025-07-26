@@ -3,6 +3,7 @@ using MARS.Server.Services.SoundRequest.Entitys.Exceptions;
 using MARS.Server.Services.SoundRequest.Platforms.SoundCloud;
 using MARS.Server.Services.SoundRequest.Platforms.YouTube;
 using MARS.Server.Services.Twitch.Management;
+using TwitchLib.EventSub.Websockets;
 
 namespace MARS.Server.Services.SoundRequest;
 
@@ -17,7 +18,8 @@ public class SoundRequestHandler(
     YouTubeApiService youTubeApiService,
     SoundCloudApiService soundCloudApiService,
     SoundCloudTextSearchService soundCloudTextSearchService,
-    SoundRequestUserQueue userQueue
+    SoundRequestUserQueue userQueue,
+    EventSubWebsocketClient wsClient
 ) : BackgroundService
 {
     private readonly CancellationToken _cancellationToken = lifetime.ApplicationStopping;
@@ -26,7 +28,7 @@ public class SoundRequestHandler(
     {
         lifetime.ApplicationStarted.Register(() =>
         {
-            EventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd +=
+            wsClient.ChannelPointsCustomRewardRedemptionAdd +=
                 WsClientOnChannelPointsCustomRewardRedemptionAdd;
         });
 

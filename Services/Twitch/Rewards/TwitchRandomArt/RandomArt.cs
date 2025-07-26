@@ -2,6 +2,7 @@
 using BooruSharp.Search.Post;
 using MARS.Server.Services.ServiceManager;
 using MARS.Server.Services.Twitch.Management;
+using TwitchLib.EventSub.Websockets;
 
 namespace MARS.Server.Services.Twitch.Rewards.TwitchRandomArt;
 
@@ -10,7 +11,8 @@ public class RandomArt(
     IHostApplicationLifetime lifetime,
     ITwitchClient client,
     Gelbooru site,
-    ILogger<RandomArt> logger
+    ILogger<RandomArt> logger,
+    EventSubWebsocketClient wsClient
 ) : ManagedServiceBase(logger)
 {
     public override string ServiceName => "randomart";
@@ -126,7 +128,7 @@ public class RandomArt(
     {
         lifetime.ApplicationStarted.Register(() =>
         {
-            EventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd +=
+            wsClient.ChannelPointsCustomRewardRedemptionAdd +=
                 WsClientOnChannelPointsCustomRewardRedemptionAdd;
         });
 
@@ -135,7 +137,7 @@ public class RandomArt(
 
     public override Task StopAsync(CancellationToken cancellationToken = default)
     {
-        EventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd -=
+        wsClient.ChannelPointsCustomRewardRedemptionAdd -=
             WsClientOnChannelPointsCustomRewardRedemptionAdd;
         return base.StopAsync(cancellationToken);
     }

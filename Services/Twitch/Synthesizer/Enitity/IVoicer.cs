@@ -8,5 +8,5 @@ public interface IVoicer
     Task Sound(MessageToSynthezid message);
     Task Stop();
     Task Block();
-    Task Unlock();
+    Task Unblock();
 }

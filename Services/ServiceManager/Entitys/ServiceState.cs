@@ -54,9 +54,4 @@ public class ServiceState
     /// Время последнего обновления
     /// </summary>
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
-
-    /// <summary>
-    /// Конфигурация сервиса в JSON формате
-    /// </summary>
-    public string? ConfigurationJson { get; set; }
 }

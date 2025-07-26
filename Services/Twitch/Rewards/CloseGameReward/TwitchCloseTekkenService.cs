@@ -1,12 +1,14 @@
 ﻿using System.Diagnostics;
 using MARS.Server.Services.ServiceManager;
 using MARS.Server.Services.Twitch.Management;
+using TwitchLib.EventSub.Websockets;
 
 namespace MARS.Server.Services.Twitch.Rewards.CloseGameReward;
 
 public class TwitchCloseTekkenService(
     IHostApplicationLifetime lifetime,
-    ILogger<TwitchCloseTekkenService> logger
+    ILogger<TwitchCloseTekkenService> logger,
+    EventSubWebsocketClient wsClient
 ) : ManagedServiceBase(logger)
 {
     public override string ServiceName => "twitchclosetekken";
@@ -18,7 +20,7 @@ public class TwitchCloseTekkenService(
     {
         lifetime.ApplicationStarted.Register(() =>
         {
-            EventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd +=
+            wsClient.ChannelPointsCustomRewardRedemptionAdd +=
                 WsClientOnChannelPointsCustomRewardRedemptionAdd;
         });
 
@@ -27,7 +29,7 @@ public class TwitchCloseTekkenService(
 
     public override Task StopAsync(CancellationToken cancellationToken = default)
     {
-        EventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd -=
+        wsClient.ChannelPointsCustomRewardRedemptionAdd -=
             WsClientOnChannelPointsCustomRewardRedemptionAdd;
         return base.StopAsync(cancellationToken);
     }

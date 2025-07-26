@@ -3,6 +3,7 @@ using MARS.Server.Services.ServiceManager;
 using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.WaifuRoll;
 using TwitchLib.EventSub.Core.SubscriptionTypes.Channel;
+using TwitchLib.EventSub.Websockets;
 
 namespace MARS.Server.Services.Twitch.Rewards.TwitchWaifuRolls;
 
@@ -13,7 +14,8 @@ public class RollWaifu(
     IHubContext<TelegramusHub, ITelegramusHub> hubContext,
     IDbContextFactory<AppDbContext> factory,
     ITwitchAPI api,
-    IHostApplicationLifetime lifetime
+    IHostApplicationLifetime lifetime,
+    EventSubWebsocketClient wsClient
 ) : ManagedServiceBase(logger)
 {
     public override string ServiceName => "rollwaifu";
@@ -95,14 +97,14 @@ public class RollWaifu(
         {
             lifetime.ApplicationStarted.Register(() =>
             {
-                EventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd += RollWaifuTwitchEvent;
+                wsClient.ChannelPointsCustomRewardRedemptionAdd += RollWaifuTwitchEvent;
             });
         }
     }
 
     public override Task StopAsync(CancellationToken cancellationToken = default)
     {
-        EventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd -= RollWaifuTwitchEvent;
+        wsClient.ChannelPointsCustomRewardRedemptionAdd -= RollWaifuTwitchEvent;
 
         return base.StopAsync(cancellationToken);
     }

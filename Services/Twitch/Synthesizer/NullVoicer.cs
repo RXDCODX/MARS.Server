@@ -31,7 +31,7 @@ public class NullVoicer(ILogger<IVoicer> logger) : IVoicer
         );
     }
 
-    public Task Unlock()
+    public Task Unblock()
     {
         return Task.FromResult(
             () => logger.LogWarning("Speech unblock is not supported on this platform.")

@@ -3,6 +3,7 @@ using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.Twitch.Rewards.MiniGames.Entitys.Interfaces;
 using MARS.Server.Services.Twitch.Rewards.MiniGames.Entitys.Subs;
 using TwitchLib.Api.Helix.Models.Chat;
+using TwitchLib.EventSub.Websockets;
 using TwitchLib.EventSub.Websockets.Core.EventArgs.Stream;
 
 namespace MARS.Server.Services.Twitch.Rewards.MiniGames;
@@ -13,7 +14,8 @@ public class TwitchRussianRoulete(
     ITwitchAPI api,
     IDbContextFactory<AppDbContext> dbContextFactory,
     IHostApplicationLifetime applicationLifetime,
-    TokenService tokenService
+    TokenService tokenService,
+    EventSubWebsocketClient wsClient
 ) : ManagedServiceBase(logger), ITwitchMiniGame
 {
     public override string ServiceName => "russianroulete";
@@ -184,8 +186,8 @@ public class TwitchRussianRoulete(
         _isAwaitingNewPlayers = false;
         applicationLifetime.ApplicationStarted.Register(() =>
         {
-            EventSubService.WsClient.StreamOffline += Closing;
-            EventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd += NewAlert;
+            wsClient.StreamOffline += Closing;
+            wsClient.ChannelPointsCustomRewardRedemptionAdd += NewAlert;
         });
 
         return base.StartAsync(cancellationToken);
@@ -193,8 +195,8 @@ public class TwitchRussianRoulete(
 
     public override Task StopAsync(CancellationToken cancellationToken = default)
     {
-        EventSubService.WsClient.StreamOffline -= Closing;
-        EventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd -= NewAlert;
+        wsClient.StreamOffline -= Closing;
+        wsClient.ChannelPointsCustomRewardRedemptionAdd -= NewAlert;
 
         return base.StopAsync(cancellationToken);
     }

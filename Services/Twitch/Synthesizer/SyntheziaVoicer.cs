@@ -14,7 +14,7 @@ public class SyntheziaVoicer : IVoicer
     private readonly SpeechSynthesizer _speechSynthesizer = new();
     private readonly SemaphoreSlim _semaphore = new(1);
 
-    public bool IsActive { get; set; }
+    public bool IsActive { get; set; } = true;
 
     public SyntheziaVoicer(ILogger<IVoicer> logger)
     {
@@ -117,7 +117,7 @@ public class SyntheziaVoicer : IVoicer
         return Stop();
     }
 
-    public Task Unlock()
+    public Task Unblock()
     {
         IsActive = true;
         return Task.CompletedTask;

@@ -23,9 +23,13 @@ public partial class Commands
             {
                 if (OperatingSystem.IsWindows())
                 {
-                    if (volume == 0)
+                    if (volume < 1)
                     {
                         await syntheziaVoicer.Block();
+                    }
+                    else
+                    {
+                        await syntheziaVoicer.Unblock();
                     }
 
                     syntheziaVoicer.ChangeVolume(volume);

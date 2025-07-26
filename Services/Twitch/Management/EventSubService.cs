@@ -9,13 +9,17 @@ public class EventSubService(
     ITwitchAPI api,
     ILogger<EventSubService> logger,
     ITelegramBotClient client,
-    TokenService tokenService
-)
+    TokenService tokenService,
+    IHostEnvironment environment,
+    IHostApplicationLifetime lifetime,
+    EventSubWebsocketClient wsClient
+) : BackgroundService
 {
-    public static readonly EventSubWebsocketClient WsClient = new();
-
     private static readonly SemaphoreSlim SemaphoreSlim = new(1);
+    private static readonly SemaphoreSlim WsReconnectSlim = new(1);
+    private readonly CancellationToken _cancellationToken = lifetime.ApplicationStopping;
     private bool _firstActivation = true;
+    private bool _isWsConnected = false;
 
     public async Task UpdateEventSubbAsync(TokenInfo? token = null)
     {
@@ -32,41 +36,40 @@ public class EventSubService(
                     )
                 )
                 {
-                    await WsClient.DisconnectAsync();
+                    await wsClient.DisconnectAsync();
                 }
             }
         }
 
         if (_firstActivation)
         {
-            WsClient.WebsocketConnected += (_, _) => ReconnectAsync(token);
+            wsClient.WebsocketConnected += (_, _) =>
+            {
+                _isWsConnected = true;
+                return ResubscribeToEventSub(token);
+            };
 
-            WsClient.ErrorOccurred += async (_, args) =>
+            wsClient.ErrorOccurred += async (_, args) =>
             {
                 logger.LogException(args.Exception);
 
-                while (!await WsClient.ReconnectAsync())
-                {
-                    await Task.Delay(30 * 1000);
-                }
+                await TryReconnect();
             };
 
-            WsClient.WebsocketReconnected += async (sender, args) =>
+            wsClient.WebsocketReconnected += async (sender, args) =>
             {
+                _isWsConnected = true;
                 if (token != null)
                 {
-                    await ReconnectAsync(token);
+                    await ResubscribeToEventSub(token);
                 }
 
-                await Task.Delay(1000);
+                await Task.Delay(1000, _cancellationToken);
             };
 
-            WsClient.WebsocketDisconnected += async (sender, args) =>
+            wsClient.WebsocketDisconnected += async (sender, args) =>
             {
-                while (!await WsClient.ReconnectAsync())
-                {
-                    await Task.Delay(30 * 1000);
-                }
+                await TryReconnect();
             };
 
             _firstActivation = false;
@@ -80,8 +83,34 @@ public class EventSubService(
                 }
             }
 
-            await WsClient.ConnectAsync();
+            await wsClient.ConnectAsync();
         }
+    }
+
+    private async Task TryReconnect()
+    {
+        if (WsReconnectSlim.CurrentCount < 1)
+        {
+            return;
+        }
+
+        await WsReconnectSlim.WaitAsync(_cancellationToken);
+
+        _isWsConnected = false;
+        while (true)
+        {
+            _isWsConnected = await wsClient.ReconnectAsync();
+            if (_isWsConnected)
+            {
+                break;
+            }
+            else
+            {
+                await Task.Delay(30 * 1000, _cancellationToken);
+            }
+        }
+
+        WsReconnectSlim.Release();
     }
 
     private async Task DeleteAllSubs(TokenInfo token)
@@ -101,7 +130,7 @@ public class EventSubService(
         }
     }
 
-    public async Task ReconnectAsync(TokenInfo? token = default)
+    public async Task ResubscribeToEventSub(TokenInfo? token = default)
     {
         token ??= tokenService.Token;
         ArgumentException.ThrowIfNullOrWhiteSpace(token?.AccessToken);
@@ -109,11 +138,29 @@ public class EventSubService(
 
         if (SemaphoreSlim.CurrentCount == 0)
         {
+            if (environment.IsDevelopment())
+            {
+                logger.LogException(new Exception("Множественный вызов EventSubSubscribe"));
+            }
+
             return;
         }
 
-        await SemaphoreSlim.WaitAsync();
+        await SemaphoreSlim.WaitAsync(_cancellationToken);
         await DeleteAllSubs(token);
+
+        if (!_isWsConnected)
+        {
+            while (!_isWsConnected)
+            {
+                if (WsReconnectSlim.CurrentCount > 0)
+                {
+                    await Task.Factory.StartNew(TryReconnect, _cancellationToken);
+                }
+
+                await Task.Delay(30 * 1000, _cancellationToken);
+            }
+        }
 
         var condition = new Dictionary<string, string>
         {
@@ -125,7 +172,7 @@ public class EventSubService(
             "1",
             condition,
             EventSubTransportMethod.Websocket,
-            WsClient.SessionId,
+            wsClient.SessionId,
             null,
             null,
             api.Settings.ClientId,
@@ -140,7 +187,7 @@ public class EventSubService(
             "1",
             condition,
             EventSubTransportMethod.Websocket,
-            WsClient.SessionId,
+            wsClient.SessionId,
             null,
             null,
             api.Settings.ClientId,
@@ -152,7 +199,7 @@ public class EventSubService(
             "1",
             condition,
             EventSubTransportMethod.Websocket,
-            WsClient.SessionId,
+            wsClient.SessionId,
             null,
             null,
             api.Settings.ClientId,
@@ -164,7 +211,7 @@ public class EventSubService(
             "1",
             condition,
             EventSubTransportMethod.Websocket,
-            WsClient.SessionId,
+            wsClient.SessionId,
             null,
             null,
             api.Settings.ClientId,
@@ -178,7 +225,7 @@ public class EventSubService(
             "2",
             condition,
             EventSubTransportMethod.Websocket,
-            WsClient.SessionId,
+            wsClient.SessionId,
             null,
             null,
             api.Settings.ClientId,
@@ -206,7 +253,8 @@ public class EventSubService(
             var message = string.Join(Environment.NewLine, aa);
             await client.SendMessage(
                 TelegramExstension.Rxdcodx,
-                "Подключенные ивенты для твича: " + Environment.NewLine + message
+                "Подключенные ивенты для твича: " + Environment.NewLine + message,
+                cancellationToken: _cancellationToken
             );
         }
     }
@@ -225,5 +273,21 @@ public class EventSubService(
             logger.LogException(e);
             return null;
         }
+    }
+
+    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        lifetime.ApplicationStarted.Register(() =>
+        {
+            Task.Factory.StartNew(
+                async () =>
+                {
+                    await UpdateEventSubbAsync(tokenService.Token);
+                },
+                stoppingToken
+            );
+        });
+
+        return Task.CompletedTask;
     }
 }

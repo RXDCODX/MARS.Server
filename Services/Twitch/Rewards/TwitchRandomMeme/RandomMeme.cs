@@ -1,6 +1,7 @@
 ﻿using MARS.Server.Services.RandomMem.Entity;
 using MARS.Server.Services.ServiceManager;
 using MARS.Server.Services.Twitch.Management;
+using TwitchLib.EventSub.Websockets;
 
 namespace MARS.Server.Services.Twitch.Rewards.TwitchRandomMeme;
 
@@ -9,7 +10,8 @@ public class RandomMeme(
     IWebHostEnvironment webHostEnvironment,
     IDbContextFactory<AppDbContext> dbContextFactory,
     IHostApplicationLifetime applicationLifetime,
-    ILogger<RandomMeme> logger
+    ILogger<RandomMeme> logger,
+    EventSubWebsocketClient wsClient
 ) : ManagedServiceBase(logger)
 {
     public override string ServiceName => "randommeme";
@@ -36,7 +38,7 @@ public class RandomMeme(
 
                     if (media is not null)
                     {
-                            await hubContext.Clients.All.RandomMem(
+                        await hubContext.Clients.All.RandomMem(
                             new MediaDto(media) { MediaInfo = media }
                         );
                     }
@@ -49,7 +51,7 @@ public class RandomMeme(
 
                     if (sound is not null)
                     {
-                            await hubContext.Clients.All.RandomMem(
+                        await hubContext.Clients.All.RandomMem(
                             new MediaDto(sound) { MediaInfo = sound }
                         );
                     }
@@ -154,14 +156,14 @@ public class RandomMeme(
         {
             applicationLifetime.ApplicationStarted.Register(() =>
             {
-                EventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd += RandomMemeHandler;
+                wsClient.ChannelPointsCustomRewardRedemptionAdd += RandomMemeHandler;
             });
         }
     }
 
     public override Task StopAsync(CancellationToken cancellationToken = default)
     {
-        EventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd -= RandomMemeHandler;
+        wsClient.ChannelPointsCustomRewardRedemptionAdd -= RandomMemeHandler;
 
         return base.StopAsync(cancellationToken);
     }

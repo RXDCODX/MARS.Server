@@ -2,7 +2,7 @@
 using MARS.Server.Services.ServiceManager;
 using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.Twitch.Rewards.MiniGames.Entitys.Interfaces;
-using Telegramus.Migrations;
+using TwitchLib.EventSub.Websockets;
 
 namespace MARS.Server.Services.Twitch.Rewards.MiniGames;
 
@@ -12,7 +12,8 @@ public class MiniGamesManager(
     TwitchTrivia twitchTrivia,
     IHostApplicationLifetime lifetime,
     ITwitchClient client,
-    ILogger<MiniGamesManager> logger
+    ILogger<MiniGamesManager> logger,
+    EventSubWebsocketClient wsClient
 ) : ManagedServiceBase(logger)
 {
     public override string ServiceName => "minigames";
@@ -36,7 +37,7 @@ public class MiniGamesManager(
         _miniGames = miniGames.ToFrozenDictionary();
         lifetime.ApplicationStarted.Register(() =>
         {
-            EventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd +=
+            wsClient.ChannelPointsCustomRewardRedemptionAdd +=
                 WsClientOnChannelPointsCustomRewardRedemptionAdd;
         });
 
@@ -46,7 +47,7 @@ public class MiniGamesManager(
     public override Task StopAsync(CancellationToken cancellationToken = default)
     {
         _miniGames = FrozenDictionary<int, ITwitchMiniGame>.Empty;
-        EventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd -=
+        wsClient.ChannelPointsCustomRewardRedemptionAdd -=
             WsClientOnChannelPointsCustomRewardRedemptionAdd;
 
         return base.StopAsync(cancellationToken);

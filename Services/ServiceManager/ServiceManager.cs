@@ -327,9 +327,6 @@ public class ServiceManager : IServiceManager
                 state.LastStartTime = service.StartTime;
                 state.LastActivity = service.LastActivity;
                 state.UpdatedAt = DateTime.UtcNow;
-                state.ConfigurationJson = JsonSerializer.Serialize(
-                    service.GetServiceConfiguration()
-                );
 
                 await dbContext.SaveChangesAsync();
             }

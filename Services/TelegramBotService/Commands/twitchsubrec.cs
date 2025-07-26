@@ -13,7 +13,7 @@ public partial class Commands
     )
     {
         await Task.Factory.StartNew(
-            async () => await eventSubService.ReconnectAsync(),
+            async () => await eventSubService.ResubscribeToEventSub(),
             cancellationToken
         );
         const string text = "Отправлена попытка реконекта";

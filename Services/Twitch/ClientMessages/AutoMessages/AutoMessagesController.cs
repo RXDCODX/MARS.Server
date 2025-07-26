@@ -1,8 +1,5 @@
 ﻿using MARS.Server.Services.Twitch.ClientMessages.AutoMessages.Entitys;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Hosting.Internal;
 using TwitchLib.Client.Events;
-using TwitchLib.Communication.Events;
 
 namespace MARS.Server.Services.Twitch.ClientMessages.AutoMessages;
 

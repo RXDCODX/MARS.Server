@@ -2,6 +2,7 @@
 using MARS.Server.Services.Twitch.Management;
 using TwitchLib.Client.Events;
 using TwitchLib.EventSub.Core.SubscriptionTypes.Channel;
+using TwitchLib.EventSub.Websockets;
 
 namespace MARS.Server.Services.Twitch.Rewards.TwitchAlerts;
 
@@ -10,7 +11,8 @@ public class TwitchMediaAlerts(
     IDbContextFactory<AppDbContext> dbContextFactory,
     ITwitchClient client,
     IHostApplicationLifetime applicationLifetime,
-    ILogger<TwitchMediaAlerts> logger
+    ILogger<TwitchMediaAlerts> logger,
+    EventSubWebsocketClient wsClient
 ) : ManagedServiceBase(logger)
 {
     private readonly CancellationToken _token = applicationLifetime.ApplicationStopping;
@@ -152,8 +154,7 @@ public class TwitchMediaAlerts(
             applicationLifetime.ApplicationStarted.Register(() =>
             {
                 client.OnMessageReceived += TwitchClientOnNormalMessage;
-                EventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd +=
-                    TwitchClientOnOnMessageSend;
+                wsClient.ChannelPointsCustomRewardRedemptionAdd += TwitchClientOnOnMessageSend;
             });
         }
     }
@@ -161,8 +162,7 @@ public class TwitchMediaAlerts(
     public override Task StopAsync(CancellationToken cancellationToken = default)
     {
         client.OnMessageReceived -= TwitchClientOnNormalMessage;
-        EventSubService.WsClient.ChannelPointsCustomRewardRedemptionAdd -=
-            TwitchClientOnOnMessageSend;
+        wsClient.ChannelPointsCustomRewardRedemptionAdd -= TwitchClientOnOnMessageSend;
         return base.StopAsync(cancellationToken);
     }
 }

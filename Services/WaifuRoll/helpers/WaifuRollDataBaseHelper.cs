@@ -1,5 +1,4 @@
-﻿using ShikimoriSharp.Classes;
-using MARS.Server.Services.Shikimori;
+﻿using MARS.Server.Services.Shikimori;
 
 namespace MARS.Server.Services.WaifuRoll.helpers;
 
