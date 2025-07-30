@@ -49,7 +49,7 @@ public static class Aliases
         { "yoshimitsu", ["yoshi", "manji", "yos"] },
         { "xiaoyu", ["xiao", "ling"] },
         { "zafina", ["zaffy", "zaf"] },
-        { "fahkumram", new[] { "fah", "fahkum", "fahk", "fak" } },
+        { "fahkumram", ["fah", "fahkum", "fahk", "fak"] },
         { "leroy", ["ler"] },
         //{"ganryu", new string[]{"gan", "ganny"}},
         //{"kunimitsu", new string[]{"kun", "kuni"}},

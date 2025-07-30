@@ -1,6 +1,5 @@
 ﻿using System.Globalization;
 using MARS.Server.Services.ServiceManager;
-using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.WaifuRoll;
 using TwitchLib.EventSub.Core.SubscriptionTypes.Channel;
 using TwitchLib.EventSub.Websockets;

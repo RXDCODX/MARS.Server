@@ -1,6 +1,5 @@
-﻿using MARS.Server.Services.Twitch.Management;
+﻿using TwitchLib.EventSub.Websockets;
 using TwitchLib.EventSub.Websockets.Core.EventArgs.Stream;
-using TwitchLib.EventSub.Websockets;
 
 namespace MARS.Server.Services.Twitch.StreamBotNotifications;
 

@@ -10,14 +10,8 @@ namespace MARS.Server.Controllers;
 [Route("api/[controller]")]
 public class CheckersController : ControllerBase
 {
-    private readonly CheckersGameManager _gameManager;
-    private readonly CheckersQueue _queue;
-
-    public CheckersController()
-    {
-        _gameManager = new CheckersGameManager();
-        _queue = new CheckersQueue();
-    }
+    private readonly CheckersGameManager _gameManager = new();
+    private readonly CheckersQueue _queue = new();
 
     /// <summary>
     /// Starts a new checkers game.

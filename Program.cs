@@ -3,10 +3,12 @@ using BooruSharp.Booru;
 using MARS.Server.CustomLoggers.DatabaseLogger;
 using MARS.Server.CustomLoggers.TelegramLogger;
 using MARS.Server.Services._365Genius;
+using MARS.Server.Services.CommandExecutor;
 using MARS.Server.Services.Honkai;
 using MARS.Server.Services.MemoryStorageService;
 using MARS.Server.Services.PyroAlerts;
 using MARS.Server.Services.RandomMem;
+using MARS.Server.Services.Scoreboard;
 using MARS.Server.Services.Shikimori;
 using MARS.Server.Services.Twitch.Rewards;
 using MARS.Server.Services.Twitch.SoundBarService;
@@ -114,6 +116,7 @@ public static class Program
         /////////////////////////////////////////////////////////////////////////////////////////
 
         await services.AddTwitchEvents(configuration, loggerFactory);
+        services.AddCommandExecutorServices();
         services.AddTelegramThings(loggerFactory);
         services.AddConfiguration(configuration);
         //services.AddYandexMusic();
@@ -150,6 +153,8 @@ public static class Program
         services.AddSingleton<AnswersForTwitchRewards>();
 
         services.AddSingleton<ShikimoriService>();
+
+        services.AddSingleton<ScoreboardService>();
 
         services.AddSingleton<WaifuRollService>();
         services.AddSingleton<WaifuRollDataBaseHelper>();
@@ -210,6 +215,7 @@ public static class Program
         app.MapHub<TelegramusHub>("/telegramus");
         app.MapHub<TunaHub>("/tuna");
         //app.MapHub<SoundBarHub>("/soundbar");
+        app.MapHub<ScoreboardHub>("/scoreboard");
         if (IsUseSoundRequest)
         {
             app.MapHub<SoundRequestHub>("/sr");

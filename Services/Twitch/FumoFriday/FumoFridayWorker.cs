@@ -1,6 +1,5 @@
 ﻿using MARS.Server.Services.ServiceManager;
 using MARS.Server.Services.Twitch.FumoFriday.Entitys;
-using MARS.Server.Services.Twitch.Management;
 using TwitchLib.Client.Events;
 using TwitchLib.EventSub.Websockets;
 

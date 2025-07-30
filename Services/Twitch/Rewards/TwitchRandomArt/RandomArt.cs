@@ -1,7 +1,6 @@
 ﻿using BooruSharp.Booru;
 using BooruSharp.Search.Post;
 using MARS.Server.Services.ServiceManager;
-using MARS.Server.Services.Twitch.Management;
 using TwitchLib.EventSub.Websockets;
 
 namespace MARS.Server.Services.Twitch.Rewards.TwitchRandomArt;

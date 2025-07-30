@@ -80,7 +80,7 @@ public partial class Tekken8FrameData
                 var listStr = new List<string>();
                 var listWknss = new List<string>();
 
-                for (var index = 0; index < strAndWkns.Length; index++)
+                for (var index = 0 ; index < strAndWkns.Length ; index++)
                 {
                     var za = strAndWkns[index];
                     var twfs = za.QuerySelectorAll("li") ?? throw new Exception("miss");

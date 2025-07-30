@@ -127,7 +127,6 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="Services\CommandExecutor\Entitys\Interfaces\" />
       <Folder Include="Services\SoundRequest\Platforms\SoundCloud\" />
       <Folder Include="Services\SoundRequest\Platforms\YouTube\" />
       <Folder Include="Services\TabletopGames\Entitys\Enums\" />

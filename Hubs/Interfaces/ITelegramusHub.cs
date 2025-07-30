@@ -49,4 +49,7 @@ public interface ITelegramusHub
 
     [SignalRMethod]
     public Task RandomMem(MediaDto mediaInfo);
+
+    [SignalRMethod]
+    public Task AutoMessage(string message);
 }

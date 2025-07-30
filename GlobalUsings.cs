@@ -7,8 +7,8 @@ global using MARS.Server.DataBaseContext;
 global using MARS.Server.Exstensions;
 global using MARS.Server.Hubs;
 global using MARS.Server.Hubs.Interfaces;
+
 global using MARS.Server.Services.PyroAlerts.Entitys;
-global using MARS.Server.Services.TelegramBotService.Commands.Attribute;
 global using MARS.Server.Services.TelegramBotService.Entitys;
 global using MARS.Server.Services.WaifuRoll.Entitys;
 global using Microsoft.AspNetCore.SignalR;

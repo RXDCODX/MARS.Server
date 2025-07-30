@@ -17,9 +17,9 @@ public sealed class GameBoard
         var isWhite = false;
 
         // Инициализация каждой клетки на доске
-        for (var x = 'a'; x <= 'h'; x++)
+        for (var x = 'a' ; x <= 'h' ; x++)
         {
-            for (ushort y = 1; y <= Height; y++)
+            for (ushort y = 1 ; y <= Height ; y++)
             {
                 board.Board[x - 'a', y - 1] = new Cell
                 {
@@ -43,9 +43,9 @@ public sealed class GameBoard
     public void InitializeCheckers()
     {
         // Place black checkers on the top three rows
-        for (var x = 'a'; x <= 'h'; x++)
+        for (var x = 'a' ; x <= 'h' ; x++)
         {
-            for (ushort y = 1; y <= 3; y++)
+            for (ushort y = 1 ; y <= 3 ; y++)
             {
                 var cell = GetCell(x, y);
                 if (cell?.IsValidCheckerPosition() == true)
@@ -63,9 +63,9 @@ public sealed class GameBoard
         }
 
         // Place white checkers on the bottom three rows
-        for (var x = 'a'; x <= 'h'; x++)
+        for (var x = 'a' ; x <= 'h' ; x++)
         {
-            for (ushort y = 6; y <= 8; y++)
+            for (ushort y = 6 ; y <= 8 ; y++)
             {
                 var cell = GetCell(x, y);
                 if (cell?.IsValidCheckerPosition() == true)

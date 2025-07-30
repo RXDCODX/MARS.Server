@@ -1,15 +1,14 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 using MARS.Server.Services.Framedata;
+using MARS.Server.Services.Scoreboard;
 using MARS.Server.Services.ServiceManager;
 using MARS.Server.Services.SoundRequest;
 using MARS.Server.Services.SoundRequest.Platforms.YouTube;
 using MARS.Server.Services.TelegramBotService;
-using MARS.Server.Services.TelegramBotService.Commands;
 using MARS.Server.Services.Twitch.AutoInfoFetch;
 using MARS.Server.Services.Twitch.ClientMessages.AutoMessages;
 using MARS.Server.Services.Twitch.ClientMessages.SignalRAlerts;
-using MARS.Server.Services.Twitch.ClientMessages.TekkenFrameData;
 using MARS.Server.Services.Twitch.ClientMessages.TwitchAutoHello;
 using MARS.Server.Services.Twitch.FumoFriday;
 using MARS.Server.Services.Twitch.HelloVideos;
@@ -145,10 +144,12 @@ public static class StartupEstensions
             }
         );
 
-        services.AddScoped<Commands>();
         services.AddScoped<UpdateHandler>();
         services.AddScoped<ReceiverService>();
         services.AddHostedService<PollingService>();
+
+        // Регистрируем ScoreboardService
+        services.AddScoped<ScoreboardService>();
 
         return services;
     }
@@ -238,8 +239,9 @@ public static class StartupEstensions
         services.AddSingleton<Tekken8FrameData>();
         services.AddHostedService(sp => sp.GetRequiredService<Tekken8FrameData>());
 
-        services.AddSingleton<TwitchFramedate>();
-        services.AddHostedService(sp => sp.GetRequiredService<TwitchFramedate>());
+        // Добавил в команды
+        //services.AddSingleton<TwitchFramedate>();
+        //services.AddHostedService(sp => sp.GetRequiredService<TwitchFramedate>());
 
         services.AddSingleton<MiniGamesManager>();
         services.AddHostedService(sp => sp.GetRequiredService<MiniGamesManager>());

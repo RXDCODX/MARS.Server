@@ -252,7 +252,7 @@ namespace Telegramus.Migrations
                     b.ToTable("WTelegramAlloweedChannels");
                 });
 
-            modelBuilder.Entity("MARS.Server.Services.ServiceManager.Entitys.ServiceState", b =>
+            modelBuilder.Entity("MARS.Server.Services.Scoreboard.Entitys.ScoreboardLayout", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -260,8 +260,184 @@ namespace Telegramus.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("ConfigurationJson")
+                    b.Property<int>("FlagSize")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("HeaderHeight")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("HeaderLeft")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("HeaderTop")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("HeaderWidth")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Padding")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("PlayerBarHeight")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("PlayerBarWidth")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("PlayersLeft")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("PlayersRight")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("PlayersTop")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ScoreSize")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ScoreboardStateId")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("ShowFlags")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("ShowHeader")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("ShowSponsors")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("ShowTags")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("Spacing")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ScoreboardStateId")
+                        .IsUnique();
+
+                    b.ToTable("ScoreboardLayouts");
+                });
+
+            modelBuilder.Entity("MARS.Server.Services.Scoreboard.Entitys.ScoreboardPlayer", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Final")
+                        .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<string>("Flag")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Score")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ScoreboardStateId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Sponsor")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Tag")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ScoreboardStateId", "Position")
+                        .IsUnique();
+
+                    b.ToTable("ScoreboardPlayers");
+                });
+
+            modelBuilder.Entity("MARS.Server.Services.Scoreboard.Entitys.ScoreboardState", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AnimationDuration")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("BackgroundColor")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("BorderColor")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FightModeColor")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("FightRule")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsVisible")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("MainColor")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("PlayerNamesColor")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ScoreColor")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("TournamentTitleColor")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ScoreboardStates");
+                });
+
+            modelBuilder.Entity("MARS.Server.Services.ServiceManager.Entitys.ServiceState", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -977,6 +1153,28 @@ namespace Telegramus.Migrations
                     b.Navigation("Type");
                 });
 
+            modelBuilder.Entity("MARS.Server.Services.Scoreboard.Entitys.ScoreboardLayout", b =>
+                {
+                    b.HasOne("MARS.Server.Services.Scoreboard.Entitys.ScoreboardState", "ScoreboardState")
+                        .WithOne("Layout")
+                        .HasForeignKey("MARS.Server.Services.Scoreboard.Entitys.ScoreboardLayout", "ScoreboardStateId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ScoreboardState");
+                });
+
+            modelBuilder.Entity("MARS.Server.Services.Scoreboard.Entitys.ScoreboardPlayer", b =>
+                {
+                    b.HasOne("MARS.Server.Services.Scoreboard.Entitys.ScoreboardState", "ScoreboardState")
+                        .WithMany("Players")
+                        .HasForeignKey("ScoreboardStateId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ScoreboardState");
+                });
+
             modelBuilder.Entity("MARS.Server.Services.SoundRequest.Entitys.BaseTrackInfo", b =>
                 {
                     b.OwnsOne("MARS.Server.Services.SoundRequest.Entitys.YandexTrackAdditionalInfo", "YandexSpecificInfo", b1 =>
@@ -1076,6 +1274,13 @@ namespace Telegramus.Migrations
             modelBuilder.Entity("MARS.Server.Services.Framedata.Entitys.TekkenCharacter", b =>
                 {
                     b.Navigation("Movelist");
+                });
+
+            modelBuilder.Entity("MARS.Server.Services.Scoreboard.Entitys.ScoreboardState", b =>
+                {
+                    b.Navigation("Layout");
+
+                    b.Navigation("Players");
                 });
 
             modelBuilder.Entity("MARS.Server.Services.WaifuRoll.Entitys.Host", b =>

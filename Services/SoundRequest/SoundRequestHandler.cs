@@ -2,7 +2,6 @@
 using MARS.Server.Services.SoundRequest.Entitys.Exceptions;
 using MARS.Server.Services.SoundRequest.Platforms.SoundCloud;
 using MARS.Server.Services.SoundRequest.Platforms.YouTube;
-using MARS.Server.Services.Twitch.Management;
 using TwitchLib.EventSub.Websockets;
 
 namespace MARS.Server.Services.SoundRequest;

@@ -7,7 +7,8 @@ public class AutoMessagesController(
     ITwitchClient client,
     ILogger<AutoMessagesController> logger,
     IDbContextFactory<AppDbContext> dbContextFactory,
-    IHostApplicationLifetime applicationLifetime
+    IHostApplicationLifetime applicationLifetime,
+    IHubContext<TelegramusHub, ITelegramusHub> hubContext
 ) : BackgroundService
 {
     private const string Channel = TwitchExstension.Channel;
@@ -32,48 +33,56 @@ public class AutoMessagesController(
                 && LastPostDateTime.Add(TimeSpan.FromMinutes(45)) < DateTimeOffset.Now
             )
             {
-                await Task.Run(async () =>
-                {
-                    try
-                    {
-                        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
-                        var messages = dbContext
-                            .AutoMessages.AsNoTracking()
-                            .AsEnumerable()
-                            .Where(e => _queue.All(message => message.Id != e.Id))
-                            .ToArray();
-
-                        if (messages.Length != 0)
-                        {
-                            var index = Random.Shared.Next(0, messages.Length - 1);
-                            var message = messages.ElementAt(index);
-
-                            client.SendMessage(Channel, message.Message);
-
-                            while (_queue.Count > Capacity - 1)
-                            {
-                                _queue.Dequeue();
-                            }
-
-                            _queue.Enqueue(message);
-
-                            LastPostDateTime = DateTimeOffset.Now;
-                            MessagesCounter = 0;
-                        }
-                        else
-                        {
-                            throw new NullReferenceException(
-                                $"нету сообщений почему то в {nameof(AutoMessagesController)}"
-                            );
-                        }
-                    }
-                    catch (Exception exception)
-                    {
-                        logger.LogException(exception);
-                    }
-                });
+                await ExecuteAutoMessage();
             }
         }
+    }
+
+    internal async Task ExecuteAutoMessage()
+    {
+        await Task.Run(async () =>
+        {
+            try
+            {
+                await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+                var messages = dbContext
+                    .AutoMessages.AsNoTracking()
+                    .AsEnumerable()
+                    .Where(e => _queue.All(message => message.Id != e.Id))
+                    .ToArray();
+
+                if (messages.Length != 0)
+                {
+                    var index = Random.Shared.Next(0, messages.Length - 1);
+                    var message = messages.ElementAt(index);
+
+                    client.SendMessage(Channel, message.Message);
+
+                    // Отправляем сообщение через SignalR для отображения в OBS
+                    await hubContext.Clients.All.AutoMessage(message.Message);
+
+                    while (_queue.Count > Capacity - 1)
+                    {
+                        _queue.Dequeue();
+                    }
+
+                    _queue.Enqueue(message);
+
+                    LastPostDateTime = DateTimeOffset.Now;
+                    MessagesCounter = 0;
+                }
+                else
+                {
+                    throw new NullReferenceException(
+                        $"нету сообщений почему то в {nameof(AutoMessagesController)}"
+                    );
+                }
+            }
+            catch (Exception exception)
+            {
+                logger.LogException(exception);
+            }
+        });
     }
 
     protected override Task ExecuteAsync(CancellationToken stoppingToken)

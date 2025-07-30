@@ -1,6 +1,5 @@
 ﻿using System.Diagnostics;
 using MARS.Server.Services.ServiceManager;
-using MARS.Server.Services.Twitch.Management;
 using TwitchLib.EventSub.Websockets;
 
 namespace MARS.Server.Services.Twitch.Rewards.CloseGameReward;

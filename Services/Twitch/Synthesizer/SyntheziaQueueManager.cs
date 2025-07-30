@@ -137,15 +137,7 @@ public class SyntheziaQueueManager(
 
     public override List<ServiceCommandInfo> GetAvailableCommands()
     {
-        return
-        [
-            new ServiceCommandInfo
-            {
-                Command = "interrupt",
-                DisplayName = "Прервать озвучку",
-                Description = "Остановить текущую озвучку немедленно",
-            },
-        ];
+        return [];
     }
 
     public override Task<bool> ExecuteCommandAsync(string command)

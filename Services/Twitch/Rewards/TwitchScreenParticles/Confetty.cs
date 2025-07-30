@@ -1,5 +1,4 @@
-﻿using MARS.Server.Services.Twitch.Management;
-using MARS.Server.Services.ServiceManager;
+﻿using MARS.Server.Services.ServiceManager;
 using TwitchLib.EventSub.Websockets;
 
 namespace MARS.Server.Services.Twitch.Rewards.TwitchScreenParticles;
@@ -20,7 +19,8 @@ public class Confetty : ManagedServiceBase
         IHostApplicationLifetime lifetime,
         ITwitchClient client,
         EventSubWebsocketClient wsClient
-    ) : base(logger)
+    )
+        : base(logger)
     {
         _hub = hub;
         _client = client;

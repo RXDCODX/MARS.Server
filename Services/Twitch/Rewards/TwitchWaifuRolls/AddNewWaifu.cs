@@ -1,9 +1,9 @@
 ﻿using System.Text.RegularExpressions;
 using MARS.Server.Services.ServiceManager;
 using MARS.Server.Services.Shikimori;
-using ShikimoriSharp.Classes;
 using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.WaifuRoll;
+using ShikimoriSharp.Classes;
 using TwitchLib.Api.Helix.Models.Chat;
 using TwitchLib.Client.Events;
 

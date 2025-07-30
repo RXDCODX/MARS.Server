@@ -167,7 +167,7 @@ public class WaifuRollWorker(
                 WhenAdded = DateTimeOffset.Now,
                 LastOrder = DateTimeOffset.Now,
                 OrderCount = 0,
-                IsPrivated = false
+                IsPrivated = false,
             };
             waifu = await waifuDbHelper.EnsureWaifuHaveImageIrl(waifu);
             await dbContext.Waifus.AddAsync(waifu);

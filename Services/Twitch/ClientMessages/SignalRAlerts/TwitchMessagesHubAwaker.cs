@@ -121,22 +121,22 @@ public class TwitchMessagesHubAwaker : BackgroundService
                     switch (alerts.Length)
                     {
                         case > 1:
-                        {
-                            Random.Shared.Shuffle(alerts);
-                            var info = alerts[0];
+                            {
+                                Random.Shared.Shuffle(alerts);
+                                var info = alerts[0];
 
-                            var alert = new MediaDto() { MediaInfo = info };
+                                var alert = new MediaDto() { MediaInfo = info };
 
-                            await _hubContext.Clients.All.Alert(alert);
-                            break;
-                        }
+                                await _hubContext.Clients.All.Alert(alert);
+                                break;
+                            }
                         case 1:
-                        {
-                            var alert = new MediaDto { MediaInfo = alerts[0] };
+                            {
+                                var alert = new MediaDto { MediaInfo = alerts[0] };
 
-                            await _hubContext.Clients.All.Alert(alert);
-                            break;
-                        }
+                                await _hubContext.Clients.All.Alert(alert);
+                                break;
+                            }
                     }
                 },
                 _token

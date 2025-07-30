@@ -209,9 +209,9 @@ public class CheckersGameManager
     /// <returns>True if the player has capture moves.</returns>
     private static bool HasAnyCaptures(Color player)
     {
-        for (var x = 'a'; x <= 'h'; x++)
+        for (var x = 'a' ; x <= 'h' ; x++)
         {
-            for (ushort y = 1; y <= 8; y++)
+            for (ushort y = 1 ; y <= 8 ; y++)
             {
                 var cell = GameBoard.GetCell(x, y);
                 if (cell?.Checker != null && cell.Checker.Color.Equals(player))
@@ -280,9 +280,9 @@ public class CheckersGameManager
     private static int CountPieces(Color player)
     {
         var count = 0;
-        for (var x = 'a'; x <= 'h'; x++)
+        for (var x = 'a' ; x <= 'h' ; x++)
         {
-            for (ushort y = 1; y <= 8; y++)
+            for (ushort y = 1 ; y <= 8 ; y++)
             {
                 var cell = GameBoard.GetCell(x, y);
                 if (cell?.Checker != null && cell.Checker.Color.Equals(player))
@@ -301,9 +301,9 @@ public class CheckersGameManager
     /// <returns>True if the player has valid moves.</returns>
     private static bool HasAnyValidMoves(Color player)
     {
-        for (var x = 'a'; x <= 'h'; x++)
+        for (var x = 'a' ; x <= 'h' ; x++)
         {
-            for (ushort y = 1; y <= 8; y++)
+            for (ushort y = 1 ; y <= 8 ; y++)
             {
                 var cell = GameBoard.GetCell(x, y);
                 if (cell?.Checker != null && cell.Checker.Color.Equals(player))

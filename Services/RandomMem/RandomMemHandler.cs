@@ -123,7 +123,7 @@ public class RandomMemHandler(
             "такой ЗОЛОТОЙ файл уже есть, обновил время последнего акцесса до {0}";
         const string goldAnswer2 = "С ЗОЛОТЫМ мемом чето не так, ппц брат.";
 
-        for (var index = 0; index < AlertsPaths.Length; index++)
+        for (var index = 0 ; index < AlertsPaths.Length ; index++)
         {
             var alertsPath = AlertsPaths[index];
             var folderPath = isGold ? Path.Combine(alertsPath, "Gold") : alertsPath;

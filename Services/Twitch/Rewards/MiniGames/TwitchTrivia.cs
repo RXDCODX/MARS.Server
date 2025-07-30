@@ -1,5 +1,4 @@
 ﻿using MARS.Server.Services.ServiceManager;
-using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.Twitch.Rewards.MiniGames.Entitys.Interfaces;
 using MARS.Server.Services.Twitch.Rewards.MiniGames.Entitys.Subs;
 using TwitchLib.Client.Events;

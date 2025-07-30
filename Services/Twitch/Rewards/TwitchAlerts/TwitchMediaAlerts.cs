@@ -1,5 +1,4 @@
 ﻿using MARS.Server.Services.ServiceManager;
-using MARS.Server.Services.Twitch.Management;
 using TwitchLib.Client.Events;
 using TwitchLib.EventSub.Core.SubscriptionTypes.Channel;
 using TwitchLib.EventSub.Websockets;

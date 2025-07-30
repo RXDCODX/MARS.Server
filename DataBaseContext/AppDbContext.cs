@@ -3,6 +3,7 @@ using MARS.Server.CustomLoggers.DatabaseLogger;
 using MARS.Server.Services._365Genius.Entitys;
 using MARS.Server.Services.Framedata.Entitys;
 using MARS.Server.Services.RandomMem.Entity;
+using MARS.Server.Services.Scoreboard.Entitys;
 using MARS.Server.Services.ServiceManager.Entitys;
 using MARS.Server.Services.SoundRequest.Entitys;
 using MARS.Server.Services.Twitch.ClientMessages.AutoMessages.Entitys;
@@ -66,6 +67,9 @@ public sealed class AppDbContext : DbContext
     public DbSet<SoundRequestBackgroundTrackId> SoundRequestBackgroundTracks { get; set; } = null!;
     public DbSet<UserRequestedTrack> SoundRequestUserQueue { get; set; } = null!;
     public DbSet<ServiceState> ServiceStates { get; set; } = null!;
+    public DbSet<ScoreboardState> ScoreboardStates { get; set; } = null!;
+    public DbSet<ScoreboardPlayer> ScoreboardPlayers { get; set; } = null!;
+    public DbSet<ScoreboardLayout> ScoreboardLayouts { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -249,6 +253,26 @@ public sealed class AppDbContext : DbContext
         modelBuilder
             .Entity<RootState>()
             .HasData(new RootState() { Id = 1, RandomMemeOnlineIsStop = false });
+
+        // Конфигурация для Scoreboard
+        modelBuilder
+            .Entity<ScoreboardState>()
+            .HasMany(s => s.Players)
+            .WithOne(p => p.ScoreboardState)
+            .HasForeignKey(p => p.ScoreboardStateId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder
+            .Entity<ScoreboardPlayer>()
+            .HasIndex(p => new { p.ScoreboardStateId, p.Position })
+            .IsUnique();
+
+        modelBuilder
+            .Entity<ScoreboardLayout>()
+            .HasOne(l => l.ScoreboardState)
+            .WithOne(s => s.Layout)
+            .HasForeignKey<ScoreboardLayout>(l => l.ScoreboardStateId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)

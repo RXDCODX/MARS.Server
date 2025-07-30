@@ -1,4 +1,6 @@
-﻿using System.Reflection;
+﻿using MARS.Server.Services.CommandExecutor;
+using MARS.Server.Services.CommandExecutor.Adapters;
+using MARS.Server.Services.CommandExecutor.Entitys;
 using MARS.Server.Services.Framedata;
 using MARS.Server.Services.PyroAlerts;
 using MARS.Server.Services.RandomMem;
@@ -14,7 +16,7 @@ public class UpdateHandler : IUpdateHandler
     public delegate Task TelegramUpdateDelegate(ITelegramBotClient client, Update update);
 
     private readonly ITelegramBotClient _botClient;
-    private readonly Commands.Commands _commands;
+    private readonly ICommandService _commandService;
     private readonly ILogger<UpdateHandler> _logger;
     private readonly TelegramConfiguration _options;
     private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
@@ -22,18 +24,19 @@ public class UpdateHandler : IUpdateHandler
     public UpdateHandler(
         ITelegramBotClient botClient,
         ILogger<UpdateHandler> logger,
-        Commands.Commands commands,
+        ICommandService commandService,
         IOptions<TelegramConfiguration> options,
         PyroAlertsHandler pyroAlertsHandler,
         RandomMemHandler randomMemHandler,
         IHostApplicationLifetime applicationLifetime,
         Tekken8FrameData frameData,
-        IDbContextFactory<AppDbContext> dbContextFactory
+        IDbContextFactory<AppDbContext> dbContextFactory,
+        TelegramCommandService telegramCommandService
     )
     {
         _botClient = botClient;
         _logger = logger;
-        _commands = commands;
+        _commandService = commandService;
         _dbContextFactory = dbContextFactory;
         _options = options.Value;
 
@@ -42,6 +45,7 @@ public class UpdateHandler : IUpdateHandler
             TelegramUpdate += pyroAlertsHandler.HandAlert;
             TelegramUpdate += randomMemHandler.HandMessage;
             TelegramUpdate += frameData.HandAlert;
+            TelegramUpdate += telegramCommandService.HandMessage;
         });
     }
 
@@ -65,7 +69,6 @@ public class UpdateHandler : IUpdateHandler
         Task handler = update switch
         {
             //{ ChannelPost: {} channelPost } => BotOnChannelPost(channelPost, cancellationToken),
-            { Message: { } message } => BotOnMessageReceived(message, cancellationToken),
             { InlineQuery: { } inlineQuery } => BotOnInlineQueryReceived(
                 inlineQuery,
                 cancellationToken
@@ -141,120 +144,6 @@ public class UpdateHandler : IUpdateHandler
                     break;
             }
         }
-    }
-
-    private async Task BotOnMessageReceived(Message message, CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Receive message type: {MessageType}", message.Type);
-
-        if (
-            message.Type != MessageType.Text
-            || message.Text is not { } messageText
-            || !messageText.StartsWith('/')
-        )
-        {
-            return;
-        }
-
-        Task<Message>? action;
-
-        try
-        {
-            var command = messageText.Split(' ')[0];
-            var methodName = GetMethodName(command);
-            var methods = _commands
-                .GetType()
-                .GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
-
-            var method = methods.FirstOrDefault(e =>
-                e.Name.Equals(methodName, StringComparison.OrdinalIgnoreCase)
-            );
-            if (method == null)
-            {
-                var methodWithAliases = methods.Where(e =>
-                    e.GetCustomAttribute<AliasAttribute>() != null
-                );
-                var commandWithoutSlash = command.Substring(1);
-                method = methodWithAliases.FirstOrDefault(
-                    e =>
-                    {
-                        var aliasAttr = e?.GetCustomAttribute<AliasAttribute>();
-                        return aliasAttr?.MethodAliases.Contains(commandWithoutSlash) == true;
-                    },
-                    null
-                );
-            }
-
-            if (method != null)
-            {
-                var isAdminMethod = method.GetCustomAttribute<AdminAttribute>() != null;
-                var isIgnore = method.GetCustomAttribute<IgnoreAttribute>() != null;
-                var isAdminUser = _options.AdminIdsArray.Any(e => e == message.Chat.Id);
-
-                if (isIgnore || (isAdminMethod && !isAdminUser))
-                {
-                    action = ErrorCommand(_botClient, message, cancellationToken);
-                }
-                else
-                {
-                    var parameters = new object[] { _botClient, message, cancellationToken };
-                    if (methodName == "OnCommandsCommandReceived")
-                    {
-                        if (isAdminUser)
-                        {
-                            parameters = [_botClient, message, cancellationToken, true];
-                        }
-                        else
-                        {
-                            parameters = [_botClient, message, cancellationToken, false];
-                        }
-                    }
-
-                    action = (Task<Message>?)method.Invoke(_commands, parameters);
-                }
-            }
-            else
-            {
-                action = ErrorCommand(_botClient, message, cancellationToken);
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error handling command");
-            action = ErrorCommand(_botClient, message, cancellationToken);
-        }
-
-        if (action != null)
-        {
-            var sentMessage = await action.ConfigureAwait(false);
-            _logger.LogInformation(
-                "The message was sent with id: {SentMessageId}",
-                sentMessage.MessageId
-            );
-        }
-    }
-
-    private static Task<Message>? ErrorCommand(
-        ITelegramBotClient client,
-        Message message,
-        CancellationToken cancellationToken
-    )
-    {
-        return client.SendMessage(
-            message.Chat.Id,
-            Commands.Commands.Template,
-            cancellationToken: cancellationToken
-        );
-    }
-
-    private static string GetMethodName(string command)
-    {
-        return string.Concat(
-            "On",
-            command.Substring(1).First().ToString().ToUpper(),
-            command.AsSpan(2),
-            "CommandReceived"
-        );
     }
 
     #region Inline Mode
