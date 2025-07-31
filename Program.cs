@@ -215,7 +215,7 @@ public static class Program
         app.MapHub<TelegramusHub>("/telegramus");
         app.MapHub<TunaHub>("/tuna");
         //app.MapHub<SoundBarHub>("/soundbar");
-        app.MapHub<ScoreboardHub>("/scoreboard");
+        app.MapHub<ScoreboardHub>("/scoreboardhub");
         if (IsUseSoundRequest)
         {
             app.MapHub<SoundRequestHub>("/sr");
