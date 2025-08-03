@@ -12,7 +12,8 @@ public class ScoreboardService(
         string,
         (ScoreboardDto State, System.Threading.Timer Timer)
     > PendingUpdates = [];
-    private static readonly Lock LockObject = new();
+
+    private static readonly SemaphoreSlim SemaphoreSlim = new(1);
     private const int DebounceDelayMs = 500; // 500ms задержка для группировки изменений
 
     public async Task<ScoreboardDto?> GetCurrentStateAsync()
@@ -34,23 +35,22 @@ public class ScoreboardService(
         // Генерируем уникальный ключ для этого обновления
         var updateKey = Guid.NewGuid().ToString();
 
-        lock (LockObject)
+        await SemaphoreSlim.WaitAsync();
+        // Отменяем предыдущий таймер, если он существует
+        if (PendingUpdates.TryGetValue(updateKey, out var existing))
         {
-            // Отменяем предыдущий таймер, если он существует
-            if (PendingUpdates.TryGetValue(updateKey, out var existing))
-            {
-                existing.Timer.Dispose();
-            }
-
-            // Создаем новый таймер для отложенного обновления
-            var timer = new System.Threading.Timer(
-                async _ => await ProcessDebouncedUpdate(updateKey),
-                null,
-                DebounceDelayMs,
-                Timeout.Infinite
-            );
-            PendingUpdates[updateKey] = (dto, timer);
+            await existing.Timer.DisposeAsync();
         }
+
+        // Создаем новый таймер для отложенного обновления
+        var timer = new System.Threading.Timer(
+            async _ => await ProcessDebouncedUpdate(updateKey),
+            null,
+            DebounceDelayMs,
+            Timeout.Infinite
+        );
+        PendingUpdates[updateKey] = (dto, timer);
+        SemaphoreSlim.Release();
 
         // Возвращаем текущее состояние немедленно
         return await GetCurrentStateAsync() ?? dto;
@@ -60,15 +60,16 @@ public class ScoreboardService(
     {
         ScoreboardDto? stateToUpdate = null;
 
-        lock (LockObject)
+        await SemaphoreSlim.WaitAsync();
+
+        if (PendingUpdates.TryGetValue(updateKey, out var pending))
         {
-            if (PendingUpdates.TryGetValue(updateKey, out var pending))
-            {
-                stateToUpdate = pending.State;
-                pending.Timer.Dispose();
-                PendingUpdates.Remove(updateKey);
-            }
+            stateToUpdate = pending.State;
+            pending.Timer.Dispose();
+            PendingUpdates.Remove(updateKey);
         }
+
+        SemaphoreSlim.Release();
 
         if (stateToUpdate != null)
         {
@@ -179,10 +180,9 @@ public class ScoreboardService(
     {
         var updateKeys = new List<string>();
 
-        lock (LockObject)
-        {
-            updateKeys.AddRange(PendingUpdates.Keys);
-        }
+        await SemaphoreSlim.WaitAsync();
+        updateKeys.AddRange(PendingUpdates.Keys);
+        SemaphoreSlim.Release();
 
         foreach (var updateKey in updateKeys)
         {
