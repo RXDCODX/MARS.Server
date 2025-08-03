@@ -7,6 +7,14 @@ public class ScoreboardService(
     ILogger<ScoreboardService> logger
 )
 {
+    // Статический словарь для отслеживания отложенных обновлений
+    private static readonly Dictionary<
+        string,
+        (ScoreboardDto State, System.Threading.Timer Timer)
+    > PendingUpdates = [];
+    private static readonly Lock LockObject = new();
+    private const int DebounceDelayMs = 500; // 500ms задержка для группировки изменений
+
     public async Task<ScoreboardDto?> GetCurrentStateAsync()
     {
         await using var context = await factory.CreateDbContextAsync();
@@ -22,6 +30,61 @@ public class ScoreboardService(
     }
 
     public async Task<ScoreboardDto> UpdateStateAsync(ScoreboardDto dto)
+    {
+        // Генерируем уникальный ключ для этого обновления
+        var updateKey = Guid.NewGuid().ToString();
+
+        lock (LockObject)
+        {
+            // Отменяем предыдущий таймер, если он существует
+            if (PendingUpdates.TryGetValue(updateKey, out var existing))
+            {
+                existing.Timer.Dispose();
+            }
+
+            // Создаем новый таймер для отложенного обновления
+            var timer = new System.Threading.Timer(
+                async _ => await ProcessDebouncedUpdate(updateKey),
+                null,
+                DebounceDelayMs,
+                Timeout.Infinite
+            );
+            PendingUpdates[updateKey] = (dto, timer);
+        }
+
+        // Возвращаем текущее состояние немедленно
+        return await GetCurrentStateAsync() ?? dto;
+    }
+
+    private async Task ProcessDebouncedUpdate(string updateKey)
+    {
+        ScoreboardDto? stateToUpdate = null;
+
+        lock (LockObject)
+        {
+            if (PendingUpdates.TryGetValue(updateKey, out var pending))
+            {
+                stateToUpdate = pending.State;
+                pending.Timer.Dispose();
+                PendingUpdates.Remove(updateKey);
+            }
+        }
+
+        if (stateToUpdate != null)
+        {
+            try
+            {
+                await PerformActualUpdateAsync(stateToUpdate);
+                logger.LogInformation("Debounced scoreboard state update processed");
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error processing debounced update");
+            }
+        }
+    }
+
+    private async Task<ScoreboardDto> PerformActualUpdateAsync(ScoreboardDto dto)
     {
         await using var context = await factory.CreateDbContextAsync();
 
@@ -110,6 +173,23 @@ public class ScoreboardService(
         logger.LogInformation("Scoreboard state updated: {Title}", newState.Title);
 
         return MapToDto(newState);
+    }
+
+    public async Task ForceProcessPendingUpdates()
+    {
+        var updateKeys = new List<string>();
+
+        lock (LockObject)
+        {
+            updateKeys.AddRange(PendingUpdates.Keys);
+        }
+
+        foreach (var updateKey in updateKeys)
+        {
+            await ProcessDebouncedUpdate(updateKey);
+        }
+
+        logger.LogInformation("Forced processing of {Count} pending updates", updateKeys.Count);
     }
 
     public async Task<bool> SetVisibilityAsync(bool isVisible)
@@ -269,26 +349,29 @@ public class ScoreboardService(
             },
             IsVisible = state.IsVisible,
             AnimationDuration = state.AnimationDuration,
-            Layout = state.Layout != null ? new ScoreboardLayoutDto
-            {
-                HeaderTop = state.Layout.HeaderTop,
-                HeaderLeft = state.Layout.HeaderLeft,
-                PlayersTop = state.Layout.PlayersTop,
-                PlayersLeft = state.Layout.PlayersLeft,
-                PlayersRight = state.Layout.PlayersRight,
-                HeaderHeight = state.Layout.HeaderHeight,
-                HeaderWidth = state.Layout.HeaderWidth,
-                PlayerBarHeight = state.Layout.PlayerBarHeight,
-                PlayerBarWidth = state.Layout.PlayerBarWidth,
-                ScoreSize = state.Layout.ScoreSize,
-                FlagSize = state.Layout.FlagSize,
-                Spacing = state.Layout.Spacing,
-                Padding = state.Layout.Padding,
-                ShowHeader = state.Layout.ShowHeader,
-                ShowFlags = state.Layout.ShowFlags,
-                ShowSponsors = state.Layout.ShowSponsors,
-                ShowTags = state.Layout.ShowTags,
-            } : new ScoreboardLayoutDto(),
+            Layout =
+                state.Layout != null
+                    ? new ScoreboardLayoutDto
+                    {
+                        HeaderTop = state.Layout.HeaderTop,
+                        HeaderLeft = state.Layout.HeaderLeft,
+                        PlayersTop = state.Layout.PlayersTop,
+                        PlayersLeft = state.Layout.PlayersLeft,
+                        PlayersRight = state.Layout.PlayersRight,
+                        HeaderHeight = state.Layout.HeaderHeight,
+                        HeaderWidth = state.Layout.HeaderWidth,
+                        PlayerBarHeight = state.Layout.PlayerBarHeight,
+                        PlayerBarWidth = state.Layout.PlayerBarWidth,
+                        ScoreSize = state.Layout.ScoreSize,
+                        FlagSize = state.Layout.FlagSize,
+                        Spacing = state.Layout.Spacing,
+                        Padding = state.Layout.Padding,
+                        ShowHeader = state.Layout.ShowHeader,
+                        ShowFlags = state.Layout.ShowFlags,
+                        ShowSponsors = state.Layout.ShowSponsors,
+                        ShowTags = state.Layout.ShowTags,
+                    }
+                    : new ScoreboardLayoutDto(),
         };
     }
 }

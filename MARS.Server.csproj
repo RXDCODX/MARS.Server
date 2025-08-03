@@ -143,12 +143,15 @@
     <Target Name="CopyClientDistToWwwroot" AfterTargets="Build">
         <Message Importance="high" Text="Копирование dist в wwwroot..." />
         <RemoveDir Directories="wwwroot/assets/**/*" />
+
+        <ItemGroup>
+            <DistFiles Include="..\mars.client\dist\**\*" />
+        </ItemGroup>
+
         <Copy SourceFiles="@(DistFiles)" DestinationFolder="wwwroot\%(RecursiveDir)" SkipUnchangedFiles="true" />
     </Target>
 
-    <ItemGroup>
-        <DistFiles Include="..\mars.client\dist\**\*" />
-    </ItemGroup>
+
 
     <ItemGroup>
       <Reference Include="HuTao.NET">

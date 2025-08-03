@@ -9,12 +9,26 @@ public class FumoCommand(IHubContext<TelegramusHub, ITelegramusHub> alertsHub) :
     public override string Description => "Отправляет фумо в чат";
     public override bool IsAdminCommand => false;
 
-    public override Platform[] AvailablePlatforms => [Platform.Api, Platform.Telegram, Platform.Twitch];
+    public override Platform[] AvailablePlatforms =>
+        [Platform.Api, Platform.Telegram, Platform.Twitch];
 
-    public override CommandParameterInfo[] Parameters => [
-        new CommandParameterInfo { Name = "displayName", Description = "Имя пользователя", Type = "string", Required = true },
-        new CommandParameterInfo { Name = "color", Description = "Цвет (опционально)", Type = "string", Required = false }
-    ];
+    public override CommandParameterInfo[] Parameters =>
+        [
+            new CommandParameterInfo
+            {
+                Name = "displayName",
+                Description = "Имя пользователя",
+                Type = "string",
+                Required = true,
+            },
+            new CommandParameterInfo
+            {
+                Name = "color",
+                Description = "Цвет (опционально)",
+                Type = "string",
+                Required = false,
+            },
+        ];
 
     public override async Task<string> ExecuteAsync(
         Dictionary<string, object> parameters,
@@ -28,6 +42,7 @@ public class FumoCommand(IHubContext<TelegramusHub, ITelegramusHub> alertsHub) :
         }
 
         var displayName = displayNameObj.ToString() ?? "";
+        displayName = displayName.StartsWith('@') ? displayName.Substring(1) : displayName;
         var color = parameters.TryGetValue("color", out var colorObj) ? colorObj?.ToString() : null;
 
         if (!string.IsNullOrWhiteSpace(color))

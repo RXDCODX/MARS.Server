@@ -31,9 +31,9 @@ public class ScoreboardHub(ScoreboardService scoreboardService, ILogger<Scoreboa
 
     public async Task UpdateState(ScoreboardDto state)
     {
-        var updatedState = await scoreboardService.UpdateStateAsync(state);
+        await Task.Factory.StartNew(async () => await scoreboardService.UpdateStateAsync(state));
         // Отправляем всем клиентам, кроме отправителя, чтобы избежать рекурсии
-        await Clients.Others.StateUpdated(updatedState);
+        await Clients.Others.StateUpdated(state);
         logger.LogInformation("Scoreboard state updated by {ConnectionId}", Context.ConnectionId);
     }
 
@@ -87,6 +87,12 @@ public class ScoreboardHub(ScoreboardService scoreboardService, ILogger<Scoreboa
     public async Task<List<ScoreboardDto>> GetHistory(int count = 10)
     {
         return await scoreboardService.GetHistoryAsync(count);
+    }
+
+    public async Task ForceProcessPendingUpdates()
+    {
+        await scoreboardService.ForceProcessPendingUpdates();
+        logger.LogInformation("Forced processing of pending updates requested by {ConnectionId}", Context.ConnectionId);
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)

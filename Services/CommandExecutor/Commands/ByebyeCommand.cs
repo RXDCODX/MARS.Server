@@ -9,7 +9,8 @@ public class ByebyeCommand : BaseCommand
     public override string Description => "Прощание с пользователем";
     public override bool IsAdminCommand => false;
 
-    public override Platform[] AvailablePlatforms => [Platform.Telegram, Platform.Api, Platform.Discord, Platform.Vk, Platform.Twitch];
+    public override Platform[] AvailablePlatforms =>
+        [Platform.Telegram, Platform.Api, Platform.Discord, Platform.Vk, Platform.Twitch];
 
     public override Task<string> ExecuteAsync(
         Dictionary<string, object> parameters,
@@ -25,4 +26,3 @@ public class ByebyeCommand : BaseCommand
         return Task.FromResult(usage);
     }
 }
-

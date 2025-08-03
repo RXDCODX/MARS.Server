@@ -4,7 +4,6 @@ using MARS.Server.Services.Twitch.HelloVideos;
 
 namespace MARS.Server.Services.CommandExecutor.Commands;
 
-
 public class HelloVideoCommand(HelloVideoWorker helloVideoWorker) : BaseCommand
 {
     public override string CommandName => "hellovideo";
@@ -12,11 +11,25 @@ public class HelloVideoCommand(HelloVideoWorker helloVideoWorker) : BaseCommand
         "Отправляет приветственное видео пользователю или с указанным цветом";
     public override bool IsAdminCommand => true;
 
-    public override Platform[] AvailablePlatforms => [Platform.Api, Platform.Telegram, Platform.Twitch];
-    public override CommandParameterInfo[] Parameters => [
-        new CommandParameterInfo { Name = "name", Description = "Имя пользователя", Type = "string", Required = true },
-        new CommandParameterInfo { Name = "color", Description = "Цвет (опционально)", Type = "string", Required = false }
-    ];
+    public override Platform[] AvailablePlatforms =>
+        [Platform.Api, Platform.Telegram, Platform.Twitch];
+    public override CommandParameterInfo[] Parameters =>
+        [
+            new CommandParameterInfo
+            {
+                Name = "name",
+                Description = "Имя пользователя",
+                Type = "string",
+                Required = true,
+            },
+            new CommandParameterInfo
+            {
+                Name = "color",
+                Description = "Цвет (опционально)",
+                Type = "string",
+                Required = false,
+            },
+        ];
 
     public override async Task<string> ExecuteAsync(
         Dictionary<string, object> parameters,
@@ -30,6 +43,7 @@ public class HelloVideoCommand(HelloVideoWorker helloVideoWorker) : BaseCommand
         }
 
         var name = nameObj.ToString() ?? "";
+        name = name.StartsWith('@') ? name.Substring(1) : name;
         var color = parameters.TryGetValue("color", out var colorObj) ? colorObj?.ToString() : null;
 
         string? resultName;
@@ -53,4 +67,3 @@ public class HelloVideoCommand(HelloVideoWorker helloVideoWorker) : BaseCommand
         return "Кривые параметры";
     }
 }
-

@@ -38,7 +38,10 @@ public class HonkaiCommand(IDbContextFactory<AppDbContext> factory) : BaseComman
 
         await using var dbContext = await factory.CreateDbContextAsync(cancellationToken);
 
-        var dbUser = await dbContext.TelegramUsers.FindAsync(userName);
+        var dbUser = await dbContext.TelegramUsers.FindAsync(
+            [userName],
+            cancellationToken: cancellationToken
+        );
 
         if (dbUser is { HonkaiNotifications: true })
         {

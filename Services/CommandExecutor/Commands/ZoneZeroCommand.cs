@@ -40,7 +40,7 @@ public class ZoneZeroCommand(IDbContextFactory<AppDbContext> factory) : BaseComm
 
         await using var dbContext = await factory.CreateDbContextAsync(cancellationToken);
 
-        var dbUser = await dbContext.TelegramUsers.FindAsync(userName);
+        var dbUser = await dbContext.TelegramUsers.FindAsync([userName], cancellationToken);
 
         switch (dbUser)
         {

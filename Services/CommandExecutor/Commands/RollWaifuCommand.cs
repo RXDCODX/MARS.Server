@@ -13,11 +13,19 @@ public class RollWaifuCommand(
     public override string Description => "Выполняет вайфу-ролл для пользователя";
     public override bool IsAdminCommand => true;
 
-    public override Platform[] AvailablePlatforms => [Platform.Telegram, Platform.Api, Platform.Twitch];
+    public override Platform[] AvailablePlatforms =>
+        [Platform.Telegram, Platform.Api, Platform.Twitch];
 
-    public override CommandParameterInfo[] Parameters => [
-        new CommandParameterInfo { Name = "username", Description = "Имя пользователя", Type = "string", Required = true }
-    ];
+    public override CommandParameterInfo[] Parameters =>
+        [
+            new CommandParameterInfo
+            {
+                Name = "username",
+                Description = "Имя пользователя",
+                Type = "string",
+                Required = true,
+            },
+        ];
 
     public override async Task<string> ExecuteAsync(
         Dictionary<string, object> parameters,
@@ -31,6 +39,8 @@ public class RollWaifuCommand(
         }
 
         var username = usernameObj.ToString() ?? "";
+
+        username = username.StartsWith('@') ? username.Substring(1) : username;
 
         try
         {

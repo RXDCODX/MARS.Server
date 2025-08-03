@@ -1,4 +1,4 @@
-using MARS.Server.Services.Scoreboard;
+﻿using MARS.Server.Services.Scoreboard;
 using MARS.Server.Services.Scoreboard.Entitys;
 using Microsoft.AspNetCore.Mvc;
 
@@ -6,7 +6,10 @@ namespace MARS.Server.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class ScoreboardController(ScoreboardService scoreboardService, ILogger<ScoreboardController> logger) : ControllerBase
+public class ScoreboardController(
+    ScoreboardService scoreboardService,
+    ILogger<ScoreboardController> logger
+) : ControllerBase
 {
     [HttpGet("test")]
     public async Task<IActionResult> TestConnection()
@@ -14,20 +17,27 @@ public class ScoreboardController(ScoreboardService scoreboardService, ILogger<S
         try
         {
             var state = await scoreboardService.GetCurrentStateAsync();
-            return Ok(new { 
-                success = true, 
-                message = "Database connection successful", 
-                state = state 
-            });
+            return Ok(
+                new
+                {
+                    success = true,
+                    message = "Database connection successful",
+                    state,
+                }
+            );
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error testing scoreboard connection");
-            return StatusCode(500, new { 
-                success = false, 
-                message = "Database connection failed", 
-                error = ex.Message 
-            });
+            return StatusCode(
+                500,
+                new
+                {
+                    success = false,
+                    message = "Database connection failed",
+                    error = ex.Message,
+                }
+            );
         }
     }
 
@@ -75,4 +85,4 @@ public class ScoreboardController(ScoreboardService scoreboardService, ILogger<S
             return StatusCode(500, new { error = ex.Message });
         }
     }
-} 
+}
