@@ -11,7 +11,6 @@ using MARS.Server.Services.RandomMem;
 using MARS.Server.Services.Scoreboard;
 using MARS.Server.Services.Shikimori;
 using MARS.Server.Services.Twitch.Rewards;
-using MARS.Server.Services.Twitch.SoundBarService;
 using MARS.Server.Services.Twitch.Synthesizer;
 using MARS.Server.Services.Twitch.Synthesizer.Enitity;
 using MARS.Server.Services.WaifuRoll;
@@ -37,9 +36,11 @@ public static class Program
 
         var directory = AppDomain.CurrentDomain.BaseDirectory;
 
-        var isWithSpa =
-            builder.Environment.IsProduction() != true
-            && Environment.GetEnvironmentVariable("ASPNETCORE_SPA_LAUNCH") is "TRUE";
+        var isSpa =
+            !builder.Environment.IsProduction()
+            && Convert.ToBoolean(
+                Environment.GetEnvironmentVariable("ASPNETCORE_SPA_LAUNCH") ?? string.Empty
+            );
 
         var contextFactory = new AppDbContextFactory(options =>
         {
@@ -193,10 +194,17 @@ public static class Program
 
         services.AddSingleton(loggerFactory);
 
+        builder.AddStaticFilesBrowserOptions(directory);
+
         var app = builder.Build();
         var logger = app.Logger;
 
-        app.AddStaticFilesBrowser(directory, isWithSpa);
+        app.AddStaticFilesBrowser();
+
+        if (isSpa)
+        {
+            app.UseSpaYarp();
+        }
 
         if (IsUseSwagger)
         {
@@ -204,9 +212,7 @@ public static class Program
             app.UseSwaggerUi(settings =>
             {
                 settings.Path = "/ui";
-                settings.DocumentPath = isWithSpa
-                    ? "/backend/swagger/{documentName}/swagger.json"
-                    : "/swagger/{documentName}/swagger.json";
+                settings.DocumentPath = "/swagger/{documentName}/swagger.yaml";
                 settings.DocumentTitle = "SWAGGER SCHEMA";
             });
         }
@@ -225,10 +231,7 @@ public static class Program
 
         app.MapControllers();
 
-        if (isWithSpa || app.Environment.IsProduction())
-        {
-            app.MapFallbackToFile("index.html");
-        }
+        app.MapFallbackToFile("index.html");
 
         try
         {
@@ -237,13 +240,6 @@ public static class Program
 
             var appLifeTime = app.Services.GetRequiredService<IHostApplicationLifetime>();
             appLifeTime.ApplicationStopping.Register(MemoryStorage.ClearStorage);
-
-            if (app.Environment.IsDevelopment())
-            {
-                var aa = app.Services.GetRequiredService<SoundBarFactory>();
-                var bb = aa.CreateSoundBar();
-                //await bb.Mute();
-            }
 
             await app.RunAsync();
         }

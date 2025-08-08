@@ -80,7 +80,7 @@ public partial class Tekken8FrameData
                 var listStr = new List<string>();
                 var listWknss = new List<string>();
 
-                for (var index = 0 ; index < strAndWkns.Length ; index++)
+                for (var index = 0; index < strAndWkns.Length; index++)
                 {
                     var za = strAndWkns[index];
                     var twfs = za.QuerySelectorAll("li") ?? throw new Exception("miss");
@@ -243,40 +243,11 @@ public partial class Tekken8FrameData
 
                     var sortedMovelist = await ConsolidateMoveGroups(movelist);
 
-                    await using AppDbContext dbContext =
-                        await dbContextFactory.CreateDbContextAsync(_cancellationToken);
-
-                    if (dbContext.TekkenCharacters.Any(e => e.Equals(character)))
-                    {
-                        dbContext.TekkenCharacters.Update(character);
-                    }
-                    else
-                    {
-                        dbContext.TekkenCharacters.Add(character);
-                    }
-
-                    foreach (Move move in sortedMovelist)
-                    {
-                        if (
-                            dbContext.TekkenMoves.Any(e =>
-                                e.CharacterName == move.CharacterName && e.Command == move.Command
-                            )
-                        )
-                        {
-                            dbContext.TekkenMoves.Update(move);
-                        }
-                        else
-                        {
-                            dbContext.TekkenMoves.Add(move);
-                        }
-                    }
-
-                    var rowInt = await dbContext.SaveChangesAsync(_cancellationToken);
-
-                    if (rowInt != sortedMovelist.Length + 1)
-                    {
-                        logger.LogCritical("Было обновленно не верное количетсво теккен ударов!");
-                    }
+                    // Проверяем изменения через FramedataChangeDetectionService
+                    await _changeDetectionService.DetectChangesForCharacter(
+                        character,
+                        sortedMovelist
+                    );
 
                     // Добавляем имя в список успешно спарсенных
                     parsedCharacters.Add(name);

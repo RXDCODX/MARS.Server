@@ -70,6 +70,8 @@ public sealed class AppDbContext : DbContext
     public DbSet<ScoreboardState> ScoreboardStates { get; set; } = null!;
     public DbSet<ScoreboardPlayer> ScoreboardPlayers { get; set; } = null!;
     public DbSet<ScoreboardLayout> ScoreboardLayouts { get; set; } = null!;
+    public DbSet<FramedataChange> FramedataChanges { get; set; } = null!;
+    public DbSet<FramedataChangeInfo> FramedataChangeInfos { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -273,6 +275,36 @@ public sealed class AppDbContext : DbContext
             .WithOne(s => s.Layout)
             .HasForeignKey<ScoreboardLayout>(l => l.ScoreboardStateId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        // Конфигурация для FramedataChange
+        modelBuilder
+            .Entity<FramedataChange>()
+            .HasOne(c => c.ChangeInfo)
+            .WithOne(ci => ci.FramedataChange)
+            .HasForeignKey<FramedataChangeInfo>(ci => ci.FramedataChangeId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder
+            .Entity<FramedataChange>()
+            .HasOne(c => c.CurrentInfo)
+            .WithOne()
+            .HasForeignKey<FramedataChangeInfo>("CurrentInfoId")
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder
+            .Entity<FramedataChange>()
+            .Property(e => e.ChangeType)
+            .HasConversion<string>();
+
+        modelBuilder
+            .Entity<FramedataChange>()
+            .Property(e => e.Status)
+            .HasConversion<string>();
+
+        modelBuilder
+            .Entity<FramedataChangeInfo>()
+            .Property(e => e.InfoType)
+            .HasConversion<string>();
     }
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)

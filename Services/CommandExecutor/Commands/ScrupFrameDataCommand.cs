@@ -29,4 +29,3 @@ public class ScrupFrameDataCommand(Tekken8FrameData frameData) : BaseCommand
         return "Парсинг запущен";
     }
 }
-

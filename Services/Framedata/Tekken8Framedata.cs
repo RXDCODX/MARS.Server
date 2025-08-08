@@ -8,9 +8,11 @@ public partial class Tekken8FrameData(
     ILogger<Tekken8FrameData> logger,
     IDbContextFactory<AppDbContext> dbContextFactory,
     IHostApplicationLifetime lifetime,
-    ITelegramBotClient client
+    ITelegramBotClient client,
+    FramedataChangeDetectionService changeDetectionService
 ) : BackgroundService, ITelegramusService
 {
+    private readonly FramedataChangeDetectionService _changeDetectionService = changeDetectionService;
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(stoppingToken);

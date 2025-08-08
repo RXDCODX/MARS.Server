@@ -25,7 +25,12 @@ public class CommandsController(
     {
         try
         {
-            var commands = commandService.GetCommandsList("api_user", commandService.UserCommands, commandService.AdminCommands, false);
+            var commands = commandService.GetCommandsList(
+                "api_user",
+                commandService.UserCommands,
+                commandService.AdminCommands,
+                false
+            );
             return Ok(commands);
         }
         catch (Exception ex)
@@ -44,7 +49,12 @@ public class CommandsController(
     {
         try
         {
-            var commands = commandService.GetCommandsList("api_user", commandService.UserCommands, commandService.AdminCommands, true);
+            var commands = commandService.GetCommandsList(
+                "api_user",
+                commandService.UserCommands,
+                commandService.AdminCommands,
+                true
+            );
             return Ok(commands);
         }
         catch (Exception ex)

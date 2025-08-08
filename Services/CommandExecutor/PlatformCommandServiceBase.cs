@@ -114,7 +114,7 @@ public abstract class PlatformCommandServiceBase<T>
                 ? "Доступные команды (включая админские): "
                 : "Доступные команды: ";
 
-        result += string.Join(" | ", commands);
+        result += string.Join(Environment.NewLine + " | ", commands);
 
         return result;
     }

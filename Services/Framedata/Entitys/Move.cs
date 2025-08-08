@@ -1,4 +1,7 @@
-﻿namespace MARS.Server.Services.Framedata.Entitys;
+﻿using System.Text.Json.Serialization;
+using NSwag.Annotations;
+
+namespace MARS.Server.Services.Framedata.Entitys;
 
 /// <summary>
 /// Represents a move in Tekken, including its command, properties, and effects.
@@ -10,6 +13,9 @@ public class Move
 
     [Key]
     public required string Command { get; set; }
+
+    [JsonIgnore]
+    [OpenApiIgnore]
     public TekkenCharacter? Character { get; set; }
     public bool IsFromStance => !string.IsNullOrWhiteSpace(StanceCode);
     public string StanceCode { get; set; } = string.Empty;

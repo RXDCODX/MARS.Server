@@ -1,6 +1,8 @@
 ﻿using BooruSharp.Booru;
 using BooruSharp.Search.Post;
 using MARS.Server.Services.ServiceManager;
+using Microsoft.AspNetCore.OutputCaching;
+using Microsoft.AspNetCore.StaticFiles.Infrastructure;
 using TwitchLib.EventSub.Websockets;
 
 namespace MARS.Server.Services.Twitch.Rewards.TwitchRandomArt;
@@ -11,7 +13,8 @@ public class RandomArt(
     ITwitchClient client,
     Gelbooru site,
     ILogger<RandomArt> logger,
-    EventSubWebsocketClient wsClient
+    EventSubWebsocketClient wsClient,
+    SharedOptions staticFilesOptions
 ) : ManagedServiceBase(logger)
 {
     public override string ServiceName => "randomart";
@@ -95,6 +98,11 @@ public class RandomArt(
                     var extension = Path.GetExtension(fileUrl);
                     var fileName = Path.GetFileName(fileUrl);
                     var mediaType = await extension.GetFileMediaTypeAsync();
+                    var staticFilePath =
+                        staticFilesOptions.RequestPath.HasValue
+                        && staticFilesOptions.RequestPath.Value.EndsWith('/')
+                            ? staticFilesOptions.RequestPath.Value
+                            : staticFilesOptions.RequestPath.Value + '/';
 
                     var mediaDto = new MediaDto()
                     {
@@ -104,7 +112,7 @@ public class RandomArt(
                             {
                                 Extension = extension,
                                 FileName = fileName,
-                                FilePath = fileUrl,
+                                FilePath = staticFilePath + fileUrl,
                                 Type = mediaType,
                                 IsLocalFile = false,
                             },

@@ -5,20 +5,32 @@ namespace MARS.Server.Exstensions;
 
 public static class WebApplicatoinExstension
 {
-    public static IApplicationBuilder AddStaticFilesBrowser(
-        this WebApplication app,
-        string directory,
-        bool isWithSpa
+    public static WebApplicationBuilder AddStaticFilesBrowserOptions(
+        this WebApplicationBuilder app,
+        string directory
     )
     {
         var env = app.Environment;
-        var sharedOptions = new SharedOptions();
+        var sharedOptions = new SharedOptions()
+        {
+            RequestPath = "/static",
+            RedirectToAppendTrailingSlash = true,
+        };
         if (env.IsProduction())
         {
             sharedOptions.FileProvider = new PhysicalFileProvider(
                 Path.Combine(directory, "wwwroot")
             );
         }
+
+        app.Services.AddSingleton(sharedOptions);
+
+        return app;
+    }
+
+    public static IApplicationBuilder AddStaticFilesBrowser(this WebApplication app)
+    {
+        var sharedOptions = app.Services.GetRequiredService<SharedOptions>();
 
         var fileOptions = new StaticFileOptions(sharedOptions)
         {
@@ -32,13 +44,9 @@ public static class WebApplicatoinExstension
                     context.Context.Response.ContentType = string.Empty;
                 }
             },
-            RedirectToAppendTrailingSlash = true,
-            RequestPath = isWithSpa ? PathString.FromUriComponent("/staticfiles") : "",
         };
 
-        app.UseDirectoryBrowser(
-            new DirectoryBrowserOptions(sharedOptions) { RedirectToAppendTrailingSlash = true }
-        );
+        app.UseDirectoryBrowser(new DirectoryBrowserOptions(sharedOptions) { });
 
         app.UseStaticFiles(fileOptions);
         return app;

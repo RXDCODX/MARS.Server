@@ -7,11 +7,17 @@
         <UserSecretsId>f9a82fce-305c-4001-bb58-713dc08d3aa9</UserSecretsId>
         <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
         <DockerfileContext>..\..</DockerfileContext>
-        <SpaRoot>..\mars.client</SpaRoot>
-        <SpaProxyLaunchCommand>npm run dev</SpaProxyLaunchCommand>
-        <SpaProxyServerUrl>http://localhost:53912</SpaProxyServerUrl>
         <WarningsAsErrors>CS0618</WarningsAsErrors>
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+
+        <!-- SpaYarp configuration -->
+        <SpaRoot>../mars.client</SpaRoot>
+        <SpaClientUrl>http://localhost:44478</SpaClientUrl>
+        <SpaLaunchCommand>yarn dev</SpaLaunchCommand>
+        <!-- Change the timeout of the proxy (defaults to 120 seconds) -->
+        <SpaProxyTimeoutInSeconds>1200</SpaProxyTimeoutInSeconds>
+        <!-- Optionally forward only request starting with the specified path 
+         <SpaPublicPath>/dist</SpaPublicPath> -->
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'" />
@@ -27,51 +33,52 @@
     <ItemGroup>
         <PackageReference Include="AngleSharp" Version="1.3.0" />
         <PackageReference Include="AngleSharp.XPath" Version="2.0.5" />
+        <PackageReference Include="AspNetCore.SpaYarp" Version="2.0.1" />
         <PackageReference Include="BooruSharp" Version="3.6.0" />
-        <PackageReference Include="HtmlAgilityPack" Version="1.12.1" />
-        <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="9.0.6" />
-        <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.6" />
+        <PackageReference Include="HtmlAgilityPack" Version="1.12.2" />
+        <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="9.0.8" />
+        <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.8" />
         <PackageReference Include="Microsoft.AspNetCore.SpaProxy">
             <Version>9.*-*</Version>
         </PackageReference>
         <PackageReference Include="DSharpPlus" Version="4.5.1" />
         <PackageReference Include="DSharpPlus.Rest" Version="4.5.1" />
-        <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="9.0.6" />
+        <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="9.0.8" />
         <PackageReference Include="Microsoft.AspNetCore.WebSockets" Version="2.3.0" />
-        <PackageReference Include="Microsoft.CognitiveServices.Speech" Version="1.44.0" />
-        <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.6" />
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Abstractions" Version="9.0.6" />
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.6">
+        <PackageReference Include="Microsoft.CognitiveServices.Speech" Version="1.45.0" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.8" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Abstractions" Version="9.0.8" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.8">
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
             <PrivateAssets>all</PrivateAssets>
         </PackageReference>
-        <PackageReference Include="Microsoft.EntityFrameworkCore.DynamicLinq" Version="9.6.6" />
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="9.0.6" />
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="9.0.6" />
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.6">
+        <PackageReference Include="Microsoft.EntityFrameworkCore.DynamicLinq" Version="9.6.7" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="9.0.8" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="9.0.8" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.8">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
-        <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.6" />
-        <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="9.0.6" />
+        <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.8" />
+        <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="9.0.8" />
         <PackageReference Include="NAudio" Version="2.2.1" />
         <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />
-        <PackageReference Include="NSwag.AspNetCore" Version="14.4.0" />
+        <PackageReference Include="NSwag.AspNetCore" Version="14.5.0" />
         <PackageReference Include="ShikimoriSharp" Version="1.3.4" />
         <PackageReference Include="SignalRSwaggerGen" Version="4.8.0" />
         <PackageReference Include="SignalRSwaggerGen.Core" Version="1.5.0" />
         <PackageReference Include="SignalRSwaggerGen.Utils" Version="1.7.0" />
         <PackageReference Include="SigSpec.AspNetCore" Version="0.3.2" />
-        <PackageReference Include="SixLabors.ImageSharp" Version="3.1.10" />
+        <PackageReference Include="SixLabors.ImageSharp" Version="3.1.11" />
         <PackageReference Include="SoundCloudExplode" Version="1.6.6" />
-        <PackageReference Include="Swashbuckle.AspNetCore" Version="9.0.1" />
-        <PackageReference Include="Swashbuckle.AspNetCore.Swagger" Version="9.0.1" />
-        <PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" Version="9.0.1" />
-        <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" Version="9.0.1" />
+        <PackageReference Include="Swashbuckle.AspNetCore" Version="9.0.3" />
+        <PackageReference Include="Swashbuckle.AspNetCore.Swagger" Version="9.0.3" />
+        <PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" Version="9.0.3" />
+        <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" Version="9.0.3" />
         <PackageReference Include="System.Data.DataSetExtensions" Version="4.5.0" />
         <PackageReference Include="System.Net.Security" Version="4.3.2" />
-        <PackageReference Include="System.Speech" Version="9.0.6" />
-        <PackageReference Include="Telegram.Bot" Version="22.5.1" />
+        <PackageReference Include="System.Speech" Version="9.0.8" />
+        <PackageReference Include="Telegram.Bot" Version="22.6.0" />
         <PackageReference Include="TwitchLib" Version="3.5.3" />
         <PackageReference Include="TwitchLib.Api" Version="3.9.0" />
         <PackageReference Include="TwitchLib.Api.Core" Version="3.9.0" />
@@ -82,8 +89,8 @@
         <PackageReference Include="TwitchLib.Api.Helix.Models" Version="3.9.0" />
         <PackageReference Include="TwitchLib.EventSub.Core" Version="2.6.0" />
         <PackageReference Include="TwitchLib.EventSub.Websockets" Version="0.6.0" />
-        <PackageReference Include="WTelegramClient" Version="4.3.5" />
-        <PackageReference Include="YandexMusicResolver" Version="7.1.1" />
+        <PackageReference Include="WTelegramClient" Version="4.3.7" />
+        <PackageReference Include="YandexMusicResolver" Version="7.1.2" />
     </ItemGroup>
 
     <ItemGroup>
@@ -132,9 +139,7 @@
       <Folder Include="Services\TabletopGames\Entitys\Enums\" />
     </ItemGroup>
 
-
-
-    <Target Name="BuildClientApp" BeforeTargets="Build">
+    <!--<Target Name="BuildClientApp" BeforeTargets="Build">
         <Message Importance="high" Text="Сборка фронта через yarn build..." />
         <Exec WorkingDirectory="..\mars.client" Command="yarn install" />
         <Exec WorkingDirectory="..\mars.client" Command="yarn build" />
@@ -149,9 +154,7 @@
         </ItemGroup>
 
         <Copy SourceFiles="@(DistFiles)" DestinationFolder="wwwroot\%(RecursiveDir)" SkipUnchangedFiles="true" />
-    </Target>
-
-
+    </Target>-->
 
     <ItemGroup>
       <Reference Include="HuTao.NET">

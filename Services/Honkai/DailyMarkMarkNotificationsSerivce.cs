@@ -5,7 +5,6 @@ namespace MARS.Server.Services.Honkai;
 public class DailyMarkMarkNotificationsSerivce(
     ITelegramBotClient client,
     ILogger<DailyMarkMarkNotificationsSerivce> logger,
-    IWebHostEnvironment environment,
     IDbContextFactory<AppDbContext> factory
 ) : BackgroundService, ITelegramusService
 {
@@ -161,10 +160,7 @@ public class DailyMarkMarkNotificationsSerivce(
                         catch (Exception e)
                             when (e is ApiRequestException && e.Message.Contains("chat not found"))
                         {
-                            if (environment.IsProduction())
-                            {
-                                dbContext.TelegramUsers.Remove(user);
-                            }
+                            dbContext.TelegramUsers.Remove(user);
                         }
 
                         user.LastTimeMessage = DateTimeOffset.Now;

@@ -41,6 +41,8 @@ public static class StartupEstensions
 {
     internal static IServiceCollection AddBaseAspNetMiddlewares(this IServiceCollection services)
     {
+        services.AddSpaYarp();
+
         services
             .AddSignalR(options =>
             {
@@ -236,6 +238,7 @@ public static class StartupEstensions
         services.AddSingleton<AutoRewardInfoFetcher>();
         services.AddHostedService(sp => sp.GetRequiredService<AutoRewardInfoFetcher>());
 
+        services.AddSingleton<FramedataChangeDetectionService>();
         services.AddSingleton<Tekken8FrameData>();
         services.AddHostedService(sp => sp.GetRequiredService<Tekken8FrameData>());
 
