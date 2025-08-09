@@ -1,5 +1,5 @@
 ﻿using System.Text.Json.Serialization;
-using NSwag.Annotations;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace MARS.Server.Services.Framedata.Entitys;
 
@@ -15,7 +15,7 @@ public class Move
     public required string Command { get; set; }
 
     [JsonIgnore]
-    [OpenApiIgnore]
+    [SwaggerIgnore]
     public TekkenCharacter? Character { get; set; }
     public bool IsFromStance => !string.IsNullOrWhiteSpace(StanceCode);
     public string StanceCode { get; set; } = string.Empty;

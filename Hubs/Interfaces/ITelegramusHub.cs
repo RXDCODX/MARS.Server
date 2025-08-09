@@ -6,7 +6,7 @@ using TwitchLib.Client.Models;
 
 namespace MARS.Server.Hubs.Interfaces;
 
-[SignalRHub("/telegramus", AutoDiscover.MethodsAndParams)]
+[SignalRHub("/hubs/telegramus", AutoDiscover.MethodsAndParams)]
 public interface ITelegramusHub
 {
     public Task Alert(MediaDto info);

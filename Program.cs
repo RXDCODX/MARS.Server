@@ -15,7 +15,6 @@ using MARS.Server.Services.Twitch.Synthesizer;
 using MARS.Server.Services.Twitch.Synthesizer.Enitity;
 using MARS.Server.Services.WaifuRoll;
 using MARS.Server.Services.WaifuRoll.helpers;
-using Microsoft.OpenApi;
 using WTelegram;
 
 namespace MARS.Server;
@@ -208,23 +207,24 @@ public static class Program
 
         if (IsUseSwagger)
         {
-            app.UseSwagger(options => options.OpenApiVersion = OpenApiSpecVersion.OpenApi3_0);
-            app.UseSwaggerUi(settings =>
+            app.UseSwagger();
+            app.UseSwaggerUI(c =>
             {
-                settings.Path = "/ui";
-                settings.DocumentPath = "/swagger/{documentName}/swagger.yaml";
-                settings.DocumentTitle = "SWAGGER SCHEMA";
+                c.RoutePrefix = "ui";
+                c.SwaggerEndpoint("/swagger/api/swagger.json", "API");
+                c.SwaggerEndpoint("/swagger/hubs/swagger.json", "Hubs");
+                c.DocumentTitle = "SWAGGER SCHEMA";
             });
         }
 
         app.UseCors("CorsPolicy");
-        app.MapHub<TelegramusHub>("/telegramus");
-        app.MapHub<TunaHub>("/tuna");
-        //app.MapHub<SoundBarHub>("/soundbar");
-        app.MapHub<ScoreboardHub>("/scoreboardhub");
+        app.MapHub<TelegramusHub>("/hubs/telegramus");
+        app.MapHub<TunaHub>("/hubs/tuna");
+        //app.MapHub<SoundBarHub>("/hubs/soundbar");
+        app.MapHub<ScoreboardHub>("/hubs/scoreboard");
         if (IsUseSoundRequest)
         {
-            app.MapHub<SoundRequestHub>("/sr");
+            app.MapHub<SoundRequestHub>("/hubs/soundrequest");
         }
 
         app.UseRouting();

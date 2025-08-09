@@ -3,7 +3,7 @@
     "http": {
       "commandName": "Project",
       "launchBrowser": true,
-      "launchUrl": "/ui",
+      "launchUrl": "ui",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
         "ASPNETCORE_SPA_LAUNCH": "FALSE"
@@ -14,7 +14,7 @@
     "https": {
       "commandName": "Project",
       "launchBrowser": true,
-      "launchUrl": "/ui",
+      "launchUrl": "ui",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
         "ASPNETCORE_SPA_LAUNCH": "TRUE"
@@ -25,7 +25,7 @@
     "http (no spa)": {
       "commandName": "Project",
       "launchBrowser": true,
-      "launchUrl": "/ui",
+      "launchUrl": "ui",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
         "ASPNETCORE_SPA_LAUNCH": "FALSE"
@@ -36,7 +36,7 @@
     "https (no spa)": {
       "commandName": "Project",
       "launchBrowser": true,
-      "launchUrl": "/ui",
+      "launchUrl": "ui",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
         "ASPNETCORE_SPA_LAUNCH": "FALSE"

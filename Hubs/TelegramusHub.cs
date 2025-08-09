@@ -1,11 +1,12 @@
 ﻿using MARS.Server.Services.Twitch.SoundBarService;
 using SignalRSwaggerGen.Attributes;
 using SignalRSwaggerGen.Enums;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace MARS.Server.Hubs;
 
 [SignalRHub(
-    "/telegramus",
+    "/hubs/telegramus",
     AutoDiscover.MethodsAndParams,
     null,
     null,
@@ -28,6 +29,7 @@ public class TelegramusHub(
 
     private string ShikimoriSite => shikiOptions.Value.ShikimoriSite;
 
+    [SwaggerIgnore]
     public override async Task OnConnectedAsync()
     {
         await Clients.Caller.PostTwitchInfo(
@@ -38,6 +40,7 @@ public class TelegramusHub(
         await Clients.Caller.UpdateWaifuPrizes(prizes);
     }
 
+    [SwaggerIgnore]
     private async Task<ICollection<PrizeType>> GetWaifuPrizesAsync(
         AppDbContext? dbContext = default
     )

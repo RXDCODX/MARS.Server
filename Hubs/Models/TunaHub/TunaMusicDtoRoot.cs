@@ -3,7 +3,7 @@ using Newtonsoft.Json;
 
 namespace MARS.Server.Hubs.Models.TunaHub;
 
-public class Root
+public class TunaMusicDtoRoot
 {
     [JsonProperty("searchRequestId")]
     [JsonPropertyName("searchRequestId")]

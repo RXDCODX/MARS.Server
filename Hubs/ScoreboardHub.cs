@@ -2,10 +2,11 @@
 using MARS.Server.Services.Scoreboard.Entitys;
 using SignalRSwaggerGen.Attributes;
 using SignalRSwaggerGen.Enums;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace MARS.Server.Hubs;
 
-[SignalRHub("/scoreboard", AutoDiscover.MethodsAndParams)]
+[SignalRHub("/hubs/scoreboard", AutoDiscover.MethodsAndParams)]
 public class ScoreboardHub(ScoreboardService scoreboardService, ILogger<ScoreboardHub> logger)
     : Hub<IScoreboardHub>
 {
@@ -24,6 +25,7 @@ public class ScoreboardHub(ScoreboardService scoreboardService, ILogger<Scoreboa
         }
     }
 
+    [SwaggerIgnore]
     public override Task OnConnectedAsync()
     {
         return GetCurrentState();
@@ -92,9 +94,13 @@ public class ScoreboardHub(ScoreboardService scoreboardService, ILogger<Scoreboa
     public async Task ForceProcessPendingUpdates()
     {
         await scoreboardService.ForceProcessPendingUpdates();
-        logger.LogInformation("Forced processing of pending updates requested by {ConnectionId}", Context.ConnectionId);
+        logger.LogInformation(
+            "Forced processing of pending updates requested by {ConnectionId}",
+            Context.ConnectionId
+        );
     }
 
+    [SwaggerIgnore]
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
         logger.LogInformation(

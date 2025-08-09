@@ -5,7 +5,7 @@ using SignalRSwaggerGen.Attributes;
 
 namespace MARS.Server.Hubs;
 
-[SignalRHub]
+[SignalRHub("/hubs/tuna")]
 public class TunaHub : Hub
 {
     private static ISingleClientProxy? _yandexMusicApplication;
@@ -34,11 +34,11 @@ public class TunaHub : Hub
         return Task.CompletedTask;
     }
 
-    public Task<Root> GetYandexMusicTracks(string title)
+    public Task<TunaMusicDtoRoot> GetYandexMusicTracks(string title)
     {
         ArgumentNullException.ThrowIfNull(_yandexMusicApplication);
 
-        return _yandexMusicApplication.InvokeCoreAsync<Root>(
+        return _yandexMusicApplication.InvokeCoreAsync<TunaMusicDtoRoot>(
             "SearchTrack",
             [title],
             CancellationToken.None

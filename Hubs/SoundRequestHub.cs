@@ -5,7 +5,7 @@ using SignalRSwaggerGen.Enums;
 
 namespace MARS.Server.Hubs;
 
-[SignalRHub(null, AutoDiscover.MethodsAndParams)]
+[SignalRHub("/hubs/soundrequest", AutoDiscover.MethodsAndParams)]
 public class SoundRequestHub(
     SoundRequestBackendPlayer player,
     SoundRequestUserQueue userQueue,
