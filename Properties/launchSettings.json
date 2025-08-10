@@ -6,7 +6,7 @@
       "launchUrl": "ui",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
-        "ASPNETCORE_SPA_LAUNCH": "FALSE"
+        "ASPNETCORE_SPA_LAUNCH": "TRUE"
       },
       "dotnetRunMessages": true,
       "applicationUrl": "http://localhost:9255"

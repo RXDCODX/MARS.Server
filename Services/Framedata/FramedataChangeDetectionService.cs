@@ -552,29 +552,26 @@ public class FramedataChangeDetectionService(
         foreach (var change in changes)
         {
             // Проверяем, нет ли уже такого изменения
-            var existingChange = await dbContext
-                .Set<FramedataChange>()
-                .FirstOrDefaultAsync(
-                    c =>
-                        c.CharacterName == change.CharacterName
-                        && c.ChangeType == change.ChangeType
-                        && c.Status == FramedataChangeStatus.Pending,
-                    _cancellationToken
-                );
+            var existingChange = await dbContext.FramedataChanges.FirstOrDefaultAsync(
+                c =>
+                    c.CharacterName == change.CharacterName
+                    && c.ChangeType == change.ChangeType
+                    && c.Status == FramedataChangeStatus.Pending,
+                _cancellationToken
+            );
 
             if (existingChange == null)
             {
-                // Добавляем изменение и связанные сущности
-                dbContext.Set<FramedataChange>().Add(change);
+                dbContext.FramedataChanges.Add(change);
 
                 if (change.ChangeInfo != null)
                 {
-                    dbContext.Set<FramedataChangeInfo>().Add(change.ChangeInfo);
+                    dbContext.FramedataChangeInfos.Add(change.ChangeInfo);
                 }
 
                 if (change.CurrentInfo != null)
                 {
-                    dbContext.Set<FramedataChangeInfo>().Add(change.CurrentInfo);
+                    dbContext.FramedataChangeInfos.Add(change.CurrentInfo);
                 }
             }
         }
@@ -775,8 +772,7 @@ public class FramedataChangeDetectionService(
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(_cancellationToken);
 
         return await dbContext
-            .Set<FramedataChange>()
-            .Include(c => c.ChangeInfo)
+            .FramedataChanges.Include(c => c.ChangeInfo)
             .Include(c => c.CurrentInfo)
             .Where(c => c.Status == FramedataChangeStatus.Pending)
             .OrderBy(c => c.DetectedAt)

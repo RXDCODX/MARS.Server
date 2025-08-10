@@ -1,4 +1,5 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace MARS.Server.Services.Framedata.Entitys;
 
@@ -8,41 +9,44 @@ namespace MARS.Server.Services.Framedata.Entitys;
 public class FramedataChangeInfo
 {
     [Key]
+    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     public int Id { get; set; }
-    
+
     /// <summary>
-    /// Ссылка на изменение
+    /// Ссылка на изменение (опционально для записей, используемых как CurrentInfo)
     /// </summary>
-    public int FramedataChangeId { get; set; }
+    public int? FramedataChangeId { get; set; }
+
+    [JsonIgnore]
     public FramedataChange? FramedataChange { get; set; }
-    
+
     /// <summary>
     /// Ссылка на изменение для CurrentInfo (nullable)
     /// </summary>
     public int? CurrentInfoId { get; set; }
-    
+
     /// <summary>
     /// Тип информации
     /// </summary>
     public FramedataInfoType InfoType { get; set; }
-    
+
     /// <summary>
     /// JSON данные (сериализованная информация)
     /// </summary>
     [Required]
     public required string JsonData { get; set; }
-    
+
     /// <summary>
     /// URL источника данных
     /// </summary>
     [MaxLength(500)]
     public string? SourceUrl { get; set; }
-    
+
     /// <summary>
     /// Время получения данных
     /// </summary>
     public DateTimeOffset RetrievedAt { get; set; } = DateTimeOffset.Now;
-    
+
     /// <summary>
     /// Хеш данных для сравнения
     /// </summary>
@@ -59,14 +63,14 @@ public enum FramedataInfoType
     /// Информация о персонаже
     /// </summary>
     Character,
-    
+
     /// <summary>
     /// Информация о ходе
     /// </summary>
     Move,
-    
+
     /// <summary>
     /// Список ходов персонажа
     /// </summary>
-    Movelist
+    Movelist,
 }
