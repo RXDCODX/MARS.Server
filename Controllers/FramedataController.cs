@@ -459,4 +459,119 @@ public class FramedataController(
             return StatusCode(500, "Внутренняя ошибка сервера");
         }
     }
+
+    /// <summary>
+    /// Получить изображение персонажа
+    /// </summary>
+    /// <param name="name">Имя персонажа</param>
+    /// <returns>Изображение персонажа</returns>
+    [HttpGet("characters/{name}/image")]
+    public async Task<ActionResult> GetCharacterImage(string name)
+    {
+        try
+        {
+            await using var dbContext = await factory.CreateDbContextAsync();
+            var character = await dbContext.TekkenCharacters
+                .FirstOrDefaultAsync(c => c.Name == name);
+
+            if (character == null)
+            {
+                return NotFound($"Персонаж '{name}' не найден");
+            }
+
+            if (character.Image == null || character.Image.Length == 0)
+            {
+                return NotFound($"Изображение для персонажа '{name}' не найдено");
+            }
+
+            var contentType = GetContentType(character.ImageExtension);
+            return File(character.Image, contentType);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при получении изображения персонажа {Name}", name);
+            return StatusCode(500, "Внутренняя ошибка сервера");
+        }
+    }
+
+    /// <summary>
+    /// Получить аватар персонажа
+    /// </summary>
+    /// <param name="name">Имя персонажа</param>
+    /// <returns>Аватар персонажа</returns>
+    [HttpGet("characters/{name}/avatar")]
+    public async Task<ActionResult> GetCharacterAvatar(string name)
+    {
+        try
+        {
+            await using var dbContext = await factory.CreateDbContextAsync();
+            var character = await dbContext.TekkenCharacters
+                .FirstOrDefaultAsync(c => c.Name == name);
+
+            if (character == null)
+            {
+                return NotFound($"Персонаж '{name}' не найден");
+            }
+
+            if (character.AvatarImage == null || character.AvatarImage.Length == 0)
+            {
+                return NotFound($"Аватар для персонажа '{name}' не найден");
+            }
+
+            var contentType = GetContentType(character.AvatarImageExtension);
+            return File(character.AvatarImage, contentType);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при получении аватара персонажа {Name}", name);
+            return StatusCode(500, "Внутренняя ошибка сервера");
+        }
+    }
+
+    /// <summary>
+    /// Получить полное изображение персонажа
+    /// </summary>
+    /// <param name="name">Имя персонажа</param>
+    /// <returns>Полное изображение персонажа</returns>
+    [HttpGet("characters/{name}/fullbody")]
+    public async Task<ActionResult> GetCharacterFullBody(string name)
+    {
+        try
+        {
+            await using var dbContext = await factory.CreateDbContextAsync();
+            var character = await dbContext.TekkenCharacters
+                .FirstOrDefaultAsync(c => c.Name == name);
+
+            if (character == null)
+            {
+                return NotFound($"Персонаж '{name}' не найден");
+            }
+
+            if (character.FullBodyImage == null || character.FullBodyImage.Length == 0)
+            {
+                return NotFound($"Полное изображение для персонажа '{name}' не найдено");
+            }
+
+            var contentType = GetContentType(character.FullBodyImageExtension);
+            return File(character.FullBodyImage, contentType);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при получении полного изображения персонажа {Name}", name);
+            return StatusCode(500, "Внутренняя ошибка сервера");
+        }
+    }
+
+    private static string GetContentType(string? extension)
+    {
+        return extension?.ToLowerInvariant() switch
+        {
+            "jpg" or "jpeg" => "image/jpeg",
+            "png" => "image/png",
+            "gif" => "image/gif",
+            "webp" => "image/webp",
+            "bmp" => "image/bmp",
+            _ => "application/octet-stream"
+        };
+    }
 }

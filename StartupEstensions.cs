@@ -14,6 +14,7 @@ using MARS.Server.Services.Twitch.FumoFriday;
 using MARS.Server.Services.Twitch.HelloVideos;
 using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.Twitch.MiniGamesStats;
+using MARS.Server.Services.Twitch.Client;
 using MARS.Server.Services.Twitch.Rewards.CloseGameReward;
 using MARS.Server.Services.Twitch.Rewards.MiniGames;
 using MARS.Server.Services.Twitch.Rewards.TwitchAlerts;
@@ -176,13 +177,9 @@ public static class StartupEstensions
 
         services.AddSingleton<ITwitchAPI>(twitchApi);
 
-        var credentials = new ConnectionCredentials(TwitchExstension.BotName, twitchConfig.OAuth);
-
-        var client = new TwitchClient(default, default, factory.CreateLogger<TwitchClient>());
-
-        client.Initialize(credentials, TwitchExstension.Channel);
-        client.Connect();
-        services.AddSingleton<ITwitchClient>(client);
+        services.AddSingleton<TwitchConnectionManager>();
+        services.AddHostedService(sp => sp.GetRequiredService<TwitchConnectionManager>());
+        services.AddSingleton<ITwitchClient>(sp => sp.GetRequiredService<TwitchConnectionManager>().Client);
 
         services.AddTwitchLibEventSubWebsockets();
 
