@@ -1,12 +1,9 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 using Swashbuckle.AspNetCore.Annotations;
 
-namespace MARS.Server.Services.Framedata.Entitys;
+namespace MARS.Server.Services.Framedata.Entitys.Pending;
 
-/// <summary>
-/// Represents a move in Tekken, including its command, properties, and effects.
-/// </summary>
-public class Move
+public class MovePending
 {
     [Key]
     public required string CharacterName { get; set; }
@@ -16,7 +13,7 @@ public class Move
 
     [JsonIgnore]
     [SwaggerIgnore]
-    public TekkenCharacter? Character { get; set; }
+    public TekkenCharacterPending? Character { get; set; }
     public bool IsFromStance => !string.IsNullOrWhiteSpace(StanceCode);
     public string StanceCode { get; set; } = string.Empty;
     public string? StanceName { get; set; } = string.Empty;
@@ -36,3 +33,5 @@ public class Move
     public string? CounterHitFrame { get; set; }
     public string[]? Notes { get; set; }
 }
+
+

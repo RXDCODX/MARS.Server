@@ -126,7 +126,7 @@ public abstract class BaseCommand
             "int" => int.Parse(value),
             "long" => long.Parse(value),
             "double" => double.Parse(value),
-            "bool" => bool.Parse(value),
+            "bool" => value.Equals("true", StringComparison.OrdinalIgnoreCase),
             "string" => value,
             _ => value,
         };

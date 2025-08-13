@@ -2,6 +2,7 @@
 using MARS.Server.CustomLoggers.DatabaseLogger;
 using MARS.Server.Services._365Genius.Entitys;
 using MARS.Server.Services.Framedata.Entitys;
+using MARS.Server.Services.Framedata.Entitys.Pending;
 using MARS.Server.Services.RandomMem.Entity;
 using MARS.Server.Services.Scoreboard.Entitys;
 using MARS.Server.Services.ServiceManager.Entitys;
@@ -58,6 +59,8 @@ public sealed class AppDbContext : DbContext
     public DbSet<Video365> Videos365 { get; set; } = null!;
     public DbSet<TekkenCharacter> TekkenCharacters { get; set; } = null!;
     public DbSet<Move> TekkenMoves { get; set; } = null!;
+    public DbSet<TekkenCharacterPending> TekkenCharactersPending { get; set; } = null!;
+    public DbSet<MovePending> TekkenMovesPending { get; set; } = null!;
     public DbSet<TwitchLeaderboardUser> TwitchLeaderboardUsers { get; set; } = null!;
     public DbSet<TelegramUpdateReceiverOffset> TelegramUpdateReceiverOffset { get; set; } = null!;
     public DbSet<WTelegramAlloweedChannel> WTelegramAlloweedChannels { get; set; } = null!;
@@ -70,8 +73,6 @@ public sealed class AppDbContext : DbContext
     public DbSet<ScoreboardState> ScoreboardStates { get; set; } = null!;
     public DbSet<ScoreboardPlayer> ScoreboardPlayers { get; set; } = null!;
     public DbSet<ScoreboardLayout> ScoreboardLayouts { get; set; } = null!;
-    public DbSet<FramedataChange> FramedataChanges { get; set; } = null!;
-    public DbSet<FramedataChangeInfo> FramedataChangeInfos { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -232,6 +233,8 @@ public sealed class AppDbContext : DbContext
         });
 
         modelBuilder.Entity<Move>().HasKey(o => new { o.CharacterName, o.Command });
+        modelBuilder.Entity<MovePending>().ToTable("TekkenMovesPending");
+        modelBuilder.Entity<MovePending>().HasKey(o => new { o.CharacterName, o.Command });
 
         modelBuilder
             .Entity<Move>()
@@ -241,7 +244,22 @@ public sealed class AppDbContext : DbContext
             .OnDelete(DeleteBehavior.NoAction); // assuming you add a CharacterId property to Move
 
         modelBuilder
+            .Entity<MovePending>()
+            .HasOne(m => m.Character)
+            .WithMany(c => c.Movelist)
+            .HasForeignKey(e => e.CharacterName)
+            .OnDelete(DeleteBehavior.NoAction);
+
+        modelBuilder
             .Entity<TekkenCharacter>()
+            .HasMany(c => c.Movelist)
+            .WithOne(m => m.Character)
+            .HasForeignKey(e => e.CharacterName)
+            .OnDelete(DeleteBehavior.NoAction);
+
+        modelBuilder.Entity<TekkenCharacterPending>().ToTable("TekkenCharactersPending");
+        modelBuilder
+            .Entity<TekkenCharacterPending>()
             .HasMany(c => c.Movelist)
             .WithOne(m => m.Character)
             .HasForeignKey(e => e.CharacterName)
@@ -275,36 +293,6 @@ public sealed class AppDbContext : DbContext
             .WithOne(s => s.Layout)
             .HasForeignKey<ScoreboardLayout>(l => l.ScoreboardStateId)
             .OnDelete(DeleteBehavior.Cascade);
-
-        // Конфигурация для FramedataChange
-        modelBuilder
-            .Entity<FramedataChange>()
-            .HasOne(c => c.ChangeInfo)
-            .WithOne(ci => ci.FramedataChange)
-            .HasForeignKey<FramedataChangeInfo>(ci => ci.FramedataChangeId)
-            .OnDelete(DeleteBehavior.Cascade);
-
-        modelBuilder
-            .Entity<FramedataChange>()
-            .HasOne(c => c.CurrentInfo)
-            .WithOne()
-            .HasForeignKey<FramedataChangeInfo>("CurrentInfoId")
-            .OnDelete(DeleteBehavior.Cascade);
-
-        modelBuilder
-            .Entity<FramedataChange>()
-            .Property(e => e.ChangeType)
-            .HasConversion<string>();
-
-        modelBuilder
-            .Entity<FramedataChange>()
-            .Property(e => e.Status)
-            .HasConversion<string>();
-
-        modelBuilder
-            .Entity<FramedataChangeInfo>()
-            .Property(e => e.InfoType)
-            .HasConversion<string>();
     }
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)

@@ -3,6 +3,7 @@ using System;
 using MARS.Server.DataBaseContext;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Telegramus.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250812140845_FrameDataChangesNewVersion")]
+    partial class FrameDataChangesNewVersion
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -66,6 +69,86 @@ namespace Telegramus.Migrations
                     b.ToTable("Logs");
                 });
 
+            modelBuilder.Entity("MARS.Server.Services.Framedata.Entitys.FramedataChange", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTimeOffset?>("AppliedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ChangeType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CharacterName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTimeOffset>("DetectedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("FramedataChanges");
+                });
+
+            modelBuilder.Entity("MARS.Server.Services.Framedata.Entitys.FramedataChangeInfo", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("CurrentInfoId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("DataHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<int?>("FramedataChangeId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("InfoType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("JsonData")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("RetrievedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("SourceUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CurrentInfoId")
+                        .IsUnique();
+
+                    b.HasIndex("FramedataChangeId")
+                        .IsUnique();
+
+                    b.ToTable("FramedataChangeInfos");
+                });
+
             modelBuilder.Entity("MARS.Server.Services.Framedata.Entitys.Move", b =>
                 {
                     b.Property<string>("CharacterName")
@@ -101,8 +184,8 @@ namespace Telegramus.Migrations
                     b.Property<bool>("Homing")
                         .HasColumnType("boolean");
 
-                    b.PrimitiveCollection<string[]>("Notes")
-                        .HasColumnType("text[]");
+                    b.Property<string>("Notes")
+                        .HasColumnType("text");
 
                     b.Property<bool>("PowerCrush")
                         .HasColumnType("boolean");
@@ -166,8 +249,8 @@ namespace Telegramus.Migrations
                     b.Property<bool>("Homing")
                         .HasColumnType("boolean");
 
-                    b.PrimitiveCollection<string[]>("Notes")
-                        .HasColumnType("text[]");
+                    b.Property<string>("Notes")
+                        .HasColumnType("text");
 
                     b.Property<bool>("PowerCrush")
                         .HasColumnType("boolean");
@@ -1059,6 +1142,21 @@ namespace Telegramus.Migrations
                     b.ToTable("Videos365");
                 });
 
+            modelBuilder.Entity("MARS.Server.Services.Framedata.Entitys.FramedataChangeInfo", b =>
+                {
+                    b.HasOne("MARS.Server.Services.Framedata.Entitys.FramedataChange", null)
+                        .WithOne("CurrentInfo")
+                        .HasForeignKey("MARS.Server.Services.Framedata.Entitys.FramedataChangeInfo", "CurrentInfoId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("MARS.Server.Services.Framedata.Entitys.FramedataChange", "FramedataChange")
+                        .WithOne("ChangeInfo")
+                        .HasForeignKey("MARS.Server.Services.Framedata.Entitys.FramedataChangeInfo", "FramedataChangeId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.Navigation("FramedataChange");
+                });
+
             modelBuilder.Entity("MARS.Server.Services.Framedata.Entitys.Move", b =>
                 {
                     b.HasOne("MARS.Server.Services.Framedata.Entitys.TekkenCharacter", "Character")
@@ -1411,6 +1509,13 @@ namespace Telegramus.Migrations
                         .IsRequired();
 
                     b.Navigation("Host");
+                });
+
+            modelBuilder.Entity("MARS.Server.Services.Framedata.Entitys.FramedataChange", b =>
+                {
+                    b.Navigation("ChangeInfo");
+
+                    b.Navigation("CurrentInfo");
                 });
 
             modelBuilder.Entity("MARS.Server.Services.Framedata.Entitys.Pending.TekkenCharacterPending", b =>

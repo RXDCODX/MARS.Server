@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 using MARS.Server.Services.Framedata;
+using MARS.Server.Configuration;
 using MARS.Server.Services.Scoreboard;
 using MARS.Server.Services.ServiceManager;
 using MARS.Server.Services.SoundRequest;
@@ -235,7 +236,10 @@ public static class StartupEstensions
         services.AddSingleton<AutoRewardInfoFetcher>();
         services.AddHostedService(sp => sp.GetRequiredService<AutoRewardInfoFetcher>());
 
-        services.AddSingleton<FramedataChangeDetectionService>();
+        services.AddSingleton<FramedataStagingService>();
+        services.Configure<FramedataConfiguration>(
+            manager.GetSection(AppBase.Base).GetSection(FramedataConfiguration.SectionName)
+        );
         services.AddSingleton<Tekken8FrameData>();
         services.AddHostedService(sp => sp.GetRequiredService<Tekken8FrameData>());
 

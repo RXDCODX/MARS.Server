@@ -9,10 +9,7 @@ namespace MARS.Server.Services.Framedata;
 public partial class Tekken8FrameData
 {
     private readonly CancellationToken _cancellationToken = lifetime.ApplicationStopping;
-    private static readonly KeyValuePair<string, string> DefaultValuePair = new(
-        string.Empty,
-        string.Empty
-    );
+
 
     internal static readonly Dictionary<TekkenMoveTag, string[]> MoveTags = new()
     {
@@ -74,7 +71,5 @@ public partial class Tekken8FrameData
         },
     };
 
-    public readonly Uri BasePath = new("https://wavu.wiki");
-    public readonly Uri SecondBasePath = new("https://tekkendocs.com");
     public List<Move> VictorinaMoves = [];
 }

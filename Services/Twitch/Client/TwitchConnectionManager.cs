@@ -1,8 +1,8 @@
+﻿using MARS.Server.Configuration;
+using MARS.Server.Exstensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using MARS.Server.Configuration;
-using MARS.Server.Exstensions;
 using TwitchLib.Client;
 using TwitchLib.Client.Interfaces;
 using TwitchLib.Client.Models;
@@ -41,13 +41,20 @@ public class TwitchConnectionManager : IHostedService
         {
             MessagesAllowedInPeriod = 750,
             ThrottlingPeriod = TimeSpan.FromSeconds(30),
-            DisconnectWait = TimeSpan.FromSeconds(2),
+            DisconnectWait = (int)TimeSpan.FromSeconds(2).TotalMilliseconds,
         };
 
         _webSocketClient = new WebSocketClient(clientOptions);
-        _client = new TwitchClient(_webSocketClient, default, loggerFactory.CreateLogger<TwitchClient>());
+        _client = new TwitchClient(
+            _webSocketClient,
+            default,
+            loggerFactory.CreateLogger<TwitchClient>()
+        );
 
-        _credentials = new ConnectionCredentials(TwitchExstension.BotName, _twitchOptions.Value.OAuth);
+        _credentials = new ConnectionCredentials(
+            TwitchExstension.BotName,
+            _twitchOptions.Value.OAuth
+        );
 
         _client.OnConnected += (_, _) =>
         {
@@ -68,7 +75,7 @@ public class TwitchConnectionManager : IHostedService
             _isConnected = false;
             _lastDisconnectedAt = DateTimeOffset.Now;
             _lastDisconnectReason = args.Error?.Message ?? "Unknown";
-            _logger.LogError(args.Error, "Twitch connection error: {Message}", args.Error?.Message);
+            _logger.LogError("Twitch connection error: {Message}", args.Error?.Message);
         };
     }
 
@@ -106,11 +113,11 @@ public class TwitchConnectionManager : IHostedService
     public string GetStatus()
     {
         var joined = string.Join(", ", _client.JoinedChannels.Select(c => c.Channel));
-        return $"Connected: {_isConnected}\n" +
-               $"JoinedChannels: {(string.IsNullOrWhiteSpace(joined) ? "-" : joined)}\n" +
-               $"LastConnectedAt: {_lastConnectedAt?.ToString("yyyy-MM-dd HH:mm:ss") ?? "-"}\n" +
-               $"LastDisconnectedAt: {_lastDisconnectedAt?.ToString("yyyy-MM-dd HH:mm:ss") ?? "-"}\n" +
-               $"LastDisconnectReason: {_lastDisconnectReason ?? "-"}";
+        return $"Connected: {_isConnected}\n"
+            + $"JoinedChannels: {(string.IsNullOrWhiteSpace(joined) ? "-" : joined)}\n"
+            + $"LastConnectedAt: {_lastConnectedAt?.ToString("yyyy-MM-dd HH:mm:ss") ?? "-"}\n"
+            + $"LastDisconnectedAt: {_lastDisconnectedAt?.ToString("yyyy-MM-dd HH:mm:ss") ?? "-"}\n"
+            + $"LastDisconnectReason: {_lastDisconnectReason ?? "-"}";
     }
 
     public Task<bool> ReconnectAsync()
@@ -151,5 +158,3 @@ public class TwitchConnectionManager : IHostedService
         }
     }
 }
-
-

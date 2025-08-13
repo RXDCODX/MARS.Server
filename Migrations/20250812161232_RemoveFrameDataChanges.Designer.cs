@@ -3,6 +3,7 @@ using System;
 using MARS.Server.DataBaseContext;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Telegramus.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250812161232_RemoveFrameDataChanges")]
+    partial class RemoveFrameDataChanges
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -101,8 +104,8 @@ namespace Telegramus.Migrations
                     b.Property<bool>("Homing")
                         .HasColumnType("boolean");
 
-                    b.PrimitiveCollection<string[]>("Notes")
-                        .HasColumnType("text[]");
+                    b.Property<string>("Notes")
+                        .HasColumnType("text");
 
                     b.Property<bool>("PowerCrush")
                         .HasColumnType("boolean");
@@ -166,8 +169,8 @@ namespace Telegramus.Migrations
                     b.Property<bool>("Homing")
                         .HasColumnType("boolean");
 
-                    b.PrimitiveCollection<string[]>("Notes")
-                        .HasColumnType("text[]");
+                    b.Property<string>("Notes")
+                        .HasColumnType("text");
 
                     b.Property<bool>("PowerCrush")
                         .HasColumnType("boolean");

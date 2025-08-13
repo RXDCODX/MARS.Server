@@ -1,5 +1,8 @@
-﻿using MARS.Server.Services.Framedata.Entitys;
+﻿using MARS.Server.Configuration;
+using MARS.Server.Services.Framedata.Entitys;
 using MARS.Server.Services.Framedata.Entitys.Enums;
+using MARS.Server.Services.Framedata.Subservices.Entitys;
+using MARS.Server.Services.Framedata.Subservices.HtmlParsers;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace MARS.Server.Services.Framedata;
@@ -9,10 +12,13 @@ public partial class Tekken8FrameData(
     IDbContextFactory<AppDbContext> dbContextFactory,
     IHostApplicationLifetime lifetime,
     ITelegramBotClient client,
-    FramedataChangeDetectionService changeDetectionService
+    FramedataStagingService stagingService,
+    IOptions<FramedataConfiguration> framedataOptions
 ) : BackgroundService, ITelegramusService
 {
-    private readonly FramedataChangeDetectionService _changeDetectionService = changeDetectionService;
+    private readonly FramedataStagingService _stagingService = stagingService;
+    private readonly FramedataConfiguration _framedataConfig = framedataOptions.Value;
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(stoppingToken);
@@ -27,6 +33,134 @@ public partial class Tekken8FrameData(
         }
 
         await UpdateMovesForVictorina();
+    }
+
+    public async Task StartScrupFrameData(Chat? chat = default)
+    {
+        // Определяем порядок источников из конфигурации
+        var primary = _framedataConfig.PrimarySource;
+        var secondary =
+            primary == FramedataSource.Tekkendocs
+                ? FramedataSource.Wavu
+                : FramedataSource.Tekkendocs;
+
+        var parsed = new List<string>();
+
+        try
+        {
+            // Создаем парсер для основного источника
+            var primaryParser = FramedataParserFactory.CreateDefaultParser(
+                primary,
+                logger,
+                dbContextFactory,
+                _stagingService,
+                _cancellationToken
+            );
+
+            parsed = await primaryParser.ParseCharactersAndMoves();
+        }
+        catch (Exception ex)
+        {
+            logger.LogException(ex);
+        }
+
+        try
+        {
+            // Допарсить пропуски вторичным источником
+            var allCharacterKeys = Aliases
+                .CharacterNameAliases.Keys.Select(x => x.ToLower())
+                .ToHashSet();
+            var missing = allCharacterKeys.Except(parsed.Select(x => x.ToLower())).ToList();
+            if (missing.Count > 0)
+            {
+                var secondaryParser = FramedataParserFactory.CreateDefaultParser(
+                    secondary,
+                    logger,
+                    dbContextFactory,
+                    _stagingService,
+                    _cancellationToken
+                );
+
+                await secondaryParser.ParseCharactersAndMoves(missing);
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogException(ex);
+        }
+
+        await UpdateMovesForVictorina();
+        await client.SendMessage(
+            chat switch
+            {
+                not null => chat,
+                _ => TelegramExstension.Rxdcodx,
+            },
+            primary == FramedataSource.Tekkendocs
+                ? "Парсинг теккен фрейм даты (tekkendocs→fallback:wavu) завершён!"
+                : "Парсинг теккен фрейм даты (wavu→fallback:tekkendocs) завершён!",
+            cancellationToken: _cancellationToken
+        );
+    }
+
+    /// <summary>
+    /// Парсит только персонажей без мувов
+    /// </summary>
+    /// <param name="source">Источник данных</param>
+    /// <param name="characterNamesToParse">Список имен персонажей для парсинга (null для всех)</param>
+    /// <param name="useStagingService">Использовать ли сервис ожидающих изменений</param>
+    /// <returns>Список имен распарсенных персонажей</returns>
+    public async Task<List<string>> ParseCharactersOnly(
+        FramedataSource source,
+        List<string>? characterNamesToParse = null,
+        bool useStagingService = true
+    )
+    {
+        var options = new FramedataParserOptions
+        {
+            UseStagingService = useStagingService,
+            ParseMoves = false,
+            RequestDelaySeconds = 2,
+            CharacterDelaySeconds = 5,
+            MaxRetries = 3,
+            HttpTimeoutSeconds = 30,
+        };
+
+        var parser = FramedataParserFactory.CreateParser(
+            source,
+            logger,
+            dbContextFactory,
+            useStagingService ? _stagingService : null,
+            _cancellationToken,
+            options
+        );
+
+        return await parser.ParseCharactersOnly(characterNamesToParse);
+    }
+
+    /// <summary>
+    /// Парсит персонажей и мувы с настраиваемыми параметрами
+    /// </summary>
+    /// <param name="source">Источник данных</param>
+    /// <param name="options">Настройки парсера</param>
+    /// <param name="characterNamesToParse">Список имен персонажей для парсинга (null для всех)</param>
+    /// <returns>Список имен распарсенных персонажей</returns>
+    public async Task<List<string>> ParseWithCustomOptions(
+        FramedataSource source,
+        FramedataParserOptions options,
+        List<string>? characterNamesToParse = null
+    )
+    {
+        var parser = FramedataParserFactory.CreateParser(
+            source,
+            logger,
+            dbContextFactory,
+            options.UseStagingService ? _stagingService : null,
+            _cancellationToken,
+            options
+        );
+
+        return await parser.ParseCharactersAndMoves(characterNamesToParse);
     }
 
     public async Task<(TekkenMoveTag Tag, Move[] Moves)?> GetMultipleMovesByTags(string input)

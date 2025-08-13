@@ -1,6 +1,9 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using MARS.Server.DataBaseContext;
 using MARS.Server.Services.Framedata.Entitys;
+using MARS.Server.Services.Framedata.Entitys.Enums;
+using MARS.Server.Services.Framedata.Subservices.Entitys;
+using MARS.Server.Services.Framedata.Subservices.HtmlParsers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -335,7 +338,7 @@ public class FramedataController(
             existingMove.BlockFrame = move.BlockFrame;
             existingMove.HitFrame = move.HitFrame;
             existingMove.CounterHitFrame = move.CounterHitFrame;
-            existingMove.Notes = move.Notes;
+            existingMove.Notes = move.Notes?.ToArray();
 
             await dbContext.SaveChangesAsync();
 
@@ -471,8 +474,9 @@ public class FramedataController(
         try
         {
             await using var dbContext = await factory.CreateDbContextAsync();
-            var character = await dbContext.TekkenCharacters
-                .FirstOrDefaultAsync(c => c.Name == name);
+            var character = await dbContext.TekkenCharacters.FirstOrDefaultAsync(c =>
+                c.Name == name
+            );
 
             if (character == null)
             {
@@ -505,8 +509,9 @@ public class FramedataController(
         try
         {
             await using var dbContext = await factory.CreateDbContextAsync();
-            var character = await dbContext.TekkenCharacters
-                .FirstOrDefaultAsync(c => c.Name == name);
+            var character = await dbContext.TekkenCharacters.FirstOrDefaultAsync(c =>
+                c.Name == name
+            );
 
             if (character == null)
             {
@@ -539,8 +544,9 @@ public class FramedataController(
         try
         {
             await using var dbContext = await factory.CreateDbContextAsync();
-            var character = await dbContext.TekkenCharacters
-                .FirstOrDefaultAsync(c => c.Name == name);
+            var character = await dbContext.TekkenCharacters.FirstOrDefaultAsync(c =>
+                c.Name == name
+            );
 
             if (character == null)
             {
@@ -571,7 +577,176 @@ public class FramedataController(
             "gif" => "image/gif",
             "webp" => "image/webp",
             "bmp" => "image/bmp",
-            _ => "application/octet-stream"
+            _ => "application/octet-stream",
         };
     }
+
+    /// <summary>
+    /// Запустить парсинг фреймдаты с указанными настройками
+    /// </summary>
+    /// <param name="request">Запрос на парсинг</param>
+    /// <returns>Результат парсинга</returns>
+    [HttpPost("parse")]
+    public async Task<ActionResult<ParseResult>> ParseFramedata([FromBody] ParseRequest request)
+    {
+        try
+        {
+            var options = new FramedataParserOptions
+            {
+                RequestDelaySeconds = request.RequestDelaySeconds ?? 2,
+                CharacterDelaySeconds = request.CharacterDelaySeconds ?? 5,
+                UseStagingService = request.UseStagingService ?? true,
+                ParseMoves = request.ParseMoves ?? true,
+                MaxRetries = request.MaxRetries ?? 3,
+                HttpTimeoutSeconds = request.HttpTimeoutSeconds ?? 30,
+            };
+
+            var parser = FramedataParserFactory.CreateParser(
+                request.Source,
+                logger,
+                factory,
+                null, // StagingService будет добавлен позже
+                CancellationToken.None,
+                options
+            );
+
+            var result = await parser.ParseCharactersAndMoves(request.CharacterNames);
+
+            return Ok(
+                new ParseResult
+                {
+                    Success = true,
+                    ParsedCharacters = result,
+                    Message = $"Успешно распарсено {result.Count} персонажей",
+                }
+            );
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при парсинге фреймдаты");
+            return StatusCode(
+                500,
+                new ParseResult { Success = false, Message = $"Ошибка при парсинге: {ex.Message}" }
+            );
+        }
+    }
+
+    /// <summary>
+    /// Запустить парсинг только персонажей (без мувов)
+    /// </summary>
+    /// <param name="request">Запрос на парсинг</param>
+    /// <returns>Результат парсинга</returns>
+    [HttpPost("parse-characters-only")]
+    public async Task<ActionResult<ParseResult>> ParseCharactersOnly(
+        [FromBody] ParseRequest request
+    )
+    {
+        try
+        {
+            var options = new FramedataParserOptions
+            {
+                RequestDelaySeconds = request.RequestDelaySeconds ?? 2,
+                CharacterDelaySeconds = request.CharacterDelaySeconds ?? 5,
+                UseStagingService = request.UseStagingService ?? true,
+                ParseMoves = false, // Всегда false для этого метода
+                MaxRetries = request.MaxRetries ?? 3,
+                HttpTimeoutSeconds = request.HttpTimeoutSeconds ?? 30,
+            };
+
+            var parser = FramedataParserFactory.CreateParser(
+                request.Source,
+                logger,
+                factory,
+                null, // StagingService будет добавлен позже
+                CancellationToken.None,
+                options
+            );
+
+            var result = await parser.ParseCharactersOnly(request.CharacterNames);
+
+            return Ok(
+                new ParseResult
+                {
+                    Success = true,
+                    ParsedCharacters = result,
+                    Message = $"Успешно распарсено {result.Count} персонажей (без мувов)",
+                }
+            );
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при парсинге персонажей");
+            return StatusCode(
+                500,
+                new ParseResult { Success = false, Message = $"Ошибка при парсинге: {ex.Message}" }
+            );
+        }
+    }
+}
+
+/// <summary>
+/// Запрос на парсинг фреймдаты
+/// </summary>
+public class ParseRequest
+{
+    /// <summary>
+    /// Источник данных
+    /// </summary>
+    public FramedataSource Source { get; set; }
+
+    /// <summary>
+    /// Список имен персонажей для парсинга (null для всех)
+    /// </summary>
+    public List<string>? CharacterNames { get; set; }
+
+    /// <summary>
+    /// Задержка между запросами в секундах
+    /// </summary>
+    public int? RequestDelaySeconds { get; set; }
+
+    /// <summary>
+    /// Задержка между персонажами в секундах
+    /// </summary>
+    public int? CharacterDelaySeconds { get; set; }
+
+    /// <summary>
+    /// Использовать ли сервис ожидающих изменений
+    /// </summary>
+    public bool? UseStagingService { get; set; }
+
+    /// <summary>
+    /// Парсить ли мувы
+    /// </summary>
+    public bool? ParseMoves { get; set; }
+
+    /// <summary>
+    /// Максимальное количество попыток
+    /// </summary>
+    public int? MaxRetries { get; set; }
+
+    /// <summary>
+    /// Таймаут HTTP запросов в секундах
+    /// </summary>
+    public int? HttpTimeoutSeconds { get; set; }
+}
+
+/// <summary>
+/// Результат парсинга
+/// </summary>
+public class ParseResult
+{
+    /// <summary>
+    /// Успешность операции
+    /// </summary>
+    public bool Success { get; set; }
+
+    /// <summary>
+    /// Список распарсенных персонажей
+    /// </summary>
+    public List<string> ParsedCharacters { get; set; } = new();
+
+    /// <summary>
+    /// Сообщение о результате
+    /// </summary>
+    public string Message { get; set; } = string.Empty;
 }

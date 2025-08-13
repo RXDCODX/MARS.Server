@@ -1,145 +1,92 @@
 ﻿using MARS.Server.Services.Framedata;
 using MARS.Server.Services.Framedata.Entitys;
+using MARS.Server.Services.Framedata.Entitys.Pending;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MARS.Server.Controllers;
 
 /// <summary>
-/// Контроллер для управления изменениями в фреймдате
+/// Контроллер для управления staging-изменениями фреймдаты
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
-public class FramedataChangesController(
-    FramedataChangeDetectionService changeDetectionService,
-    ILogger<FramedataChangesController> logger
-) : ControllerBase
+public class FramedataChangesController(FramedataStagingService stagingService) : ControllerBase
 {
-    /// <summary>
-    /// Получает список ожидающих изменений
-    /// </summary>
-    [HttpGet("pending")]
-    public async Task<ActionResult<List<FramedataChange>>> GetPendingChanges()
+    // Pending lists
+    [HttpGet("pending/characters")]
+    public async Task<ActionResult<List<TekkenCharacterPendingDto>>> GetPendingCharacters() =>
+        Ok(await stagingService.GetPendingCharacters());
+
+    [HttpGet("pending/moves")]
+    public async Task<ActionResult<List<MovePendingDto>>> GetPendingMoves(
+        [FromQuery] string? characterName
+    ) => Ok(await stagingService.GetPendingMoves(characterName));
+
+    // Approve/Reject single entities
+    [HttpPost("approve/character/{name}")]
+    public async Task<ActionResult> ApproveCharacter(string name)
     {
-        try
-        {
-            var changes = await changeDetectionService.GetPendingChanges();
-            return Ok(changes);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Ошибка при получении ожидающих изменений");
-            return StatusCode(500, "Внутренняя ошибка сервера");
-        }
+        await stagingService.ApproveCharacter(name);
+        return Ok(new { message = "Персонаж применён" });
     }
 
-    /// <summary>
-    /// Применяет изменение
-    /// </summary>
-    [HttpPost("apply/{changeId}")]
-    public async Task<ActionResult> ApplyChange(int changeId)
+    [HttpPost("reject/character/{name}")]
+    public async Task<ActionResult> RejectCharacter(string name)
     {
-        try
-        {
-            await changeDetectionService.ApplyChange(changeId);
-            return Ok(new { message = "Изменение успешно применено" });
-        }
-        catch (ArgumentException ex)
-        {
-            logger.LogWarning(
-                ex,
-                "Попытка применить несуществующее изменение {ChangeId}",
-                changeId
-            );
-            return NotFound(new { error = ex.Message });
-        }
-        catch (InvalidOperationException ex)
-        {
-            logger.LogWarning(
-                ex,
-                "Попытка применить изменение с неподходящим статусом {ChangeId}",
-                changeId
-            );
-            return BadRequest(new { error = ex.Message });
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Ошибка при применении изменения {ChangeId}", changeId);
-            return StatusCode(500, "Внутренняя ошибка сервера");
-        }
+        await stagingService.RejectCharacter(name);
+        return Ok(new { message = "Персонаж отклонён" });
     }
 
-    /// <summary>
-    /// Отклоняет изменение
-    /// </summary>
-    [HttpPost("reject/{changeId}")]
-    public async Task<ActionResult> RejectChange(int changeId)
+    [HttpPost("approve/move/{characterName}/{command}")]
+    public async Task<ActionResult> ApproveMove(string characterName, string command)
     {
-        try
-        {
-            await changeDetectionService.RejectChange(changeId);
-            return Ok(new { message = "Изменение отклонено" });
-        }
-        catch (ArgumentException ex)
-        {
-            logger.LogWarning(
-                ex,
-                "Попытка отклонить несуществующее изменение {ChangeId}",
-                changeId
-            );
-            return NotFound(new { error = ex.Message });
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Ошибка при отклонении изменения {ChangeId}", changeId);
-            return StatusCode(500, "Внутренняя ошибка сервера");
-        }
+        await stagingService.ApproveMove(characterName, command);
+        return Ok(new { message = "Ход применён" });
     }
 
-    /// <summary>
-    /// Запускает обнаружение изменений
-    /// </summary>
-    [HttpPost("detect")]
-    public async Task<ActionResult> StartDetection()
+    [HttpPost("reject/move/{characterName}/{command}")]
+    public async Task<ActionResult> RejectMove(string characterName, string command)
     {
-        try
-        {
-            await changeDetectionService.StartScrupFrameData();
-            return Ok(new { message = "Обнаружение изменений запущено" });
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Ошибка при запуске обнаружения изменений");
-            return StatusCode(500, "Внутренняя ошибка сервера");
-        }
+        await stagingService.RejectMove(characterName, command);
+        return Ok(new { message = "Ход отклонён" });
     }
 
-    /// <summary>
-    /// Получает статистику изменений
-    /// </summary>
+    // Approve/Reject all
+    [HttpPost("approve/all")]
+    public async Task<ActionResult> ApproveAll()
+    {
+        await stagingService.ApproveAll();
+        return Ok(new { message = "Все изменения применены" });
+    }
+
+    [HttpPost("reject/all")]
+    public async Task<ActionResult> RejectAll()
+    {
+        await stagingService.RejectAll();
+        return Ok(new { message = "Все изменения отклонены" });
+    }
+
+    // Триггер обычного парсинга -> складывает в staging
+    [HttpPost("scrape")]
+    public async Task<ActionResult> Scrape([FromServices] Tekken8FrameData frameData)
+    {
+        await frameData.StartScrupFrameData();
+        return Ok(new { message = "Парсинг запущен, изменения отправлены в staging" });
+    }
+
     [HttpGet("stats")]
     public async Task<ActionResult<object>> GetStats()
     {
-        try
+        var pendingChars = await stagingService.GetPendingCharacters();
+        var pendingMoves = await stagingService.GetPendingMoves();
+        var stats = new
         {
-            var pendingChanges = await changeDetectionService.GetPendingChanges();
-
-            var stats = new
-            {
-                TotalPending = pendingChanges.Count,
-                ByType = pendingChanges
-                    .GroupBy(c => c.ChangeType)
-                    .ToDictionary(g => g.Key.ToString(), g => g.Count()),
-                ByCharacter = pendingChanges
-                    .GroupBy(c => c.CharacterName)
-                    .ToDictionary(g => g.Key, g => g.Count()),
-            };
-
-            return Ok(stats);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Ошибка при получении статистики изменений");
-            return StatusCode(500, "Внутренняя ошибка сервера");
-        }
+            PendingCharacters = pendingChars.Count,
+            PendingMoves = pendingMoves.Count,
+            ByCharacter = pendingMoves
+                .GroupBy(m => m.CharacterName)
+                .ToDictionary(g => g.Key, g => g.Count()),
+        };
+        return Ok(stats);
     }
 }

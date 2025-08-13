@@ -200,11 +200,6 @@ public static class Program
 
         app.AddStaticFilesBrowser();
 
-        if (isSpa)
-        {
-            app.UseSpaYarp();
-        }
-
         if (IsUseSwagger)
         {
             app.UseSwagger();
@@ -215,6 +210,11 @@ public static class Program
                 c.SwaggerEndpoint("/swagger/hubs/swagger.json", "Hubs");
                 c.DocumentTitle = "SWAGGER SCHEMA";
             });
+        }
+
+        if (isSpa)
+        {
+            app.UseSpaYarp();
         }
 
         app.UseCors("CorsPolicy");
