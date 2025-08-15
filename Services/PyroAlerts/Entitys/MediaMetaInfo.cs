@@ -9,4 +9,9 @@ public class MediaMetaInfo
     public bool IsLooped { get; set; } = false;
     public int Duration { get; set; } = 15; //длительность отображения на странице для изображения, по умолчанию 5 секунд
     public MediaAlertPriority Priority { get; set; } = MediaAlertPriority.Normal;
+
+    /// <summary>
+    /// From 0 to 100
+    /// </summary>
+    public int Volume { get; set; } = 100;
 }

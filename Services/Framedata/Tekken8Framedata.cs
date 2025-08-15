@@ -35,10 +35,14 @@ public partial class Tekken8FrameData(
         await UpdateMovesForVictorina();
     }
 
-    public async Task StartScrupFrameData(Chat? chat = default)
+    public async Task StartScrupFrameData(
+        Chat? chat = default,
+        FramedataParserOptions? options = default,
+        FramedataSource? source = default
+    )
     {
         // Определяем порядок источников из конфигурации
-        var primary = _framedataConfig.PrimarySource;
+        var primary = source ?? _framedataConfig.PrimarySource;
         var secondary =
             primary == FramedataSource.Tekkendocs
                 ? FramedataSource.Wavu
@@ -49,13 +53,23 @@ public partial class Tekken8FrameData(
         try
         {
             // Создаем парсер для основного источника
-            var primaryParser = FramedataParserFactory.CreateDefaultParser(
-                primary,
-                logger,
-                dbContextFactory,
-                _stagingService,
-                _cancellationToken
-            );
+            var primaryParser =
+                options != default
+                    ? FramedataParserFactory.CreateDefaultParser(
+                        primary,
+                        logger,
+                        dbContextFactory,
+                        _stagingService,
+                        _cancellationToken
+                    )
+                    : FramedataParserFactory.CreateParser(
+                        primary,
+                        logger,
+                        dbContextFactory,
+                        _stagingService,
+                        _cancellationToken,
+                        options
+                    );
 
             parsed = await primaryParser.ParseCharactersAndMoves();
         }
@@ -73,13 +87,23 @@ public partial class Tekken8FrameData(
             var missing = allCharacterKeys.Except(parsed.Select(x => x.ToLower())).ToList();
             if (missing.Count > 0)
             {
-                var secondaryParser = FramedataParserFactory.CreateDefaultParser(
-                    secondary,
-                    logger,
-                    dbContextFactory,
-                    _stagingService,
-                    _cancellationToken
-                );
+                var secondaryParser =
+                    options != default
+                        ? FramedataParserFactory.CreateDefaultParser(
+                            secondary,
+                            logger,
+                            dbContextFactory,
+                            _stagingService,
+                            _cancellationToken
+                        )
+                        : FramedataParserFactory.CreateParser(
+                            secondary,
+                            logger,
+                            dbContextFactory,
+                            _stagingService,
+                            _cancellationToken,
+                            options
+                        );
 
                 await secondaryParser.ParseCharactersAndMoves(missing);
             }
@@ -110,7 +134,7 @@ public partial class Tekken8FrameData(
     /// <param name="characterNamesToParse">Список имен персонажей для парсинга (null для всех)</param>
     /// <param name="useStagingService">Использовать ли сервис ожидающих изменений</param>
     /// <returns>Список имен распарсенных персонажей</returns>
-    public async Task<List<string>> ParseCharactersOnly(
+    public async Task ParseCharactersOnly(
         FramedataSource source,
         List<string>? characterNamesToParse = null,
         bool useStagingService = true
@@ -126,16 +150,13 @@ public partial class Tekken8FrameData(
             HttpTimeoutSeconds = 30,
         };
 
-        var parser = FramedataParserFactory.CreateParser(
-            source,
-            logger,
-            dbContextFactory,
-            useStagingService ? _stagingService : null,
-            _cancellationToken,
-            options
+        await Task.Factory.StartNew(
+            async () =>
+            {
+                await StartScrupFrameData(null, options, source);
+            },
+            _cancellationToken
         );
-
-        return await parser.ParseCharactersOnly(characterNamesToParse);
     }
 
     /// <summary>
@@ -145,22 +166,19 @@ public partial class Tekken8FrameData(
     /// <param name="options">Настройки парсера</param>
     /// <param name="characterNamesToParse">Список имен персонажей для парсинга (null для всех)</param>
     /// <returns>Список имен распарсенных персонажей</returns>
-    public async Task<List<string>> ParseWithCustomOptions(
+    public async Task ParseWithCustomOptions(
         FramedataSource source,
         FramedataParserOptions options,
         List<string>? characterNamesToParse = null
     )
     {
-        var parser = FramedataParserFactory.CreateParser(
-            source,
-            logger,
-            dbContextFactory,
-            options.UseStagingService ? _stagingService : null,
-            _cancellationToken,
-            options
+        await Task.Factory.StartNew(
+            async () =>
+            {
+                await StartScrupFrameData(null, options, source);
+            },
+            _cancellationToken
         );
-
-        return await parser.ParseCharactersAndMoves(characterNamesToParse);
     }
 
     public async Task<(TekkenMoveTag Tag, Move[] Moves)?> GetMultipleMovesByTags(string input)

@@ -743,7 +743,7 @@ public class ParseResult
     /// <summary>
     /// Список распарсенных персонажей
     /// </summary>
-    public List<string> ParsedCharacters { get; set; } = new();
+    public List<string> ParsedCharacters { get; set; } = [];
 
     /// <summary>
     /// Сообщение о результате

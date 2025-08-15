@@ -1,4 +1,5 @@
-﻿using TwitchLib.Client.Events;
+﻿using System.Collections.Concurrent;
+using TwitchLib.Client.Events;
 
 namespace MARS.Server.Services.Twitch.ClientMessages.SignalRAlerts;
 
@@ -10,7 +11,7 @@ public class TwitchMessagesHubAwaker : BackgroundService
     private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
 
     private readonly CancellationToken _token;
-    private MediaInfo[]? _alerts;
+    private ConcurrentBag<MediaInfo>? Alerts { get; set; }
 
     public TwitchMessagesHubAwaker(
         ITwitchClient client,
@@ -54,21 +55,22 @@ public class TwitchMessagesHubAwaker : BackgroundService
             await Task.Factory.StartNew(
                 async () =>
                 {
-                    if (_alerts is not { Length: > 0 })
+                    if (Alerts is not { Count: > 0 })
                     {
                         await using var dbContext = await _dbContextFactory.CreateDbContextAsync(
                             _token
                         );
 
-                        _alerts = await dbContext
-                            .Alerts.AsNoTracking()
-                            .Where(mediaInfo =>
-                                !string.IsNullOrWhiteSpace(mediaInfo.TextInfo.TriggerWord)
-                            )
-                            .ToArrayAsync(_token);
+                        Alerts = new ConcurrentBag<MediaInfo>(
+                            dbContext
+                                .Alerts.AsNoTracking()
+                                .Where(mediaInfo =>
+                                    !string.IsNullOrWhiteSpace(mediaInfo.TextInfo.TriggerWord)
+                                )
+                        );
                     }
 
-                    var alerts = _alerts
+                    var alerts = Alerts
                         .Where(info =>
                         {
                             var message = e.ChatMessage.Message.Trim();
@@ -121,22 +123,22 @@ public class TwitchMessagesHubAwaker : BackgroundService
                     switch (alerts.Length)
                     {
                         case > 1:
-                            {
-                                Random.Shared.Shuffle(alerts);
-                                var info = alerts[0];
+                        {
+                            Random.Shared.Shuffle(alerts);
+                            var info = alerts[0];
 
-                                var alert = new MediaDto() { MediaInfo = info };
+                            var alert = new MediaDto() { MediaInfo = info };
 
-                                await _hubContext.Clients.All.Alert(alert);
-                                break;
-                            }
+                            await _hubContext.Clients.All.Alert(alert);
+                            break;
+                        }
                         case 1:
-                            {
-                                var alert = new MediaDto { MediaInfo = alerts[0] };
+                        {
+                            var alert = new MediaDto { MediaInfo = alerts[0] };
 
-                                await _hubContext.Clients.All.Alert(alert);
-                                break;
-                            }
+                            await _hubContext.Clients.All.Alert(alert);
+                            break;
+                        }
                     }
                 },
                 _token
@@ -172,5 +174,10 @@ public class TwitchMessagesHubAwaker : BackgroundService
                 );
             }
         }
+    }
+
+    public void ClearAlertsCache()
+    {
+        Alerts?.Clear();
     }
 }

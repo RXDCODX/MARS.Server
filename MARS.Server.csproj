@@ -138,22 +138,33 @@
       <Folder Include="Services\TabletopGames\Entitys\Enums\" />
     </ItemGroup>
 
-    <!--<Target Name="BuildClientApp" BeforeTargets="Build">
+    <Target Name="BuildClientApp" BeforeTargets="Build">
         <Message Importance="high" Text="Сборка фронта через yarn build..." />
         <Exec WorkingDirectory="..\mars.client" Command="yarn install" />
         <Exec WorkingDirectory="..\mars.client" Command="yarn build" />
     </Target>
 
-    <Target Name="CopyClientDistToWwwroot" AfterTargets="Build">
+    <Target Name="CopyClientDistToWwwroot" AfterTargets="piBuiuld">
         <Message Importance="high" Text="Копирование dist в wwwroot..." />
-        <RemoveDir Directories="wwwroot/assets/**/*" />
+        <RemoveDir Directories="wwwroot\assets" />
 
         <ItemGroup>
             <DistFiles Include="..\mars.client\dist\**\*" />
         </ItemGroup>
 
         <Copy SourceFiles="@(DistFiles)" DestinationFolder="wwwroot\%(RecursiveDir)" SkipUnchangedFiles="true" />
-    </Target>-->
+    </Target>
+    
+    <Target Name="CopyClientDistToPublishWwwroot" AfterTargets="Publish">
+        <Message Importance="high" Text="Копирование dist в опубликованный wwwroot..." />
+        <RemoveDir Directories="$(PublishDir)wwwroot\assets" />
+
+        <ItemGroup>
+            <DistFiles Include="..\mars.client\dist\**\*" />
+        </ItemGroup>
+
+        <Copy SourceFiles="@(DistFiles)" DestinationFolder="$(PublishDir)wwwroot\%(RecursiveDir)" SkipUnchangedFiles="true" />
+    </Target>
 
     <ItemGroup>
       <Reference Include="HuTao.NET">

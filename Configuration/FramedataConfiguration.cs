@@ -1,7 +1,8 @@
-namespace MARS.Server.Configuration;
+﻿namespace MARS.Server.Configuration;
 
 public enum FramedataSource
 {
+    None = 0,
     Wavu,
     Tekkendocs,
 }
@@ -14,5 +15,3 @@ public class FramedataConfiguration
     public FramedataSource PrimarySource { get; set; } = FramedataSource.Tekkendocs;
 #pragma warning restore CS8618
 }
-
-

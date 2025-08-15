@@ -11,10 +11,23 @@ public class CatisaCommand(ITwitchClient client) : BaseCommand
 
     public override Platform[] AvailablePlatforms => [Platform.Api, Platform.Telegram];
 
-    public override CommandParameterInfo[] Parameters => [
-        new CommandParameterInfo { Name = "channel", Description = "Канал для отправки сообщения", Type = "string", Required = true },
-        new CommandParameterInfo { Name = "message", Description = "Текст для отправки сообщения", Type = "string", Required = true }
-    ];
+    public override CommandParameterInfo[] Parameters =>
+        [
+            new CommandParameterInfo
+            {
+                Name = "channel",
+                Description = "Канал для отправки сообщения",
+                Type = "string",
+                Required = true,
+            },
+            new CommandParameterInfo
+            {
+                Name = "message",
+                Description = "Текст для отправки сообщения",
+                Type = "string",
+                Required = true,
+            },
+        ];
 
     public override Task<string> ExecuteAsync(
         Dictionary<string, object> parameters,
@@ -28,6 +41,7 @@ public class CatisaCommand(ITwitchClient client) : BaseCommand
         Task.Factory.StartNew(
             () =>
             {
+                client.JoinChannel(channel);
                 client.SendMessage(channel, message);
             },
             cancellationToken

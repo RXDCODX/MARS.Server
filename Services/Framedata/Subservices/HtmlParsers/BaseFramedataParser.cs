@@ -40,7 +40,7 @@ public abstract class BaseFramedataParser(
         if (Options.UseStagingService && StagingService != null)
         {
             // Через сервис ожидающих изменений
-            await StagingService.StageCharacterAndMoves(character, Array.Empty<Move>());
+            await StagingService.StageCharacterAndMoves(character, []);
         }
         else
         {
@@ -176,7 +176,7 @@ public abstract class BaseFramedataParser(
                     BlockFrame = group.First().BlockFrame,
                     HitFrame = group.First().HitFrame,
                     CounterHitFrame = group.First().CounterHitFrame,
-                    Notes = group.SelectMany(m => m.Notes ?? Array.Empty<string>()).ToArray(),
+                    Notes = group.SelectMany(m => m.Notes ?? []).ToArray(),
                 };
 
                 consolidatedMoves.Add(consolidatedMove);

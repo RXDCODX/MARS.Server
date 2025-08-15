@@ -39,10 +39,7 @@ public class WavuFramedataParser : BaseFramedataParser
         var config = AngleSharp.Configuration.Default.WithDefaultLoader();
         var context = BrowsingContext.New(config);
 
-        var doc = await context.OpenNewAsync(
-            _basePath.AbsoluteUri + "t/Main_Page",
-            CancellationToken
-        );
+        var doc = await context.OpenAsync(_basePath.AbsoluteUri + "t/Main_Page", CancellationToken);
 
         var charSelectContainer = doc.QuerySelector("div.char-select-t8");
         if (charSelectContainer == null)
@@ -579,7 +576,7 @@ public class WavuFramedataParser : BaseFramedataParser
             }
         }
 
-        // Если у элемента нет прямого текста, но есть дочерние элементы, 
+        // Если у элемента нет прямого текста, но есть дочерние элементы,
         // то рекурсивно обрабатываем их
         if (!hasDirectText)
         {
