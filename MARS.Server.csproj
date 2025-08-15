@@ -144,7 +144,7 @@
         <Exec WorkingDirectory="..\mars.client" Command="yarn build" />
     </Target>
 
-    <Target Name="CopyClientDistToWwwroot" AfterTargets="piBuiuld">
+    <Target Name="CopyClientDistToWwwroot" AfterTargets="Build">
         <Message Importance="high" Text="Копирование dist в wwwroot..." />
         <RemoveDir Directories="wwwroot\assets" />
 
