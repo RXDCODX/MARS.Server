@@ -38,7 +38,7 @@ public class FramedataStagingService(
         if (existingCharacter == null || !EqualsByJson(existingCharacter, character))
         {
             var staged = MapToPending(character);
-            
+
             if (pendingCharacter == null)
             {
                 await db.TekkenCharactersPending.AddAsync(staged, _cancellationToken);
@@ -66,7 +66,7 @@ public class FramedataStagingService(
             )
             {
                 var stagedMove = MapToPending(move);
-                
+
                 if (!pendingMoves.TryGetValue(move.Command, out var pending))
                 {
                     await db.TekkenMovesPending.AddAsync(stagedMove, _cancellationToken);
@@ -84,14 +84,17 @@ public class FramedataStagingService(
     public async Task<List<TekkenCharacterPendingDto>> GetPendingCharacters()
     {
         await using var db = await dbContextFactory.CreateDbContextAsync(_cancellationToken);
-        var pendingCharacters = await db.TekkenCharactersPending.AsNoTracking().ToListAsync(_cancellationToken);
-        
+        var pendingCharacters = await db
+            .TekkenCharactersPending.AsNoTracking()
+            .ToListAsync(_cancellationToken);
+
         var result = new List<TekkenCharacterPendingDto>();
         foreach (var pc in pendingCharacters)
         {
-            var existing = await db.TekkenCharacters.AsNoTracking()
+            var existing = await db
+                .TekkenCharacters.AsNoTracking()
                 .FirstOrDefaultAsync(c => c.Name == pc.Name, _cancellationToken);
-            
+
             var dto = new TekkenCharacterPendingDto
             {
                 Name = pc.Name,
@@ -107,12 +110,12 @@ public class FramedataStagingService(
                 Description = pc.Description,
                 Strengths = pc.Strengths,
                 Weaknesess = pc.Weaknesess,
-                IsNew = existing == null // true если персонаж новый, false если обновление
+                IsNew = existing == null, // true если персонаж новый, false если обновление
             };
-            
+
             result.Add(dto);
         }
-        
+
         return result;
     }
 
@@ -124,15 +127,19 @@ public class FramedataStagingService(
         {
             query = query.Where(m => m.CharacterName == characterName);
         }
-        
+
         var pendingMoves = await query.AsNoTracking().ToListAsync(_cancellationToken);
-        
+
         var result = new List<MovePendingDto>();
         foreach (var pm in pendingMoves)
         {
-            var existing = await db.TekkenMoves.AsNoTracking()
-                .FirstOrDefaultAsync(m => m.CharacterName == pm.CharacterName && m.Command == pm.Command, _cancellationToken);
-            
+            var existing = await db
+                .TekkenMoves.AsNoTracking()
+                .FirstOrDefaultAsync(
+                    m => m.CharacterName == pm.CharacterName && m.Command == pm.Command,
+                    _cancellationToken
+                );
+
             var dto = new MovePendingDto
             {
                 CharacterName = pm.CharacterName,
@@ -154,12 +161,12 @@ public class FramedataStagingService(
                 HitFrame = pm.HitFrame,
                 CounterHitFrame = pm.CounterHitFrame,
                 Notes = pm.Notes,
-                IsNew = existing == null // true если ход новый, false если обновление
+                IsNew = existing == null, // true если ход новый, false если обновление
             };
-            
+
             result.Add(dto);
         }
-        
+
         return result;
     }
 
@@ -187,11 +194,11 @@ public class FramedataStagingService(
         }
 
         // Сначала удаляем все связанные pending moves, чтобы избежать нарушения ограничения внешнего ключа
-        var relatedMoves = await db.TekkenMovesPending
-            .Where(m => m.CharacterName == name)
+        var relatedMoves = await db
+            .TekkenMovesPending.Where(m => m.CharacterName == name)
             .ToListAsync(_cancellationToken);
-        
-        if (relatedMoves.Any())
+
+        if (relatedMoves.Count != 0)
         {
             db.TekkenMovesPending.RemoveRange(relatedMoves);
         }
@@ -208,17 +215,17 @@ public class FramedataStagingService(
                 c => c.Name == name,
                 _cancellationToken
             ) ?? throw new ArgumentException($"Pending character {name} not found");
-        
+
         // Сначала удаляем все связанные pending moves, чтобы избежать нарушения ограничения внешнего ключа
-        var relatedMoves = await db.TekkenMovesPending
-            .Where(m => m.CharacterName == name)
+        var relatedMoves = await db
+            .TekkenMovesPending.Where(m => m.CharacterName == name)
             .ToListAsync(_cancellationToken);
-        
-        if (relatedMoves.Any())
+
+        if (relatedMoves.Count != 0)
         {
             db.TekkenMovesPending.RemoveRange(relatedMoves);
         }
-        
+
         db.TekkenCharactersPending.Remove(pending);
         await db.SaveChangesAsync(_cancellationToken);
     }

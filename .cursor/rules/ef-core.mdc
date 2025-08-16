@@ -1,0 +1,8 @@
+---
+alwaysApply: true
+---
+when you using entity framework database context dont forget to use exstension method 
+```
+AsNoTracking()
+```
+for better perfomance unless explicitly stated otherwise

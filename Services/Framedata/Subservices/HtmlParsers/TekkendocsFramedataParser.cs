@@ -302,7 +302,9 @@ public class TekkendocsFramedataParser : BaseFramedataParser
         var textElements = new List<string>();
 
         if (node == null)
+        {
             return textElements;
+        }
 
         // Проверяем, есть ли у узла прямые текстовые узлы (не в дочерних элементах)
         var hasDirectText = false;
@@ -319,7 +321,7 @@ public class TekkendocsFramedataParser : BaseFramedataParser
             }
         }
 
-        // Если у узла нет прямого текста, но есть дочерние элементы, 
+        // Если у узла нет прямого текста, но есть дочерние элементы,
         // то рекурсивно обрабатываем их
         if (!hasDirectText)
         {

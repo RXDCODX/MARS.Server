@@ -137,12 +137,18 @@ public class ScrupFrameDataCommand(Tekken8FrameData frameData) : BaseCommand
     )
     {
         if (parameters.TryGetValue(key, out var value) && value is int intValue)
+        {
             return intValue;
+        }
+
         if (
             parameters.TryGetValue(key, out var stringValue)
             && int.TryParse(stringValue.ToString(), out var parsed)
         )
+        {
             return parsed;
+        }
+
         return defaultValue;
     }
 
@@ -155,14 +161,19 @@ public class ScrupFrameDataCommand(Tekken8FrameData frameData) : BaseCommand
         if (parameters.TryGetValue(key, out var value))
         {
             if (value is bool boolValue)
+            {
                 return boolValue;
+            }
+
             if (value is string stringValue)
+            {
                 return stringValue.ToLower() switch
                 {
                     "true" or "1" or "yes" or "on" => true,
                     "false" or "0" or "no" or "off" => false,
                     _ => defaultValue,
                 };
+            }
         }
         return defaultValue;
     }
