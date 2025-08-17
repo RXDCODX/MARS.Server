@@ -3,6 +3,7 @@ using MARS.Server.CustomLoggers.DatabaseLogger;
 using MARS.Server.Services._365Genius.Entitys;
 using MARS.Server.Services.Framedata.Entitys;
 using MARS.Server.Services.Framedata.Entitys.Pending;
+using MARS.Server.Services.Honkai.Entitys;
 using MARS.Server.Services.RandomMem.Entity;
 using MARS.Server.Services.Scoreboard.Entitys;
 using MARS.Server.Services.ServiceManager.Entitys;
@@ -73,6 +74,7 @@ public sealed class AppDbContext : DbContext
     public DbSet<ScoreboardState> ScoreboardStates { get; set; } = null!;
     public DbSet<ScoreboardPlayer> ScoreboardPlayers { get; set; } = null!;
     public DbSet<ScoreboardLayout> ScoreboardLayouts { get; set; } = null!;
+    public DbSet<DailyAutoMarkupUser> HonkaiMarkupUser { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

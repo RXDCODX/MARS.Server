@@ -147,8 +147,12 @@ public static class Program
         services.AddSingleton<PyroAlertsHelper>();
         services.AddSingleton<PyroAlertsHandler>();
 
-        services.AddSingleton<DailyMarkMarkNotificationsSerivce>();
-        services.AddHostedService(sp => sp.GetRequiredService<DailyMarkMarkNotificationsSerivce>());
+        // Honkai: Star Rail сервисы
+        services.AddSingleton<DailyMarkRedeemService>();
+        services.AddHostedService(sp => sp.GetRequiredService<DailyMarkRedeemService>());
+
+        services.AddSingleton<EnergyNotificationService>();
+        services.AddHostedService(sp => sp.GetRequiredService<EnergyNotificationService>());
 
         services.AddSingleton<AnswersForTwitchRewards>();
 
