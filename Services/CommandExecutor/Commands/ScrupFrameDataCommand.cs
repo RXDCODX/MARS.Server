@@ -117,7 +117,7 @@ public class ScrupFrameDataCommand(Tekken8FrameData frameData) : BaseCommand
                 else
                 {
                     await frameData
-                        .ParseCharactersOnly(source, characterNames, options.UseStagingService)
+                        .ParseCharactersOnly(source, options.UseStagingService)
                         .ConfigureAwait(false);
                 }
             },

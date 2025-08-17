@@ -115,7 +115,7 @@ public static class Program
 
         /////////////////////////////////////////////////////////////////////////////////////////
 
-        await services.AddTwitchEvents(configuration, loggerFactory);
+        await services.AddTwitchEvents(configuration);
         services.AddCommandExecutorServices();
         services.AddTelegramThings(loggerFactory);
         services.AddConfiguration(configuration);
