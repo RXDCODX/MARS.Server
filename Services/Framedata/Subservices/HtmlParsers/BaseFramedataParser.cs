@@ -176,7 +176,7 @@ public abstract class BaseFramedataParser(
                     BlockFrame = group.First().BlockFrame,
                     HitFrame = group.First().HitFrame,
                     CounterHitFrame = group.First().CounterHitFrame,
-                    Notes = group.SelectMany(m => m.Notes ?? []).ToArray(),
+                    Notes = [.. group.SelectMany(m => m.Notes ?? [])],
                 };
 
                 consolidatedMoves.Add(consolidatedMove);

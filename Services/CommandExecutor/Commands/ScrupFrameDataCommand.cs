@@ -112,9 +112,7 @@ public class ScrupFrameDataCommand(Tekken8FrameData frameData) : BaseCommand
             {
                 if (options.ParseMoves)
                 {
-                    await frameData
-                        .ParseWithCustomOptions(source, options, characterNames)
-                        .ConfigureAwait(false);
+                    await frameData.ParseWithCustomOptions(source, options).ConfigureAwait(false);
                 }
                 else
                 {
@@ -136,20 +134,11 @@ public class ScrupFrameDataCommand(Tekken8FrameData frameData) : BaseCommand
         int defaultValue
     )
     {
-        if (parameters.TryGetValue(key, out var value) && value is int intValue)
-        {
-            return intValue;
-        }
-
-        if (
-            parameters.TryGetValue(key, out var stringValue)
+        return parameters.TryGetValue(key, out var value) && value is int intValue ? intValue
+            : parameters.TryGetValue(key, out var stringValue)
             && int.TryParse(stringValue.ToString(), out var parsed)
-        )
-        {
-            return parsed;
-        }
-
-        return defaultValue;
+                ? parsed
+            : defaultValue;
     }
 
     private static bool GetBoolParameter(
@@ -201,11 +190,13 @@ public class ScrupFrameDataCommand(Tekken8FrameData frameData) : BaseCommand
         {
             if (value is string stringValue)
             {
-                return stringValue
-                    .Split(',', StringSplitOptions.RemoveEmptyEntries)
-                    .Select(c => c.Trim())
-                    .Where(c => !string.IsNullOrEmpty(c))
-                    .ToList();
+                return
+                [
+                    .. stringValue
+                        .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                        .Select(c => c.Trim())
+                        .Where(c => !string.IsNullOrEmpty(c)),
+                ];
             }
             if (value is List<string> listValue)
             {

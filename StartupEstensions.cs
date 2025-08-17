@@ -1,13 +1,14 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
-using MARS.Server.Services.Framedata;
 using MARS.Server.Configuration;
+using MARS.Server.Services.Framedata;
 using MARS.Server.Services.Scoreboard;
 using MARS.Server.Services.ServiceManager;
 using MARS.Server.Services.SoundRequest;
 using MARS.Server.Services.SoundRequest.Platforms.YouTube;
 using MARS.Server.Services.TelegramBotService;
 using MARS.Server.Services.Twitch.AutoInfoFetch;
+using MARS.Server.Services.Twitch.Client;
 using MARS.Server.Services.Twitch.ClientMessages.AutoMessages;
 using MARS.Server.Services.Twitch.ClientMessages.SignalRAlerts;
 using MARS.Server.Services.Twitch.ClientMessages.TwitchAutoHello;
@@ -15,7 +16,6 @@ using MARS.Server.Services.Twitch.FumoFriday;
 using MARS.Server.Services.Twitch.HelloVideos;
 using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.Twitch.MiniGamesStats;
-using MARS.Server.Services.Twitch.Client;
 using MARS.Server.Services.Twitch.Rewards.CloseGameReward;
 using MARS.Server.Services.Twitch.Rewards.MiniGames;
 using MARS.Server.Services.Twitch.Rewards.TwitchAlerts;
@@ -160,8 +160,7 @@ public static class StartupEstensions
 
     internal static async Task<IServiceCollection> AddTwitchEvents(
         this IServiceCollection services,
-        IConfigurationManager manager,
-        ILoggerFactory factory
+        IConfigurationManager manager
     )
     {
         var twitchConfig = new TwitchConfiguration();
@@ -180,7 +179,9 @@ public static class StartupEstensions
 
         services.AddSingleton<TwitchConnectionManager>();
         services.AddHostedService(sp => sp.GetRequiredService<TwitchConnectionManager>());
-        services.AddSingleton<ITwitchClient>(sp => sp.GetRequiredService<TwitchConnectionManager>().Client);
+        services.AddSingleton<ITwitchClient>(sp =>
+            sp.GetRequiredService<TwitchConnectionManager>().Client
+        );
 
         services.AddTwitchLibEventSubWebsockets();
 

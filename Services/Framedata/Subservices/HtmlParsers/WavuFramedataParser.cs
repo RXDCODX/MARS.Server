@@ -53,7 +53,6 @@ public class WavuFramedataParser : BaseFramedataParser
         // Скачиваем спрайт-лист один раз
         const string spriteUrl = "https://wavu.wiki/w/images/5/55/T8-spritesheet.webp";
         byte[]? spriteBytes = null;
-        var fileExtension = Path.GetExtension(spriteUrl);
 
         try
         {
@@ -89,7 +88,7 @@ public class WavuFramedataParser : BaseFramedataParser
 
             try
             {
-                var character = await ParseCharacter(charDiv, doc, spriteBytes, fileExtension);
+                var character = await ParseCharacter(charDiv, doc, spriteBytes);
 
                 if (Options.ParseMoves)
                 {
@@ -194,7 +193,7 @@ public class WavuFramedataParser : BaseFramedataParser
                 }
             }
 
-            move.Notes = notesList.Count > 0 ? notesList.ToArray() : null;
+            move.Notes = notesList.Count > 0 ? [.. notesList] : null;
 
             // Парсим свойства мува
             ParseMoveProperties(move);
@@ -208,8 +207,7 @@ public class WavuFramedataParser : BaseFramedataParser
     private async Task<TekkenCharacter> ParseCharacter(
         IElement charDiv,
         IDocument doc,
-        byte[]? spriteBytes,
-        string fileExtension
+        byte[]? spriteBytes
     )
     {
         var aNode = charDiv.QuerySelector("a");
@@ -239,12 +237,7 @@ public class WavuFramedataParser : BaseFramedataParser
         var (strengths, weaknesses) = ParseStrengthsAndWeaknesses(divOutputElement);
 
         // Парсим изображение
-        var (imageBytes, imageExtension) = await ParseCharacterImage(
-            charDiv,
-            doc,
-            spriteBytes,
-            fileExtension
-        );
+        var (imageBytes, imageExtension) = await ParseCharacterImage(charDiv, doc, spriteBytes);
 
         var nameNode = charDiv.ParentElement?.QuerySelector("div.char-select-t8-text > a");
         var name = nameNode?.TextContent.Trim().ToLower();
@@ -326,8 +319,7 @@ public class WavuFramedataParser : BaseFramedataParser
     private async Task<(byte[]? imageBytes, string? imageExtension)> ParseCharacterImage(
         IElement charDiv,
         IDocument doc,
-        byte[]? spriteBytes,
-        string fileExtension
+        byte[]? spriteBytes
     )
     {
         if (spriteBytes == null)
@@ -518,7 +510,9 @@ public class WavuFramedataParser : BaseFramedataParser
             : characterName;
         var charName = string.Join(
             ' ',
-            characterName.Split(' ').Select(e => e[0].ToString().ToUpper() + e.Substring(1))
+            characterName
+                .Split(' ')
+                .Select(e => string.Concat(e[0].ToString().ToUpper(), e.AsSpan(1)))
         );
         var encodedName = Uri.EscapeDataString(charName + " movelist");
 

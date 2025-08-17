@@ -193,7 +193,7 @@ public static class Program
 
         services.AddSingleton(loggerFactory);
 
-        builder.AddStaticFilesBrowserOptions(directory);
+        builder.AddStaticFilesBrowserOptions();
 
         var app = builder.Build();
         var logger = app.Logger;

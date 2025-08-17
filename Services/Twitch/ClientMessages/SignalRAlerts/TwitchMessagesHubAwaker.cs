@@ -61,13 +61,14 @@ public class TwitchMessagesHubAwaker : BackgroundService
                             _token
                         );
 
-                        Alerts = new ConcurrentBag<MediaInfo>(
-                            dbContext
+                        Alerts =
+                        [
+                            .. dbContext
                                 .Alerts.AsNoTracking()
                                 .Where(mediaInfo =>
                                     !string.IsNullOrWhiteSpace(mediaInfo.TextInfo.TriggerWord)
-                                )
-                        );
+                                ),
+                        ];
                     }
 
                     var alerts = Alerts

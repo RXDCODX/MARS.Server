@@ -67,12 +67,8 @@ public static class WebApplicatoinExstension
             : base(root, filters) { }
     }
 
-    public static WebApplicationBuilder AddStaticFilesBrowserOptions(
-        this WebApplicationBuilder app,
-        string directory
-    )
+    public static WebApplicationBuilder AddStaticFilesBrowserOptions(this WebApplicationBuilder app)
     {
-        var env = app.Environment;
         var sharedOptions = new SharedOptions()
         {
             RequestPath = "/static",

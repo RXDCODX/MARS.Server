@@ -11,7 +11,7 @@ public class TekkenCharacter
 
     [NotMapped]
     public string DisplayName =>
-        Name.Length > 0 ? Name[0].ToString().ToUpper() + Name.Substring(1) : Name;
+        Name.Length > 0 ? string.Concat(Name[0].ToString().ToUpper(), Name.AsSpan(1)) : Name;
 
     [MaxLength(300)]
     public string? LinkToImage { get; set; }

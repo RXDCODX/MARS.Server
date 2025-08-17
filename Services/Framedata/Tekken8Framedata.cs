@@ -131,14 +131,9 @@ public partial class Tekken8FrameData(
     /// Парсит только персонажей без мувов
     /// </summary>
     /// <param name="source">Источник данных</param>
-    /// <param name="characterNamesToParse">Список имен персонажей для парсинга (null для всех)</param>
     /// <param name="useStagingService">Использовать ли сервис ожидающих изменений</param>
     /// <returns>Список имен распарсенных персонажей</returns>
-    public async Task ParseCharactersOnly(
-        FramedataSource source,
-        List<string>? characterNamesToParse = null,
-        bool useStagingService = true
-    )
+    public async Task ParseCharactersOnly(FramedataSource source, bool useStagingService = true)
     {
         var options = new FramedataParserOptions
         {
@@ -164,13 +159,8 @@ public partial class Tekken8FrameData(
     /// </summary>
     /// <param name="source">Источник данных</param>
     /// <param name="options">Настройки парсера</param>
-    /// <param name="characterNamesToParse">Список имен персонажей для парсинга (null для всех)</param>
     /// <returns>Список имен распарсенных персонажей</returns>
-    public async Task ParseWithCustomOptions(
-        FramedataSource source,
-        FramedataParserOptions options,
-        List<string>? characterNamesToParse = null
-    )
+    public async Task ParseWithCustomOptions(FramedataSource source, FramedataParserOptions options)
     {
         await Task.Factory.StartNew(
             async () =>

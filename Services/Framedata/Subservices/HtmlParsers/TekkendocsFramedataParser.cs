@@ -173,7 +173,7 @@ public class TekkendocsFramedataParser : BaseFramedataParser
                     }
                 }
 
-                move.Notes = notesList.Count > 0 ? notesList.ToArray() : null;
+                move.Notes = notesList.Count > 0 ? [.. notesList] : null;
 
                 // Парсим свойства мува
                 ParseMoveProperties(move);
