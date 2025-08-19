@@ -1,7 +1,6 @@
 ﻿using BooruSharp.Booru;
 using BooruSharp.Search.Post;
 using MARS.Server.Services.ServiceManager;
-using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.AspNetCore.StaticFiles.Infrastructure;
 using TwitchLib.EventSub.Websockets;
 

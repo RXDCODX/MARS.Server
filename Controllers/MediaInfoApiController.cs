@@ -1,9 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using MARS.Server.DataBaseContext;
-using MARS.Server.Services.PyroAlerts.Entitys;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Mvc;
 
 namespace MARS.Server.Controllers;
 

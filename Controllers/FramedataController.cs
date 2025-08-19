@@ -1,11 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
-using MARS.Server.DataBaseContext;
-using MARS.Server.Services.Framedata.Entitys;
-using MARS.Server.Services.Framedata.Entitys.Enums;
+﻿using MARS.Server.Services.Framedata.Entitys;
 using MARS.Server.Services.Framedata.Subservices.Entitys;
 using MARS.Server.Services.Framedata.Subservices.HtmlParsers;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace MARS.Server.Controllers;
 

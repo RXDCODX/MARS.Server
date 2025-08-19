@@ -17,7 +17,7 @@ public class Emojis(
 
     private readonly CancellationToken _token = lifetime.ApplicationStopping;
 
-    private readonly Guid _guid = System.Guid.Parse("22db3d35-1b76-4674-beb7-cc7546356a84");
+    private readonly Guid _guid = Guid.Parse("22db3d35-1b76-4674-beb7-cc7546356a84");
 
     private async void ClientOnOnMessageReceived(object? sender, OnMessageReceivedArgs e)
     {

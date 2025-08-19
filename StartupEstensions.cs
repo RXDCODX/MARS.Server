@@ -1,6 +1,5 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
-using MARS.Server.Configuration;
 using MARS.Server.Services.Framedata;
 using MARS.Server.Services.Scoreboard;
 using MARS.Server.Services.ServiceManager;
@@ -28,11 +27,8 @@ using MARS.Server.Services.Twitch.Rewards.TwitchWaifuRolls;
 using MARS.Server.Services.Twitch.SoundBarService;
 using MARS.Server.Services.Twitch.StreamBotNotifications;
 using Microsoft.OpenApi.Models;
-using NJsonSchema.Generation;
 using TwitchLib.Api;
 using TwitchLib.Api.Core.Enums;
-using TwitchLib.Client;
-using TwitchLib.Client.Models;
 using TwitchLib.EventSub.Websockets.Extensions;
 using YandexMusicResolver;
 using YandexMusicResolver.Config;

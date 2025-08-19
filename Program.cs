@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using BooruSharp.Booru;
 using MARS.Server.CustomLoggers.DatabaseLogger;
+using MARS.Server.DataBaseContext;
 using MARS.Server.CustomLoggers.TelegramLogger;
 using MARS.Server.Services._365Genius;
 using MARS.Server.Services.CommandExecutor;
@@ -196,6 +197,9 @@ public static class Program
         services.AddHostedService(sp => sp.GetRequiredService<WaifuRollWorker>());
 
         services.AddSingleton(loggerFactory);
+
+        // Добавляем инициализатор базы данных
+        services.AddDataBaseInitializer();
 
         builder.AddStaticFilesBrowserOptions();
 

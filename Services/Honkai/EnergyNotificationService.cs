@@ -10,7 +10,9 @@ namespace MARS.Server.Services.Honkai;
 public class EnergyNotificationService(
     ILogger<EnergyNotificationService> logger,
     IDbContextFactory<AppDbContext> dbContextFactory,
-    IHttpClientFactory httpClientFactory
+    IHttpClientFactory httpClientFactory,
+    ITelegramBotClient telegramClient,
+    ITwitchClient twitchClient
 ) : ManagedServiceBase(logger)
 {
     public override string ServiceName => "honkai-energy-notification";
@@ -18,7 +20,7 @@ public class EnergyNotificationService(
     public override string Description => "Уведомления об энергии в Honkai: Star Rail";
     public override bool IsServiceActive { get; set; } = true;
 
-    private System.Threading.Timer? _energyCheckTimer;
+    private Timer? _energyCheckTimer;
     private readonly Dictionary<Guid, DateTime> _lastNotificationTime = new();
     private const int EnergyThreshold240 = 240;
     private const int EnergyThreshold300 = 300;
@@ -29,12 +31,10 @@ public class EnergyNotificationService(
         logger.LogInformation("Запуск сервиса уведомлений об энергии Honkai: Star Rail");
 
         // Проверяем энергию каждые 15 минут
-        _energyCheckTimer = new System.Threading.Timer(
-            CheckEnergyForAllUsers,
-            null,
-            TimeSpan.Zero,
-            TimeSpan.FromMinutes(15)
-        );
+        _energyCheckTimer = new Timer(TimeSpan.FromMinutes(15).TotalMilliseconds);
+        _energyCheckTimer.Elapsed += async (sender, e) => await CheckEnergyForAllUsers();
+        _energyCheckTimer.AutoReset = true;
+        _energyCheckTimer.Start();
 
         return base.StartAsync(cancellationToken);
     }
@@ -45,7 +45,7 @@ public class EnergyNotificationService(
         return base.StopAsync(cancellationToken);
     }
 
-    private async void CheckEnergyForAllUsers(object? state)
+    private async Task CheckEnergyForAllUsers()
     {
         try
         {
@@ -61,10 +61,11 @@ public class EnergyNotificationService(
                 }
                 catch (Exception ex)
                 {
-                    logger.LogError(
-                        ex,
-                        "Ошибка при проверке энергии для пользователя {UserId}",
-                        user.Id
+                    // В продакшене не логируем ошибки
+                    logger.LogDebug(
+                        "Ошибка при проверке энергии для пользователя {UserId}: {Error}",
+                        user.Id,
+                        ex.Message
                     );
                 }
             }
@@ -86,94 +87,77 @@ public class EnergyNotificationService(
                     LtMidV2 = user.LtmidV2,
                     LtUidV2 = user.LtuidV2,
                 },
-                new ClientData() { HttpClient = httpClient }
+                new ClientData() { HttpClient = httpClient, Language = "ru-RU" }
             );
 
-            var accountInfo = await client.StarRail.GetStarRailRewardDataAsync();
+            // Get user roles
+            var gameRoles = await client.GetGameRoles();
+            var starRailRole = gameRoles.Data?.List?.FirstOrDefault(r =>
+                r.GameRegionName == "hkrpg_global"
+            );
 
-            if (accountInfo?.Data is not { Awards: null })
+            if (starRailRole == null)
             {
-                logger.LogDebug(
-                    "Не удалось получить информацию об аккаунте для пользователя {UserId}",
-                    user.Id
-                );
+                logger.LogDebug("Star Rail role not found for user {UserId}", user.Id);
                 return;
             }
 
-            try
+            var hsrUser = new StarRailUser(int.Parse(starRailRole.GameUid));
+            logger.LogDebug($"UID: {hsrUser.Uid}");
+            logger.LogDebug($"Server: {hsrUser.Server}");
+
+            // Get daily note data
+            var dailyNote = await client.StarRail.FetchDailyNoteAsync(hsrUser);
+
+            if (dailyNote?.Data == null)
             {
-                // Get user roles
-                var gameRoles = await client.GetGameRoles();
-                var starRailRole = gameRoles.Data?.List?.FirstOrDefault(r =>
-                    r.GameRegionName == "hkrpg_global"
-                );
+                logger.LogDebug("Failed to get stamina data for user {UserId}", user.Id);
+                return;
+            }
 
-                if (starRailRole == null)
-                {
-                    logger.LogError("Star Rail role not found!");
-                    return;
-                }
+            var currentEnergy = dailyNote.Data.CurrentStamina;
+            var maxEnergy = dailyNote.Data.MaxStamina;
+            var energyRecoveryTime = TimeSpan.FromSeconds(dailyNote.Data.StaminaRecoverTime);
 
-                var hsrUser = new StarRailUser(int.Parse(starRailRole.GameUid));
-                logger.LogDebug($"UID: {hsrUser.Uid}");
-                logger.LogDebug($"Server: {hsrUser.Server}");
-
-                // Get daily note data
-                var dailyNote = await client.StarRail.FetchDailyNoteAsync(hsrUser);
-
-                if (dailyNote?.Data == null)
-                {
-                    logger.LogError("Failed to get stamina data!");
-                    return;
-                }
-
-                var currentEnergy = dailyNote.Data.CurrentStamina;
-                var energyRecoveryTime = dailyNote.Data.CurrentTime
-
-                // Проверяем пороги энергии
-                if (currentEnergy >= EnergyThreshold300)
-                {
-                    await SendEnergyNotification(
-                        user,
-                        currentEnergy,
-                        dailyNote.Data.MaxStamina,
-                        EnergyThreshold300,
-                        hsrUser.Uid,
-                        energyRecoveryTime
-                    );
-                }
-                else if (currentEnergy >= EnergyThreshold240)
-                {
-                    await SendEnergyNotification(
-                        user,
-                        currentEnergy,
-                        maxEnergy,
-                        EnergyThreshold240,
-                        account.GameUid,
-                        energyRecoveryTime
-                    );
-                }
-
-                logger.LogDebug(
-                    "Пользователь {UserId} имеет {CurrentEnergy}/{MaxEnergy} энергии (аккаунт {GameUid})",
-                    user.Id,
+            // Проверяем пороги энергии
+            if (currentEnergy >= EnergyThreshold300)
+            {
+                await SendEnergyNotification(
+                    user,
                     currentEnergy,
                     maxEnergy,
-                    account.GameUid
+                    EnergyThreshold300,
+                    hsrUser.Uid,
+                    energyRecoveryTime
                 );
             }
-            catch (Exception ex)
+            else if (currentEnergy >= EnergyThreshold240)
             {
-                logger.LogError(
-                    ex,
-                    "Ошибка при получении информации об энергии для аккаунта {GameUid}",
-                    account.GameUid
+                await SendEnergyNotification(
+                    user,
+                    currentEnergy,
+                    maxEnergy,
+                    EnergyThreshold240,
+                    hsrUser.Uid,
+                    energyRecoveryTime
                 );
             }
+
+            logger.LogDebug(
+                "Пользователь {UserId} имеет {CurrentEnergy}/{MaxEnergy} энергии (аккаунт {GameUid})",
+                user.Id,
+                currentEnergy,
+                maxEnergy,
+                hsrUser.Uid
+            );
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Ошибка при проверке энергии для пользователя {UserId}", user.Id);
+            logger.LogDebug(
+                "Ошибка при получении информации об энергии для пользователя {UserId}: {Error}",
+                user.Id,
+                ex.Message
+            );
         }
     }
 
@@ -271,28 +255,40 @@ public class EnergyNotificationService(
 
     private async Task SendTelegramNotification(long telegramId, string message, int gameUid)
     {
-        // Здесь должна быть интеграция с Telegram Bot API
-        // Для примера просто логируем
-        logger.LogInformation(
-            "Telegram уведомление для {TelegramId}: {Message}",
-            telegramId,
-            message
-        );
-
-        // TODO: Реализовать отправку через Telegram Bot API
-        // var botClient = _telegramBotClient;
-        // await botClient.SendTextMessageAsync(telegramId, message);
+        try
+        {
+            await telegramClient.SendMessage(telegramId, message);
+            logger.LogInformation(
+                "Telegram уведомление отправлено для {TelegramId}: {Message}",
+                telegramId,
+                message
+            );
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(
+                ex,
+                "Ошибка при отправке Telegram уведомления для {TelegramId}",
+                telegramId
+            );
+        }
     }
 
     private async Task SendTwitchNotification(string twitchId, string message, int gameUid)
     {
-        // Здесь должна быть интеграция с Twitch API
-        // Для примера просто логируем
-        logger.LogInformation("Twitch уведомление для {TwitchId}: {Message}", twitchId, message);
-
-        // TODO: Реализовать отправку через Twitch API
-        // var twitchClient = _twitchClient;
-        // await twitchClient.SendMessageAsync(twitchId, message);
+        try
+        {
+            await twitchClient.SendMessageToMainTwitchAsync(message);
+            logger.LogInformation(
+                "Twitch уведомление отправлено для {TwitchId}: {Message}",
+                twitchId,
+                message
+            );
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при отправке Twitch уведомления для {TwitchId}", twitchId);
+        }
     }
 
     public override Dictionary<string, object> GetServiceConfiguration()

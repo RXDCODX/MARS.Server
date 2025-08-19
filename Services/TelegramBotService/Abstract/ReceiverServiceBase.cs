@@ -34,7 +34,7 @@ public abstract class ReceiverServiceBase<TUpdateHandler> : IReceiverService
     {
         // ToDo: we can inject ReceiverOptions through IOptions container
 
-        var offset = await ReceiverServiceBase<TUpdateHandler>.GetOffset(context, stoppingToken);
+        var offset = await GetOffset(context, stoppingToken);
         var isOffsetRequired = offset is not null;
 
         var receiverOptions = new ReceiverOptions

@@ -25,7 +25,7 @@ public class TwitchMessagesHubAwaker : BackgroundService
         _lifetime = lifetime;
         _dbContextFactory = dbContextFactory;
         _token = lifetime.ApplicationStopping;
-        TwitchMessagesHubAwaker.Instance = client;
+        Instance = client;
     }
 
     private static ITwitchClient? Instance { get; set; }

@@ -1,7 +1,5 @@
+﻿using MARS.Server.Services.Honkai.Entitys;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using MARS.Server.DataBaseContext;
-using MARS.Server.Services.Honkai.Entitys;
 
 namespace MARS.Server.Controllers;
 
@@ -14,7 +12,8 @@ public class HonkaiController : ControllerBase
 
     public HonkaiController(
         IDbContextFactory<AppDbContext> dbContextFactory,
-        ILogger<HonkaiController> logger)
+        ILogger<HonkaiController> logger
+    )
     {
         _dbContextFactory = dbContextFactory;
         _logger = logger;
@@ -29,8 +28,8 @@ public class HonkaiController : ControllerBase
         try
         {
             await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
-            var users = await dbContext.HonkaiMarkupUser
-                .AsNoTracking()
+            var users = await dbContext
+                .HonkaiMarkupUser.AsNoTracking()
                 .OrderBy(u => u.CreatedAt)
                 .ToListAsync();
 
@@ -52,8 +51,8 @@ public class HonkaiController : ControllerBase
         try
         {
             await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
-            var user = await dbContext.HonkaiMarkupUser
-                .AsNoTracking()
+            var user = await dbContext
+                .HonkaiMarkupUser.AsNoTracking()
                 .FirstOrDefaultAsync(u => u.Id == id);
 
             if (user == null)
@@ -72,26 +71,31 @@ public class HonkaiController : ControllerBase
     /// Создать нового пользователя автоматических отметок
     /// </summary>
     [HttpPost("users")]
-    public async Task<ActionResult<DailyAutoMarkupUser>> CreateUser([FromBody] CreateUserRequest request)
+    public async Task<ActionResult<DailyAutoMarkupUser>> CreateUser(
+        [FromBody] CreateUserRequest request
+    )
     {
         try
         {
-            if (string.IsNullOrEmpty(request.LtmidV2) || 
-                string.IsNullOrEmpty(request.LTokenV2) || 
-                string.IsNullOrEmpty(request.LtuidV2))
+            if (
+                string.IsNullOrEmpty(request.LtmidV2)
+                || string.IsNullOrEmpty(request.LTokenV2)
+                || string.IsNullOrEmpty(request.LtuidV2)
+            )
             {
                 return BadRequest("Все обязательные поля должны быть заполнены");
             }
 
             await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
-            
+
             // Проверяем, не существует ли уже пользователь с такими данными
-            var existingUser = await dbContext.HonkaiMarkupUser
-                .AsNoTracking()
-                .FirstOrDefaultAsync(u => 
-                    u.LtmidV2 == request.LtmidV2 && 
-                    u.LTokenV2 == request.LTokenV2 && 
-                    u.LtuidV2 == request.LtuidV2);
+            var existingUser = await dbContext
+                .HonkaiMarkupUser.AsNoTracking()
+                .FirstOrDefaultAsync(u =>
+                    u.LtmidV2 == request.LtmidV2
+                    && u.LTokenV2 == request.LTokenV2
+                    && u.LtuidV2 == request.LtuidV2
+                );
 
             if (existingUser != null)
             {
@@ -106,13 +110,16 @@ public class HonkaiController : ControllerBase
                 LTokenV2 = request.LTokenV2,
                 LtuidV2 = request.LtuidV2,
                 CreatedAt = DateTime.UtcNow,
-                LastAutoMarkup = DateTime.UtcNow.AddDays(-1) // Позволяет получить отметки сразу
+                LastAutoMarkup = DateTime.UtcNow.AddDays(-1), // Позволяет получить отметки сразу
             };
 
             dbContext.HonkaiMarkupUser.Add(user);
             await dbContext.SaveChangesAsync();
 
-            _logger.LogInformation("Создан новый пользователь автоматических отметок: {UserId}", user.Id);
+            _logger.LogInformation(
+                "Создан новый пользователь автоматических отметок: {UserId}",
+                user.Id
+            );
 
             return CreatedAtAction(nameof(GetUser), new { id = user.Id }, user);
         }
@@ -127,7 +134,10 @@ public class HonkaiController : ControllerBase
     /// Обновить пользователя
     /// </summary>
     [HttpPut("users/{id:guid}")]
-    public async Task<ActionResult<DailyAutoMarkupUser>> UpdateUser(Guid id, [FromBody] UpdateUserRequest request)
+    public async Task<ActionResult<DailyAutoMarkupUser>> UpdateUser(
+        Guid id,
+        [FromBody] UpdateUserRequest request
+    )
     {
         try
         {
@@ -140,22 +150,25 @@ public class HonkaiController : ControllerBase
             // Обновляем только разрешенные поля
             if (request.TwitchId != null)
                 user.TwitchId = request.TwitchId;
-            
+
             if (request.TelegramId != null)
                 user.TelegramId = request.TelegramId;
 
             if (!string.IsNullOrEmpty(request.LtmidV2))
                 user.LtmidV2 = request.LtmidV2;
-            
+
             if (!string.IsNullOrEmpty(request.LTokenV2))
                 user.LTokenV2 = request.LTokenV2;
-            
+
             if (!string.IsNullOrEmpty(request.LtuidV2))
                 user.LtuidV2 = request.LtuidV2;
 
             await dbContext.SaveChangesAsync();
 
-            _logger.LogInformation("Обновлен пользователь автоматических отметок: {UserId}", user.Id);
+            _logger.LogInformation(
+                "Обновлен пользователь автоматических отметок: {UserId}",
+                user.Id
+            );
 
             return Ok(user);
         }
@@ -212,9 +225,17 @@ public class HonkaiController : ControllerBase
             user.LastAutoMarkup = DateTime.UtcNow.AddDays(-1);
             await dbContext.SaveChangesAsync();
 
-            _logger.LogInformation("Сброшено время последней отметки для пользователя {UserId}", id);
+            _logger.LogInformation(
+                "Сброшено время последней отметки для пользователя {UserId}",
+                id
+            );
 
-            return Ok(new { message = "Время последней отметки сброшено. Отметки будут активированы при следующей проверке." });
+            return Ok(
+                new
+                {
+                    message = "Время последней отметки сброшено. Отметки будут активированы при следующей проверке.",
+                }
+            );
         }
         catch (Exception ex)
         {
@@ -232,15 +253,22 @@ public class HonkaiController : ControllerBase
         try
         {
             await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
-            
+
             var totalUsers = await dbContext.HonkaiMarkupUser.CountAsync();
-            var usersWithTelegram = await dbContext.HonkaiMarkupUser.CountAsync(u => u.TelegramId.HasValue);
-            var usersWithTwitch = await dbContext.HonkaiMarkupUser.CountAsync(u => !string.IsNullOrEmpty(u.TwitchId));
-            var usersWithBoth = await dbContext.HonkaiMarkupUser.CountAsync(u => 
-                u.TelegramId.HasValue && !string.IsNullOrEmpty(u.TwitchId));
-            
+            var usersWithTelegram = await dbContext.HonkaiMarkupUser.CountAsync(u =>
+                u.TelegramId.HasValue
+            );
+            var usersWithTwitch = await dbContext.HonkaiMarkupUser.CountAsync(u =>
+                !string.IsNullOrEmpty(u.TwitchId)
+            );
+            var usersWithBoth = await dbContext.HonkaiMarkupUser.CountAsync(u =>
+                u.TelegramId.HasValue && !string.IsNullOrEmpty(u.TwitchId)
+            );
+
             var today = DateTime.UtcNow.Date;
-            var usersMarkedToday = await dbContext.HonkaiMarkupUser.CountAsync(u => u.LastAutoMarkup >= today);
+            var usersMarkedToday = await dbContext.HonkaiMarkupUser.CountAsync(u =>
+                u.LastAutoMarkup >= today
+            );
 
             var stats = new
             {
@@ -249,7 +277,7 @@ public class HonkaiController : ControllerBase
                 UsersWithTwitch = usersWithTwitch,
                 UsersWithBoth = usersWithBoth,
                 UsersMarkedToday = usersMarkedToday,
-                UsersNotMarkedToday = totalUsers - usersMarkedToday
+                UsersNotMarkedToday = totalUsers - usersMarkedToday,
             };
 
             return Ok(stats);

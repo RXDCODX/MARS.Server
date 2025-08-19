@@ -23,7 +23,8 @@ public class DailyMarkRedeemService(
     public override bool IsServiceActive { get; set; } = true;
 
     private readonly HoyolabConfiguration _configuration = options.Value;
-    private System.Threading.Timer? _dailyTimer;
+    private Timer? _dailyTimer;
+    private Timer? _errorNotificationTimer;
     private readonly TimeZoneInfo _ulyanovskTimeZone = TimeZoneInfo.FindSystemTimeZoneById(
         "Russian Standard Time"
     );
@@ -34,8 +35,18 @@ public class DailyMarkRedeemService(
         {
             logger.LogInformation("Запуск сервиса автоматических отметок Honkai: Star Rail");
 
-            // Запускаем таймер для ежедневных отметок (после 8 вечера по Ульяновскому времени)
-            ScheduleDailyMarkRedeem();
+            // Запускаем таймер для проверки каждые 30 минут
+            _dailyTimer = new Timer(TimeSpan.FromMinutes(30).TotalMilliseconds);
+            _dailyTimer.Elapsed += async (sender, e) => await PerformDailyMarkRedeem();
+            _dailyTimer.AutoReset = true;
+            _dailyTimer.Start();
+
+            Task.Factory.StartNew(async () => await PerformDailyMarkRedeem(), cancellationToken);
+
+            logger.LogInformation("Таймер запущен - проверка каждые 30 минут");
+
+            // Планируем отправку уведомлений об ошибках за 2 часа до 20:00
+            ScheduleErrorNotifications();
         });
 
         return base.StartAsync(cancellationToken);
@@ -44,49 +55,96 @@ public class DailyMarkRedeemService(
     public override Task StopAsync(CancellationToken cancellationToken = default)
     {
         _dailyTimer?.Dispose();
+        _errorNotificationTimer?.Dispose();
         return base.StopAsync(cancellationToken);
     }
 
-    private void ScheduleDailyMarkRedeem()
+    private void ScheduleErrorNotifications()
     {
-        var now = TimeZoneInfo.ConvertTime(DateTime.UtcNow, _ulyanovskTimeZone);
-        var targetTime = now.Date.AddHours(20); // 8 вечера
+        var now = TimeZoneInfo.ConvertTime(DateTime.UtcNow.Date, _ulyanovskTimeZone);
+        var targetTime = now.Date.AddHours(20); // 20:00 по ульяновскому времени
+        var notificationTime = targetTime.AddHours(-2); // За 2 часа до 20:00
 
-        // Если уже прошло 8 вечера, планируем на завтра
-        if (now >= targetTime)
+        // Если время уведомлений уже прошло, планируем на завтра
+        if (now >= notificationTime)
         {
-            targetTime = targetTime.AddDays(1);
+            notificationTime = notificationTime.AddDays(1);
         }
 
-        var delay = targetTime - now;
+        var delay = notificationTime - now;
 
         logger.LogInformation(
-            "Следующая автоматическая отметка запланирована на {TargetTime} (через {Delay})",
-            targetTime.ToString("dd.MM.yyyy HH:mm"),
+            "Уведомления об ошибках запланированы на {NotificationTime} (через {Delay})",
+            notificationTime.ToString("dd.MM.yyyy HH:mm"),
             delay
         );
 
-        _dailyTimer = new System.Threading.Timer(
-            PerformDailyMarkRedeem,
-            null,
-            delay,
-            TimeSpan.FromDays(1)
-        );
+        _errorNotificationTimer = new Timer(delay.TotalMilliseconds);
+        _errorNotificationTimer.Elapsed += async (sender, e) => await SendErrorNotifications();
+        _errorNotificationTimer.AutoReset = false; // Выполняем только один раз
+
+        // Планируем следующий запуск на завтра
+        var nextNotificationTime = notificationTime.AddDays(1);
+        var nextDelay = nextNotificationTime - now;
+        _errorNotificationTimer.Interval = nextDelay.TotalMilliseconds;
+        _errorNotificationTimer.AutoReset = true;
+
+        _errorNotificationTimer.Start();
     }
 
-    private async void PerformDailyMarkRedeem(object? state)
+    private async Task SendErrorNotifications()
+    {
+        try
+        {
+            await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+            var users = await dbContext
+                .HonkaiMarkupUser.AsNoTracking()
+                .Where(u => u.LastAutoMarkup < DateTime.UtcNow.Date)
+                .ToListAsync();
+
+            foreach (var user in users)
+            {
+                if (user.TelegramId != null)
+                {
+                    await SendMarkupFailureNotification(user.TelegramId.Value, user.Id);
+                }
+            }
+
+            logger.LogInformation(
+                "Отправлены уведомления об ошибках для {Count} пользователей",
+                users.Count
+            );
+
+            // Планируем следующую отправку уведомлений на завтра
+            ScheduleErrorNotifications();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при отправке уведомлений об ошибках");
+        }
+    }
+
+    private async Task PerformDailyMarkRedeem()
     {
         try
         {
             using var httpClient = httpClientFactory.CreateClient();
 
-            logger.LogInformation("Начинаем автоматическую активацию ежедневных отметок");
+            logger.LogInformation("Начинаем проверку и активацию ежедневных отметок");
 
             await using var dbContext = await dbContextFactory.CreateDbContextAsync();
             var users = await dbContext
                 .HonkaiMarkupUser.AsNoTracking()
                 .Where(u => u.LastAutoMarkup < DateTime.UtcNow.Date)
                 .ToListAsync();
+
+            if (users.Count == 0)
+            {
+                logger.LogDebug("Нет пользователей, требующих отметки");
+                return;
+            }
+
+            logger.LogInformation("Найдено {Count} пользователей для отметки", users.Count);
 
             foreach (var user in users)
             {
@@ -104,24 +162,43 @@ public class DailyMarkRedeemService(
                         user.Id
                     );
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
-                    logger.LogError(
-                        ex,
-                        "Ошибка при активации отметок для пользователя {UserId}",
-                        user.Id
-                    );
+                    // В продакшене не логируем ошибки, только отправляем уведомление
+                    if (user.TelegramId != null)
+                    {
+                        await SendMarkupFailureNotification(user.TelegramId.Value, user.Id);
+                    }
                 }
             }
 
             logger.LogInformation(
-                "Завершена автоматическая активация ежедневных отметок для {Count} пользователей",
+                "Завершена проверка ежедневных отметок для {Count} пользователей",
                 users.Count
             );
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Ошибка при выполнении автоматической активации отметок");
+            logger.LogError(ex, "Ошибка при выполнении проверки ежедневных отметок");
+        }
+    }
+
+    private async Task SendMarkupFailureNotification(long telegramId, Guid userId)
+    {
+        try
+        {
+            var message =
+                $"⚠️ **Внимание!**\n\n"
+                + $"Не удалось поставить отметку в Honkai: Star Rail для пользователя {userId}.\n\n"
+                + $"🕐 Время: {DateTime.UtcNow:dd.MM.yyyy HH:mm} UTC\n"
+                + $"📱 Попробуйте проверить настройки аккаунта или обратиться к администратору.\n\n"
+                + $"⏰ Следующая попытка автоматической отметки будет через 30 минут.";
+
+            await telegramClient.SendMessage(telegramId, message);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при отправке уведомления о неудачной отметке");
         }
     }
 
@@ -136,7 +213,7 @@ public class DailyMarkRedeemService(
                     LtMidV2 = user.LtmidV2,
                     LtUidV2 = user.LtuidV2,
                 },
-                new ClientData() { HttpClient = httpClient }
+                new ClientData() { HttpClient = httpClient, Language = "ru-RU" }
             );
 
             // Получаем информацию об аккаунте
@@ -144,11 +221,7 @@ public class DailyMarkRedeemService(
 
             if (accountInfo?.Data?.GameLists == null)
             {
-                logger.LogWarning(
-                    "Не удалось получить информацию об аккаунте для пользователя {UserId}",
-                    user.Id
-                );
-                return;
+                throw new Exception("Не удалось получить информацию об аккаунте");
             }
 
             try
@@ -157,7 +230,7 @@ public class DailyMarkRedeemService(
                 if (user.TelegramId != null)
                 {
                     await telegramClient.SendMessage(
-                        user.TelegramId,
+                        user.TelegramId.Value,
                         "Автоотметка была активирована! Награда за сегодня: "
                             + response.RewardName
                             + " в количестве "
@@ -171,7 +244,7 @@ public class DailyMarkRedeemService(
                 if (user.TelegramId != null)
                 {
                     await telegramClient.SendMessage(
-                        user.TelegramId,
+                        user.TelegramId.Value,
                         "Награда за отметки для HSR уже была активирована!"
                     );
                 }
@@ -179,12 +252,7 @@ public class DailyMarkRedeemService(
         }
         catch (Exception ex)
         {
-            logger.LogError(
-                ex,
-                "Ошибка при создании клиента MarchSeven для пользователя {UserId}",
-                user.Id
-            );
-            throw;
+            throw new Exception($"Ошибка при создании клиента MarchSeven: {ex.Message}");
         }
     }
 
@@ -193,8 +261,10 @@ public class DailyMarkRedeemService(
         return new Dictionary<string, object>
         {
             ["TimeZone"] = _ulyanovskTimeZone.DisplayName,
-            ["DailyMarkTime"] = "20:00",
-            ["EnergyCheckInterval"] = "30 минут",
+            ["CheckInterval"] = "30 минут",
+            ["ErrorNotificationTime"] = "18:00 (за 2 часа до 20:00)",
+            ["Description"] =
+                "Проверка каждые 30 минут + уведомления об ошибках за 2 часа до 20:00",
         };
     }
 }

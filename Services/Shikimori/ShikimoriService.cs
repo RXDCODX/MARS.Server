@@ -48,7 +48,7 @@ public class ShikimoriService : ITelegramusService
     public async Task<Manga?> GetRandomManga()
     {
         var mangas = await _client.Mangas.GetBySearch(
-            new ShikimoriSharp.Settings.MangaRequestSettings
+            new MangaRequestSettings
             {
                 order = ShikimoriSharp.Enums.Order.random,
                 limit = 1,
