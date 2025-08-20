@@ -21,7 +21,8 @@ public interface IHonkaiApiService
     Task<UserStatsData?> GetUserStatsAsync(DailyAutoMarkupUser user, HttpClient httpClient);
 }
 
-public class HonkaiApiService(ILogger<HonkaiApiService> logger) : IHonkaiApiService
+public class HonkaiApiService(ILogger<HonkaiApiService> logger, IHostEnvironment environment)
+    : IHonkaiApiService
 {
     public async Task<StarRailUser?> GetStarRailUserAsync(
         DailyAutoMarkupUser user,
@@ -50,7 +51,10 @@ public class HonkaiApiService(ILogger<HonkaiApiService> logger) : IHonkaiApiServ
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error getting Star Rail user for user {UserId}", user.Id);
+            if (!environment.IsProduction())
+            {
+                logger.LogError(ex, "Error getting Star Rail user for user {UserId}", user.Id);
+            }
             return null;
         }
     }
@@ -81,7 +85,10 @@ public class HonkaiApiService(ILogger<HonkaiApiService> logger) : IHonkaiApiServ
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error claiming daily reward for user {UserId}", user.Id);
+            if (!environment.IsProduction())
+            {
+                logger.LogError(ex, "Error claiming daily reward for user {UserId}", user.Id);
+            }
             throw;
         }
     }
@@ -106,7 +113,11 @@ public class HonkaiApiService(ILogger<HonkaiApiService> logger) : IHonkaiApiServ
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error getting daily note for user {UserId}", user.Id);
+            if (!environment.IsProduction())
+            {
+                logger.LogError(ex, "Error getting daily note for user {UserId}", user.Id);
+            }
+
             return null;
         }
     }
@@ -131,7 +142,11 @@ public class HonkaiApiService(ILogger<HonkaiApiService> logger) : IHonkaiApiServ
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error getting user stats for user {UserId}", user.Id);
+            if (!environment.IsProduction())
+            {
+                logger.LogError(ex, "Error getting user stats for user {UserId}", user.Id);
+            }
+
             return null;
         }
     }

@@ -6,7 +6,6 @@ public static class HonkaiServiceCollectionExtensions
 {
     public static IServiceCollection AddHonkaiServices(this IServiceCollection services)
     {
-        // Honkai: Star Rail сервисы
         services.AddSingleton<DailyMarkRedeemService>();
         services.AddHostedService(sp => sp.GetRequiredService<DailyMarkRedeemService>());
 
