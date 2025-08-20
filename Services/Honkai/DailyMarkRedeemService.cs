@@ -1,8 +1,4 @@
-﻿using MarchSeven;
-using MarchSeven.Models.Core;
-using MarchSeven.Models.Core.Cookie;
-using MarchSeven.Util.Errors;
-using MARS.Server.Services.Honkai.Entitys;
+﻿using MARS.Server.Services.Honkai.Entitys;
 using MARS.Server.Services.ServiceManager;
 
 namespace MARS.Server.Services.Honkai;
@@ -11,9 +7,11 @@ public class DailyMarkRedeemService(
     IOptions<HoyolabConfiguration> options,
     ILogger<DailyMarkRedeemService> logger,
     IHostApplicationLifetime lifetime,
-    ITelegramBotClient telegramClient,
+    IHonkaiApiService honkaiApiService,
+    IHonkaiNotificationService notificationService,
     IDbContextFactory<AppDbContext> dbContextFactory,
-    IHttpClientFactory httpClientFactory
+    IHttpClientFactory httpClientFactory,
+    IHostEnvironment environment
 ) : ManagedServiceBase(logger)
 {
     public override string ServiceName => "honkai-daily-mark-redeem";
@@ -62,34 +60,67 @@ public class DailyMarkRedeemService(
     private void ScheduleErrorNotifications()
     {
         var now = TimeZoneInfo.ConvertTime(DateTime.UtcNow.Date, _ulyanovskTimeZone);
-        var targetTime = now.Date.AddHours(20); // 20:00 по ульяновскому времени
+        var targetTime = now.Date.AddHours(19); // 20:00 по ульяновскому времени
         var notificationTime = targetTime.AddHours(-2); // За 2 часа до 20:00
 
-        // Если время уведомлений уже прошло, планируем на завтра
-        if (now >= notificationTime)
+        // Проверяем, находимся ли мы в промежутке между 18:00 и 20:00
+        var currentTime = TimeZoneInfo.ConvertTime(DateTime.UtcNow, _ulyanovskTimeZone);
+        var isInNotificationWindow =
+            currentTime.TimeOfDay >= TimeSpan.FromHours(17)
+            && currentTime.TimeOfDay < TimeSpan.FromHours(19);
+
+        if (isInNotificationWindow)
         {
-            notificationTime = notificationTime.AddDays(1);
+            logger.LogInformation(
+                "Приложение запущено в промежутке между 18:00 и 20:00. Немедленно отправляем уведомления об ошибках."
+            );
+
+            // Немедленно отправляем уведомления об ошибках
+            Task.Run(async () => await SendErrorNotifications());
+
+            // Планируем следующую отправку на завтра в 18:00
+            var tomorrowNotificationTime = currentTime.Date.AddDays(1).AddHours(17);
+            var delayUntilTomorrow = tomorrowNotificationTime - currentTime;
+
+            logger.LogInformation(
+                "Следующие уведомления об ошибках запланированы на завтра в {NotificationTime} (через {Delay})",
+                tomorrowNotificationTime.ToString("dd.MM.yyyy HH:mm"),
+                delayUntilTomorrow
+            );
+
+            _errorNotificationTimer = new Timer(delayUntilTomorrow.TotalMilliseconds);
+            _errorNotificationTimer.Elapsed += async (sender, e) => await SendErrorNotifications();
+            _errorNotificationTimer.AutoReset = true;
+            _errorNotificationTimer.Start();
         }
+        else
+        {
+            // Если время уведомлений уже прошло, планируем на завтра
+            if (now >= notificationTime)
+            {
+                notificationTime = notificationTime.AddDays(1);
+            }
 
-        var delay = notificationTime - now;
+            var delay = notificationTime - now;
 
-        logger.LogInformation(
-            "Уведомления об ошибках запланированы на {NotificationTime} (через {Delay})",
-            notificationTime.ToString("dd.MM.yyyy HH:mm"),
-            delay
-        );
+            logger.LogInformation(
+                "Уведомления об ошибках запланированы на {NotificationTime} (через {Delay})",
+                notificationTime.ToString("dd.MM.yyyy HH:mm"),
+                delay
+            );
 
-        _errorNotificationTimer = new Timer(delay.TotalMilliseconds);
-        _errorNotificationTimer.Elapsed += async (sender, e) => await SendErrorNotifications();
-        _errorNotificationTimer.AutoReset = false; // Выполняем только один раз
+            _errorNotificationTimer = new Timer(delay.TotalMilliseconds);
+            _errorNotificationTimer.Elapsed += async (sender, e) => await SendErrorNotifications();
+            _errorNotificationTimer.AutoReset = false; // Выполняем только один раз
 
-        // Планируем следующий запуск на завтра
-        var nextNotificationTime = notificationTime.AddDays(1);
-        var nextDelay = nextNotificationTime - now;
-        _errorNotificationTimer.Interval = nextDelay.TotalMilliseconds;
-        _errorNotificationTimer.AutoReset = true;
+            // Планируем следующий запуск на завтра
+            var nextNotificationTime = notificationTime.AddDays(1);
+            var nextDelay = nextNotificationTime - now;
+            _errorNotificationTimer.Interval = nextDelay.TotalMilliseconds;
+            _errorNotificationTimer.AutoReset = true;
 
-        _errorNotificationTimer.Start();
+            _errorNotificationTimer.Start();
+        }
     }
 
     private async Task SendErrorNotifications()
@@ -106,7 +137,10 @@ public class DailyMarkRedeemService(
             {
                 if (user.TelegramId != null)
                 {
-                    await SendMarkupFailureNotification(user.TelegramId.Value, user.Id);
+                    await notificationService.SendMarkupFailureNotificationAsync(
+                        user.TelegramId.Value,
+                        user.Id
+                    );
                 }
             }
 
@@ -116,7 +150,7 @@ public class DailyMarkRedeemService(
             );
 
             // Планируем следующую отправку уведомлений на завтра
-            ScheduleErrorNotifications();
+            // Не вызываем ScheduleErrorNotifications() здесь, так как таймер уже настроен
         }
         catch (Exception ex)
         {
@@ -165,9 +199,12 @@ public class DailyMarkRedeemService(
                 catch (Exception)
                 {
                     // В продакшене не логируем ошибки, только отправляем уведомление
-                    if (user.TelegramId != null)
+                    if (user.TelegramId != null && environment.IsProduction())
                     {
-                        await SendMarkupFailureNotification(user.TelegramId.Value, user.Id);
+                        await notificationService.SendMarkupFailureNotificationAsync(
+                            user.TelegramId.Value,
+                            user.Id
+                        );
                     }
                 }
             }
@@ -183,76 +220,35 @@ public class DailyMarkRedeemService(
         }
     }
 
-    private async Task SendMarkupFailureNotification(long telegramId, Guid userId)
-    {
-        try
-        {
-            var message =
-                $"⚠️ **Внимание!**\n\n"
-                + $"Не удалось поставить отметку в Honkai: Star Rail для пользователя {userId}.\n\n"
-                + $"🕐 Время: {DateTime.UtcNow:dd.MM.yyyy HH:mm} UTC\n"
-                + $"📱 Попробуйте проверить настройки аккаунта или обратиться к администратору.\n\n"
-                + $"⏰ Следующая попытка автоматической отметки будет через 30 минут.";
-
-            await telegramClient.SendMessage(telegramId, message);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Ошибка при отправке уведомления о неудачной отметке");
-        }
-    }
-
     private async Task RedeemDailyMarksForUser(DailyAutoMarkupUser user, HttpClient httpClient)
     {
         try
         {
-            var client = MarchSevenClient.Create(
-                new CookieV2()
-                {
-                    LTokenV2 = user.LTokenV2,
-                    LtMidV2 = user.LtmidV2,
-                    LtUidV2 = user.LtuidV2,
-                },
-                new ClientData() { HttpClient = httpClient, Language = "ru-RU" }
-            );
-
             // Получаем информацию об аккаунте
-            var accountInfo = await client.StarRail.FetchUserStatsAsync();
+            var accountInfo = await honkaiApiService.GetUserStatsAsync(user, httpClient);
 
-            if (accountInfo?.Data?.GameLists == null)
+            if (accountInfo?.GameLists == null)
             {
                 throw new Exception("Не удалось получить информацию об аккаунте");
             }
 
-            try
+            var (success, rewardName, amount) = await honkaiApiService.ClaimDailyRewardAsync(
+                user,
+                httpClient
+            );
+            if (success && user.TelegramId != null)
             {
-                var response = await client.StarRail.ClaimDailyRewardAsync();
-                if (user.TelegramId != null)
-                {
-                    await telegramClient.SendMessage(
-                        user.TelegramId.Value,
-                        "Автоотметка была активирована! Награда за сегодня: "
-                            + response.RewardName
-                            + " в количестве "
-                            + response.Amount
-                            + " штук!"
-                    );
-                }
-            }
-            catch (DailyRewardAlreadyReceivedException)
-            {
-                if (user.TelegramId != null)
-                {
-                    await telegramClient.SendMessage(
-                        user.TelegramId.Value,
-                        "Награда за отметки для HSR уже была активирована!"
-                    );
-                }
+                // Отправляем уведомление об успехе с информацией о награде
+                await notificationService.SendMarkupSuccessNotificationAsync(
+                    user.TelegramId.Value,
+                    rewardName ?? "награда",
+                    amount ?? 1
+                );
             }
         }
         catch (Exception ex)
         {
-            throw new Exception($"Ошибка при создании клиента MarchSeven: {ex.Message}");
+            throw new Exception($"Ошибка при работе с Honkai API: {ex.Message}");
         }
     }
 

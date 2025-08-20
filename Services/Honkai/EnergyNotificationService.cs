@@ -1,8 +1,4 @@
-﻿using MarchSeven;
-using MarchSeven.Models.Core;
-using MarchSeven.Models.Core.Cookie;
-using MarchSeven.Models.HonkaiStarRail.Entitys;
-using MARS.Server.Services.Honkai.Entitys;
+﻿using MARS.Server.Services.Honkai.Entitys;
 using MARS.Server.Services.ServiceManager;
 
 namespace MARS.Server.Services.Honkai;
@@ -11,8 +7,8 @@ public class EnergyNotificationService(
     ILogger<EnergyNotificationService> logger,
     IDbContextFactory<AppDbContext> dbContextFactory,
     IHttpClientFactory httpClientFactory,
-    ITelegramBotClient telegramClient,
-    ITwitchClient twitchClient
+    IHonkaiApiService honkaiApiService,
+    IHonkaiNotificationService notificationService
 ) : ManagedServiceBase(logger)
 {
     public override string ServiceName => "honkai-energy-notification";
@@ -21,10 +17,8 @@ public class EnergyNotificationService(
     public override bool IsServiceActive { get; set; } = true;
 
     private Timer? _energyCheckTimer;
-    private readonly Dictionary<Guid, DateTime> _lastNotificationTime = new();
     private const int EnergyThreshold240 = 240;
     private const int EnergyThreshold300 = 300;
-    private const int NotificationCooldownHours = 2; // Повторное уведомление не чаще чем через 2 часа
 
     public override Task StartAsync(CancellationToken cancellationToken = default)
     {
@@ -80,34 +74,16 @@ public class EnergyNotificationService(
     {
         try
         {
-            var client = MarchSevenClient.Create(
-                new CookieV2()
-                {
-                    LTokenV2 = user.LTokenV2,
-                    LtMidV2 = user.LtmidV2,
-                    LtUidV2 = user.LtuidV2,
-                },
-                new ClientData() { HttpClient = httpClient, Language = "ru-RU" }
-            );
-
-            // Get user roles
-            var gameRoles = await client.GetGameRoles();
-            var starRailRole = gameRoles.Data?.List?.FirstOrDefault(r =>
-                r.GameRegionName == "hkrpg_global"
-            );
-
-            if (starRailRole == null)
+            // Get Star Rail user
+            var starRailUser = await honkaiApiService.GetStarRailUserAsync(user, httpClient);
+            if (starRailUser == null)
             {
                 logger.LogDebug("Star Rail role not found for user {UserId}", user.Id);
                 return;
             }
 
-            var hsrUser = new StarRailUser(int.Parse(starRailRole.GameUid));
-            logger.LogDebug($"UID: {hsrUser.Uid}");
-            logger.LogDebug($"Server: {hsrUser.Server}");
-
             // Get daily note data
-            var dailyNote = await client.StarRail.FetchDailyNoteAsync(hsrUser);
+            var dailyNote = await honkaiApiService.GetDailyNoteAsync(user, httpClient);
 
             if (dailyNote?.Data == null)
             {
@@ -122,23 +98,23 @@ public class EnergyNotificationService(
             // Проверяем пороги энергии
             if (currentEnergy >= EnergyThreshold300)
             {
-                await SendEnergyNotification(
+                await notificationService.SendEnergyNotificationAsync(
                     user,
                     currentEnergy,
                     maxEnergy,
                     EnergyThreshold300,
-                    hsrUser.Uid,
+                    starRailUser.Uid,
                     energyRecoveryTime
                 );
             }
             else if (currentEnergy >= EnergyThreshold240)
             {
-                await SendEnergyNotification(
+                await notificationService.SendEnergyNotificationAsync(
                     user,
                     currentEnergy,
                     maxEnergy,
                     EnergyThreshold240,
-                    hsrUser.Uid,
+                    starRailUser.Uid,
                     energyRecoveryTime
                 );
             }
@@ -148,7 +124,7 @@ public class EnergyNotificationService(
                 user.Id,
                 currentEnergy,
                 maxEnergy,
-                hsrUser.Uid
+                starRailUser.Uid
             );
         }
         catch (Exception ex)
@@ -161,136 +137,6 @@ public class EnergyNotificationService(
         }
     }
 
-    private async Task SendEnergyNotification(
-        DailyAutoMarkupUser user,
-        int currentEnergy,
-        int maxEnergy,
-        int threshold,
-        int gameUid,
-        TimeSpan recoveryTime
-    )
-    {
-        // Проверяем кулдаун уведомлений
-        var notificationKey = $"{user.Id}_{gameUid}_{threshold}";
-        if (
-            _lastNotificationTime.TryGetValue(Guid.Parse(notificationKey), out var lastNotification)
-        )
-        {
-            if (DateTime.UtcNow - lastNotification < TimeSpan.FromHours(NotificationCooldownHours))
-            {
-                logger.LogDebug(
-                    "Пропускаем уведомление для пользователя {UserId} из-за кулдауна",
-                    user.Id
-                );
-                return;
-            }
-        }
-
-        try
-        {
-            var message = GenerateEnergyNotificationMessage(
-                currentEnergy,
-                maxEnergy,
-                threshold,
-                recoveryTime
-            );
-
-            // Отправляем уведомление через Telegram, если есть TelegramId
-            if (user.TelegramId.HasValue)
-            {
-                await SendTelegramNotification(user.TelegramId.Value, message, gameUid);
-            }
-
-            // Отправляем уведомление через Twitch, если есть TwitchId
-            if (!string.IsNullOrEmpty(user.TwitchId))
-            {
-                await SendTwitchNotification(user.TwitchId, message, gameUid);
-            }
-
-            // Обновляем время последнего уведомления
-            _lastNotificationTime[Guid.Parse(notificationKey)] = DateTime.UtcNow;
-
-            logger.LogInformation(
-                "Отправлено уведомление об энергии {Energy}/{MaxEnergy} для пользователя {UserId} (аккаунт {GameUid})",
-                currentEnergy,
-                maxEnergy,
-                user.Id,
-                gameUid
-            );
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(
-                ex,
-                "Ошибка при отправке уведомления об энергии для пользователя {UserId}",
-                user.Id
-            );
-        }
-    }
-
-    private string GenerateEnergyNotificationMessage(
-        int currentEnergy,
-        int maxEnergy,
-        int threshold,
-        TimeSpan recoveryTime
-    )
-    {
-        var thresholdText = threshold == EnergyThreshold300 ? "300" : "240";
-        var recoveryTimeSpan = recoveryTime;
-
-        var message = $"⚡ Внимание! Ваша энергия в Honkai: Star Rail достигла {thresholdText}!\n\n";
-        message += $"🔋 Текущая энергия: {currentEnergy}/{maxEnergy}\n";
-
-        if (recoveryTime.TotalSeconds > 0)
-        {
-            var hours = (int)recoveryTimeSpan.TotalHours;
-            var minutes = recoveryTimeSpan.Minutes;
-            message += $"⏰ Время до полного восстановления: {hours}ч {minutes}м\n";
-        }
-
-        message += "\n🎮 Не забудьте потратить энергию на фарм материалов!";
-
-        return message;
-    }
-
-    private async Task SendTelegramNotification(long telegramId, string message, int gameUid)
-    {
-        try
-        {
-            await telegramClient.SendMessage(telegramId, message);
-            logger.LogInformation(
-                "Telegram уведомление отправлено для {TelegramId}: {Message}",
-                telegramId,
-                message
-            );
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(
-                ex,
-                "Ошибка при отправке Telegram уведомления для {TelegramId}",
-                telegramId
-            );
-        }
-    }
-
-    private async Task SendTwitchNotification(string twitchId, string message, int gameUid)
-    {
-        try
-        {
-            await twitchClient.SendMessageToMainTwitchAsync(message);
-            logger.LogInformation(
-                "Twitch уведомление отправлено для {TwitchId}: {Message}",
-                twitchId,
-                message
-            );
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Ошибка при отправке Twitch уведомления для {TwitchId}", twitchId);
-        }
-    }
-
     public override Dictionary<string, object> GetServiceConfiguration()
     {
         return new Dictionary<string, object>
@@ -298,7 +144,6 @@ public class EnergyNotificationService(
             ["EnergyCheckInterval"] = "15 минут",
             ["EnergyThreshold240"] = EnergyThreshold240,
             ["EnergyThreshold300"] = EnergyThreshold300,
-            ["NotificationCooldown"] = $"{NotificationCooldownHours} часа",
             ["SupportedPlatforms"] = "Telegram, Twitch",
         };
     }

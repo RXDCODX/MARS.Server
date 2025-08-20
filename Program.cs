@@ -1,8 +1,8 @@
 ﻿using System.Diagnostics;
 using BooruSharp.Booru;
 using MARS.Server.CustomLoggers.DatabaseLogger;
-using MARS.Server.DataBaseContext;
 using MARS.Server.CustomLoggers.TelegramLogger;
+using MARS.Server.DataBaseContext;
 using MARS.Server.Services._365Genius;
 using MARS.Server.Services.CommandExecutor;
 using MARS.Server.Services.Honkai;
@@ -124,6 +124,7 @@ public static class Program
         //services.AddSoundRequest();
         services.AddBaseAspNetMiddlewares();
         services.AddSwaggerServices();
+        services.AddHonkaiServices();
 
         if (builder.Environment.IsProduction())
         {
@@ -147,13 +148,6 @@ public static class Program
 
         services.AddSingleton<PyroAlertsHelper>();
         services.AddSingleton<PyroAlertsHandler>();
-
-        // Honkai: Star Rail сервисы
-        services.AddSingleton<DailyMarkRedeemService>();
-        services.AddHostedService(sp => sp.GetRequiredService<DailyMarkRedeemService>());
-
-        services.AddSingleton<EnergyNotificationService>();
-        services.AddHostedService(sp => sp.GetRequiredService<EnergyNotificationService>());
 
         services.AddSingleton<AnswersForTwitchRewards>();
 
