@@ -30,6 +30,8 @@ public class EnergyNotificationService(
         _energyCheckTimer.AutoReset = true;
         _energyCheckTimer.Start();
 
+        Task.Factory.StartNew(async () => await CheckEnergyForAllUsers(), cancellationToken);
+
         return base.StartAsync(cancellationToken);
     }
 

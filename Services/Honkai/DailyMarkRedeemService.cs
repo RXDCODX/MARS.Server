@@ -224,14 +224,6 @@ public class DailyMarkRedeemService(
     {
         try
         {
-            // Получаем информацию об аккаунте
-            var accountInfo = await honkaiApiService.GetUserStatsAsync(user, httpClient);
-
-            if (accountInfo?.GameLists == null)
-            {
-                throw new Exception("Не удалось получить информацию об аккаунте");
-            }
-
             var (success, rewardName, amount) = await honkaiApiService.ClaimDailyRewardAsync(
                 user,
                 httpClient
