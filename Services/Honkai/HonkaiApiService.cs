@@ -1,7 +1,6 @@
 ﻿using MarchSeven;
 using MarchSeven.Models.Core;
 using MarchSeven.Models.Core.Cookie;
-using MarchSeven.Models.GenshinImpact.DailyNote;
 using MarchSeven.Models.HonkaiStarRail.Entitys;
 using MarchSeven.Models.HonkaiStarRail.StarRailDailyNote;
 using MarchSeven.Models.HoYoLab;
@@ -163,7 +162,7 @@ public class HonkaiApiService(ILogger<HonkaiApiService> logger, IHostEnvironment
             LtUidV2 = user.LtuidV2,
         };
 
-        var clientData = new ClientData { HttpClient = httpClient, Language = "ru-RU" };
+        var clientData = new ClientData { HttpClient = httpClient, Language = "ru-ru" };
 
         return MarchSevenClient.Create(cookieV2, clientData);
     }

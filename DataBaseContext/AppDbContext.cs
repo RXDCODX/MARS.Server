@@ -75,6 +75,7 @@ public sealed class AppDbContext : DbContext
     public DbSet<ScoreboardPlayer> ScoreboardPlayers { get; set; } = null!;
     public DbSet<ScoreboardLayout> ScoreboardLayouts { get; set; } = null!;
     public DbSet<DailyAutoMarkupUser> HonkaiMarkupUser { get; set; } = null!;
+    public DbSet<WaifuRollGuarantee> WaifuRollGuarantees { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

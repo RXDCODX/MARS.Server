@@ -2,7 +2,6 @@
 using BooruSharp.Booru;
 using MARS.Server.CustomLoggers.DatabaseLogger;
 using MARS.Server.CustomLoggers.TelegramLogger;
-using MARS.Server.DataBaseContext;
 using MARS.Server.Services._365Genius;
 using MARS.Server.Services.CommandExecutor;
 using MARS.Server.Services.Honkai;
@@ -15,6 +14,7 @@ using MARS.Server.Services.Twitch.Rewards;
 using MARS.Server.Services.Twitch.Synthesizer;
 using MARS.Server.Services.Twitch.Synthesizer.Enitity;
 using MARS.Server.Services.WaifuRoll;
+using MARS.Server.Services.WaifuRoll.Entitys.Interfaces;
 using MARS.Server.Services.WaifuRoll.helpers;
 using WTelegram;
 
@@ -157,6 +157,7 @@ public static class Program
 
         services.AddSingleton<WaifuRollService>();
         services.AddSingleton<WaifuRollDataBaseHelper>();
+        services.AddSingleton<IWaifuRollGuaranteeService, WaifuRollGuaranteeService>();
 
         services.AddSingleton<RandomMemHandler>();
         services.AddSingleton<RandomMemeWorker>();

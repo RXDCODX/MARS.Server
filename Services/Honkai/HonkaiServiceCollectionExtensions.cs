@@ -1,6 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-
-namespace MARS.Server.Services.Honkai;
+﻿namespace MARS.Server.Services.Honkai;
 
 public static class HonkaiServiceCollectionExtensions
 {

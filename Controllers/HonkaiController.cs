@@ -56,7 +56,9 @@ public class HonkaiController : ControllerBase
                 .FirstOrDefaultAsync(u => u.Id == id);
 
             if (user == null)
+            {
                 return NotFound($"Пользователь с ID {id} не найден");
+            }
 
             return Ok(user);
         }
@@ -145,23 +147,35 @@ public class HonkaiController : ControllerBase
             var user = await dbContext.HonkaiMarkupUser.FindAsync(id);
 
             if (user == null)
+            {
                 return NotFound($"Пользователь с ID {id} не найден");
+            }
 
             // Обновляем только разрешенные поля
             if (request.TwitchId != null)
+            {
                 user.TwitchId = request.TwitchId;
+            }
 
             if (request.TelegramId != null)
+            {
                 user.TelegramId = request.TelegramId;
+            }
 
             if (!string.IsNullOrEmpty(request.LtmidV2))
+            {
                 user.LtmidV2 = request.LtmidV2;
+            }
 
             if (!string.IsNullOrEmpty(request.LTokenV2))
+            {
                 user.LTokenV2 = request.LTokenV2;
+            }
 
             if (!string.IsNullOrEmpty(request.LtuidV2))
+            {
                 user.LtuidV2 = request.LtuidV2;
+            }
 
             await dbContext.SaveChangesAsync();
 
@@ -191,7 +205,9 @@ public class HonkaiController : ControllerBase
             var user = await dbContext.HonkaiMarkupUser.FindAsync(id);
 
             if (user == null)
+            {
                 return NotFound($"Пользователь с ID {id} не найден");
+            }
 
             dbContext.HonkaiMarkupUser.Remove(user);
             await dbContext.SaveChangesAsync();
@@ -219,7 +235,9 @@ public class HonkaiController : ControllerBase
             var user = await dbContext.HonkaiMarkupUser.FindAsync(id);
 
             if (user == null)
+            {
                 return NotFound($"Пользователь с ID {id} не найден");
+            }
 
             // Сбрасываем время последней отметки, чтобы сервис мог снова активировать отметки
             user.LastAutoMarkup = DateTime.UtcNow.AddDays(-1);

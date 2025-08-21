@@ -1,8 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-
-namespace MARS.Server.DataBaseContext;
+﻿namespace MARS.Server.DataBaseContext;
 
 /// <summary>
 /// Hosted service для автоматической инициализации базы данных при запуске приложения

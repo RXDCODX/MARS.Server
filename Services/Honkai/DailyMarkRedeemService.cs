@@ -119,7 +119,7 @@ public class DailyMarkRedeemService(
             _errorNotificationTimer.Interval = nextDelay.TotalMilliseconds;
             _errorNotificationTimer.AutoReset = true;
 
-            _errorNotificationTimer.Start();
+            //_errorNotificationTimer.Start();
         }
     }
 
@@ -201,10 +201,10 @@ public class DailyMarkRedeemService(
                     // В продакшене не логируем ошибки, только отправляем уведомление
                     if (user.TelegramId != null && environment.IsProduction())
                     {
-                        await notificationService.SendMarkupFailureNotificationAsync(
-                            user.TelegramId.Value,
-                            user.Id
-                        );
+                        //await notificationService.SendMarkupFailureNotificationAsync(
+                        //    user.TelegramId.Value,
+                        //    user.Id
+                        //);
                     }
                 }
             }

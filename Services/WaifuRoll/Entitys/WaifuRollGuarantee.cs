@@ -1,0 +1,17 @@
+﻿namespace MARS.Server.Services.WaifuRoll.Entitys;
+
+[Table("WaifuRollGuarantees")]
+public class WaifuRollGuarantee
+{
+    [Key]
+    [DatabaseGenerated(DatabaseGeneratedOption.None)]
+    public required string TwitchId { get; set; }
+
+    public int RollCount { get; set; } = 0;
+
+    public DateTimeOffset LastRoll { get; set; } = DateTimeOffset.Now;
+
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.Now;
+
+    public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.Now;
+}

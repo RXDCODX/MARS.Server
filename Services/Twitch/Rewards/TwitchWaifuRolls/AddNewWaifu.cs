@@ -3,6 +3,7 @@ using MARS.Server.Services.ServiceManager;
 using MARS.Server.Services.Shikimori;
 using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.WaifuRoll;
+using MARS.Server.Services.WaifuRoll.Entitys.Interfaces;
 using ShikimoriSharp.Classes;
 using TwitchLib.Api.Helix.Models.Chat;
 using TwitchLib.Client.Events;
@@ -18,13 +19,14 @@ public class AddNewWaifu(
     IHubContext<TelegramusHub, ITelegramusHub> hubContext,
     ITwitchAPI api,
     IHostApplicationLifetime lifetime,
-    TokenService tokenService
+    TokenService tokenService,
+    IWaifuRollGuaranteeService guaranteeService
 ) : ManagedServiceBase(logger)
 {
     private readonly ShikimoriClientOptions _options = options.Value;
 
     private static Guid RewardGuid => Guid.Parse("a0c9d421-cf76-4f76-9bc6-3cf28da1ffaf");
-    private const int VipChance = 5;
+    private const int GuaranteeRolls = 200; // Количество роллов для гаранта
 
     public override string ServiceName => "addnewwaifu";
     public override string DisplayName => "Add New Waifu";
@@ -113,8 +115,13 @@ public class AddNewWaifu(
 
                     if (!isVip)
                     {
-                        var chance = Random.Shared.Next(0, 101);
-                        if (chance >= 100 - VipChance)
+                        // Увеличиваем счетчик роллов пользователя
+                        await guaranteeService.IncrementRollCountAsync(userId);
+
+                        // Проверяем, выпал ли VIP статус
+                        var vipDropped = await guaranteeService.CheckVipDropAsync(userId);
+
+                        if (vipDropped)
                         {
                             if (tokenService.Token == null)
                             {
@@ -135,9 +142,19 @@ public class AddNewWaifu(
                                 userId,
                                 tokenService.Token.AccessToken
                             );
+
+                            // Сбрасываем счетчик роллов после выпадения VIP
+                            await guaranteeService.ResetRollCountAsync(userId);
                         }
                         else
                         {
+                            // Получаем информацию о гаранте для отображения
+                            var guaranteeInfo = await guaranteeService.GetGuaranteeInfoAsync(
+                                userId
+                            );
+                            var rollsUntilGuarantee =
+                                GuaranteeRolls - (guaranteeInfo?.RollCount ?? 0);
+
                             var message =
                                 AnswersForTwitchRewards.ReplaceKeywordsInAnswer(
                                     userName,
@@ -145,10 +162,7 @@ public class AddNewWaifu(
                                     null,
                                     null,
                                     waifu
-                                )
-                                + "Тебе выпало число "
-                                + chance
-                                + " !";
+                                ) + $" Осталось до гаранта: {rollsUntilGuarantee} роллов!";
                             await client.SendMessageToMainTwitchAsync(message);
                         }
                     }
