@@ -135,9 +135,6 @@ public class TwitchCommandService : PlatformCommandServiceBase<string>, IHostedS
                 {
                     if (!_aliases.TryGetValue(commandName, out var commandAlias))
                     {
-                        await SendMessage(
-                            $"Команда '{commandName}' не найдена. Используйте !commands для списка доступных команд."
-                        );
                         return;
                     }
                     else

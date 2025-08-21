@@ -26,6 +26,7 @@ using MARS.Server.Services.Twitch.Rewards.TwitchScreenParticles;
 using MARS.Server.Services.Twitch.Rewards.TwitchWaifuRolls;
 using MARS.Server.Services.Twitch.SoundBarService;
 using MARS.Server.Services.Twitch.StreamBotNotifications;
+using MARS.Server.Services.Twitch.TwitchFollowers;
 using Microsoft.OpenApi.Models;
 using TwitchLib.Api;
 using TwitchLib.Api.Core.Enums;
@@ -191,6 +192,10 @@ public static class StartupEstensions
         services.AddSingleton<EventSubService>();
         services.AddSingleton<TelegramTokenNotification>();
         services.AddSingleton<TokenService>();
+        
+        // Регистрируем сервис для работы с зрителями канала rxdcodx
+        services.AddRxdcodxViewersService();
+        
         services.AddSingleton<AutoHello>();
         services.AddHostedService(sp => sp.GetRequiredService<AutoHello>());
 

@@ -5,20 +5,11 @@ namespace MARS.Server.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class HonkaiController : ControllerBase
+public class HonkaiController(
+    IDbContextFactory<AppDbContext> dbContextFactory,
+    ILogger<HonkaiController> logger
+) : ControllerBase
 {
-    private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
-    private readonly ILogger<HonkaiController> _logger;
-
-    public HonkaiController(
-        IDbContextFactory<AppDbContext> dbContextFactory,
-        ILogger<HonkaiController> logger
-    )
-    {
-        _dbContextFactory = dbContextFactory;
-        _logger = logger;
-    }
-
     /// <summary>
     /// Получить всех пользователей автоматических отметок
     /// </summary>
@@ -27,7 +18,7 @@ public class HonkaiController : ControllerBase
     {
         try
         {
-            await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+            await using var dbContext = await dbContextFactory.CreateDbContextAsync();
             var users = await dbContext
                 .HonkaiMarkupUser.AsNoTracking()
                 .OrderBy(u => u.CreatedAt)
@@ -37,7 +28,7 @@ public class HonkaiController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Ошибка при получении пользователей автоматических отметок");
+            logger.LogError(ex, "Ошибка при получении пользователей автоматических отметок");
             return StatusCode(500, "Внутренняя ошибка сервера");
         }
     }
@@ -50,21 +41,16 @@ public class HonkaiController : ControllerBase
     {
         try
         {
-            await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+            await using var dbContext = await dbContextFactory.CreateDbContextAsync();
             var user = await dbContext
                 .HonkaiMarkupUser.AsNoTracking()
                 .FirstOrDefaultAsync(u => u.Id == id);
 
-            if (user == null)
-            {
-                return NotFound($"Пользователь с ID {id} не найден");
-            }
-
-            return Ok(user);
+            return user == null ? NotFound($"Пользователь с ID {id} не найден") : Ok(user);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Ошибка при получении пользователя {UserId}", id);
+            logger.LogError(ex, "Ошибка при получении пользователя {UserId}", id);
             return StatusCode(500, "Внутренняя ошибка сервера");
         }
     }
@@ -88,7 +74,7 @@ public class HonkaiController : ControllerBase
                 return BadRequest("Все обязательные поля должны быть заполнены");
             }
 
-            await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+            await using var dbContext = await dbContextFactory.CreateDbContextAsync();
 
             // Проверяем, не существует ли уже пользователь с такими данными
             var existingUser = await dbContext
@@ -118,7 +104,7 @@ public class HonkaiController : ControllerBase
             dbContext.HonkaiMarkupUser.Add(user);
             await dbContext.SaveChangesAsync();
 
-            _logger.LogInformation(
+            logger.LogInformation(
                 "Создан новый пользователь автоматических отметок: {UserId}",
                 user.Id
             );
@@ -127,7 +113,7 @@ public class HonkaiController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Ошибка при создании пользователя автоматических отметок");
+            logger.LogError(ex, "Ошибка при создании пользователя автоматических отметок");
             return StatusCode(500, "Внутренняя ошибка сервера");
         }
     }
@@ -143,7 +129,7 @@ public class HonkaiController : ControllerBase
     {
         try
         {
-            await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+            await using var dbContext = await dbContextFactory.CreateDbContextAsync();
             var user = await dbContext.HonkaiMarkupUser.FindAsync(id);
 
             if (user == null)
@@ -179,7 +165,7 @@ public class HonkaiController : ControllerBase
 
             await dbContext.SaveChangesAsync();
 
-            _logger.LogInformation(
+            logger.LogInformation(
                 "Обновлен пользователь автоматических отметок: {UserId}",
                 user.Id
             );
@@ -188,7 +174,7 @@ public class HonkaiController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Ошибка при обновлении пользователя {UserId}", id);
+            logger.LogError(ex, "Ошибка при обновлении пользователя {UserId}", id);
             return StatusCode(500, "Внутренняя ошибка сервера");
         }
     }
@@ -201,7 +187,7 @@ public class HonkaiController : ControllerBase
     {
         try
         {
-            await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+            await using var dbContext = await dbContextFactory.CreateDbContextAsync();
             var user = await dbContext.HonkaiMarkupUser.FindAsync(id);
 
             if (user == null)
@@ -212,13 +198,13 @@ public class HonkaiController : ControllerBase
             dbContext.HonkaiMarkupUser.Remove(user);
             await dbContext.SaveChangesAsync();
 
-            _logger.LogInformation("Удален пользователь автоматических отметок: {UserId}", id);
+            logger.LogInformation("Удален пользователь автоматических отметок: {UserId}", id);
 
             return NoContent();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Ошибка при удалении пользователя {UserId}", id);
+            logger.LogError(ex, "Ошибка при удалении пользователя {UserId}", id);
             return StatusCode(500, "Внутренняя ошибка сервера");
         }
     }
@@ -231,7 +217,7 @@ public class HonkaiController : ControllerBase
     {
         try
         {
-            await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+            await using var dbContext = await dbContextFactory.CreateDbContextAsync();
             var user = await dbContext.HonkaiMarkupUser.FindAsync(id);
 
             if (user == null)
@@ -243,10 +229,7 @@ public class HonkaiController : ControllerBase
             user.LastAutoMarkup = DateTime.UtcNow.AddDays(-1);
             await dbContext.SaveChangesAsync();
 
-            _logger.LogInformation(
-                "Сброшено время последней отметки для пользователя {UserId}",
-                id
-            );
+            logger.LogInformation("Сброшено время последней отметки для пользователя {UserId}", id);
 
             return Ok(
                 new
@@ -257,7 +240,7 @@ public class HonkaiController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Ошибка при сбросе времени отметки для пользователя {UserId}", id);
+            logger.LogError(ex, "Ошибка при сбросе времени отметки для пользователя {UserId}", id);
             return StatusCode(500, "Внутренняя ошибка сервера");
         }
     }
@@ -270,7 +253,7 @@ public class HonkaiController : ControllerBase
     {
         try
         {
-            await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+            await using var dbContext = await dbContextFactory.CreateDbContextAsync();
 
             var totalUsers = await dbContext.HonkaiMarkupUser.CountAsync();
             var usersWithTelegram = await dbContext.HonkaiMarkupUser.CountAsync(u =>
@@ -302,7 +285,7 @@ public class HonkaiController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Ошибка при получении статистики");
+            logger.LogError(ex, "Ошибка при получении статистики");
             return StatusCode(500, "Внутренняя ошибка сервера");
         }
     }

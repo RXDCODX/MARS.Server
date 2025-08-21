@@ -23,7 +23,7 @@ public class HonkaiNotificationService(
     ILogger<HonkaiNotificationService> logger
 ) : IHonkaiNotificationService
 {
-    private readonly Dictionary<Guid, DateTime> _lastNotificationTime = new();
+    private readonly Dictionary<Guid, DateTime> _lastNotificationTime = [];
     private const int NotificationCooldownHours = 2;
 
     public async Task SendMarkupFailureNotificationAsync(long telegramId, Guid userId)
@@ -134,13 +134,13 @@ public class HonkaiNotificationService(
             // Отправляем уведомление через Telegram, если есть TelegramId
             if (user.TelegramId.HasValue)
             {
-                await SendTelegramNotification(user.TelegramId.Value, message, gameUid);
+                await SendTelegramNotification(user.TelegramId.Value, message);
             }
 
             // Отправляем уведомление через Twitch, если есть TwitchId
             if (!string.IsNullOrEmpty(user.TwitchId))
             {
-                await SendTwitchNotification(user.TwitchId, message, gameUid);
+                await SendTwitchNotification(user.TwitchId, message);
             }
 
             // Обновляем время последнего уведомления
@@ -160,7 +160,7 @@ public class HonkaiNotificationService(
         }
     }
 
-    private string GenerateMarkupFailureMessage(Guid userId)
+    private static string GenerateMarkupFailureMessage(Guid userId)
     {
         return $"⚠️ **Внимание!**\n\n"
             + $"Не удалось поставить отметку в Honkai: Star Rail для пользователя {userId}.\n\n"
@@ -170,17 +170,17 @@ public class HonkaiNotificationService(
             + "Вот ссылка для ручной активации - https://act.hoyolab.com/bbs/event/signin/hkrpg/index.html?act_id=e202303301540311";
     }
 
-    private string GenerateMarkupSuccessMessage(string rewardName, int amount)
+    private static string GenerateMarkupSuccessMessage(string rewardName, int amount)
     {
         return $"Автоотметка была активирована! Награда за сегодня: {rewardName} в количестве {amount} штук!";
     }
 
-    private string GenerateMarkupAlreadyReceivedMessage()
+    private static string GenerateMarkupAlreadyReceivedMessage()
     {
         return "Награда за отметки для HSR уже была активирована!";
     }
 
-    private string GenerateEnergyNotificationMessage(
+    private static string GenerateEnergyNotificationMessage(
         int currentEnergy,
         int maxEnergy,
         int threshold,
@@ -202,7 +202,7 @@ public class HonkaiNotificationService(
         return message;
     }
 
-    private async Task SendTelegramNotification(long telegramId, string message, int gameUid)
+    private async Task SendTelegramNotification(long telegramId, string message)
     {
         try
         {
@@ -219,7 +219,7 @@ public class HonkaiNotificationService(
         }
     }
 
-    private async Task SendTwitchNotification(string twitchId, string message, int gameUid)
+    private async Task SendTwitchNotification(string twitchId, string message)
     {
         try
         {

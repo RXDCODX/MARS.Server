@@ -23,8 +23,8 @@ public class DailyMarkRedeemService(
     private readonly HoyolabConfiguration _configuration = options.Value;
     private Timer? _dailyTimer;
     private Timer? _errorNotificationTimer;
-    private readonly TimeZoneInfo _ulyanovskTimeZone = TimeZoneInfo.FindSystemTimeZoneById(
-        "Russian Standard Time"
+    private readonly TimeZoneInfo _honkaiTimeZone = TimeZoneInfo.FindSystemTimeZoneById(
+        "China Standard Time" // UTC+8
     );
 
     public override Task StartAsync(CancellationToken cancellationToken = default)
@@ -43,7 +43,7 @@ public class DailyMarkRedeemService(
 
             logger.LogInformation("Таймер запущен - проверка каждые 30 минут");
 
-            // Планируем отправку уведомлений об ошибках за 2 часа до 20:00
+            // Планируем отправку уведомлений об ошибках за 2 часа до 00:00 по UTC+8
             ScheduleErrorNotifications();
         });
 
@@ -59,31 +59,32 @@ public class DailyMarkRedeemService(
 
     private void ScheduleErrorNotifications()
     {
-        var now = TimeZoneInfo.ConvertTime(DateTime.UtcNow.Date, _ulyanovskTimeZone);
-        var targetTime = now.Date.AddHours(19); // 20:00 по ульяновскому времени
-        var notificationTime = targetTime.AddHours(-2); // За 2 часа до 20:00
+        // Работаем с UTC временем, но используем логику UTC+8
+        var now = DateTime.UtcNow;
+        var targetTimeUtc = now.Date.AddHours(16); // 00:00 UTC+8 = 16:00 UTC (предыдущий день)
+        var notificationTimeUtc = targetTimeUtc.AddHours(-2); // 22:00 UTC+8 = 14:00 UTC (предыдущий день)
 
-        // Проверяем, находимся ли мы в промежутке между 18:00 и 20:00
-        var currentTime = TimeZoneInfo.ConvertTime(DateTime.UtcNow, _ulyanovskTimeZone);
+        // Проверяем, находимся ли мы в промежутке между 22:00 и 00:00 по UTC+8
+        // 22:00 UTC+8 = 14:00 UTC, 00:00 UTC+8 = 16:00 UTC
         var isInNotificationWindow =
-            currentTime.TimeOfDay >= TimeSpan.FromHours(17)
-            && currentTime.TimeOfDay < TimeSpan.FromHours(19);
+            now.TimeOfDay >= TimeSpan.FromHours(14)
+            && now.TimeOfDay < TimeSpan.FromHours(16);
 
         if (isInNotificationWindow)
         {
             logger.LogInformation(
-                "Приложение запущено в промежутке между 18:00 и 20:00. Немедленно отправляем уведомления об ошибках."
+                "Приложение запущено в промежутке между 22:00 и 00:00 по UTC+8. Немедленно отправляем уведомления об ошибках."
             );
 
             // Немедленно отправляем уведомления об ошибках
             Task.Run(async () => await SendErrorNotifications());
 
-            // Планируем следующую отправку на завтра в 18:00
-            var tomorrowNotificationTime = currentTime.Date.AddDays(1).AddHours(17);
-            var delayUntilTomorrow = tomorrowNotificationTime - currentTime;
+            // Планируем следующую отправку на завтра в 22:00 по UTC+8 (14:00 UTC)
+            var tomorrowNotificationTime = now.Date.AddDays(1).AddHours(14);
+            var delayUntilTomorrow = tomorrowNotificationTime - now;
 
             logger.LogInformation(
-                "Следующие уведомления об ошибках запланированы на завтра в {NotificationTime} (через {Delay})",
+                "Следующие уведомления об ошибках запланированы на завтра в {NotificationTime} UTC+8 (через {Delay})",
                 tomorrowNotificationTime.ToString("dd.MM.yyyy HH:mm"),
                 delayUntilTomorrow
             );
@@ -96,16 +97,16 @@ public class DailyMarkRedeemService(
         else
         {
             // Если время уведомлений уже прошло, планируем на завтра
-            if (now >= notificationTime)
+            if (now >= notificationTimeUtc)
             {
-                notificationTime = notificationTime.AddDays(1);
+                notificationTimeUtc = notificationTimeUtc.AddDays(1);
             }
 
-            var delay = notificationTime - now;
+            var delay = notificationTimeUtc - now;
 
             logger.LogInformation(
-                "Уведомления об ошибках запланированы на {NotificationTime} (через {Delay})",
-                notificationTime.ToString("dd.MM.yyyy HH:mm"),
+                "Уведомления об ошибках запланированы на {NotificationTime} UTC+8 (через {Delay})",
+                TimeZoneInfo.ConvertTime(notificationTimeUtc, _honkaiTimeZone).ToString("dd.MM.yyyy HH:mm"),
                 delay
             );
 
@@ -114,7 +115,7 @@ public class DailyMarkRedeemService(
             _errorNotificationTimer.AutoReset = false; // Выполняем только один раз
 
             // Планируем следующий запуск на завтра
-            var nextNotificationTime = notificationTime.AddDays(1);
+            var nextNotificationTime = notificationTimeUtc.AddDays(1);
             var nextDelay = nextNotificationTime - now;
             _errorNotificationTimer.Interval = nextDelay.TotalMilliseconds;
             _errorNotificationTimer.AutoReset = true;
@@ -123,14 +124,41 @@ public class DailyMarkRedeemService(
         }
     }
 
+    /// <summary>
+    /// Получает время последнего сброса цикла отметок в UTC+8
+    /// </summary>
+    private DateTime GetLastCycleResetTime()
+    {
+        var now = DateTime.UtcNow;
+        var todayResetTimeUtc = now.Date.AddHours(16); // 00:00 UTC+8 = 16:00 UTC (предыдущий день)
+        
+        // Если сейчас время до 16:00 UTC (00:00 UTC+8), то сброс был вчера
+        if (now.TimeOfDay < TimeSpan.FromHours(16))
+        {
+            return todayResetTimeUtc.AddDays(-1);
+        }
+        
+        return todayResetTimeUtc;
+    }
+
+    /// <summary>
+    /// Проверяет, нужна ли пользователю отметка на основе времени последнего сброса цикла
+    /// </summary>
+    private bool NeedsMarkup(DailyAutoMarkupUser user)
+    {
+        var lastCycleReset = GetLastCycleResetTime();
+        // user.LastAutoMarkup уже в UTC, поэтому конвертируем lastCycleReset в UTC для сравнения
+        return user.LastAutoMarkup < lastCycleReset;
+    }
+
     private async Task SendErrorNotifications()
     {
         try
         {
             await using var dbContext = await dbContextFactory.CreateDbContextAsync();
             var users = await dbContext
-                .HonkaiMarkupUser.AsNoTracking()
-                .Where(u => u.LastAutoMarkup < DateTime.UtcNow.Date)
+                .HonkaiMarkupUser.AsNoTracking().AsEnumerable()
+                .Where(u => NeedsMarkup(u))
                 .ToListAsync();
 
             foreach (var user in users)
@@ -168,8 +196,8 @@ public class DailyMarkRedeemService(
 
             await using var dbContext = await dbContextFactory.CreateDbContextAsync();
             var users = await dbContext
-                .HonkaiMarkupUser.AsNoTracking()
-                .Where(u => u.LastAutoMarkup < DateTime.UtcNow.Date)
+                .HonkaiMarkupUser.AsNoTracking().AsEnumerable()
+                .Where(u => NeedsMarkup(u))
                 .ToListAsync();
 
             if (users.Count == 0)
@@ -248,11 +276,12 @@ public class DailyMarkRedeemService(
     {
         return new Dictionary<string, object>
         {
-            ["TimeZone"] = _ulyanovskTimeZone.DisplayName,
+            ["TimeZone"] = _honkaiTimeZone.DisplayName,
             ["CheckInterval"] = "30 минут",
-            ["ErrorNotificationTime"] = "18:00 (за 2 часа до 20:00)",
+            ["CycleResetTime"] = "00:00 UTC+8",
+            ["ErrorNotificationTime"] = "22:00 UTC+8 (за 2 часа до 00:00)",
             ["Description"] =
-                "Проверка каждые 30 минут + уведомления об ошибках за 2 часа до 20:00",
+                "Проверка каждые 30 минут + уведомления об ошибках за 2 часа до 00:00 по UTC+8",
         };
     }
 }
