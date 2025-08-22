@@ -19,16 +19,13 @@ public class ScoreboardHub(ScoreboardService scoreboardService, ILogger<Scoreboa
     public async Task GetCurrentState()
     {
         var state = await scoreboardService.GetCurrentStateAsync();
-        if (state != null)
-        {
-            await Clients.Caller.ReceiveState(state);
-        }
+        await Clients.Caller.ReceiveState(state);
     }
 
     [SwaggerIgnore]
-    public override Task OnConnectedAsync()
+    public override async Task OnConnectedAsync()
     {
-        return GetCurrentState();
+        await Clients.Caller.ReceiveState(await scoreboardService.GetCurrentStateAsync());
     }
 
     public async Task UpdateState(ScoreboardDto state)

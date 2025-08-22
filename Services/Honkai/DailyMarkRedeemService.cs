@@ -67,8 +67,7 @@ public class DailyMarkRedeemService(
         // Проверяем, находимся ли мы в промежутке между 22:00 и 00:00 по UTC+8
         // 22:00 UTC+8 = 14:00 UTC, 00:00 UTC+8 = 16:00 UTC
         var isInNotificationWindow =
-            now.TimeOfDay >= TimeSpan.FromHours(14)
-            && now.TimeOfDay < TimeSpan.FromHours(16);
+            now.TimeOfDay >= TimeSpan.FromHours(14) && now.TimeOfDay < TimeSpan.FromHours(16);
 
         if (isInNotificationWindow)
         {
@@ -106,7 +105,9 @@ public class DailyMarkRedeemService(
 
             logger.LogInformation(
                 "Уведомления об ошибках запланированы на {NotificationTime} UTC+8 (через {Delay})",
-                TimeZoneInfo.ConvertTime(notificationTimeUtc, _honkaiTimeZone).ToString("dd.MM.yyyy HH:mm"),
+                TimeZoneInfo
+                    .ConvertTime(notificationTimeUtc, _honkaiTimeZone)
+                    .ToString("dd.MM.yyyy HH:mm"),
                 delay
             );
 
@@ -127,18 +128,15 @@ public class DailyMarkRedeemService(
     /// <summary>
     /// Получает время последнего сброса цикла отметок в UTC+8
     /// </summary>
-    private DateTime GetLastCycleResetTime()
+    private static DateTime GetLastCycleResetTime()
     {
         var now = DateTime.UtcNow;
         var todayResetTimeUtc = now.Date.AddHours(16); // 00:00 UTC+8 = 16:00 UTC (предыдущий день)
-        
+
         // Если сейчас время до 16:00 UTC (00:00 UTC+8), то сброс был вчера
-        if (now.TimeOfDay < TimeSpan.FromHours(16))
-        {
-            return todayResetTimeUtc.AddDays(-1);
-        }
-        
-        return todayResetTimeUtc;
+        return now.TimeOfDay < TimeSpan.FromHours(16)
+            ? todayResetTimeUtc.AddDays(-1)
+            : todayResetTimeUtc;
     }
 
     /// <summary>
@@ -156,10 +154,11 @@ public class DailyMarkRedeemService(
         try
         {
             await using var dbContext = await dbContextFactory.CreateDbContextAsync();
-            var users = await dbContext
-                .HonkaiMarkupUser.AsNoTracking().AsEnumerable()
-                .Where(u => NeedsMarkup(u))
-                .ToListAsync();
+            var users = dbContext
+                .HonkaiMarkupUser.AsNoTracking()
+                .AsEnumerable()
+                .Where(NeedsMarkup)
+                .ToList();
 
             foreach (var user in users)
             {
@@ -195,10 +194,11 @@ public class DailyMarkRedeemService(
             logger.LogInformation("Начинаем проверку и активацию ежедневных отметок");
 
             await using var dbContext = await dbContextFactory.CreateDbContextAsync();
-            var users = await dbContext
-                .HonkaiMarkupUser.AsNoTracking().AsEnumerable()
-                .Where(u => NeedsMarkup(u))
-                .ToListAsync();
+            var users = dbContext
+                .HonkaiMarkupUser.AsNoTracking()
+                .AsEnumerable()
+                .Where(NeedsMarkup)
+                .ToList();
 
             if (users.Count == 0)
             {

@@ -32,7 +32,7 @@ public interface IRxdcodxViewersService
     /// <summary>
     /// Получить количество VIP канала rxdcodx
     /// </summary>
-    Task<int> GetVIPsCount();
+    Task<int> GetViPsCount();
 
     /// <summary>
     /// Получить количество модераторов канала rxdcodx
@@ -49,7 +49,7 @@ public interface IRxdcodxViewersService
     /// Проверить, является ли пользователь VIP канала rxdcodx
     /// </summary>
     /// <param name="userId">ID пользователя для проверки</param>
-    Task<bool> IsUserVIP(string userId);
+    Task<bool> IsUserVip(string userId);
 
     /// <summary>
     /// Проверить, является ли пользователь модератором канала rxdcodx

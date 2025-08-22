@@ -35,7 +35,7 @@ public class PyroAlertsHelper(ILogger<PyroAlertsHelper> logger) : ITelegramusSer
                 {
                     DisplayName = message.Chat.Username ?? string.Empty,
                     IsLooped = fileType == MediaType.Video,
-                    VIP = false,
+                    Vip = false,
                 },
                 PositionInfo = new MediaPositionInfo
                 {

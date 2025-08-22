@@ -1,4 +1,4 @@
-using MARS.Server.Services.Twitch.Management;
+﻿using MARS.Server.Services.Twitch.Management;
 using TwitchLib.Api.Helix.Models.Channels.GetChannelFollowers;
 using TwitchLib.Api.Helix.Models.Channels.GetChannelVIPs;
 using TwitchLib.Api.Helix.Models.Moderation.GetModerators;
@@ -8,7 +8,8 @@ namespace MARS.Server.Services.Twitch.TwitchFollowers;
 /// <summary>
 /// Сервис для получения информации о зрителях канала rxdcodx
 /// </summary>
-public class RxdcodxViewersService(ITwitchAPI api, TokenService tokenService) : IRxdcodxViewersService
+public class RxdcodxViewersService(ITwitchAPI api, TokenService tokenService)
+    : IRxdcodxViewersService
 {
     private const string ChannelId = "785975641"; // ID канала rxdcodx
     private const string ChannelName = "rxdcodx";
@@ -39,7 +40,7 @@ public class RxdcodxViewersService(ITwitchAPI api, TokenService tokenService) : 
                     pagination,
                     tokenService.Token.AccessToken
                 );
-                
+
                 pagination = result.Pagination?.Cursor ?? string.Empty;
                 list.AddRange(result.Data);
             }
@@ -49,7 +50,10 @@ public class RxdcodxViewersService(ITwitchAPI api, TokenService tokenService) : 
         catch (Exception ex)
         {
             // Логирование ошибки можно добавить здесь
-            throw new InvalidOperationException($"Ошибка при получении фоловеров канала {ChannelName}", ex);
+            throw new InvalidOperationException(
+                $"Ошибка при получении фоловеров канала {ChannelName}",
+                ex
+            );
         }
     }
 
@@ -79,7 +83,7 @@ public class RxdcodxViewersService(ITwitchAPI api, TokenService tokenService) : 
                     pagination,
                     tokenService.Token.AccessToken
                 );
-                
+
                 pagination = result.Pagination?.Cursor ?? string.Empty;
                 list.AddRange(result.Data);
             }
@@ -88,7 +92,10 @@ public class RxdcodxViewersService(ITwitchAPI api, TokenService tokenService) : 
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException($"Ошибка при получении VIP канала {ChannelName}", ex);
+            throw new InvalidOperationException(
+                $"Ошибка при получении VIP канала {ChannelName}",
+                ex
+            );
         }
     }
 
@@ -118,7 +125,7 @@ public class RxdcodxViewersService(ITwitchAPI api, TokenService tokenService) : 
                     pagination,
                     tokenService.Token.AccessToken
                 );
-                
+
                 pagination = result.Pagination?.Cursor ?? string.Empty;
                 list.AddRange(result.Data);
             }
@@ -127,7 +134,10 @@ public class RxdcodxViewersService(ITwitchAPI api, TokenService tokenService) : 
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException($"Ошибка при получении модераторов канала {ChannelName}", ex);
+            throw new InvalidOperationException(
+                $"Ошибка при получении модераторов канала {ChannelName}",
+                ex
+            );
         }
     }
 
@@ -145,7 +155,7 @@ public class RxdcodxViewersService(ITwitchAPI api, TokenService tokenService) : 
     /// Получить количество VIP канала rxdcodx
     /// </summary>
     /// <returns>Количество VIP или 0 если токен недоступен</returns>
-    public async Task<int> GetVIPsCount()
+    public async Task<int> GetViPsCount()
     {
         var vips = await GetAllViPs();
         return vips?.Count ?? 0;
@@ -196,7 +206,7 @@ public class RxdcodxViewersService(ITwitchAPI api, TokenService tokenService) : 
     /// </summary>
     /// <param name="userId">ID пользователя для проверки</param>
     /// <returns>True если пользователь является VIP</returns>
-    public async Task<bool> IsUserVIP(string userId)
+    public async Task<bool> IsUserVip(string userId)
     {
         if (tokenService.Token == null)
         {
@@ -207,7 +217,7 @@ public class RxdcodxViewersService(ITwitchAPI api, TokenService tokenService) : 
         {
             var result = await api.Helix.Channels.GetVIPsAsync(
                 ChannelId,
-                userId,
+                [userId],
                 1,
                 null,
                 tokenService.Token.AccessToken
@@ -237,7 +247,7 @@ public class RxdcodxViewersService(ITwitchAPI api, TokenService tokenService) : 
         {
             var result = await api.Helix.Moderation.GetModeratorsAsync(
                 ChannelId,
-                userId,
+                [userId],
                 1,
                 null,
                 tokenService.Token.AccessToken

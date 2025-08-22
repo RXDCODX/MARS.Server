@@ -16,7 +16,7 @@ public class ScoreboardService(
     private static readonly SemaphoreSlim SemaphoreSlim = new(1);
     private const int DebounceDelayMs = 500; // 500ms задержка для группировки изменений
 
-    public async Task<ScoreboardDto?> GetCurrentStateAsync()
+    public async Task<ScoreboardDto> GetCurrentStateAsync()
     {
         await using var context = await factory.CreateDbContextAsync();
 

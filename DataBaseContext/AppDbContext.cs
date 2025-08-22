@@ -212,7 +212,7 @@ public sealed class AppDbContext : DbContext
                     metaInfo
                         .Property(p => p.TwitchPointsCost)
                         .HasColumnName("MetaInfo_TwitchPointsCost");
-                    metaInfo.Property(p => p.VIP).HasColumnName("MetaInfo_VIP");
+                    metaInfo.Property(p => p.Vip).HasColumnName("MetaInfo_VIP");
                     metaInfo.Property(e => e.Priority).HasColumnName("MetaInfo_Priority");
                 }
             );
