@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Twitch Message Builder - Тестирование API</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        h1 {
+            color: #6441a5;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        h2 {
+            color: #333;
+            border-bottom: 2px solid #6441a5;
+            padding-bottom: 10px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        
+        input, textarea, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        textarea {
+            height: 80px;
+            resize: vertical;
+        }
+        
+        button {
+            background-color: #6441a5;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        
+        button:hover {
+            background-color: #4a2d7a;
+        }
+        
+        button.secondary {
+            background-color: #6c757d;
+        }
+        
+        button.secondary:hover {
+            background-color: #545b62;
+        }
+        
+        button.danger {
+            background-color: #dc3545;
+        }
+        
+        button.danger:hover {
+            background-color: #c82333;
+        }
+        
+        .response {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin-top: 15px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        
+        .error {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .template-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .template-item {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            margin-bottom: 10px;
+            cursor: pointer;
+        }
+        
+        .template-item:hover {
+            background: #e9ecef;
+        }
+        
+        .template-item.selected {
+            background: #6441a5;
+            color: white;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .stat-card {
+            background: #6441a5;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎮 Twitch Message Builder - Тестирование API</h1>
+    
+    <div class="container">
+        <h2>🔧 Создание шаблона</h2>
+        <form id="createForm">
+            <div class="form-group">
+                <label for="name">Название:</label>
+                <input type="text" id="name" name="name" required placeholder="Введите название шаблона">
+            </div>
+            
+            <div class="form-group">
+                <label for="messageTemplate">Шаблон сообщения:</label>
+                <textarea id="messageTemplate" name="messageTemplate" required placeholder="Введите шаблон с переменными {user}, {displayName}, {username}"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="description">Описание:</label>
+                <textarea id="description" name="description" placeholder="Описание шаблона (необязательно)"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="triggerWord">Триггер-слово:</label>
+                <input type="text" id="triggerWord" name="triggerWord" required placeholder="Слово для активации шаблона">
+            </div>
+            
+            <div class="grid">
+                <div class="form-group">
+                    <label for="authorColor">Цвет автора (HEX):</label>
+                    <input type="color" id="authorColor" name="authorColor" value="#6441a5">
+                </div>
+                
+                <div class="form-group">
+                    <label for="authorName">Имя автора:</label>
+                    <input type="text" id="authorName" name="authorName" placeholder="Имя автора (необязательно)">
+                </div>
+            </div>
+            
+            <div class="grid">
+                <div class="form-group">
+                    <label for="priority">Приоритет:</label>
+                    <input type="number" id="priority" name="priority" value="0" min="0" max="100">
+                </div>
+                
+                <div class="form-group">
+                    <label for="randomChance">Случайность (%):</label>
+                    <input type="number" id="randomChance" name="randomChance" value="100" min="0" max="100">
+                </div>
+                
+                <div class="form-group">
+                    <label for="cooldownSeconds">Кулдаун (сек):</label>
+                    <input type="number" id="cooldownSeconds" name="cooldownSeconds" value="0" min="0">
+                </div>
+            </div>
+            
+            <button type="submit">📝 Создать шаблон</button>
+            <button type="button" onclick="loadTemplates()" class="secondary">🔄 Обновить список</button>
+        </form>
+        
+        <div id="createResponse" class="response" style="display: none;"></div>
+    </div>
+    
+    <div class="container">
+        <h2>📋 Список шаблонов</h2>
+        <div id="templatesList" class="template-list"></div>
+        <button onclick="loadTemplates()" class="secondary">🔄 Обновить</button>
+    </div>
+    
+    <div class="container">
+        <h2>📊 Статистика</h2>
+        <div id="statsContainer"></div>
+        <button onclick="loadStats()" class="secondary">🔄 Обновить статистику</button>
+    </div>
+    
+    <div class="container">
+        <h2>🧪 Быстрые тесты</h2>
+        <button onclick="createExampleTemplates()" class="secondary">📝 Создать примеры</button>
+        <button onclick="testAllEndpoints()" class="secondary">🧪 Тест всех endpoints</button>
+        <button onclick="clearAllTemplates()" class="danger">🗑️ Очистить все</button>
+    </div>
+    
+    <div id="testResponse" class="response" style="display: none;"></div>
+
+    <script>
+        const API_BASE = '/api/twitch/message-templates';
+        let selectedTemplateId = null;
+        
+        // Инициализация
+        document.addEventListener('DOMContentLoaded', function() {
+            loadTemplates();
+            loadStats();
+        });
+        
+        // Создание шаблона
+        document.getElementById('createForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData.entries());
+            
+            // Преобразование типов
+            data.priority = parseInt(data.priority);
+            data.randomChance = parseInt(data.randomChance);
+            data.cooldownSeconds = parseInt(data.cooldownSeconds);
+            
+            // Удаление пустых полей
+            Object.keys(data).forEach(key => {
+                if (data[key] === '' || data[key] === null) {
+                    delete data[key];
+                }
+            });
+            
+            try {
+                const response = await fetch(API_BASE, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showResponse('createResponse', JSON.stringify(result, null, 2), 'success');
+                    e.target.reset();
+                    loadTemplates();
+                    loadStats();
+                } else {
+                    showResponse('createResponse', `Ошибка: ${result.message || response.statusText}`, 'error');
+                }
+            } catch (error) {
+                showResponse('createResponse', `Ошибка: ${error.message}`, 'error');
+            }
+        });
+        
+        // Загрузка шаблонов
+        async function loadTemplates() {
+            try {
+                const response = await fetch(API_BASE);
+                const templates = await response.json();
+                
+                const container = document.getElementById('templatesList');
+                container.innerHTML = '';
+                
+                if (templates.length === 0) {
+                    container.innerHTML = '<p>Шаблоны не найдены</p>';
+                    return;
+                }
+                
+                templates.forEach(template => {
+                    const item = document.createElement('div');
+                    item.className = 'template-item';
+                    item.onclick = () => selectTemplate(template.id);
+                    item.innerHTML = `
+                        <strong>${template.name}</strong><br>
+                        <small>Триггер: ${template.triggerWord} | Приоритет: ${template.priority} | Активен: ${template.isActive ? 'Да' : 'Нет'}</small><br>
+                        <small>${template.messageTemplate}</small>
+                    `;
+                    container.appendChild(item);
+                });
+            } catch (error) {
+                console.error('Ошибка загрузки шаблонов:', error);
+            }
+        }
+        
+        // Выбор шаблона
+        function selectTemplate(templateId) {
+            selectedTemplateId = templateId;
+            
+            // Убираем выделение со всех элементов
+            document.querySelectorAll('.template-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            
+            // Выделяем выбранный элемент
+            event.target.closest('.template-item').classList.add('selected');
+        }
+        
+        // Загрузка статистики
+        async function loadStats() {
+            try {
+                const response = await fetch(`${API_BASE}/stats`);
+                const stats = await response.json();
+                
+                const container = document.getElementById('statsContainer');
+                container.innerHTML = `
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-value">${stats.totalTemplates}</div>
+                            <div class="stat-label">Всего шаблонов</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${stats.activeTemplates}</div>
+                            <div class="stat-label">Активных</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${stats.totalUsage}</div>
+                            <div class="stat-label">Всего использований</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${stats.inactiveTemplates}</div>
+                            <div class="stat-label">Неактивных</div>
+                        </div>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Ошибка загрузки статистики:', error);
+            }
+        }
+        
+        // Создание примеров
+        async function createExampleTemplates() {
+            const examples = [
+                {
+                    name: "Приветствие",
+                    messageTemplate: "Привет, {user}! Рад тебя видеть в чате! 👋",
+                    description: "Автоматическое приветствие новых пользователей",
+                    triggerWord: "привет",
+                    priority: 1,
+                    randomChance: 100,
+                    cooldownSeconds: 60
+                },
+                {
+                    name: "Команда помощи",
+                    messageTemplate: "{user}, вот список доступных команд: !help, !info, !stats, !commands",
+                    description: "Помощь по командам",
+                    triggerWord: "помощь",
+                    authorColor: "#00FF00",
+                    authorName: "Бот-помощник",
+                    priority: 10,
+                    randomChance: 100,
+                    cooldownSeconds: 30
+                },
+                {
+                    name: "Случайная шутка",
+                    messageTemplate: "{user}, вот шутка для тебя: Почему программисты путают Рождество и Хэллоуин? Потому что Oct 31 == Dec 25! 😄",
+                    description: "Случайные шутки для программистов",
+                    triggerWord: "шутка",
+                    authorColor: "#FF00FF",
+                    authorName: "Шутник",
+                    priority: 5,
+                    randomChance: 30,
+                    cooldownSeconds: 300
+                }
+            ];
+            
+            let created = 0;
+            for (const example of examples) {
+                try {
+                    const response = await fetch(API_BASE, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(example)
+                    });
+                    
+                    if (response.ok) {
+                        created++;
+                    }
+                } catch (error) {
+                    console.error('Ошибка создания примера:', error);
+                }
+            }
+            
+            showResponse('testResponse', `Создано ${created} примеров шаблонов`, 'success');
+            loadTemplates();
+            loadStats();
+        }
+        
+        // Тест всех endpoints
+        async function testAllEndpoints() {
+            const results = [];
+            
+            try {
+                // GET all
+                const allResponse = await fetch(API_BASE);
+                results.push(`GET / - ${allResponse.ok ? 'OK' : 'FAIL'}`);
+                
+                if (allResponse.ok) {
+                    const templates = await allResponse.json();
+                    if (templates.length > 0) {
+                        const templateId = templates[0].id;
+                        
+                        // GET by ID
+                        const byIdResponse = await fetch(`${API_BASE}/${templateId}`);
+                        results.push(`GET /{id} - ${byIdResponse.ok ? 'OK' : 'FAIL'}`);
+                        
+                        // GET by trigger
+                        const trigger = templates[0].triggerWord;
+                        const byTriggerResponse = await fetch(`${API_BASE}/by-trigger/${trigger}`);
+                        results.push(`GET /by-trigger/{word} - ${byTriggerResponse.ok ? 'OK' : 'FAIL'}`);
+                        
+                        // GET active
+                        const activeResponse = await fetch(`${API_BASE}/active`);
+                        results.push(`GET /active - ${activeResponse.ok ? 'OK' : 'FAIL'}`);
+                        
+                        // GET stats
+                        const statsResponse = await fetch(`${API_BASE}/stats`);
+                        results.push(`GET /stats - ${statsResponse.ok ? 'OK' : 'FAIL'}`);
+                    }
+                }
+                
+                // GET active
+                const activeResponse = await fetch(`${API_BASE}/active`);
+                results.push(`GET /active - ${activeResponse.ok ? 'OK' : 'FAIL'}`);
+                
+                // GET stats
+                const statsResponse = await fetch(`${API_BASE}/stats`);
+                results.push(`GET /stats - ${statsResponse.ok ? 'OK' : 'FAIL'}`);
+                
+            } catch (error) {
+                results.push(`Ошибка: ${error.message}`);
+            }
+            
+            showResponse('testResponse', results.join('\n'), 'success');
+        }
+        
+        // Очистка всех шаблонов
+        async function clearAllTemplates() {
+            if (!confirm('Вы уверены, что хотите удалить ВСЕ шаблоны? Это действие нельзя отменить!')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(API_BASE);
+                const templates = await response.json();
+                
+                let deleted = 0;
+                for (const template of templates) {
+                    try {
+                        const deleteResponse = await fetch(`${API_BASE}/${template.id}`, {
+                            method: 'DELETE'
+                        });
+                        
+                        if (deleteResponse.ok) {
+                            deleted++;
+                        }
+                    } catch (error) {
+                        console.error('Ошибка удаления:', error);
+                    }
+                }
+                
+                showResponse('testResponse', `Удалено ${deleted} шаблонов`, 'success');
+                loadTemplates();
+                loadStats();
+            } catch (error) {
+                showResponse('testResponse', `Ошибка: ${error.message}`, 'error');
+            }
+        }
+        
+        // Показать ответ
+        function showResponse(elementId, message, type) {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.className = `response ${type}`;
+            element.style.display = 'block';
+            
+            // Автоскрытие через 10 секунд
+            setTimeout(() => {
+                element.style.display = 'none';
+            }, 10000);
+        }
+    </script>
+</body>
+</html>

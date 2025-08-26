@@ -52,4 +52,7 @@ public interface ITelegramusHub
 
     [SignalRMethod]
     public Task AutoMessage(string message);
+
+    [SignalRMethod]
+    public Task TemplateMessage(string message);
 }
