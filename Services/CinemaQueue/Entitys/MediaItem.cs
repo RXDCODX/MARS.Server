@@ -18,7 +18,8 @@ public class MediaItem
     public string? Description { get; set; }
 
     [Required]
-    public MediaType Type { get; set; }
+    [MaxLength(1000)]
+    public required string MediaUrl { get; set; }
 
     [Required]
     public MediaStatus Status { get; set; } = MediaStatus.Pending;
@@ -48,31 +49,7 @@ public class MediaItem
     public bool IsNext { get; set; } = false;
 
     [Required]
-    public int EpisodeNumber { get; set; } = 1;
-
-    [MaxLength(100)]
-    public string? Season { get; set; }
-
-    [MaxLength(100)]
-    public string? Genre { get; set; }
-
-    [MaxLength(200)]
-    public string? PosterUrl { get; set; }
-
-    [Required]
-    public int DurationMinutes { get; set; } = 0;
-
-    [Required]
     public DateTimeOffset? LastModified { get; set; } = DateTimeOffset.Now;
-}
-
-public enum MediaType
-{
-    Movie,
-    Series,
-    Anime,
-    Documentary,
-    Special
 }
 
 public enum MediaStatus

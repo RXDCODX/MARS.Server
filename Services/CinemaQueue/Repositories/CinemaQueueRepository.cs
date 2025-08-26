@@ -1,28 +1,18 @@
-﻿using MARS.Server.DataBaseContext;
-using MARS.Server.Services.CinemaQueue.Entitys;
+﻿using MARS.Server.Services.CinemaQueue.Entitys;
 using MARS.Server.Services.CinemaQueue.Interfaces;
-using Microsoft.EntityFrameworkCore;
-using MediaType = MARS.Server.Services.CinemaQueue.Entitys.MediaType;
 
 namespace MARS.Server.Services.CinemaQueue.Repositories;
 
-public class CinemaQueueRepository : ICinemaQueueRepository
+public class CinemaQueueRepository(IDbContextFactory<AppDbContext> dbContextFactory)
+    : ICinemaQueueRepository
 {
-    private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
-
-    public CinemaQueueRepository(IDbContextFactory<AppDbContext> dbContextFactory)
-    {
-        _dbContextFactory = dbContextFactory;
-    }
-
     public async Task<IEnumerable<MediaItem>> GetAllAsync(
         CancellationToken cancellationToken = default
     )
     {
-        await using var context = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using var context = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         return await context
-            .Set<MediaItem>()
-            .AsNoTracking()
+            .CinemaQueue.AsNoTracking()
             .OrderByDescending(x => x.Priority)
             .ThenBy(x => x.CreatedAt)
             .ToListAsync(cancellationToken);
@@ -33,19 +23,17 @@ public class CinemaQueueRepository : ICinemaQueueRepository
         CancellationToken cancellationToken = default
     )
     {
-        await using var context = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using var context = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         return await context
-            .Set<MediaItem>()
-            .AsNoTracking()
+            .CinemaQueue.AsNoTracking()
             .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
     }
 
     public async Task<MediaItem?> GetNextAsync(CancellationToken cancellationToken = default)
     {
-        await using var context = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using var context = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         return await context
-            .Set<MediaItem>()
-            .AsNoTracking()
+            .CinemaQueue.AsNoTracking()
             .Where(x => x.Status == MediaStatus.Pending && x.IsNext)
             .OrderByDescending(x => x.Priority)
             .ThenBy(x => x.CreatedAt)
@@ -57,26 +45,10 @@ public class CinemaQueueRepository : ICinemaQueueRepository
         CancellationToken cancellationToken = default
     )
     {
-        await using var context = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using var context = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         return await context
-            .Set<MediaItem>()
-            .AsNoTracking()
+            .CinemaQueue.AsNoTracking()
             .Where(x => x.Status == status)
-            .OrderByDescending(x => x.Priority)
-            .ThenBy(x => x.CreatedAt)
-            .ToListAsync(cancellationToken);
-    }
-
-    public async Task<IEnumerable<MediaItem>> GetByTypeAsync(
-        MediaType type,
-        CancellationToken cancellationToken = default
-    )
-    {
-        await using var context = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
-        return await context
-            .Set<MediaItem>()
-            .AsNoTracking()
-            .Where(x => x.Type == type)
             .OrderByDescending(x => x.Priority)
             .ThenBy(x => x.CreatedAt)
             .ToListAsync(cancellationToken);
@@ -87,8 +59,8 @@ public class CinemaQueueRepository : ICinemaQueueRepository
         CancellationToken cancellationToken = default
     )
     {
-        await using var context = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var entity = await context.Set<MediaItem>().AddAsync(mediaItem, cancellationToken);
+        await using var context = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var entity = await context.CinemaQueue.AddAsync(mediaItem, cancellationToken);
         await context.SaveChangesAsync(cancellationToken);
         return entity.Entity;
     }
@@ -98,10 +70,8 @@ public class CinemaQueueRepository : ICinemaQueueRepository
         CancellationToken cancellationToken = default
     )
     {
-        await using var context = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var existingItem = await context
-            .Set<MediaItem>()
-            .FindAsync([mediaItem.Id], cancellationToken);
+        await using var context = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var existingItem = await context.CinemaQueue.FindAsync([mediaItem.Id], cancellationToken);
 
         if (existingItem == null)
         {
@@ -117,26 +87,23 @@ public class CinemaQueueRepository : ICinemaQueueRepository
 
     public async Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        await using var context = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var item = await context.Set<MediaItem>().FindAsync([id], cancellationToken);
+        await using var context = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var item = await context.CinemaQueue.FindAsync([id], cancellationToken);
 
         if (item == null)
         {
             return false;
         }
 
-        context.Set<MediaItem>().Remove(item);
+        context.CinemaQueue.Remove(item);
         await context.SaveChangesAsync(cancellationToken);
         return true;
     }
 
     public async Task ResetNextFlagsAsync(CancellationToken cancellationToken = default)
     {
-        await using var context = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var items = await context
-            .Set<MediaItem>()
-            .Where(x => x.IsNext)
-            .ToListAsync(cancellationToken);
+        await using var context = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var items = await context.CinemaQueue.Where(x => x.IsNext).ToListAsync(cancellationToken);
 
         foreach (var item in items)
         {
@@ -152,22 +119,9 @@ public class CinemaQueueRepository : ICinemaQueueRepository
         CancellationToken cancellationToken = default
     )
     {
-        await using var context = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using var context = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         return await context
-            .Set<MediaItem>()
-            .AsNoTracking()
+            .CinemaQueue.AsNoTracking()
             .CountAsync(x => x.Status == status, cancellationToken);
-    }
-
-    public async Task<int> GetCountByTypeAsync(
-        MediaType type,
-        CancellationToken cancellationToken = default
-    )
-    {
-        await using var context = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
-        return await context
-            .Set<MediaItem>()
-            .AsNoTracking()
-            .CountAsync(x => x.Type == type, cancellationToken);
     }
 }

@@ -193,7 +193,7 @@ public class RxdcodxViewersService(ITwitchAPI api, TokenService tokenService)
                 tokenService.Token.AccessToken
             );
 
-            return result.Data.Any();
+            return result.Data.Length != 0;
         }
         catch
         {
@@ -223,7 +223,7 @@ public class RxdcodxViewersService(ITwitchAPI api, TokenService tokenService)
                 tokenService.Token.AccessToken
             );
 
-            return result.Data.Any();
+            return result.Data.Length != 0;
         }
         catch
         {
@@ -253,7 +253,7 @@ public class RxdcodxViewersService(ITwitchAPI api, TokenService tokenService)
                 tokenService.Token.AccessToken
             );
 
-            return result.Data.Any();
+            return result.Data.Length != 0;
         }
         catch
         {

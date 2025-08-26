@@ -76,6 +76,7 @@ public sealed class AppDbContext : DbContext
     public DbSet<ScoreboardLayout> ScoreboardLayouts { get; set; } = null!;
     public DbSet<DailyAutoMarkupUser> HonkaiMarkupUser { get; set; } = null!;
     public DbSet<WaifuRollGuarantee> WaifuRollGuarantees { get; set; } = null!;
+    public DbSet<MARS.Server.Services.CinemaQueue.Entitys.MediaItem> CinemaQueue { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

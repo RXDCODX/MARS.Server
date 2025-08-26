@@ -8,7 +8,8 @@ public class TwitchCinemaQueueService(
     ICinemaQueueService cinemaQueueService,
     EventSubWebsocketClient wsClient,
     ILogger<TwitchCinemaQueueService> logger,
-    IHostApplicationLifetime lifetime
+    IHostApplicationLifetime lifetime,
+    ITwitchClient twitchClient
 ) : BackgroundService
 {
     private readonly IHostApplicationLifetime _lifetime = lifetime;
@@ -18,7 +19,7 @@ public class TwitchCinemaQueueService(
         logger.LogInformation("Starting Twitch Cinema Queue Service");
 
         // Подписываемся на события Twitch
-        wsClient.ChannelPointsCustomRewardRedemption += OnChannelPointsRedemption;
+        wsClient.ChannelPointsCustomRewardRedemptionAdd += OnChannelPointsRedemption;
         wsClient.ChannelFollow += OnChannelFollow;
         wsClient.ChannelSubscribe += OnChannelSubscribe;
 
@@ -30,16 +31,15 @@ public class TwitchCinemaQueueService(
         logger.LogInformation("Stopping Twitch Cinema Queue Service");
 
         // Отписываемся от событий
-        wsClient
-        wsClient.ChannelPointsCustomRewardRedemption -= OnChannelPointsRedemption;
+        wsClient.ChannelPointsCustomRewardRedemptionAdd -= OnChannelPointsRedemption;
         wsClient.ChannelFollow -= OnChannelFollow;
         wsClient.ChannelSubscribe -= OnChannelSubscribe;
 
         return base.StopAsync(cancellationToken);
     }
 
-    private async void OnChannelPointsRedemption(
-        object? sender,
+    private async Task OnChannelPointsRedemption(
+        object sender,
         ChannelPointsCustomRewardRedemptionArgs e
     )
     {
@@ -47,17 +47,12 @@ public class TwitchCinemaQueueService(
         {
             logger.LogInformation(
                 "Channel points redemption: {RewardTitle} by {UserName}",
-                e.Notification.Event.Reward.Title,
-                e.Notification.Event.UserName
+                e.Notification.Payload.Event.Reward.Title,
+                e.Notification.Payload.Event.UserName
             );
 
             // Проверяем, является ли это наградой для добавления в очередь
-            if (
-                IsCinemaQueueReward(
-                    e.Notification.Event.Reward.Title,
-                    e.Notification.Event.Reward.Cost
-                )
-            )
+            if (IsCinemaQueueReward(e.Notification.Payload.Event.Reward.Cost))
             {
                 await HandleCinemaQueueRedemption(e);
             }
@@ -68,14 +63,20 @@ public class TwitchCinemaQueueService(
         }
     }
 
-    private async void OnChannelFollow(object? sender, ChannelFollowArgs e)
+    private async Task OnChannelFollow(object sender, ChannelFollowArgs e)
     {
         try
         {
-            logger.LogInformation("New follower: {UserName}", e.Notification.Event.UserName);
+            logger.LogInformation(
+                "New follower: {UserName}",
+                e.Notification.Payload.Event.UserName
+            );
 
             // Автоматически добавляем фильм/сериал для нового фолловера
-            await AddWelcomeMediaItem(e.Notification.Event.UserName, e.Notification.Event.UserId);
+            await AddWelcomeMediaItem(
+                e.Notification.Payload.Event.UserName,
+                e.Notification.Payload.Event.UserId
+            );
         }
         catch (Exception ex)
         {
@@ -83,14 +84,20 @@ public class TwitchCinemaQueueService(
         }
     }
 
-    private async void OnChannelSubscribe(object? sender, ChannelSubscribeArgs e)
+    private async Task OnChannelSubscribe(object sender, ChannelSubscribeArgs e)
     {
         try
         {
-            logger.LogInformation("New subscriber: {UserName}", e.Notification.Event.UserName);
+            logger.LogInformation(
+                "New subscriber: {UserName}",
+                e.Notification.Payload.Event.UserName
+            );
 
             // Автоматически добавляем премиум контент для нового подписчика
-            await AddPremiumMediaItem(e.Notification.Event.UserName, e.Notification.Event.UserId);
+            await AddPremiumMediaItem(
+                e.Notification.Payload.Event.UserName,
+                e.Notification.Payload.Event.UserId
+            );
         }
         catch (Exception ex)
         {
@@ -98,7 +105,7 @@ public class TwitchCinemaQueueService(
         }
     }
 
-    private bool IsCinemaQueueReward(string rewardTitle, int cost)
+    private static bool IsCinemaQueueReward(int cost)
     {
         // Check if this is a cinema queue reward based on specific cost
         return cost == 1602;
@@ -108,27 +115,21 @@ public class TwitchCinemaQueueService(
     {
         try
         {
-            var rewardTitle = e.Notification.Event.Reward.Title.ToLowerInvariant();
-            var userName = e.Notification.Event.UserName;
-            var userId = e.Notification.Event.UserId;
-
-            // Определяем тип медиа по названию награды
-            var mediaType = DetermineMediaType(rewardTitle);
+            var rewardTitle = e.Notification.Payload.Event.Reward.Title;
+            var userName = e.Notification.Payload.Event.UserName;
+            var userId = e.Notification.Payload.Event.UserId;
 
             // Создаем запрос на добавление в очередь
             var request = new CreateMediaItemRequest
             {
                 Title = $"Requested by {userName}",
                 Description =
-                    $"Added to queue via Twitch reward: {e.Notification.Event.Reward.Title}",
-                Type = mediaType,
-                Priority = GetPriorityByReward(e.Notification.Event.Reward.Cost),
+                    $"Added to queue via Twitch reward: {e.Notification.Payload.Event.Reward.Title}",
+                MediaUrl = $"https://example.com/media/{Guid.NewGuid()}", // Заглушка, в реальности нужно получать от пользователя
                 AddedBy = userName,
                 TwitchUserId = userId,
                 TwitchUsername = userName,
-                Notes = $"Twitch reward redemption - {e.Notification.Event.Reward.Title}",
-                EpisodeNumber = 1,
-                DurationMinutes = 0,
+                Notes = $"Twitch reward redemption - {e.Notification.Payload.Event.Reward.Title}",
             };
 
             var mediaItem = await cinemaQueueService.CreateMediaItemAsync(request);
@@ -154,14 +155,12 @@ public class TwitchCinemaQueueService(
             {
                 Title = $"Welcome {userName}",
                 Description = "Welcome gift for new follower",
-                Type = MediaType.Special,
+                MediaUrl = $"https://example.com/welcome/{Guid.NewGuid()}", // Заглушка
                 Priority = 1,
                 AddedBy = "System",
                 TwitchUserId = userId,
                 TwitchUsername = userName,
                 Notes = "Automatically added for new follower",
-                EpisodeNumber = 1,
-                DurationMinutes = 0,
             };
 
             var mediaItem = await cinemaQueueService.CreateMediaItemAsync(request);
@@ -184,14 +183,12 @@ public class TwitchCinemaQueueService(
             {
                 Title = $"Premium Content for {userName}",
                 Description = "Premium content for new subscriber",
-                Type = MediaType.Special,
+                MediaUrl = $"https://example.com/premium/{Guid.NewGuid()}", // Заглушка
                 Priority = 2,
                 AddedBy = "System",
                 TwitchUserId = userId,
                 TwitchUsername = userName,
                 Notes = "Automatically added for new subscriber",
-                EpisodeNumber = 1,
-                DurationMinutes = 0,
             };
 
             var mediaItem = await cinemaQueueService.CreateMediaItemAsync(request);
@@ -206,58 +203,20 @@ public class TwitchCinemaQueueService(
         }
     }
 
-    private MediaType DetermineMediaType(string rewardTitle)
-    {
-        if (rewardTitle.Contains("movie") || rewardTitle.Contains("фильм"))
-        {
-            return MediaType.Movie;
-        }
-
-        if (rewardTitle.Contains("series") || rewardTitle.Contains("сериал"))
-        {
-            return MediaType.Series;
-        }
-
-        if (rewardTitle.Contains("anime") || rewardTitle.Contains("аниме"))
-        {
-            return MediaType.Anime;
-        }
-
-        if (rewardTitle.Contains("documentary") || rewardTitle.Contains("документал"))
-        {
-            return MediaType.Documentary;
-        }
-
-        return MediaType.Movie; // По умолчанию
-    }
-
-    private int GetPriorityByReward(int rewardCost)
-    {
-        // Чем дороже награда, тем выше приоритет
-        return rewardCost switch
-        {
-            >= 1000 => 5,
-            >= 500 => 4,
-            >= 200 => 3,
-            >= 100 => 2,
-            _ => 1,
-        };
-    }
-
-    private async Task SendTwitchNotification(string userName, MediaItemDto mediaItem)
+    private Task SendTwitchNotification(string userName, MediaItemDto mediaItem)
     {
         try
         {
-            // Здесь можно интегрировать с TwitchClient для отправки сообщений в чат
             var message = $"@{userName} добавил '{mediaItem.Title}' в очередь просмотра! 🎬";
             logger.LogInformation("Twitch notification: {Message}", message);
 
-            // TODO: Интеграция с TwitchClient для отправки сообщения в чат
-            // await _twitchClient.SendMessageAsync(channel, message);
+            twitchClient.SendMessageToMainTwitchAsync(message);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error sending Twitch notification");
         }
+
+        return Task.CompletedTask;
     }
 }

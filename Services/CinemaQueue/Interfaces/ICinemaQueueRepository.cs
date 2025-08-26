@@ -1,5 +1,4 @@
 ﻿using MARS.Server.Services.CinemaQueue.Entitys;
-using MediaType = MARS.Server.Services.CinemaQueue.Entitys.MediaType;
 
 namespace MARS.Server.Services.CinemaQueue.Interfaces;
 
@@ -25,14 +24,6 @@ public interface ICinemaQueueRepository
     /// </summary>
     Task<IEnumerable<MediaItem>> GetByStatusAsync(
         MediaStatus status,
-        CancellationToken cancellationToken = default
-    );
-
-    /// <summary>
-    /// Получить элементы по типу
-    /// </summary>
-    Task<IEnumerable<MediaItem>> GetByTypeAsync(
-        MediaType type,
         CancellationToken cancellationToken = default
     );
 
@@ -66,9 +57,4 @@ public interface ICinemaQueueRepository
         MediaStatus status,
         CancellationToken cancellationToken = default
     );
-
-    /// <summary>
-    /// Получить количество элементов по типу
-    /// </summary>
-    Task<int> GetCountByTypeAsync(MediaType type, CancellationToken cancellationToken = default);
 }
