@@ -3,6 +3,7 @@ using BooruSharp.Booru;
 using MARS.Server.CustomLoggers.DatabaseLogger;
 using MARS.Server.CustomLoggers.TelegramLogger;
 using MARS.Server.Services._365Genius;
+using MARS.Server.Services.CinemaQueue;
 using MARS.Server.Services.CommandExecutor;
 using MARS.Server.Services.Honkai;
 using MARS.Server.Services.MemoryStorageService;
@@ -125,6 +126,7 @@ public static class Program
         services.AddBaseAspNetMiddlewares();
         services.AddSwaggerServices();
         services.AddHonkaiServices();
+        services.AddCinemaQueueServicesAsSingleton();
 
         if (builder.Environment.IsProduction())
         {

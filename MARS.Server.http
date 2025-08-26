@@ -1,6 +1,0 @@
-@MARS.Server_HostAddress = http://localhost:9255
-
-GET {{MARS.Server_HostAddress}}/swagger/v1/swagger.json
-Accept: application/json
-
-###
