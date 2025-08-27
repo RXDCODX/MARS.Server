@@ -24,6 +24,7 @@ using MARS.Server.Services.Twitch.Rewards.TwitchRandomArt;
 using MARS.Server.Services.Twitch.Rewards.TwitchRandomMeme;
 using MARS.Server.Services.Twitch.Rewards.TwitchScreenParticles;
 using MARS.Server.Services.Twitch.Rewards.TwitchWaifuRolls;
+using MARS.Server.Services.Twitch.Rewards.TwitchAdhdReward;
 using MARS.Server.Services.Twitch.SoundBarService;
 using MARS.Server.Services.Twitch.StreamBotNotifications;
 using MARS.Server.Services.Twitch.TwitchFollowers;
@@ -264,6 +265,9 @@ public static class StartupEstensions
 
         services.AddSingleton<TwitchCloseTekkenService>();
         services.AddHostedService(sp => sp.GetRequiredService<TwitchCloseTekkenService>());
+
+        services.AddSingleton<TwitchAdhdService>();
+        services.AddHostedService(sp => sp.GetRequiredService<TwitchAdhdService>());
 
         services.AddSingleton<TwitchNameActualizer>();
         services.AddHostedService(sp => sp.GetRequiredService<TwitchNameActualizer>());
