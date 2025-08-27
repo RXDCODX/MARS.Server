@@ -17,6 +17,7 @@ using MARS.Server.Services.Twitch.Synthesizer.Enitity;
 using MARS.Server.Services.WaifuRoll;
 using MARS.Server.Services.WaifuRoll.Entitys.Interfaces;
 using MARS.Server.Services.WaifuRoll.helpers;
+using MARS.Server.Services.DatabaseBackup;
 using WTelegram;
 
 namespace MARS.Server;
@@ -197,6 +198,9 @@ public static class Program
 
         // Добавляем инициализатор базы данных
         services.AddDataBaseInitializer();
+        
+        // Добавляем сервис резервного копирования базы данных
+        services.AddDatabaseBackupService();
 
         builder.AddStaticFilesBrowserOptions();
 

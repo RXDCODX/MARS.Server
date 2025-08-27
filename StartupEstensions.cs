@@ -9,7 +9,6 @@ using MARS.Server.Services.TelegramBotService;
 using MARS.Server.Services.Twitch.AutoInfoFetch;
 using MARS.Server.Services.Twitch.Client;
 using MARS.Server.Services.Twitch.ClientMessages.AutoMessages;
-using MARS.Server.Services.Twitch.ClientMessages.MessageBuilder;
 using MARS.Server.Services.Twitch.ClientMessages.SignalRAlerts;
 using MARS.Server.Services.Twitch.ClientMessages.TwitchAutoHello;
 using MARS.Server.Services.Twitch.FumoFriday;
@@ -190,8 +189,8 @@ public static class StartupEstensions
         services.AddHostedService(sp => sp.GetRequiredService<AutoMessagesController>());
         
         // Регистрируем сервис для работы с шаблонами сообщений Twitch
-        services.AddSingleton<TwitchMessageBuilderService>();
-        services.AddHostedService(sp => sp.GetRequiredService<TwitchMessageBuilderService>());
+        // services.AddSingleton<TwitchMessageBuilderService>();
+        // services.AddHostedService(sp => sp.GetRequiredService<TwitchMessageBuilderService>());
         services.AddSingleton<TwitchAuthService>();
         services.AddHostedService(sp => sp.GetRequiredService<TwitchAuthService>());
         services.AddSingleton<EventSubService>();

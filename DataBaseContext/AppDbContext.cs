@@ -9,7 +9,6 @@ using MARS.Server.Services.Scoreboard.Entitys;
 using MARS.Server.Services.ServiceManager.Entitys;
 using MARS.Server.Services.SoundRequest.Entitys;
 using MARS.Server.Services.Twitch.ClientMessages.AutoMessages.Entitys;
-using MARS.Server.Services.Twitch.ClientMessages.MessageBuilder.Entitys;
 using MARS.Server.Services.Twitch.FumoFriday.Entitys;
 using MARS.Server.Services.Twitch.HelloVideos.Entitys;
 using MARS.Server.Services.Twitch.Management.Entitys;
@@ -52,7 +51,6 @@ public sealed class AppDbContext : DbContext
     public DbSet<HostCoolDown> HostsCoolDowns { get; set; } = null!;
     public DbSet<HostAutoHello> HostsGreetings { get; set; } = null!;
     public DbSet<AutoMessage> AutoMessages { get; set; } = null!;
-    public DbSet<TwitchMessageTemplate> TwitchMessageTemplates { get; set; } = null!;
     public DbSet<TokenInfo> TwitchToken { get; set; } = null!;
     public DbSet<Log> Logs { get; set; } = null!;
     public DbSet<MemeOrder> RandomMemeOrder { get; set; } = null!;
