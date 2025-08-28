@@ -17,15 +17,15 @@ using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.Twitch.MiniGamesStats;
 using MARS.Server.Services.Twitch.Rewards.CloseGameReward;
 using MARS.Server.Services.Twitch.Rewards.MiniGames;
+using MARS.Server.Services.Twitch.Rewards.TwitchAdhdReward;
 using MARS.Server.Services.Twitch.Rewards.TwitchAlerts;
 using MARS.Server.Services.Twitch.Rewards.TwitchClipCreator;
 using MARS.Server.Services.Twitch.Rewards.TwitchHighlitedMessage;
 using MARS.Server.Services.Twitch.Rewards.TwitchRandomArt;
 using MARS.Server.Services.Twitch.Rewards.TwitchRandomMeme;
+using MARS.Server.Services.Twitch.Rewards.TwitchRefundService;
 using MARS.Server.Services.Twitch.Rewards.TwitchScreenParticles;
 using MARS.Server.Services.Twitch.Rewards.TwitchWaifuRolls;
-using MARS.Server.Services.Twitch.Rewards.TwitchAdhdReward;
-using MARS.Server.Services.Twitch.Rewards.TwitchRefundService;
 using MARS.Server.Services.Twitch.SoundBarService;
 using MARS.Server.Services.Twitch.StreamBotNotifications;
 using MARS.Server.Services.Twitch.TwitchFollowers;
@@ -189,7 +189,7 @@ public static class StartupEstensions
         services.AddHostedService(sp => sp.GetRequiredService<TwitchMediaAlerts>());
         services.AddSingleton<AutoMessagesController>();
         services.AddHostedService(sp => sp.GetRequiredService<AutoMessagesController>());
-        
+
         // Регистрируем сервис для работы с шаблонами сообщений Twitch
         // services.AddSingleton<TwitchMessageBuilderService>();
         // services.AddHostedService(sp => sp.GetRequiredService<TwitchMessageBuilderService>());
@@ -198,10 +198,10 @@ public static class StartupEstensions
         services.AddSingleton<EventSubService>();
         services.AddSingleton<TelegramTokenNotification>();
         services.AddSingleton<TokenService>();
-        
+
         // Регистрируем сервис для работы с зрителями канала rxdcodx
         services.AddRxdcodxViewersService();
-        
+
         services.AddSingleton<AutoHello>();
         services.AddHostedService(sp => sp.GetRequiredService<AutoHello>());
 
@@ -270,8 +270,8 @@ public static class StartupEstensions
         services.AddSingleton<TwitchAdhdService>();
         services.AddHostedService(sp => sp.GetRequiredService<TwitchAdhdService>());
 
-        services.AddSingleton<TwitchRefundService>();
-        services.AddHostedService(sp => sp.GetRequiredService<TwitchRefundService>());
+        //services.AddSingleton<TwitchRefundService>();
+        //services.AddHostedService(sp => sp.GetRequiredService<TwitchRefundService>());
 
         services.AddSingleton<TwitchNameActualizer>();
         services.AddHostedService(sp => sp.GetRequiredService<TwitchNameActualizer>());

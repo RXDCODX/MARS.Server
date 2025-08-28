@@ -59,7 +59,7 @@ public class HighlitedMessage : BackgroundService
         }
     }
 
-    private static Image GetImageByFilePath(string filePath)
+    private static AutoArtImage GetImageByFilePath(string filePath)
     {
         if (!File.Exists(filePath))
         {
@@ -71,7 +71,7 @@ public class HighlitedMessage : BackgroundService
             filePath.IndexOf("wwwroot", StringComparison.Ordinal) + "wwwroot".Length
         );
 
-        return new Image { URL = filePath, Extension = exstension };
+        return new AutoArtImage { URL = filePath, Extension = exstension };
     }
 
     protected override Task ExecuteAsync(CancellationToken stoppingToken)

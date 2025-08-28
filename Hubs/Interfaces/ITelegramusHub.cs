@@ -36,7 +36,7 @@ public interface ITelegramusHub
     public Task DeleteMessage(string id);
 
     [SignalRMethod]
-    public Task Highlite(ChatMessage message, string color, Image faceUrl);
+    public Task Highlite(ChatMessage message, string color, AutoArtImage faceUrl);
 
     [SignalRMethod]
     public Task PostTwitchInfo(string clientId, string secret);

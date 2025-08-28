@@ -1,4 +1,5 @@
 ﻿using MARS.Server.Services.ServiceManager;
+using MARS.Server.Services.Twitch.Management;
 using TwitchLib.Api.Core.Enums;
 using TwitchLib.Api.Helix.Models.ChannelPoints;
 using TwitchLib.Api.Helix.Models.ChannelPoints.UpdateCustomRewardRedemptionStatus;
@@ -14,7 +15,8 @@ public class TwitchRefundService(
     ITwitchClient client,
     IHostApplicationLifetime applicationLifetime,
     ILogger<TwitchRefundService> logger,
-    EventSubWebsocketClient wsClient
+    EventSubWebsocketClient wsClient,
+    TokenService tokenService
 ) : ManagedServiceBase(logger)
 {
     public override string ServiceName => "twitchrefund";
@@ -24,7 +26,7 @@ public class TwitchRefundService(
     public override bool IsServiceActive { get; set; } = true;
 
     private const int RefundRewardCost = 160;
-    private const string RefundRewardId = "2fb9d182-e269-40f4-88f4-2675da47268b";
+    private const string RefundRewardId = "e0af123a-3987-4924-a86b-393a702d2857\r\n";
     private static readonly string[] AspVariations = ["asp", "ASP", "Asp", "асп", "Асп", "АСП"];
 
     public override Task StartAsync(CancellationToken cancellationToken = default)
@@ -56,6 +58,8 @@ public class TwitchRefundService(
         {
             return;
         }
+
+        ArgumentException.ThrowIfNullOrWhiteSpace(tokenService.Token?.AccessToken);
 
         var twEvent = args.Notification.Payload.Event;
 
@@ -89,11 +93,12 @@ public class TwitchRefundService(
                     await api.Helix.ChannelPoints.UpdateRedemptionStatusAsync(
                         TwitchExstension.ChannelId,
                         RefundRewardId,
-                        [twEvent.Id],
+                        [args.Notification.Metadata.MessageId],
                         new UpdateCustomRewardRedemptionStatusRequest
                         {
                             Status = CustomRewardRedemptionStatus.CANCELED,
-                        }
+                        },
+                        tokenService.Token.AccessToken
                     );
 
                     // Отправляем сообщение пользователю о возврате баллов

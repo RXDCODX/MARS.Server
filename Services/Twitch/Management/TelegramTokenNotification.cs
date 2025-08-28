@@ -23,7 +23,7 @@ public class TelegramTokenNotification(
                 await Task.Delay(1000);
             }
 
-            var address = addressesFeature.Addresses.FirstOrDefault();
+            var address = addressesFeature.Addresses.FirstOrDefault() ?? "http://localhost:9255";
 
             foreach (var t in _adminsArray)
             {

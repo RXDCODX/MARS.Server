@@ -2,7 +2,7 @@
 
 namespace MARS.Server.Services.AutoArts.Entitys;
 
-public class Image
+public class AutoArtImage
 {
     [JsonProperty("signature")]
     public string? Signature { get; set; }
