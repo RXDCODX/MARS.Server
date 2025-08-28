@@ -44,15 +44,16 @@
       "dotnetRunMessages": true,
       "applicationUrl": "https://localhost:9256;http://localhost:9255"
     },
-    "Container (Dockerfile)": {
-      "commandName": "Docker",
-      "launchUrl": "{Scheme}://{ServiceHost}:{ServicePort}",
+    "Production": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "launchUrl": "ui",
       "environmentVariables": {
-        "ASPNETCORE_HTTPS_PORTS": "8081",
-        "ASPNETCORE_HTTP_PORTS": "8080"
+        "ASPNETCORE_ENVIRONMENT": "Production",
+        "ASPNETCORE_SPA_LAUNCH": "FALSE"
       },
-      "publishAllPorts": true,
-      "useSSL": true
+      "dotnetRunMessages": true,
+      "applicationUrl": "http://localhost:9155"
     }
   },
   "$schema": "https://json.schemastore.org/launchsettings.json"

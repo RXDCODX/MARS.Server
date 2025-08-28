@@ -35,7 +35,7 @@ namespace Telegramus.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ApplicationState");
+                    b.ToTable("ApplicationState", (string)null);
 
                     b.HasData(
                         new
@@ -63,7 +63,7 @@ namespace Telegramus.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Logs");
+                    b.ToTable("Logs", (string)null);
                 });
 
             modelBuilder.Entity("MARS.Server.Services.CinemaQueue.Entitys.MediaItem", b =>
@@ -122,7 +122,7 @@ namespace Telegramus.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("CinemaQueue");
+                    b.ToTable("CinemaQueue", (string)null);
                 });
 
             modelBuilder.Entity("MARS.Server.Services.Framedata.Entitys.Move", b =>
@@ -187,7 +187,7 @@ namespace Telegramus.Migrations
 
                     b.HasKey("CharacterName", "Command");
 
-                    b.ToTable("TekkenMoves");
+                    b.ToTable("TekkenMoves", (string)null);
                 });
 
             modelBuilder.Entity("MARS.Server.Services.Framedata.Entitys.Pending.MovePending", b =>
@@ -356,7 +356,7 @@ namespace Telegramus.Migrations
 
                     b.HasKey("Name");
 
-                    b.ToTable("TekkenCharacters");
+                    b.ToTable("TekkenCharacters", (string)null);
                 });
 
             modelBuilder.Entity("MARS.Server.Services.Honkai.Entitys.DailyAutoMarkupUser", b =>
@@ -391,7 +391,7 @@ namespace Telegramus.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("HonkaiMarkupUser");
+                    b.ToTable("HonkaiMarkupUser", (string)null);
                 });
 
             modelBuilder.Entity("MARS.Server.Services.PyroAlerts.Entitys.MediaInfo", b =>
@@ -402,7 +402,7 @@ namespace Telegramus.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Alerts");
+                    b.ToTable("Alerts", (string)null);
                 });
 
             modelBuilder.Entity("MARS.Server.Services.RandomMem.Entity.MemeOrder", b =>
@@ -429,7 +429,7 @@ namespace Telegramus.Migrations
 
                     b.HasIndex("MemeTypeId");
 
-                    b.ToTable("RandomMemeOrder");
+                    b.ToTable("RandomMemeOrder", (string)null);
                 });
 
             modelBuilder.Entity("MARS.Server.Services.RandomMem.Entity.MemeType", b =>
@@ -452,7 +452,7 @@ namespace Telegramus.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("RandomMemeType");
+                    b.ToTable("RandomMemeType", (string)null);
 
                     b.HasData(
                         new
@@ -474,7 +474,7 @@ namespace Telegramus.Migrations
                     b.Property<long>("Value")
                         .HasColumnType("bigint");
 
-                    b.ToTable("WTelegramAlloweedChannels");
+                    b.ToTable("WTelegramAlloweedChannels", (string)null);
                 });
 
             modelBuilder.Entity("MARS.Server.Services.Scoreboard.Entitys.ScoreboardLayout", b =>
@@ -544,7 +544,7 @@ namespace Telegramus.Migrations
                     b.HasIndex("ScoreboardStateId")
                         .IsUnique();
 
-                    b.ToTable("ScoreboardLayouts");
+                    b.ToTable("ScoreboardLayouts", (string)null);
                 });
 
             modelBuilder.Entity("MARS.Server.Services.Scoreboard.Entitys.ScoreboardPlayer", b =>
@@ -589,7 +589,7 @@ namespace Telegramus.Migrations
                     b.HasIndex("ScoreboardStateId", "Position")
                         .IsUnique();
 
-                    b.ToTable("ScoreboardPlayers");
+                    b.ToTable("ScoreboardPlayers", (string)null);
                 });
 
             modelBuilder.Entity("MARS.Server.Services.Scoreboard.Entitys.ScoreboardState", b =>
@@ -653,7 +653,7 @@ namespace Telegramus.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ScoreboardStates");
+                    b.ToTable("ScoreboardStates", (string)null);
                 });
 
             modelBuilder.Entity("MARS.Server.Services.ServiceManager.Entitys.ServiceState", b =>
@@ -696,7 +696,7 @@ namespace Telegramus.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ServiceStates");
+                    b.ToTable("ServiceStates", (string)null);
                 });
 
             modelBuilder.Entity("MARS.Server.Services.SoundRequest.Entitys.BaseTrackInfo", b =>
@@ -733,7 +733,7 @@ namespace Telegramus.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("SoundRequestBaseTrackInfos");
+                    b.ToTable("SoundRequestBaseTrackInfos", (string)null);
                 });
 
             modelBuilder.Entity("MARS.Server.Services.SoundRequest.Entitys.PlayerState", b =>
@@ -769,7 +769,7 @@ namespace Telegramus.Migrations
 
                     b.HasIndex("NextTrackId");
 
-                    b.ToTable("SoundRequestPlayerState");
+                    b.ToTable("SoundRequestPlayerState", (string)null);
                 });
 
             modelBuilder.Entity("MARS.Server.Services.SoundRequest.Entitys.SoundRequestBackgroundTrackId", b =>
@@ -780,7 +780,7 @@ namespace Telegramus.Migrations
                     b.HasIndex("TrackId")
                         .IsUnique();
 
-                    b.ToTable("SoundRequestBackgroundTracks");
+                    b.ToTable("SoundRequestBackgroundTracks", (string)null);
                 });
 
             modelBuilder.Entity("MARS.Server.Services.SoundRequest.Entitys.UserRequestedTrack", b =>
@@ -807,7 +807,7 @@ namespace Telegramus.Migrations
                     b.HasIndex("RequestedTrackId")
                         .IsUnique();
 
-                    b.ToTable("SoundRequestUserQueue");
+                    b.ToTable("SoundRequestUserQueue", (string)null);
                 });
 
             modelBuilder.Entity("MARS.Server.Services.TelegramBotService.Entitys.TelegramUpdateReceiverOffset", b =>
@@ -821,7 +821,7 @@ namespace Telegramus.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("TelegramUpdateReceiverOffset");
+                    b.ToTable("TelegramUpdateReceiverOffset", (string)null);
                 });
 
             modelBuilder.Entity("MARS.Server.Services.TelegramBotService.Entitys.TelegramUser", b =>
@@ -865,7 +865,7 @@ namespace Telegramus.Migrations
 
                     b.HasKey("UserId");
 
-                    b.ToTable("TelegramUsers");
+                    b.ToTable("TelegramUsers", (string)null);
                 });
 
             modelBuilder.Entity("MARS.Server.Services.Twitch.ClientMessages.AutoMessages.Entitys.AutoMessage", b =>
@@ -880,69 +880,7 @@ namespace Telegramus.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("AutoMessages");
-                });
-
-            modelBuilder.Entity("MARS.Server.Services.Twitch.ClientMessages.MessageBuilder.Entitys.TwitchMessageTemplate", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("AuthorColor")
-                        .HasMaxLength(7)
-                        .HasColumnType("character varying(7)");
-
-                    b.Property<string>("AuthorName")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<int>("CooldownSeconds")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
-
-                    b.Property<DateTime?>("LastTriggeredAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("MessageTemplate")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<int>("Priority")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("RandomChance")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("TriggerWord")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("UsageCount")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("TwitchMessageTemplates");
+                    b.ToTable("AutoMessages", (string)null);
                 });
 
             modelBuilder.Entity("MARS.Server.Services.Twitch.FumoFriday.Entitys.FumoUser", b =>
@@ -958,7 +896,7 @@ namespace Telegramus.Migrations
 
                     b.HasKey("TwitchId");
 
-                    b.ToTable("FumoUsers");
+                    b.ToTable("FumoUsers", (string)null);
                 });
 
             modelBuilder.Entity("MARS.Server.Services.Twitch.HelloVideos.Entitys.HelloVideosUsers", b =>
@@ -986,7 +924,7 @@ namespace Telegramus.Migrations
                     b.HasIndex("MediaInfoId")
                         .IsUnique();
 
-                    b.ToTable("HelloVideosUsers");
+                    b.ToTable("HelloVideosUsers", (string)null);
                 });
 
             modelBuilder.Entity("MARS.Server.Services.Twitch.Management.Entitys.TokenInfo", b =>
@@ -1011,7 +949,7 @@ namespace Telegramus.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("TwitchToken");
+                    b.ToTable("TwitchToken", (string)null);
                 });
 
             modelBuilder.Entity("MARS.Server.Services.Twitch.MiniGamesStats.Entitys.TwitchLeaderboardUser", b =>
@@ -1043,7 +981,7 @@ namespace Telegramus.Migrations
 
                     b.HasKey("TwitchId");
 
-                    b.ToTable("TwitchLeaderboardUsers");
+                    b.ToTable("TwitchLeaderboardUsers", (string)null);
                 });
 
             modelBuilder.Entity("MARS.Server.Services.WaifuRoll.Entitys.Host", b =>
@@ -1074,7 +1012,7 @@ namespace Telegramus.Migrations
 
                     b.HasKey("TwitchId");
 
-                    b.ToTable("Hosts");
+                    b.ToTable("Hosts", (string)null);
 
                     b.UseTpcMappingStrategy();
                 });
@@ -1097,7 +1035,7 @@ namespace Telegramus.Migrations
                     b.HasIndex("HostId")
                         .IsUnique();
 
-                    b.ToTable("AutoHello");
+                    b.ToTable("AutoHello", (string)null);
                 });
 
             modelBuilder.Entity("MARS.Server.Services.WaifuRoll.Entitys.HostCoolDown", b =>
@@ -1118,7 +1056,7 @@ namespace Telegramus.Migrations
                     b.HasIndex("HostId")
                         .IsUnique();
 
-                    b.ToTable("CD");
+                    b.ToTable("CD", (string)null);
                 });
 
             modelBuilder.Entity("MARS.Server.Services.WaifuRoll.Entitys.Waifu", b =>
@@ -1160,7 +1098,7 @@ namespace Telegramus.Migrations
 
                     b.HasKey("ShikiId");
 
-                    b.ToTable("Waifus");
+                    b.ToTable("Waifus", (string)null);
                 });
 
             modelBuilder.Entity("MARS.Server.Services.WaifuRoll.Entitys.WaifuRollGuarantee", b =>
@@ -1182,7 +1120,7 @@ namespace Telegramus.Migrations
 
                     b.HasKey("TwitchId");
 
-                    b.ToTable("WaifuRollGuarantees");
+                    b.ToTable("WaifuRollGuarantees", (string)null);
                 });
 
             modelBuilder.Entity("MARS.Server.Services._365Genius.Entitys.Video365", b =>
@@ -1234,7 +1172,7 @@ namespace Telegramus.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Videos365");
+                    b.ToTable("Videos365", (string)null);
                 });
 
             modelBuilder.Entity("MARS.Server.Services.Framedata.Entitys.Move", b =>
@@ -1292,7 +1230,7 @@ namespace Telegramus.Migrations
 
                             b1.HasKey("MediaInfoId");
 
-                            b1.ToTable("Alerts");
+                            b1.ToTable("Alerts", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("MediaInfoId");
@@ -1336,7 +1274,7 @@ namespace Telegramus.Migrations
 
                             b1.HasKey("MediaInfoId");
 
-                            b1.ToTable("Alerts");
+                            b1.ToTable("Alerts", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("MediaInfoId");
@@ -1396,7 +1334,7 @@ namespace Telegramus.Migrations
 
                             b1.HasKey("MediaInfoId");
 
-                            b1.ToTable("Alerts");
+                            b1.ToTable("Alerts", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("MediaInfoId");
@@ -1413,7 +1351,7 @@ namespace Telegramus.Migrations
 
                             b1.HasKey("MediaInfoId");
 
-                            b1.ToTable("Alerts");
+                            b1.ToTable("Alerts", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("MediaInfoId");
@@ -1445,7 +1383,7 @@ namespace Telegramus.Migrations
 
                             b1.HasKey("MediaInfoId");
 
-                            b1.ToTable("Alerts");
+                            b1.ToTable("Alerts", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("MediaInfoId");
@@ -1515,7 +1453,7 @@ namespace Telegramus.Migrations
 
                             b1.HasKey("BaseTrackInfoId");
 
-                            b1.ToTable("SoundRequestBaseTrackInfos");
+                            b1.ToTable("SoundRequestBaseTrackInfos", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("BaseTrackInfoId");
