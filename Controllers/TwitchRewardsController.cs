@@ -131,8 +131,7 @@ public class TwitchRewardsController(
         string rewardId,
         [FromQuery] string status = "UNFULFILLED",
         [FromQuery] string? sort = null,
-        [FromQuery] string? after = null,
-        [FromQuery] int first = 50
+        [FromQuery] string? after = null
     )
     {
         try
