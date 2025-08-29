@@ -18,6 +18,7 @@ using MARS.Server.Services.WaifuRoll;
 using MARS.Server.Services.WaifuRoll.Entitys.Interfaces;
 using MARS.Server.Services.WaifuRoll.helpers;
 using MARS.Server.Services.DatabaseBackup;
+using MARS.Server.Services.KeyboardHook;
 using WTelegram;
 
 namespace MARS.Server;
@@ -204,6 +205,9 @@ public static class Program
         
         // Добавляем сервис резервного копирования базы данных
         services.AddDatabaseBackupService();
+        
+        // Добавляем сервис перехвата клавиатуры
+        services.AddKeyboardHookService();
 
         builder.AddStaticFilesBrowserOptions();
 

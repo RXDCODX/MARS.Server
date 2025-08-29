@@ -1,0 +1,100 @@
+﻿using MARS.Server.Services.CommandExecutor.Entitys;
+using MARS.Server.Services.CommandExecutor.Entitys.Commands;
+using MARS.Server.Services.Twitch.StreamManagement;
+
+namespace MARS.Server.Services.CommandExecutor.Commands;
+
+/// <summary>
+/// Команда для смены названия трансляции Twitch
+/// </summary>
+public class ChangeStreamTitleCommand(
+    TwitchStreamManagementService streamManagementService,
+    ITwitchClient client,
+    ILogger<ChangeStreamTitleCommand> logger
+) : BaseCommand
+{
+    public override string CommandName => "title";
+    public override string Description => "Смена названия трансляции Twitch";
+    public override bool IsAdminCommand => true;
+    public override Platform[] AvailablePlatforms =>
+        [Platform.Twitch, Platform.Telegram, Platform.Api];
+
+    public override CommandParameterInfo[] Parameters =>
+        [
+            new CommandParameterInfo
+            {
+                Name = "новое_название",
+                Description = "Новое название для трансляции",
+                Type = "string",
+                Required = true,
+            },
+        ];
+
+    public override async Task<string> ExecuteAsync(
+        Dictionary<string, object> parameters,
+        Platform platform = Platform.None,
+        CancellationToken cancellationToken = default
+    )
+    {
+        try
+        {
+            if (!streamManagementService.IsServiceAvailable())
+            {
+                return GetErrorMessage(platform, "Сервис управления трансляцией недоступен");
+            }
+
+            if (!parameters.TryGetValue("новое_название", out var titleParam))
+            {
+                return GetErrorMessage(platform, "Не указано новое название трансляции");
+            }
+
+            var newTitle = titleParam.ToString()?.Trim();
+            if (string.IsNullOrWhiteSpace(newTitle))
+            {
+                return GetErrorMessage(platform, "Название трансляции не может быть пустым");
+            }
+
+            // Ограничиваем длину названия (Twitch ограничивает до 140 символов)
+            if (newTitle.Length > 140)
+            {
+                newTitle = newTitle[..140];
+                logger.LogWarning("Название трансляции обрезано до 140 символов");
+            }
+
+            var success = await streamManagementService.ChangeStreamTitleAsync(newTitle);
+
+            if (success)
+            {
+                var message = $"Название трансляции успешно изменено на: {newTitle}";
+
+                // Если команда выполнена через Twitch, отправляем сообщение в чат
+                if (platform == Platform.Twitch)
+                {
+                    await client.SendMessageToMainTwitchAsync(message, logger);
+                }
+
+                return message;
+            }
+            else
+            {
+                return GetErrorMessage(platform, "Не удалось изменить название трансляции");
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogException(ex);
+            return GetErrorMessage(platform, "Произошла ошибка при смене названия трансляции");
+        }
+    }
+
+    private static string GetErrorMessage(Platform platform, string message)
+    {
+        return platform switch
+        {
+            Platform.Twitch => $"@{message}",
+            Platform.Telegram => $"❌ {message}",
+            Platform.Api => $"Error: {message}",
+            _ => message,
+        };
+    }
+}
