@@ -5,20 +5,21 @@ using MARS.Server.CustomLoggers.TelegramLogger;
 using MARS.Server.Services._365Genius;
 using MARS.Server.Services.CinemaQueue;
 using MARS.Server.Services.CommandExecutor;
+using MARS.Server.Services.DatabaseBackup;
 using MARS.Server.Services.Honkai;
+using MARS.Server.Services.KeyboardHook;
 using MARS.Server.Services.MemoryStorageService;
 using MARS.Server.Services.PyroAlerts;
 using MARS.Server.Services.RandomMem;
 using MARS.Server.Services.Scoreboard;
 using MARS.Server.Services.Shikimori;
 using MARS.Server.Services.Twitch.Rewards;
+using MARS.Server.Services.Twitch.StreamManagement;
 using MARS.Server.Services.Twitch.Synthesizer;
 using MARS.Server.Services.Twitch.Synthesizer.Enitity;
 using MARS.Server.Services.WaifuRoll;
 using MARS.Server.Services.WaifuRoll.Entitys.Interfaces;
 using MARS.Server.Services.WaifuRoll.helpers;
-using MARS.Server.Services.DatabaseBackup;
-using MARS.Server.Services.KeyboardHook;
 using WTelegram;
 
 namespace MARS.Server;
@@ -129,6 +130,7 @@ public static class Program
         services.AddSwaggerServices();
         services.AddHonkaiServices();
         services.AddCinemaQueueServicesAsSingleton();
+        services.AddTwitchStreamManagementServiceOnly();
 
         if (builder.Environment.IsProduction())
         {
@@ -168,7 +170,7 @@ public static class Program
         services.AddHostedService(sp => sp.GetRequiredService<RandomMemeWorker>());
         services.AddSingleton<RandomMemOnline>();
         services.AddHostedService(sp => sp.GetRequiredService<RandomMemOnline>());
-        
+
         // Register RandomMeme CRUD service
         services.AddScoped<IRandomMemeService, RandomMemeService>();
 
@@ -202,10 +204,10 @@ public static class Program
 
         // Добавляем инициализатор базы данных
         services.AddDataBaseInitializer();
-        
+
         // Добавляем сервис резервного копирования базы данных
         services.AddDatabaseBackupService();
-        
+
         // Добавляем сервис перехвата клавиатуры
         services.AddKeyboardHookService();
 

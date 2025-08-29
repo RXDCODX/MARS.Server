@@ -117,3 +117,4 @@ public class TwitchStreamManagementService(
         return IsServiceActive && tokenService.Token?.AccessToken != null;
     }
 }
+
