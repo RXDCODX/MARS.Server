@@ -1,25 +1,17 @@
-using Microsoft.AspNetCore.Mvc;
-using MARS.Server.Services.RandomMem;
+﻿using MARS.Server.Services.RandomMem;
 using MARS.Server.Services.RandomMem.DTOs;
 using MARS.Server.Services.RandomMem.Entity;
+using Microsoft.AspNetCore.Mvc;
 
 namespace MARS.Server.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class RandomMemeController : ControllerBase
+public class RandomMemeController(
+    IRandomMemeService randomMemeService,
+    ILogger<RandomMemeController> logger
+) : ControllerBase
 {
-    private readonly IRandomMemeService _randomMemeService;
-    private readonly ILogger<RandomMemeController> _logger;
-
-    public RandomMemeController(
-        IRandomMemeService randomMemeService,
-        ILogger<RandomMemeController> logger)
-    {
-        _randomMemeService = randomMemeService;
-        _logger = logger;
-    }
-
     #region MemeType Endpoints
 
     /// <summary>
@@ -28,17 +20,19 @@ public class RandomMemeController : ControllerBase
     [HttpGet("types")]
     [ProducesResponseType(typeof(IEnumerable<MemeTypeDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<ActionResult<IEnumerable<MemeTypeDto>>> GetAllMemeTypes(CancellationToken cancellationToken = default)
+    public async Task<ActionResult<IEnumerable<MemeTypeDto>>> GetAllMemeTypes(
+        CancellationToken cancellationToken = default
+    )
     {
         try
         {
-            var memeTypes = await _randomMemeService.GetAllMemeTypesAsync(cancellationToken);
+            var memeTypes = await randomMemeService.GetAllMemeTypesAsync(cancellationToken);
             var dtos = memeTypes.Select(MapToDto);
             return Ok(dtos);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error occurred while getting all meme types");
+            logger.LogError(ex, "Error occurred while getting all meme types");
             return StatusCode(StatusCodes.Status500InternalServerError, "Internal server error");
         }
     }
@@ -50,21 +44,21 @@ public class RandomMemeController : ControllerBase
     [ProducesResponseType(typeof(MemeTypeDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<ActionResult<MemeTypeDto>> GetMemeTypeById(int id, CancellationToken cancellationToken = default)
+    public async Task<ActionResult<MemeTypeDto>> GetMemeTypeById(
+        int id,
+        CancellationToken cancellationToken = default
+    )
     {
         try
         {
-            var memeType = await _randomMemeService.GetMemeTypeByIdAsync(id, cancellationToken);
-            if (memeType == null)
-            {
-                return NotFound($"MemeType with ID {id} not found");
-            }
-
-            return Ok(MapToDto(memeType));
+            var memeType = await randomMemeService.GetMemeTypeByIdAsync(id, cancellationToken);
+            return memeType == null
+                ? NotFound($"MemeType with ID {id} not found")
+                : Ok(MapToDto(memeType));
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error occurred while getting meme type with ID {Id}", id);
+            logger.LogError(ex, "Error occurred while getting meme type with ID {Id}", id);
             return StatusCode(StatusCodes.Status500InternalServerError, "Internal server error");
         }
     }
@@ -76,7 +70,10 @@ public class RandomMemeController : ControllerBase
     [ProducesResponseType(typeof(MemeTypeDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<ActionResult<MemeTypeDto>> CreateMemeType(CreateMemeTypeDto createDto, CancellationToken cancellationToken = default)
+    public async Task<ActionResult<MemeTypeDto>> CreateMemeType(
+        CreateMemeTypeDto createDto,
+        CancellationToken cancellationToken = default
+    )
     {
         try
         {
@@ -88,17 +85,17 @@ public class RandomMemeController : ControllerBase
             var memeType = new MemeType
             {
                 Name = createDto.Name,
-                FolderPath = createDto.FolderPath
+                FolderPath = createDto.FolderPath,
             };
 
-            var created = await _randomMemeService.CreateMemeTypeAsync(memeType, cancellationToken);
+            var created = await randomMemeService.CreateMemeTypeAsync(memeType, cancellationToken);
             var dto = MapToDto(created);
 
             return CreatedAtAction(nameof(GetMemeTypeById), new { id = created.Id }, dto);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error occurred while creating meme type");
+            logger.LogError(ex, "Error occurred while creating meme type");
             return StatusCode(StatusCodes.Status500InternalServerError, "Internal server error");
         }
     }
@@ -111,7 +108,11 @@ public class RandomMemeController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<ActionResult<MemeTypeDto>> UpdateMemeType(int id, UpdateMemeTypeDto updateDto, CancellationToken cancellationToken = default)
+    public async Task<ActionResult<MemeTypeDto>> UpdateMemeType(
+        int id,
+        UpdateMemeTypeDto updateDto,
+        CancellationToken cancellationToken = default
+    )
     {
         try
         {
@@ -124,10 +125,10 @@ public class RandomMemeController : ControllerBase
             {
                 Id = id,
                 Name = updateDto.Name,
-                FolderPath = updateDto.FolderPath
+                FolderPath = updateDto.FolderPath,
             };
 
-            var updated = await _randomMemeService.UpdateMemeTypeAsync(memeType, cancellationToken);
+            var updated = await randomMemeService.UpdateMemeTypeAsync(memeType, cancellationToken);
             return Ok(MapToDto(updated));
         }
         catch (InvalidOperationException ex)
@@ -136,7 +137,7 @@ public class RandomMemeController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error occurred while updating meme type with ID {Id}", id);
+            logger.LogError(ex, "Error occurred while updating meme type with ID {Id}", id);
             return StatusCode(StatusCodes.Status500InternalServerError, "Internal server error");
         }
     }
@@ -149,17 +150,15 @@ public class RandomMemeController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<ActionResult> DeleteMemeType(int id, CancellationToken cancellationToken = default)
+    public async Task<ActionResult> DeleteMemeType(
+        int id,
+        CancellationToken cancellationToken = default
+    )
     {
         try
         {
-            var result = await _randomMemeService.DeleteMemeTypeAsync(id, cancellationToken);
-            if (!result)
-            {
-                return NotFound($"MemeType with ID {id} not found");
-            }
-
-            return NoContent();
+            var result = await randomMemeService.DeleteMemeTypeAsync(id, cancellationToken);
+            return !result ? NotFound($"MemeType with ID {id} not found") : NoContent();
         }
         catch (InvalidOperationException ex)
         {
@@ -167,7 +166,7 @@ public class RandomMemeController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error occurred while deleting meme type with ID {Id}", id);
+            logger.LogError(ex, "Error occurred while deleting meme type with ID {Id}", id);
             return StatusCode(StatusCodes.Status500InternalServerError, "Internal server error");
         }
     }
@@ -182,17 +181,19 @@ public class RandomMemeController : ControllerBase
     [HttpGet("orders")]
     [ProducesResponseType(typeof(IEnumerable<MemeOrderDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<ActionResult<IEnumerable<MemeOrderDto>>> GetAllMemeOrders(CancellationToken cancellationToken = default)
+    public async Task<ActionResult<IEnumerable<MemeOrderDto>>> GetAllMemeOrders(
+        CancellationToken cancellationToken = default
+    )
     {
         try
         {
-            var memeOrders = await _randomMemeService.GetAllMemeOrdersAsync(cancellationToken);
+            var memeOrders = await randomMemeService.GetAllMemeOrdersAsync(cancellationToken);
             var dtos = memeOrders.Select(MapToDto);
             return Ok(dtos);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error occurred while getting all meme orders");
+            logger.LogError(ex, "Error occurred while getting all meme orders");
             return StatusCode(StatusCodes.Status500InternalServerError, "Internal server error");
         }
     }
@@ -203,17 +204,27 @@ public class RandomMemeController : ControllerBase
     [HttpGet("orders/type/{typeId:int}")]
     [ProducesResponseType(typeof(IEnumerable<MemeOrderDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<ActionResult<IEnumerable<MemeOrderDto>>> GetMemeOrdersByType(int typeId, CancellationToken cancellationToken = default)
+    public async Task<ActionResult<IEnumerable<MemeOrderDto>>> GetMemeOrdersByType(
+        int typeId,
+        CancellationToken cancellationToken = default
+    )
     {
         try
         {
-            var memeOrders = await _randomMemeService.GetMemeOrdersByTypeAsync(typeId, cancellationToken);
+            var memeOrders = await randomMemeService.GetMemeOrdersByTypeAsync(
+                typeId,
+                cancellationToken
+            );
             var dtos = memeOrders.Select(MapToDto);
             return Ok(dtos);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error occurred while getting meme orders for type {TypeId}", typeId);
+            logger.LogError(
+                ex,
+                "Error occurred while getting meme orders for type {TypeId}",
+                typeId
+            );
             return StatusCode(StatusCodes.Status500InternalServerError, "Internal server error");
         }
     }
@@ -225,21 +236,21 @@ public class RandomMemeController : ControllerBase
     [ProducesResponseType(typeof(MemeOrderDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<ActionResult<MemeOrderDto>> GetMemeOrderById(Guid id, CancellationToken cancellationToken = default)
+    public async Task<ActionResult<MemeOrderDto>> GetMemeOrderById(
+        Guid id,
+        CancellationToken cancellationToken = default
+    )
     {
         try
         {
-            var memeOrder = await _randomMemeService.GetMemeOrderByIdAsync(id, cancellationToken);
-            if (memeOrder == null)
-            {
-                return NotFound($"MemeOrder with ID {id} not found");
-            }
-
-            return Ok(MapToDto(memeOrder));
+            var memeOrder = await randomMemeService.GetMemeOrderByIdAsync(id, cancellationToken);
+            return memeOrder == null
+                ? NotFound($"MemeOrder with ID {id} not found")
+                : Ok(MapToDto(memeOrder));
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error occurred while getting meme order with ID {Id}", id);
+            logger.LogError(ex, "Error occurred while getting meme order with ID {Id}", id);
             return StatusCode(StatusCodes.Status500InternalServerError, "Internal server error");
         }
     }
@@ -251,7 +262,10 @@ public class RandomMemeController : ControllerBase
     [ProducesResponseType(typeof(MemeOrderDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<ActionResult<MemeOrderDto>> CreateMemeOrder(CreateMemeOrderDto createDto, CancellationToken cancellationToken = default)
+    public async Task<ActionResult<MemeOrderDto>> CreateMemeOrder(
+        CreateMemeOrderDto createDto,
+        CancellationToken cancellationToken = default
+    )
     {
         try
         {
@@ -263,59 +277,71 @@ public class RandomMemeController : ControllerBase
             var memeOrder = new MemeOrder
             {
                 FilePath = createDto.FilePath,
-                MemeTypeId = createDto.MemeTypeId
+                MemeTypeId = createDto.MemeTypeId,
             };
 
-            var created = await _randomMemeService.CreateMemeOrderAsync(memeOrder, cancellationToken);
+            var created = await randomMemeService.CreateMemeOrderAsync(
+                memeOrder,
+                cancellationToken
+            );
             var dto = MapToDto(created);
 
             return CreatedAtAction(nameof(GetMemeOrderById), new { id = created.Id }, dto);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error occurred while creating meme order");
+            logger.LogError(ex, "Error occurred while creating meme order");
             return StatusCode(StatusCodes.Status500InternalServerError, "Internal server error");
         }
     }
 
-    /// <summary>
-    /// Update meme order
-    /// </summary>
-    [HttpPut("orders/{id:guid}")]
-    [ProducesResponseType(typeof(MemeOrderDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<ActionResult<MemeOrderDto>> UpdateMemeOrder(Guid id, UpdateMemeOrderDto updateDto, CancellationToken cancellationToken = default)
-    {
-        try
-        {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
+    ///// <summary>
+    ///// Update meme order
+    ///// </summary>
+    //[HttpPut("orders/{id:guid}")]
+    //[ProducesResponseType(typeof(MemeOrderDto), StatusCodes.Status200OK)]
+    //[ProducesResponseType(StatusCodes.Status400BadRequest)]
+    //[ProducesResponseType(StatusCodes.Status404NotFound)]
+    //[ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    //public async Task<ActionResult<MemeOrderDto>> UpdateMemeOrder(
+    //    UpdateMemeOrderDto updateDto,
+    //    CancellationToken cancellationToken = default
+    //)
+    //{
+    //    var memeOrder = new MemeOrder
+    //    {
+    //        FilePath = updateDto.FilePath,
+    //        MemeTypeId = updateDto.MemeTypeId,
+    //        Order = updateDto.Order,
+    //    };
 
-            var memeOrder = new MemeOrder
-            {
-                Id = id,
-                FilePath = updateDto.FilePath,
-                MemeTypeId = updateDto.MemeTypeId,
-                Order = updateDto.Order
-            };
+    //    try
+    //    {
+    //        if (!ModelState.IsValid)
+    //        {
+    //            return BadRequest(ModelState);
+    //        }
 
-            var updated = await _randomMemeService.UpdateMemeOrderAsync(memeOrder, cancellationToken);
-            return Ok(MapToDto(updated));
-        }
-        catch (InvalidOperationException ex)
-        {
-            return NotFound(ex.Message);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while updating meme order with ID {Id}", id);
-            return StatusCode(StatusCodes.Status500InternalServerError, "Internal server error");
-        }
-    }
+    //        var updated = await randomMemeService.UpdateMemeOrderAsync(
+    //            memeOrder,
+    //            cancellationToken
+    //        );
+    //        return Ok(MapToDto(updated));
+    //    }
+    //    catch (InvalidOperationException ex)
+    //    {
+    //        return NotFound(ex.Message);
+    //    }
+    //    catch (Exception ex)
+    //    {
+    //        logger.LogError(
+    //            ex,
+    //            "Error occurred while updating meme order with ID {Id}",
+    //            memeOrder.Id
+    //        );
+    //        return StatusCode(StatusCodes.Status500InternalServerError, "Internal server error");
+    //    }
+    //}
 
     /// <summary>
     /// Delete meme order
@@ -324,21 +350,19 @@ public class RandomMemeController : ControllerBase
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<ActionResult> DeleteMemeOrder(Guid id, CancellationToken cancellationToken = default)
+    public async Task<ActionResult> DeleteMemeOrder(
+        Guid id,
+        CancellationToken cancellationToken = default
+    )
     {
         try
         {
-            var result = await _randomMemeService.DeleteMemeOrderAsync(id, cancellationToken);
-            if (!result)
-            {
-                return NotFound($"MemeOrder with ID {id} not found");
-            }
-
-            return NoContent();
+            var result = await randomMemeService.DeleteMemeOrderAsync(id, cancellationToken);
+            return !result ? NotFound($"MemeOrder with ID {id} not found") : NoContent();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error occurred while deleting meme order with ID {Id}", id);
+            logger.LogError(ex, "Error occurred while deleting meme order with ID {Id}", id);
             return StatusCode(StatusCodes.Status500InternalServerError, "Internal server error");
         }
     }
@@ -354,21 +378,19 @@ public class RandomMemeController : ControllerBase
     [ProducesResponseType(typeof(MemeOrderDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<ActionResult<MemeOrderDto>> GetRandomMeme([FromQuery] int? typeId, CancellationToken cancellationToken = default)
+    public async Task<ActionResult<MemeOrderDto>> GetRandomMeme(
+        [FromQuery] int? typeId,
+        CancellationToken cancellationToken = default
+    )
     {
         try
         {
-            var randomMeme = await _randomMemeService.GetRandomMemeAsync(typeId, cancellationToken);
-            if (randomMeme == null)
-            {
-                return NotFound("No memes found");
-            }
-
-            return Ok(MapToDto(randomMeme));
+            var randomMeme = await randomMemeService.GetRandomMemeAsync(typeId, cancellationToken);
+            return randomMeme == null ? NotFound("No memes found") : Ok(MapToDto(randomMeme));
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error occurred while getting random meme");
+            logger.LogError(ex, "Error occurred while getting random meme");
             return StatusCode(StatusCodes.Status500InternalServerError, "Internal server error");
         }
     }
@@ -379,16 +401,19 @@ public class RandomMemeController : ControllerBase
     [HttpGet("count")]
     [ProducesResponseType(typeof(int), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<ActionResult<int>> GetMemeCount([FromQuery] int? typeId, CancellationToken cancellationToken = default)
+    public async Task<ActionResult<int>> GetMemeCount(
+        [FromQuery] int? typeId,
+        CancellationToken cancellationToken = default
+    )
     {
         try
         {
-            var count = await _randomMemeService.GetMemeOrderCountAsync(typeId, cancellationToken);
+            var count = await randomMemeService.GetMemeOrderCountAsync(typeId, cancellationToken);
             return Ok(count);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error occurred while getting meme count");
+            logger.LogError(ex, "Error occurred while getting meme count");
             return StatusCode(StatusCodes.Status500InternalServerError, "Internal server error");
         }
     }
@@ -399,16 +424,23 @@ public class RandomMemeController : ControllerBase
     [HttpPost("orders/reorder/{typeId:int}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<ActionResult> ReorderMemeOrders(int typeId, CancellationToken cancellationToken = default)
+    public async Task<ActionResult> ReorderMemeOrders(
+        int typeId,
+        CancellationToken cancellationToken = default
+    )
     {
         try
         {
-            await _randomMemeService.ReorderMemeOrdersAsync(typeId, cancellationToken);
+            await randomMemeService.ReorderMemeOrdersAsync(typeId, cancellationToken);
             return Ok($"Successfully reordered meme orders for type {typeId}");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error occurred while reordering meme orders for type {TypeId}", typeId);
+            logger.LogError(
+                ex,
+                "Error occurred while reordering meme orders for type {TypeId}",
+                typeId
+            );
             return StatusCode(StatusCodes.Status500InternalServerError, "Internal server error");
         }
     }
@@ -423,7 +455,7 @@ public class RandomMemeController : ControllerBase
         {
             Id = memeType.Id,
             Name = memeType.Name,
-            FolderPath = memeType.FolderPath
+            FolderPath = memeType.FolderPath,
         };
     }
 
@@ -435,7 +467,7 @@ public class RandomMemeController : ControllerBase
             Order = memeOrder.Order,
             FilePath = memeOrder.FilePath,
             MemeTypeId = memeOrder.MemeTypeId,
-            Type = memeOrder.Type != null ? MapToDto(memeOrder.Type) : null
+            Type = memeOrder.Type != null ? MapToDto(memeOrder.Type) : null,
         };
     }
 
