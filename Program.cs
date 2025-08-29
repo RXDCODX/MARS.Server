@@ -167,6 +167,9 @@ public static class Program
         services.AddHostedService(sp => sp.GetRequiredService<RandomMemeWorker>());
         services.AddSingleton<RandomMemOnline>();
         services.AddHostedService(sp => sp.GetRequiredService<RandomMemOnline>());
+        
+        // Register RandomMeme CRUD service
+        services.AddScoped<IRandomMemeService, RandomMemeService>();
 
         services.AddSingleton(
             (sp) => VoicerFactory.CreateVoicer(sp.GetRequiredService<ILogger<IVoicer>>())
