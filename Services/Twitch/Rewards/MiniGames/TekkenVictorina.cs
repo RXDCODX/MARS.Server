@@ -1,11 +1,9 @@
 ﻿using MARS.Server.Services.Framedata;
 using MARS.Server.Services.Framedata.Entitys;
-using MARS.Server.Services.ServiceManager;
 using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.Twitch.MiniGamesStats;
 using MARS.Server.Services.Twitch.Rewards.MiniGames.Entitys.Interfaces;
 using MARS.Server.Services.Twitch.Rewards.MiniGames.Entitys.Subs;
-using TwitchLib.Client.Events;
 
 namespace MARS.Server.Services.Twitch.Rewards.MiniGames;
 
@@ -14,88 +12,49 @@ public class TekkenVictorina(
     ITwitchAPI api,
     TokenService tokenService,
     Tekken8FrameData frameData,
-    IHostApplicationLifetime lifetime,
     ILogger<TekkenVictorina> logger,
     IDbContextFactory<AppDbContext> dbContextFactory,
     TekkenVictorinaLeaderbord tekkenVictorinaLeaderbord
-) : ManagedServiceBase(logger), ITwitchMiniGame
+) : ITwitchMiniGame
 {
-    public override string ServiceName => "tekkenvictorina";
-    public override string DisplayName => "Tekken Victorina";
-    public override string Description => "Мини-игра Tekken Victorina на Twitch";
-    public override bool IsServiceActive { get; set; }
+    public string Name => "tekkenvictorina";
     public bool IsReuseRewardForAddMechanic { get; set; } = false;
     public bool IsGameRunning { get; set; } = false;
     private const string? CommandForStop = "!стопвикторина";
     private TekkenVictorinaGame? _currentGame;
     private readonly SemaphoreSlim _semaphoreSlim = new(1);
 
-    public override async Task StartAsync(CancellationToken cancellationToken = default)
+    public async Task OnChatMessage(string userName, string userId, string message)
     {
-        await base.StartAsync(cancellationToken);
-
-        if (IsServiceActive)
-        {
-            lifetime.ApplicationStarted.Register(() =>
-            {
-                client.OnMessageReceived += TwitchClientOnOnMessageReceived;
-            });
-        }
-    }
-
-    public override Task StopAsync(CancellationToken cancellationToken = default)
-    {
-        client.OnMessageReceived -= TwitchClientOnOnMessageReceived;
-
-        return base.StopAsync(cancellationToken);
-    }
-
-    private async void TwitchClientOnOnMessageReceived(
-        object? sender,
-        OnMessageReceivedArgs onMessageReceivedArgs
-    )
-    {
-        if (!IsServiceActive)
+        if (userName == TwitchExstension.BotName)
         {
             return;
         }
 
-        await Task.Factory.StartNew(async () =>
+        if (
+            message.Equals(CommandForStop, StringComparison.OrdinalIgnoreCase)
+            && userName.Equals(TwitchExstension.Channel, StringComparison.OrdinalIgnoreCase)
+        )
         {
-            var name = onMessageReceivedArgs.ChatMessage.Username;
-            var message = onMessageReceivedArgs.ChatMessage.Message;
-            var userId = onMessageReceivedArgs.ChatMessage.UserId;
-
-            if (name == TwitchExstension.BotName)
+            if (_currentGame is { Active: true })
             {
-                return;
+                _currentGame.Active = false;
+                _currentGame = null;
+                await client.SendMessageToMainTwitchAsync("Теккен викторина была остановлена!");
+            }
+            else
+            {
+                await client.SendMessageToMainTwitchAsync("Теккен викторина не была запущена.");
             }
 
-            //Стоп - слово
-            if (
-                message.Equals(CommandForStop, StringComparison.OrdinalIgnoreCase)
-                && name.Equals(TwitchExstension.Channel, StringComparison.OrdinalIgnoreCase)
-            )
-            {
-                if (_currentGame is { Active: true })
-                {
-                    _currentGame.Active = false;
-                    _currentGame = null;
-                    await client.SendMessageToMainTwitchAsync("Теккен викторина была остановлена!");
-                }
-                else
-                {
-                    await client.SendMessageToMainTwitchAsync("Теккен викторина не была запущена.");
-                }
+            IsGameRunning = false;
+            return;
+        }
 
-                return;
-            }
-
-            if (_currentGame != null)
-            {
-                await CheckIsAnswer(name, userId, message);
-            }
-        });
+        if (_currentGame != null)
+        {
+            await CheckIsAnswer(userName, userId, message);
+        }
     }
 
     public int GetGameCost()
@@ -103,13 +62,12 @@ public class TekkenVictorina(
         return 8;
     }
 
-    public async Task GameStart(string userName, string userId)
+    public async Task GameStart(
+        string userName,
+        string userId,
+        CancellationToken cancellationToken = default
+    )
     {
-        if (!IsServiceActive)
-        {
-            return;
-        }
-
         if (_currentGame is null)
         {
             var randomIndex = Random.Shared.Next(frameData.VictorinaMoves.Count) - 1;
@@ -128,6 +86,7 @@ public class TekkenVictorina(
             var answer = GetAnswer(randomMove);
             _currentGame = new TekkenVictorinaGame(answer);
             var token = _currentGame.CancellationTokenForRightAnswer.Token;
+            IsGameRunning = true;
 
             while (!token.IsCancellationRequested)
             {
@@ -137,17 +96,18 @@ public class TekkenVictorina(
                     break;
                 }
 
-                await Task.Delay(100, CancellationToken.None);
+                await Task.Delay(100, cancellationToken);
             }
 
             if (_currentGame.CancellationTokenForRightAnswer.IsCancellationRequested)
             {
                 if (_currentGame.IsWaifuHelp)
                 {
-                    await using var dbContext = await dbContextFactory.CreateDbContextAsync(
-                        lifetime.ApplicationStopping
+                    await using var dbContext = await dbContextFactory.CreateDbContextAsync(token);
+                    var waifu = await dbContext.Waifus.FindAsync(
+                        [_currentGame.WaifuId],
+                        cancellationToken: token
                     );
-                    var waifu = await dbContext.Waifus.FindAsync(_currentGame.WaifuId);
                     var waifuName = waifu?.Name;
                     var rightAnswer = _currentGame.GoodAnswers.First();
                     await client.SendMessageToMainTwitchAsync(
@@ -210,6 +170,26 @@ public class TekkenVictorina(
         {
             await client.SendMessageToMainTwitchAsync("Теккен викторина уже используется!");
         }
+    }
+
+    public Task CancelAsync()
+    {
+        try
+        {
+            _currentGame?.CancellationTokenForRightAnswer.Cancel();
+            _currentGame = null;
+        }
+        finally
+        {
+            IsGameRunning = false;
+        }
+        return Task.CompletedTask;
+    }
+
+    public Task<bool> OnRewardRedemption(string userName, string userId, int cost)
+    {
+        // Ничего не добавляем во время игры (нет механики добавления)
+        return Task.FromResult(false);
     }
 
     private void ClearGame()

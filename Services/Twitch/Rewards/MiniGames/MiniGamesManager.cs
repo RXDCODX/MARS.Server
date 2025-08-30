@@ -1,55 +1,42 @@
 ﻿using System.Collections.Frozen;
-using MARS.Server.Services.ServiceManager;
 using MARS.Server.Services.Twitch.Rewards.MiniGames.Entitys.Interfaces;
+using TwitchLib.Client.Events;
 using TwitchLib.EventSub.Websockets;
 
 namespace MARS.Server.Services.Twitch.Rewards.MiniGames;
 
 public class MiniGamesManager(
-    TekkenVictorina tekkenVictorina,
-    TwitchRussianRoulete russianRoulete,
-    TwitchTrivia twitchTrivia,
+    IServiceProvider serviceProvider,
     IHostApplicationLifetime lifetime,
     ITwitchClient client,
-    ILogger<MiniGamesManager> logger,
     EventSubWebsocketClient wsClient
-) : ManagedServiceBase(logger)
+) : IHostedService
 {
-    public override string ServiceName => "minigames";
-    public override string DisplayName => "Mini Games";
-    public override string Description => "Менеджер мини-игр Twitch";
-    public override bool IsServiceActive { get; set; }
+    public bool IsServiceActive { get; set; } = true;
 
-    private static FrozenDictionary<int, ITwitchMiniGame> _miniGames = FrozenDictionary<
-        int,
-        ITwitchMiniGame
-    >.Empty;
+    private readonly CancellationToken _cancellationToken = lifetime.ApplicationStopping;
+    private static readonly Dictionary<int, ITwitchMiniGame> MiniGames = [];
 
-    public override Task StartAsync(CancellationToken cancellationToken = default)
+    public Task StartAsync(CancellationToken token)
     {
-        var miniGames = new Dictionary<int, ITwitchMiniGame>
-        {
-            { tekkenVictorina.GetGameCost(), tekkenVictorina },
-            { russianRoulete.GetGameCost(), russianRoulete },
-            { twitchTrivia.GetGameCost(), twitchTrivia },
-        };
-        _miniGames = miniGames.ToFrozenDictionary();
         lifetime.ApplicationStarted.Register(() =>
         {
             wsClient.ChannelPointsCustomRewardRedemptionAdd +=
                 WsClientOnChannelPointsCustomRewardRedemptionAdd;
+            client.OnMessageReceived += ClientOnMessageReceived;
         });
 
-        return base.StartAsync(cancellationToken);
+        return Task.CompletedTask;
     }
 
-    public override Task StopAsync(CancellationToken cancellationToken = default)
+    public Task StopAsync(CancellationToken token)
     {
-        _miniGames = FrozenDictionary<int, ITwitchMiniGame>.Empty;
+        MiniGames.Clear();
         wsClient.ChannelPointsCustomRewardRedemptionAdd -=
             WsClientOnChannelPointsCustomRewardRedemptionAdd;
+        client.OnMessageReceived -= ClientOnMessageReceived;
 
-        return base.StopAsync(cancellationToken);
+        return Task.CompletedTask;
     }
 
     private async Task WsClientOnChannelPointsCustomRewardRedemptionAdd(
@@ -63,34 +50,87 @@ public class MiniGamesManager(
         }
 
         var cost = args.Notification.Payload.Event.Reward.Cost;
-        var miniGames = _miniGames.Values;
+        var miniGames = MiniGames.Values;
         var name = args.Notification.Payload.Event.UserName;
         var userId = args.Notification.Payload.Event.UserId;
 
         if (miniGames.Any(e => e.IsGameRunning))
         {
-            var gameCost = _miniGames.Keys.FirstOrDefault(e => e == cost, 0);
+            var gameCost = MiniGames.Keys.FirstOrDefault(e => e == cost, 0);
 
             if (gameCost != 0)
             {
-                var game = _miniGames[gameCost];
+                var game = MiniGames[gameCost];
                 if (!game.IsReuseRewardForAddMechanic)
                 {
                     await client.SendMessageToMainTwitchAsync(
                         @$"@{name}, прости но уже другая игра происходит!"
                     );
                 }
+                else
+                {
+                    await game.OnRewardRedemption(name, userId, cost);
+                }
             }
         }
-        else
+        else if (cost is 8 or 7 or 6)
         {
-            var gameCost = _miniGames.Keys.FirstOrDefault(e => e == cost, 0);
+            var asyncServiceScope = serviceProvider.CreateAsyncScope();
 
-            if (gameCost != 0)
+            switch (cost)
             {
-                var game = _miniGames[gameCost];
-                game.IsGameRunning = true;
-                await game.GameStart(name, userId);
+                case 8:
+                    var tekkenVictorina =
+                        asyncServiceScope.ServiceProvider.GetRequiredService<TekkenVictorina>();
+                    tekkenVictorina.IsGameRunning = true;
+                    MiniGames.Add(8, tekkenVictorina);
+                    await tekkenVictorina.GameStart(name, userId, _cancellationToken);
+                    break;
+                case 7:
+                    var twitchTrivia =
+                        asyncServiceScope.ServiceProvider.GetRequiredService<TwitchTrivia>();
+                    twitchTrivia.IsGameRunning = true;
+                    MiniGames.Add(7, twitchTrivia);
+                    await twitchTrivia.GameStart(name, userId, _cancellationToken);
+                    break;
+                case 6:
+                    var russianRoulette =
+                        asyncServiceScope.ServiceProvider.GetRequiredService<TwitchTrivia>();
+                    russianRoulette.IsGameRunning = true;
+                    MiniGames.Add(6, russianRoulette);
+                    await russianRoulette.GameStart(name, userId, _cancellationToken);
+                    break;
+            }
+        }
+    }
+
+    public async Task CancelAllGamesAsync()
+    {
+        foreach (var game in MiniGames.Values)
+        {
+            if (game.IsGameRunning)
+            {
+                await game.CancelAsync();
+            }
+        }
+    }
+
+    private async void ClientOnMessageReceived(object? sender, OnMessageReceivedArgs e)
+    {
+        if (!IsServiceActive)
+        {
+            return;
+        }
+
+        var userName = e.ChatMessage.Username;
+        var message = e.ChatMessage.Message;
+        var userId = e.ChatMessage.UserId;
+
+        foreach (var game in MiniGames.Values)
+        {
+            if (game.IsGameRunning)
+            {
+                await game.OnChatMessage(userName, userId, message);
             }
         }
     }

@@ -213,12 +213,9 @@ public static class StartupEstensions
         services.AddHostedService(sp => sp.GetRequiredService<RollWaifu>());
         services.AddSingleton<RandomMeme>();
         services.AddHostedService(sp => sp.GetRequiredService<RandomMeme>());
-        services.AddSingleton<TwitchRussianRoulete>();
-        services.AddHostedService(sp => sp.GetRequiredService<TwitchRussianRoulete>());
-        services.AddSingleton<TekkenVictorina>();
-        services.AddHostedService(sp => sp.GetRequiredService<TekkenVictorina>());
-        services.AddSingleton<TwitchTrivia>();
-        services.AddHostedService(sp => sp.GetRequiredService<TwitchTrivia>());
+        services.AddScoped<TwitchRussianRoulete>();
+        services.AddScoped<TekkenVictorina>();
+        services.AddScoped<TwitchTrivia>();
         services.AddSingleton<HighlitedMessage>();
         services.AddHostedService(sp => sp.GetRequiredService<HighlitedMessage>());
         services.AddSingleton<FumoFridayWorker>();

@@ -44,7 +44,7 @@ public class VictorinaGame(ILogger<TwitchTrivia> logger, ITwitchClient client, T
         return lines[numberQuestion];
     }
 
-    public async void MainThread()
+    public async Task MainThread()
     {
         try
         {
@@ -144,7 +144,7 @@ public class VictorinaGame(ILogger<TwitchTrivia> logger, ITwitchClient client, T
         finally
         {
             Active = false;
-            trivia.IsGameRunning = false;
+            // Убираем trivia.IsGameRunning = false отсюда - это должно управляться в TwitchTrivia
         }
     }
 }

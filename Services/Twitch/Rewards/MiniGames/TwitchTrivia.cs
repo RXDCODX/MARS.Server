@@ -1,9 +1,6 @@
-﻿using MARS.Server.Services.ServiceManager;
-using MARS.Server.Services.Twitch.Rewards.MiniGames.Entitys.Interfaces;
+﻿using MARS.Server.Services.Twitch.Rewards.MiniGames.Entitys.Interfaces;
 using MARS.Server.Services.Twitch.Rewards.MiniGames.Entitys.Subs;
 using TwitchLib.Client.Events;
-using TwitchLib.EventSub.Websockets;
-using TwitchLib.EventSub.Websockets.Core.EventArgs.Stream;
 
 namespace MARS.Server.Services.Twitch.Rewards.MiniGames;
 
@@ -11,18 +8,12 @@ public class TwitchTrivia(
     ITwitchClient client,
     IWebHostEnvironment environment,
     ILogger<TwitchTrivia> logger,
-    IDbContextFactory<AppDbContext> dbContextFactory,
-    IHostApplicationLifetime applicationLifetime,
-    EventSubWebsocketClient wsClient
-) : ManagedServiceBase(logger), ITwitchMiniGame
+    IDbContextFactory<AppDbContext> dbContextFactory
+) : ITwitchMiniGame
 {
-    public override string ServiceName => "twitchtrivia";
-    public override string DisplayName => "Twitch Trivia";
-    public override string Description => "Мини-игра Trivia на Twitch";
-    public override bool IsServiceActive { get; set; }
+    public string Name => "trivia";
     public bool IsReuseRewardForAddMechanic { get; set; } = false;
     public bool IsGameRunning { get; set; }
-    public string CommandForStop { get; set; } = "!викторинастоп";
 
     private const int CostOfAlert = 7;
     private const int ChanceToBeSaved = 30;
@@ -32,114 +23,80 @@ public class TwitchTrivia(
 
     public readonly int TimeoutBetweenHints = 10;
 
-    internal CancellationTokenSource TokenSource = null!;
+    internal CancellationTokenSource TokenSource = new();
 
     internal string FilenameTrivia =>
         Path.Combine(environment.ContentRootPath, "Trivia", "bot_trivia_questions.txt");
     private VictorinaGame? CurrentGame { get; set; }
 
-    private async void NewMessage(object? sender, OnMessageReceivedArgs onMessageReceivedArgs)
+    public async Task OnChatMessage(string userName, string userId, string message)
     {
-        await Task.Run(
-            async () =>
+        if (!IsGameRunning || userName == TwitchExstension.BotName)
+        {
+            return;
+        }
+
+        message = message.Trim();
+
+        if (CurrentGame != null && CurrentGame.Answer != "")
+        {
+            try
             {
-                var name = onMessageReceivedArgs.ChatMessage.Username;
-                var message = onMessageReceivedArgs.ChatMessage.Message.Trim();
-                var id = onMessageReceivedArgs.ChatMessage.UserId;
+                Waifu? waifu = null;
+                await using AppDbContext context = await dbContextFactory.CreateDbContextAsync();
 
-                if (name == TwitchExstension.BotName || !IsServiceActive)
-                {
-                    return;
-                }
+                var host = await context.Hosts.FindAsync(userId);
 
-                //Стоп - слово
-                if (
-                    message.Equals(CommandForStop, StringComparison.OrdinalIgnoreCase)
-                    && name.Equals(TwitchExstension.Channel, StringComparison.OrdinalIgnoreCase)
-                )
+                if (host is { IsPrivated: true } && !NoWaifuHelpUsers.Contains(userId))
                 {
-                    if (CurrentGame != null)
+                    var chance = Random.Shared.Next(0, 101);
+                    if (chance < ChanceToBeSaved)
                     {
-                        CurrentGame.Active = false;
-                        CurrentGame = null;
-                        await client.SendMessageToMainTwitchAsync("Остановка тривии", logger);
+                        waifu = await context.Waifus.FindAsync(host.WaifuBrideId);
                     }
                     else
                     {
-                        await client.SendMessageToMainTwitchAsync(
-                            "Тривия не была запущена",
-                            logger
-                        );
+                        NoWaifuHelpUsers.Add(userId);
                     }
-
-                    IsGameRunning = false;
-                    return;
                 }
 
-                //травия ответы
-                if (CurrentGame != null && CurrentGame.Answer != "")
+                await SemaphoreSlim.WaitAsync(TokenSource.Token);
+                if (
+                    message.Equals(CurrentGame.Answer, StringComparison.OrdinalIgnoreCase)
+                    && !CurrentGame.AllLettersShowed
+                )
                 {
-                    try
-                    {
-                        Waifu? waifu = null;
-                        await using AppDbContext context =
-                            await dbContextFactory.CreateDbContextAsync();
-
-                        var host = await context.Hosts.FindAsync(id);
-
-                        if (host is { IsPrivated: true } && !NoWaifuHelpUsers.Contains(id))
-                        {
-                            var chance = Random.Shared.Next(0, 101);
-                            if (chance < ChanceToBeSaved)
-                            {
-                                waifu = await context.Waifus.FindAsync(host.WaifuBrideId);
-                            }
-                            else
-                            {
-                                NoWaifuHelpUsers.Add(id);
-                            }
-                        }
-
-                        await SemaphoreSlim.WaitAsync(TokenSource.Token);
-                        if (
-                            message.Equals(CurrentGame.Answer, StringComparison.OrdinalIgnoreCase)
-                            && !CurrentGame.AllLettersShowed
-                        )
-                        {
-                            CurrentGame.AllLettersShowed = true;
-                            var answer = CurrentGame.Answer;
-                            CurrentGame.Answer = "";
-                            await client.SendMessageToMainTwitchAsync(
-                                $"@{name} отгадал загаданное слово: {answer}",
-                                logger
-                            );
-                            IsGameRunning = false;
-                            NoWaifuHelpUsers.Clear();
-                        }
-
-                        if (!CurrentGame.AllLettersShowed && waifu != null)
-                        {
-                            CurrentGame.AllLettersShowed = true;
-                            var answer = CurrentGame.Answer;
-                            CurrentGame.Answer = "";
-                            await client.SendMessageToMainTwitchAsync(
-                                $"@{name}, поздравляем, ты победил! Твой супруг ({waifu.Name}) шепнул(-а) тебе на ушко загаданное слово: {answer}",
-                                logger
-                            );
-                            IsGameRunning = false;
-                            NoWaifuHelpUsers.Clear();
-                        }
-
-                        SemaphoreSlim.Release();
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.LogException(ex);
-                    }
+                    CurrentGame.AllLettersShowed = true;
+                    var answer = CurrentGame.Answer;
+                    CurrentGame.Answer = "";
+                    await client.SendMessageToMainTwitchAsync(
+                        $"@{userName} отгадал загаданное слово: {answer}",
+                        logger
+                    );
+                    IsGameRunning = false;
+                    NoWaifuHelpUsers.Clear();
                 }
-            },
-            TokenSource.Token
-        );
+
+                if (!CurrentGame.AllLettersShowed && waifu != null)
+                {
+                    CurrentGame.AllLettersShowed = true;
+                    var answer = CurrentGame.Answer;
+                    CurrentGame.Answer = "";
+                    await client.SendMessageToMainTwitchAsync(
+                        $"@{userName}, поздравляем, ты победил! Твой супруг ({waifu.Name}) шепнул(-а) тебе на ушко загаданное слово: {answer}",
+                        logger
+                    );
+                    IsGameRunning = false;
+                    NoWaifuHelpUsers.Clear();
+                }
+
+                SemaphoreSlim.Release();
+            }
+            catch (Exception ex)
+            {
+                logger.LogException(ex);
+            }
+        }
     }
 
     public int GetGameCost()
@@ -147,55 +104,51 @@ public class TwitchTrivia(
         return CostOfAlert;
     }
 
-    public Task GameStart(string userName, string userId)
+    public async Task GameStart(
+        string userName,
+        string userId,
+        CancellationToken cancellationToken = default
+    )
     {
-        if (IsServiceActive)
+        try
         {
-            try
-            {
-                var qwe = new VictorinaGame(logger, client, this);
-                CurrentGame = qwe;
-                qwe.MainThread();
-                IsGameRunning = false;
-            }
-            catch (Exception ex)
-            {
-                logger.LogException(ex);
-            }
+            CountQuestions = (
+                await File.ReadAllLinesAsync(FilenameTrivia, cancellationToken)
+            ).Length;
+            TokenSource = new CancellationTokenSource();
+            var qwe = new VictorinaGame(logger, client, this);
+            CurrentGame = qwe;
+            IsGameRunning = true;
+            await qwe.MainThread();
+        }
+        catch (Exception ex)
+        {
+            logger.LogException(ex);
+            IsGameRunning = false;
+        }
+    }
+
+    public Task CancelAsync()
+    {
+        try
+        {
+            CurrentGame!.Active = false;
+        }
+        catch
+        {
+            // ignore
+        }
+        finally
+        {
+            IsGameRunning = false;
+            TokenSource.Cancel();
         }
 
         return Task.CompletedTask;
     }
 
-    public override async Task StartAsync(CancellationToken cancellationToken = default)
+    public Task<bool> OnRewardRedemption(string userName, string userId, int cost)
     {
-        CountQuestions = (await File.ReadAllLinesAsync(FilenameTrivia, cancellationToken)).Length;
-        TokenSource = new CancellationTokenSource();
-        IsServiceActive = true;
-        await base.StartAsync(cancellationToken);
-
-        if (IsServiceActive)
-        {
-            applicationLifetime.ApplicationStarted.Register(() =>
-            {
-                client.OnMessageReceived += NewMessage;
-                wsClient.StreamOffline += WsClientOnStreamOffline;
-            });
-        }
-    }
-
-    public override Task StopAsync(CancellationToken cancellationToken = default)
-    {
-        TokenSource = new CancellationTokenSource();
-        IsServiceActive = false;
-        CountQuestions = 0;
-        client.OnMessageReceived -= NewMessage;
-        wsClient.StreamOffline -= WsClientOnStreamOffline;
-        return base.StopAsync(cancellationToken);
-    }
-
-    private Task WsClientOnStreamOffline(object sender, StreamOfflineArgs args)
-    {
-        return StopAsync(applicationLifetime.ApplicationStopping);
+        return Task.FromResult(false);
     }
 }

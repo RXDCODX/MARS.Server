@@ -26,7 +26,7 @@ public class ChangeStreamTitleCommand(
                 Name = "новое_название",
                 Description = "Новое название для трансляции",
                 Type = "string",
-                Required = true,
+                Required = false,
             },
         ];
 
@@ -43,41 +43,44 @@ public class ChangeStreamTitleCommand(
                 return GetErrorMessage(platform, "Сервис управления трансляцией недоступен");
             }
 
-            if (!parameters.TryGetValue("новое_название", out var titleParam))
+            if (parameters.TryGetValue("новое_название", out var titleParam))
             {
-                return GetErrorMessage(platform, "Не указано новое название трансляции");
-            }
-
-            var newTitle = titleParam.ToString()?.Trim();
-            if (string.IsNullOrWhiteSpace(newTitle))
-            {
-                return GetErrorMessage(platform, "Название трансляции не может быть пустым");
-            }
-
-            // Ограничиваем длину названия (Twitch ограничивает до 140 символов)
-            if (newTitle.Length > 140)
-            {
-                newTitle = newTitle[..140];
-                logger.LogWarning("Название трансляции обрезано до 140 символов");
-            }
-
-            var success = await streamManagementService.ChangeStreamTitleAsync(newTitle);
-
-            if (success)
-            {
-                var message = $"Название трансляции успешно изменено на: {newTitle}";
-
-                // Если команда выполнена через Twitch, отправляем сообщение в чат
-                if (platform == Platform.Twitch)
+                var newTitle = titleParam.ToString()?.Trim();
+                if (string.IsNullOrWhiteSpace(newTitle))
                 {
-                    await client.SendMessageToMainTwitchAsync(message, logger);
+                    return GetErrorMessage(platform, "Название трансляции не может быть пустым");
                 }
 
-                return message;
+                // Ограничиваем длину названия (Twitch ограничивает до 140 символов)
+                if (newTitle.Length > 140)
+                {
+                    newTitle = newTitle[..140];
+                    logger.LogWarning("Название трансляции обрезано до 140 символов");
+                }
+
+                var success = await streamManagementService.ChangeStreamTitleAsync(newTitle);
+
+                if (success)
+                {
+                    var message = $"Название трансляции успешно изменено на: {newTitle}";
+
+                    // Если команда выполнена через Twitch, отправляем сообщение в чат
+                    if (platform == Platform.Twitch)
+                    {
+                        await client.SendMessageToMainTwitchAsync(message, logger);
+                    }
+
+                    return message;
+                }
+                else
+                {
+                    return GetErrorMessage(platform, "Не удалось изменить название трансляции");
+                }
             }
             else
             {
-                return GetErrorMessage(platform, "Не удалось изменить название трансляции");
+                return await streamManagementService.GetCurrentTitleAsync()
+                    ?? "Не удалось получить текущее название трансляции";
             }
         }
         catch (Exception ex)
@@ -98,4 +101,3 @@ public class ChangeStreamTitleCommand(
         };
     }
 }
-
