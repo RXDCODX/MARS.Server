@@ -1,4 +1,5 @@
 ﻿using MARS.Server.Services.AutoArts.Entitys;
+using MARS.Server.Services.Twitch.Rewards.TwitchGaoAlert.Entitys;
 using MARS.Server.Services.Twitch.Rewards.TwitchScreenParticles.Entitys;
 using SignalRSwaggerGen.Attributes;
 using SignalRSwaggerGen.Enums;
@@ -61,4 +62,7 @@ public interface ITelegramusHub
 
     [SignalRMethod]
     public Task LeroyAlert();
+
+    [SignalRMethod]
+    Task GaoAlert(GaoAlertDto gaoAlert);
 }

@@ -153,13 +153,13 @@
       </Compile>
     </ItemGroup>
 
-    <Target Name="BuildClientApp" BeforeTargets="Build">
+    <Target Name="BuildClientApp" BeforeTargets="Publish">
         <Message Importance="high" Text="Сборка фронта через yarn build..." />
         <Exec WorkingDirectory="..\mars.client" Command="yarn install" />
         <Exec WorkingDirectory="..\mars.client" Command="yarn build" />
     </Target>
 
-    <Target Name="CopyClientDistToWwwroot" AfterTargets="Build">
+    <!--<Target Name="CopyClientDistToWwwroot" AfterTargets="Build">
         <Message Importance="high" Text="Копирование dist в wwwroot..." />
         <RemoveDir Directories="wwwroot\assets" />
 
@@ -168,7 +168,7 @@
         </ItemGroup>
 
         <Copy SourceFiles="@(DistFiles)" DestinationFolder="wwwroot\%(RecursiveDir)" SkipUnchangedFiles="true" />
-    </Target>
+    </Target>-->
     
     <Target Name="CopyClientDistToPublishWwwroot" AfterTargets="Publish">
         <Message Importance="high" Text="Копирование dist в опубликованный wwwroot..." />
