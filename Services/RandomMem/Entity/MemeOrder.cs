@@ -4,7 +4,7 @@ public class MemeOrder
 {
     [Key]
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-    public Guid Id { get; } = Guid.CreateVersion7();
+    public Guid Id { get; set; } = Guid.CreateVersion7();
 
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     public int Order { get; set; }

@@ -295,53 +295,55 @@ public class RandomMemeController(
         }
     }
 
-    ///// <summary>
-    ///// Update meme order
-    ///// </summary>
-    //[HttpPut("orders/{id:guid}")]
-    //[ProducesResponseType(typeof(MemeOrderDto), StatusCodes.Status200OK)]
-    //[ProducesResponseType(StatusCodes.Status400BadRequest)]
-    //[ProducesResponseType(StatusCodes.Status404NotFound)]
-    //[ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    //public async Task<ActionResult<MemeOrderDto>> UpdateMemeOrder(
-    //    UpdateMemeOrderDto updateDto,
-    //    CancellationToken cancellationToken = default
-    //)
-    //{
-    //    var memeOrder = new MemeOrder
-    //    {
-    //        FilePath = updateDto.FilePath,
-    //        MemeTypeId = updateDto.MemeTypeId,
-    //        Order = updateDto.Order,
-    //    };
+    /// <summary>
+    /// Update meme order
+    /// </summary>
+    [HttpPut("orders/{id:guid}")]
+    [ProducesResponseType(typeof(MemeOrderDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<MemeOrderDto>> UpdateMemeOrder(
+        Guid id,
+        UpdateMemeOrderDto updateDto,
+        CancellationToken cancellationToken = default
+    )
+    {
+        try
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
 
-    //    try
-    //    {
-    //        if (!ModelState.IsValid)
-    //        {
-    //            return BadRequest(ModelState);
-    //        }
+            var memeOrder = new MemeOrder
+            {
+                Id = id,
+                FilePath = updateDto.FilePath,
+                MemeTypeId = updateDto.MemeTypeId,
+                Order = updateDto.Order,
+            };
 
-    //        var updated = await randomMemeService.UpdateMemeOrderAsync(
-    //            memeOrder,
-    //            cancellationToken
-    //        );
-    //        return Ok(MapToDto(updated));
-    //    }
-    //    catch (InvalidOperationException ex)
-    //    {
-    //        return NotFound(ex.Message);
-    //    }
-    //    catch (Exception ex)
-    //    {
-    //        logger.LogError(
-    //            ex,
-    //            "Error occurred while updating meme order with ID {Id}",
-    //            memeOrder.Id
-    //        );
-    //        return StatusCode(StatusCodes.Status500InternalServerError, "Internal server error");
-    //    }
-    //}
+            var updated = await randomMemeService.UpdateMemeOrderAsync(
+                memeOrder,
+                cancellationToken
+            );
+            return Ok(MapToDto(updated));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(
+                ex,
+                "Error occurred while updating meme order with ID {Id}",
+                id
+            );
+            return StatusCode(StatusCodes.Status500InternalServerError, "Internal server error");
+        }
+    }
 
     /// <summary>
     /// Delete meme order
