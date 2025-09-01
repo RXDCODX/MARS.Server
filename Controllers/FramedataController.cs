@@ -1,4 +1,5 @@
-﻿using MARS.Server.Services.Framedata.Entitys;
+﻿using MARS.Server.Services.Framedata;
+using MARS.Server.Services.Framedata.Entitys;
 using MARS.Server.Services.Framedata.Subservices.Entitys;
 using MARS.Server.Services.Framedata.Subservices.HtmlParsers;
 using Microsoft.AspNetCore.Mvc;
@@ -678,6 +679,120 @@ public class FramedataController(
             );
         }
     }
+
+    /// <summary>
+    /// Запустить парсинг в режиме дополнения
+    /// </summary>
+    /// <param name="request">Запрос на дополнение</param>
+    /// <returns>Результат операции</returns>
+    [HttpPost("supplement")]
+    public async Task<ActionResult<ParseResult>> StartSupplement(
+        [FromBody] SupplementRequest request
+    )
+    {
+        try
+        {
+            // Получаем сервис фреймдаты через DI
+            var framedataService =
+                HttpContext.RequestServices.GetRequiredService<Tekken8FrameData>();
+
+            var options = new FramedataParserOptions
+            {
+                RequestDelaySeconds = request.RequestDelaySeconds ?? 2,
+                CharacterDelaySeconds = request.CharacterDelaySeconds ?? 5,
+                UseStagingService = request.UseStagingService ?? true,
+                ParseMoves = request.ParseMoves ?? true,
+                IsSupplementMode = true, // Обязательно включаем режим дополнения
+                MaxRetries = request.MaxRetries ?? 3,
+                HttpTimeoutSeconds = request.HttpTimeoutSeconds ?? 30,
+            };
+
+            // Запускаем дополнение в фоновом режиме
+            await Task.Factory.StartNew(async () =>
+            {
+                try
+                {
+                    await framedataService.SupplementWithCustomOptions(request.Source, options);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Ошибка при дополнении фреймдаты");
+                }
+            });
+
+            return Ok(
+                new ParseResult
+                {
+                    Success = true,
+                    ParsedCharacters = [],
+                    Message = $"Запущено дополнение фреймдаты из {request.Source}",
+                }
+            );
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при запуске дополнения фреймдаты");
+            return StatusCode(
+                500,
+                new ParseResult
+                {
+                    Success = false,
+                    Message = $"Ошибка при запуске дополнения: {ex.Message}",
+                }
+            );
+        }
+    }
+
+    /// <summary>
+    /// Запустить дополнение фреймдаты с настройками по умолчанию
+    /// </summary>
+    /// <param name="source">Источник данных для дополнения</param>
+    /// <returns>Результат операции</returns>
+    [HttpPost("supplement/{source}")]
+    public async Task<ActionResult<ParseResult>> StartDefaultSupplement(FramedataSource source)
+    {
+        try
+        {
+            // Получаем сервис фреймдаты через DI
+            var framedataService =
+                HttpContext.RequestServices.GetRequiredService<Tekken8FrameData>();
+
+            // Запускаем дополнение с настройками по умолчанию
+            await Task.Factory.StartNew(async () =>
+            {
+                try
+                {
+                    await framedataService.StartSupplementFrameData(null, null, source);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Ошибка при дополнении фреймдаты");
+                }
+            });
+
+            return Ok(
+                new ParseResult
+                {
+                    Success = true,
+                    ParsedCharacters = [],
+                    Message =
+                        $"Запущено дополнение фреймдаты из {source} с настройками по умолчанию",
+                }
+            );
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при запуске дополнения фреймдаты");
+            return StatusCode(
+                500,
+                new ParseResult
+                {
+                    Success = false,
+                    Message = $"Ошибка при запуске дополнения: {ex.Message}",
+                }
+            );
+        }
+    }
 }
 
 /// <summary>
@@ -694,6 +809,47 @@ public class ParseRequest
     /// Список имен персонажей для парсинга (null для всех)
     /// </summary>
     public List<string>? CharacterNames { get; set; }
+
+    /// <summary>
+    /// Задержка между запросами в секундах
+    /// </summary>
+    public int? RequestDelaySeconds { get; set; }
+
+    /// <summary>
+    /// Задержка между персонажами в секундах
+    /// </summary>
+    public int? CharacterDelaySeconds { get; set; }
+
+    /// <summary>
+    /// Использовать ли сервис ожидающих изменений
+    /// </summary>
+    public bool? UseStagingService { get; set; }
+
+    /// <summary>
+    /// Парсить ли мувы
+    /// </summary>
+    public bool? ParseMoves { get; set; }
+
+    /// <summary>
+    /// Максимальное количество попыток
+    /// </summary>
+    public int? MaxRetries { get; set; }
+
+    /// <summary>
+    /// Таймаут HTTP запросов в секундах
+    /// </summary>
+    public int? HttpTimeoutSeconds { get; set; }
+}
+
+/// <summary>
+/// Запрос на дополнение фреймдаты
+/// </summary>
+public class SupplementRequest
+{
+    /// <summary>
+    /// Источник данных для дополнения
+    /// </summary>
+    public FramedataSource Source { get; set; }
 
     /// <summary>
     /// Задержка между запросами в секундах

@@ -84,4 +84,42 @@ public static class FramedataParserFactory
             options
         );
     }
+
+    /// <summary>
+    /// Создает парсер в режиме дополнения
+    /// </summary>
+    /// <param name="source">Источник данных</param>
+    /// <param name="logger">Логгер</param>
+    /// <param name="dbContextFactory">Фабрика контекста базы данных</param>
+    /// <param name="stagingService">Сервис ожидающих изменений (может быть null)</param>
+    /// <param name="cancellationToken">Токен отмены</param>
+    /// <returns>Парсер фреймдаты в режиме дополнения</returns>
+    public static IFramedataParser CreateSupplementParser(
+        FramedataSource source,
+        ILogger logger,
+        IDbContextFactory<AppDbContext> dbContextFactory,
+        FramedataStagingService? stagingService,
+        CancellationToken cancellationToken
+    )
+    {
+        var options = new FramedataParserOptions
+        {
+            RequestDelaySeconds = 2,
+            CharacterDelaySeconds = 5,
+            UseStagingService = stagingService != null,
+            ParseMoves = true,
+            IsSupplementMode = true,
+            MaxRetries = 3,
+            HttpTimeoutSeconds = 30,
+        };
+
+        return CreateParser(
+            source,
+            logger,
+            dbContextFactory,
+            stagingService,
+            cancellationToken,
+            options
+        );
+    }
 }

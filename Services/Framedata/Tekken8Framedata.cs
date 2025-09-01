@@ -30,8 +30,10 @@ public partial class Tekken8FrameData(
         {
             await Task.Factory.StartNew(() => StartScrupFrameData(), stoppingToken);
         }
-
-        await UpdateMovesForVictorina();
+        else
+        {
+            await UpdateMovesForVictorina();
+        }
     }
 
     public async Task StartScrupFrameData(
@@ -46,8 +48,6 @@ public partial class Tekken8FrameData(
             primary == FramedataSource.Tekkendocs
                 ? FramedataSource.Wavu
                 : FramedataSource.Tekkendocs;
-
-        var parsed = new List<string>();
 
         try
         {
@@ -70,7 +70,7 @@ public partial class Tekken8FrameData(
                         options
                     );
 
-            parsed = await primaryParser.ParseCharactersAndMoves();
+            await primaryParser.ParseCharactersAndMoves();
         }
         catch (Exception ex)
         {
@@ -79,33 +79,30 @@ public partial class Tekken8FrameData(
 
         try
         {
-            // Допарсить пропуски вторичным источником
-            var allCharacterKeys = Aliases
-                .CharacterNameAliases.Keys.Select(x => x.ToLower())
-                .ToHashSet();
-            var missing = allCharacterKeys.Except(parsed.Select(x => x.ToLower())).ToList();
-            if (missing.Count > 0)
+            // Вторичный источник всегда работает в режиме дополнения и обрабатывает ВСЕХ персонажей
+            var secondaryOptions = new FramedataParserOptions
             {
-                var secondaryParser =
-                    options != default
-                        ? FramedataParserFactory.CreateDefaultParser(
-                            secondary,
-                            logger,
-                            dbContextFactory,
-                            _stagingService,
-                            _cancellationToken
-                        )
-                        : FramedataParserFactory.CreateParser(
-                            secondary,
-                            logger,
-                            dbContextFactory,
-                            _stagingService,
-                            _cancellationToken,
-                            options
-                        );
+                RequestDelaySeconds = options?.RequestDelaySeconds ?? 2,
+                CharacterDelaySeconds = options?.CharacterDelaySeconds ?? 5,
+                UseStagingService = options?.UseStagingService ?? true,
+                ParseMoves = options?.ParseMoves ?? true,
+                IsSupplementMode = true, // Всегда включаем режим дополнения
+                MaxRetries = options?.MaxRetries ?? 3,
+                HttpTimeoutSeconds = options?.HttpTimeoutSeconds ?? 30,
+            };
 
-                await secondaryParser.ParseCharactersAndMoves(missing);
-            }
+            var secondaryParser = FramedataParserFactory.CreateParser(
+                secondary,
+                logger,
+                dbContextFactory,
+                _stagingService,
+                _cancellationToken,
+                secondaryOptions
+            );
+
+            // Обрабатываем ВСЕХ персонажей в режиме дополнения
+            var allCharacterKeys = Aliases.CharacterNameAliases.Keys.ToList();
+            await secondaryParser.ParseCharactersAndMoves(allCharacterKeys);
         }
         catch (Exception ex)
         {
@@ -168,6 +165,108 @@ public partial class Tekken8FrameData(
             },
             _cancellationToken
         );
+    }
+
+    /// <summary>
+    /// Запускает дополнение фреймдаты с кастомными настройками
+    /// </summary>
+    /// <param name="source">Источник данных для дополнения</param>
+    /// <param name="options">Настройки парсера</param>
+    /// <param name="chat">Чат для уведомлений</param>
+    public async Task SupplementWithCustomOptions(
+        FramedataSource source,
+        FramedataParserOptions options,
+        Chat? chat = null
+    )
+    {
+        await Task.Factory.StartNew(
+            async () =>
+            {
+                await StartSupplementFrameData(chat, options, source);
+            },
+            _cancellationToken
+        );
+    }
+
+    /// <summary>
+    /// Запускает парсинг в режиме дополнения - вторичный источник заполняет только пустые поля
+    /// </summary>
+    /// <param name="chat">Чат для уведомлений</param>
+    /// <param name="options">Настройки парсера</param>
+    /// <param name="source">Источник данных для дополнения</param>
+    public async Task StartSupplementFrameData(
+        Chat? chat = default,
+        FramedataParserOptions? options = default,
+        FramedataSource? source = default
+    )
+    {
+        var supplementSource =
+            source
+            ?? (
+                _framedataConfig.PrimarySource == FramedataSource.Tekkendocs
+                    ? FramedataSource.Wavu
+                    : FramedataSource.Tekkendocs
+            );
+
+        try
+        {
+            // Создаем парсер для дополнения
+            IFramedataParser supplementParser;
+
+            if (options != null)
+            {
+                // Если переданы кастомные настройки, используем их, но обязательно устанавливаем режим дополнения
+                options.IsSupplementMode = true;
+                supplementParser = FramedataParserFactory.CreateParser(
+                    supplementSource,
+                    logger,
+                    dbContextFactory,
+                    _stagingService,
+                    _cancellationToken,
+                    options
+                );
+            }
+            else
+            {
+                // Используем готовый парсер в режиме дополнения
+                supplementParser = FramedataParserFactory.CreateSupplementParser(
+                    supplementSource,
+                    logger,
+                    dbContextFactory,
+                    _stagingService,
+                    _cancellationToken
+                );
+            }
+
+            // В режиме дополнения проходим всех персонажей обязательно
+            var allCharacterKeys = Aliases.CharacterNameAliases.Keys.ToList();
+            await supplementParser.ParseCharactersAndMoves(allCharacterKeys);
+
+            await UpdateMovesForVictorina();
+
+            await client.SendMessage(
+                chat switch
+                {
+                    not null => chat,
+                    _ => TelegramExstension.Rxdcodx,
+                },
+                $"Дополнение фреймдаты из {supplementSource} завершено!",
+                cancellationToken: _cancellationToken
+            );
+        }
+        catch (Exception ex)
+        {
+            logger.LogException(ex);
+            await client.SendMessage(
+                chat switch
+                {
+                    not null => chat,
+                    _ => TelegramExstension.Rxdcodx,
+                },
+                $"Ошибка при дополнении фреймдаты: {ex.Message}",
+                cancellationToken: _cancellationToken
+            );
+        }
     }
 
     public async Task<(TekkenMoveTag Tag, Move[] Moves)?> GetMultipleMovesByTags(string input)

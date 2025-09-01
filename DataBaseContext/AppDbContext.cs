@@ -76,7 +76,8 @@ public sealed class AppDbContext : DbContext
     public DbSet<ScoreboardLayout> ScoreboardLayouts { get; set; } = null!;
     public DbSet<DailyAutoMarkupUser> HonkaiMarkupUser { get; set; } = null!;
     public DbSet<WaifuRollGuarantee> WaifuRollGuarantees { get; set; } = null!;
-    public DbSet<MARS.Server.Services.CinemaQueue.Entitys.MediaItem> CinemaQueue { get; set; } = null!;
+    public DbSet<MARS.Server.Services.CinemaQueue.Entitys.MediaItem> CinemaQueue { get; set; } =
+        null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -248,13 +249,6 @@ public sealed class AppDbContext : DbContext
             .OnDelete(DeleteBehavior.NoAction); // assuming you add a CharacterId property to Move
 
         modelBuilder
-            .Entity<MovePending>()
-            .HasOne(m => m.Character)
-            .WithMany(c => c.Movelist)
-            .HasForeignKey(e => e.CharacterName)
-            .OnDelete(DeleteBehavior.NoAction);
-
-        modelBuilder
             .Entity<TekkenCharacter>()
             .HasMany(c => c.Movelist)
             .WithOne(m => m.Character)
@@ -262,12 +256,6 @@ public sealed class AppDbContext : DbContext
             .OnDelete(DeleteBehavior.NoAction);
 
         modelBuilder.Entity<TekkenCharacterPending>().ToTable("TekkenCharactersPending");
-        modelBuilder
-            .Entity<TekkenCharacterPending>()
-            .HasMany(c => c.Movelist)
-            .WithOne(m => m.Character)
-            .HasForeignKey(e => e.CharacterName)
-            .OnDelete(DeleteBehavior.NoAction);
 
         modelBuilder
             .Entity<TekkenCharacter>()

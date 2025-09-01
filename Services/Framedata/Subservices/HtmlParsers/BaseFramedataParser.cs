@@ -37,7 +37,11 @@ public abstract class BaseFramedataParser(
         if (Options.UseStagingService && StagingService != null)
         {
             // Через сервис ожидающих изменений
-            await StagingService.StageCharacterAndMoves(character, []);
+            await StagingService.StageCharacterAndMoves(
+                character,
+                [],
+                options?.IsSupplementMode ?? false
+            );
         }
         else
         {
@@ -70,7 +74,11 @@ public abstract class BaseFramedataParser(
         if (Options.UseStagingService && StagingService != null)
         {
             // Через сервис ожидающих изменений
-            await StagingService.StageCharacterAndMoves(character, moves);
+            await StagingService.StageCharacterAndMoves(
+                character,
+                moves,
+                options?.IsSupplementMode ?? false
+            );
         }
         else
         {
@@ -89,7 +97,16 @@ public abstract class BaseFramedataParser(
             }
             else
             {
-                db.Entry(existingChar).CurrentValues.SetValues(character);
+                if (Options.IsSupplementMode)
+                {
+                    // В режиме дополнения заполняем только пустые поля
+                    var supplementedChar = SupplementCharacter(existingChar, character);
+                    db.Entry(existingChar).CurrentValues.SetValues(supplementedChar);
+                }
+                else
+                {
+                    db.Entry(existingChar).CurrentValues.SetValues(character);
+                }
             }
 
             // Сохраняем мувы
@@ -106,12 +123,77 @@ public abstract class BaseFramedataParser(
                 }
                 else
                 {
-                    db.Entry(existingMove).CurrentValues.SetValues(move);
+                    if (Options.IsSupplementMode)
+                    {
+                        // В режиме дополнения заполняем только пустые поля
+                        var supplementedMove = SupplementMove(existingMove, move);
+                        db.Entry(existingMove).CurrentValues.SetValues(supplementedMove);
+                    }
+                    else
+                    {
+                        db.Entry(existingMove).CurrentValues.SetValues(move);
+                    }
                 }
             }
 
             await db.SaveChangesAsync(CancellationToken);
         }
+    }
+
+    /// <summary>
+    /// Объединяет данные персонажа в режиме дополнения
+    /// </summary>
+    private static TekkenCharacter SupplementCharacter(
+        TekkenCharacter existing,
+        TekkenCharacter supplement
+    )
+    {
+        return new TekkenCharacter
+        {
+            Name = existing.Name,
+            LinkToImage = existing.LinkToImage ?? supplement.LinkToImage,
+            PageUrl = existing.PageUrl ?? supplement.PageUrl,
+            Image = existing.Image ?? supplement.Image,
+            ImageExtension = existing.ImageExtension ?? supplement.ImageExtension,
+            AvatarImage = existing.AvatarImage ?? supplement.AvatarImage,
+            AvatarImageExtension = existing.AvatarImageExtension ?? supplement.AvatarImageExtension,
+            FullBodyImage = existing.FullBodyImage ?? supplement.FullBodyImage,
+            FullBodyImageExtension =
+                existing.FullBodyImageExtension ?? supplement.FullBodyImageExtension,
+            LastUpdateTime = existing.LastUpdateTime,
+            Description = existing.Description ?? supplement.Description,
+            Strengths = existing.Strengths ?? supplement.Strengths,
+            Weaknesess = existing.Weaknesess ?? supplement.Weaknesess,
+        };
+    }
+
+    /// <summary>
+    /// Объединяет данные мува в режиме дополнения
+    /// </summary>
+    private static Move SupplementMove(Move existing, Move supplement)
+    {
+        return new Move
+        {
+            CharacterName = existing.CharacterName,
+            Command = existing.Command,
+            StanceCode = existing.StanceCode ?? supplement.StanceCode,
+            StanceName = existing.StanceName ?? supplement.StanceName,
+            HeatEngage = existing.HeatEngage || supplement.HeatEngage,
+            HeatSmash = existing.HeatSmash || supplement.HeatSmash,
+            PowerCrush = existing.PowerCrush || supplement.PowerCrush,
+            Throw = existing.Throw || supplement.Throw,
+            Homing = existing.Homing || supplement.Homing,
+            Tornado = existing.Tornado || supplement.Tornado,
+            HeatBurst = existing.HeatBurst || supplement.HeatBurst,
+            RequiresHeat = existing.RequiresHeat || supplement.RequiresHeat,
+            HitLevel = existing.HitLevel ?? supplement.HitLevel,
+            Damage = existing.Damage ?? supplement.Damage,
+            StartUpFrame = existing.StartUpFrame ?? supplement.StartUpFrame,
+            BlockFrame = existing.BlockFrame ?? supplement.BlockFrame,
+            HitFrame = existing.HitFrame ?? supplement.HitFrame,
+            CounterHitFrame = existing.CounterHitFrame ?? supplement.CounterHitFrame,
+            Notes = existing.Notes, // Временно исключаем Notes из логики дополнения
+        };
     }
 
     /// <summary>

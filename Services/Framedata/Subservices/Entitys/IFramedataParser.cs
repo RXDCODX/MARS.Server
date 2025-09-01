@@ -68,4 +68,9 @@ public class FramedataParserOptions
     /// Таймаут для HTTP запросов в секундах
     /// </summary>
     public int HttpTimeoutSeconds { get; set; } = 30;
+
+    /// <summary>
+    /// Режим дополнения: заполнять только пустые поля, не трогать уже заполненные
+    /// </summary>
+    public bool IsSupplementMode { get; set; } = false;
 }

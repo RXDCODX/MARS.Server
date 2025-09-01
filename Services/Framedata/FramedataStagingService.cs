@@ -22,7 +22,11 @@ public class FramedataStagingService(
 {
     private readonly CancellationToken _cancellationToken = lifetime.ApplicationStopping;
 
-    public async Task StageCharacterAndMoves(TekkenCharacter character, Move[] moves)
+    public async Task StageCharacterAndMoves(
+        TekkenCharacter character,
+        Move[] moves,
+        bool isSupplementMode = false
+    )
     {
         await using var db = await dbContextFactory.CreateDbContextAsync(_cancellationToken);
 
@@ -35,7 +39,10 @@ public class FramedataStagingService(
             _cancellationToken
         );
 
-        if (existingCharacter == null || !EqualsByJson(existingCharacter, character))
+        if (
+            existingCharacter == null
+            || HasSignificantChanges(existingCharacter, character, isSupplementMode)
+        )
         {
             var staged = MapToPending(character);
 
@@ -62,7 +69,7 @@ public class FramedataStagingService(
         {
             if (
                 !existingMoves.TryGetValue(move.Command, out var existing)
-                || !EqualsByJson(existing, move)
+                || HasSignificantChanges(existing, move, isSupplementMode)
             )
             {
                 var stagedMove = MapToPending(move);
@@ -318,8 +325,8 @@ public class FramedataStagingService(
         await using var db = await dbContextFactory.CreateDbContextAsync(_cancellationToken);
         // Сначала удаляем pending moves, затем pending characters
         // чтобы избежать нарушения ограничения внешнего ключа
-        db.TekkenMovesPending.RemoveRange(db.TekkenMovesPending);
-        db.TekkenCharactersPending.RemoveRange(db.TekkenCharactersPending);
+        await db.TekkenMovesPending.ExecuteDeleteAsync(cancellationToken: _cancellationToken);
+        await db.TekkenCharactersPending.ExecuteDeleteAsync(cancellationToken: _cancellationToken);
         await db.SaveChangesAsync(_cancellationToken);
     }
 
@@ -413,4 +420,125 @@ public class FramedataStagingService(
             CounterHitFrame = move.CounterHitFrame,
             Notes = move.Notes?.ToArray(),
         };
+
+    /// <summary>
+    /// Проверяет, есть ли значимые изменения между объектами
+    /// </summary>
+    private static bool HasSignificantChanges<T>(T left, T right, bool isSupplementMode)
+        where T : class
+    {
+        var leftJson = JsonSerializer.Serialize(left);
+        var rightJson = JsonSerializer.Serialize(right);
+
+        if (string.Equals(leftJson, rightJson, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        // Дополнительная проверка для null значений
+        var leftObj = JsonSerializer.Deserialize<JsonElement>(leftJson);
+        var rightObj = JsonSerializer.Deserialize<JsonElement>(rightJson);
+
+        return HasNonNullChanges(leftObj, rightObj, isSupplementMode);
+    }
+
+    /// <summary>
+    /// Рекурсивно проверяет, есть ли изменения в не-null значениях
+    /// </summary>
+    private static bool HasNonNullChanges(
+        JsonElement left,
+        JsonElement right,
+        bool isSupplementMode
+    )
+    {
+        if (left.ValueKind != right.ValueKind)
+        {
+            return true;
+        }
+
+        switch (left.ValueKind)
+        {
+            case JsonValueKind.Object:
+                foreach (var property in left.EnumerateObject())
+                {
+                    if (right.TryGetProperty(property.Name, out var rightValue))
+                    {
+                        // Если левое значение null, а правое не null - это значимое изменение
+                        if (
+                            property.Value.ValueKind == JsonValueKind.Null
+                            && rightValue.ValueKind != JsonValueKind.Null
+                        )
+                        {
+                            return true;
+                        }
+
+                        // Если оба значения не null, проверяем рекурсивно
+                        if (
+                            property.Value.ValueKind != JsonValueKind.Null
+                            && rightValue.ValueKind != JsonValueKind.Null
+                            && isSupplementMode
+                        )
+                        {
+                            // Специальная обработка для поля Notes
+                            if (property.Name == "Notes")
+                            {
+                                if (!HasNotesSignificantChanges(property.Value, rightValue))
+                                {
+                                    continue; // Изменения в Notes незначимы, продолжаем проверку других полей
+                                }
+                            }
+
+                            if (HasNonNullChanges(property.Value, rightValue, isSupplementMode))
+                            {
+                                return true;
+                            }
+                        }
+                    }
+                }
+                break;
+
+            case JsonValueKind.Array:
+                if (left.GetArrayLength() != right.GetArrayLength())
+                {
+                    return true;
+                }
+
+                for (var i = 0; i < left.GetArrayLength(); i++)
+                {
+                    if (HasNonNullChanges(left[i], right[i], isSupplementMode))
+                    {
+                        return true;
+                    }
+                }
+                break;
+
+            default:
+                if (left.ValueKind != JsonValueKind.Null && right.ValueKind != JsonValueKind.Null)
+                {
+                    return !left.GetRawText().Equals(right.GetRawText());
+                }
+                break;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Проверяет, есть ли значимые изменения в Notes
+    /// </summary>
+    private static bool HasNotesSignificantChanges(JsonElement leftNotes, JsonElement rightNotes)
+    {
+        // Если оба массива имеют одинаковую длину - изменения незначимы
+        if (
+            leftNotes.ValueKind == JsonValueKind.Array
+            && rightNotes.ValueKind == JsonValueKind.Array
+        )
+        {
+            return leftNotes.GetArrayLength() != rightNotes.GetArrayLength();
+        }
+
+        // Если один из них не массив - это значимое изменение
+        return leftNotes.ValueKind != JsonValueKind.Array
+            || rightNotes.ValueKind != JsonValueKind.Array;
+    }
 }
