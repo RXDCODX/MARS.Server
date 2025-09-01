@@ -18,7 +18,7 @@ public class EventSubService(
     private static readonly SemaphoreSlim WsReconnectSlim = new(1);
     private readonly CancellationToken _cancellationToken = lifetime.ApplicationStopping;
     private bool _firstActivation = true;
-    private bool _isWsConnected = false;
+    private bool _isWsConnected;
 
     public async Task UpdateEventSubbAsync(TokenInfo? token = null)
     {
@@ -105,10 +105,8 @@ public class EventSubService(
             {
                 break;
             }
-            else
-            {
-                await Task.Delay(30 * 1000, _cancellationToken);
-            }
+
+            await Task.Delay(30 * 1000, _cancellationToken);
         }
 
         WsReconnectSlim.Release();
@@ -131,7 +129,7 @@ public class EventSubService(
         }
     }
 
-    public async Task<string> ResubscribeToEventSub(TokenInfo? token = default, bool force = false)
+    public async Task<string> ResubscribeToEventSub(TokenInfo? token = default)
     {
         token ??= tokenService.Token;
         ArgumentException.ThrowIfNullOrWhiteSpace(token?.AccessToken);

@@ -10,7 +10,7 @@ public class TwitchSubRecCommand(EventSubService eventSubService) : BaseCommand
     public override string Description => "Выполняет реконнект EventSub Twitch";
     public override bool IsAdminCommand => true;
 
-    public override Platform[] AvailablePlatforms => [Platform.Telegram];
+    public override Platform[] AvailablePlatforms => [Platform.Telegram, Platform.Api];
 
     public override async Task<string> ExecuteAsync(
         Dictionary<string, object> parameters,
@@ -20,8 +20,7 @@ public class TwitchSubRecCommand(EventSubService eventSubService) : BaseCommand
     {
         try
         {
-            var force = parameters.TryGetValue("force", out var forceParam) && (bool)forceParam;
-            var result = await eventSubService.ResubscribeToEventSub(force: force);
+            var result = await eventSubService.ResubscribeToEventSub();
             return result;
         }
         catch (Exception ex)
@@ -29,15 +28,4 @@ public class TwitchSubRecCommand(EventSubService eventSubService) : BaseCommand
             return $"Ошибка при реконекте EventSub: {ex.Message}";
         }
     }
-
-    public override CommandParameterInfo[] Parameters => [
-        new() {
-            Name = "force",
-            Description = "Принудительно выполнить реконект, даже если он уже выполняется",
-            Type = "bool",
-            Required = false,
-            DefaultValue = "false"
-        }
-    ];
 }
-
