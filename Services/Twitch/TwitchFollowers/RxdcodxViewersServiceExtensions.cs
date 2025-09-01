@@ -1,6 +1,4 @@
-using Microsoft.Extensions.DependencyInjection;
-
-namespace MARS.Server.Services.Twitch.TwitchFollowers;
+﻿namespace MARS.Server.Services.Twitch.TwitchFollowers;
 
 /// <summary>
 /// Расширения для регистрации сервиса RxdcodxViewersService
@@ -23,7 +21,9 @@ public static class RxdcodxViewersServiceExtensions
     /// </summary>
     /// <param name="services">Коллекция сервисов</param>
     /// <returns>Коллекция сервисов с добавленным сервисом</returns>
-    public static IServiceCollection AddRxdcodxViewersServiceAsSingleton(this IServiceCollection services)
+    public static IServiceCollection AddRxdcodxViewersServiceAsSingleton(
+        this IServiceCollection services
+    )
     {
         services.AddSingleton<IRxdcodxViewersService, RxdcodxViewersService>();
         return services;

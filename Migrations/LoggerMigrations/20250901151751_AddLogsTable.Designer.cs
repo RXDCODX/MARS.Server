@@ -3,6 +3,7 @@ using System;
 using MARS.Server.CustomLoggers.DatabaseLogger;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MARS.Server.Migrations.LoggerMigrations
 {
     [DbContext(typeof(LoggerDbContext))]
-    partial class LoggerDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250901151751_AddLogsTable")]
+    partial class AddLogsTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -29,23 +32,21 @@ namespace MARS.Server.Migrations.LoggerMigrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("LogLevel")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.Property<string>("Message")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
 
                     b.Property<string>("StackTrace")
-                        .HasColumnType("text");
+                        .HasMaxLength(8000)
+                        .HasColumnType("character varying(8000)");
 
                     b.Property<DateTimeOffset>("WhenLogged")
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
 
-                    b.ToTable("Errors", "logs");
+                    b.ToTable("Logs", "logs");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>

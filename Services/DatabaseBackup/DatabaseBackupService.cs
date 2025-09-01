@@ -1,10 +1,6 @@
 ﻿using System.Diagnostics;
-using System.IO;
 using MARS.Server.Services.DatabaseBackup.Models;
 using MARS.Server.Services.MemoryStorageService;
-using MARS.Server.Services.PyroAlerts.Entitys;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
 
 namespace MARS.Server.Services.DatabaseBackup;
 

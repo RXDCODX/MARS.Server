@@ -1,5 +1,4 @@
-﻿using MARS.Server.Exstensions;
-using MARS.Server.Services.Twitch.Management;
+﻿using MARS.Server.Services.Twitch.Management;
 using Microsoft.AspNetCore.Mvc;
 using TwitchLib.Api.Helix.Models.ChannelPoints;
 using TwitchLib.Api.Helix.Models.ChannelPoints.CreateCustomReward;

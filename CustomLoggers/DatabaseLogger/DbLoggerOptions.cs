@@ -2,10 +2,5 @@
 
 public class DbLoggerOptions
 {
-    private LoggerDbContext? _dbContext;
-    public required LoggerDbContext DbContext
-    {
-        get { return _dbContext ?? throw new NullReferenceException(); }
-        set { _dbContext = value ?? throw new NullReferenceException(); }
-    }
+    public required LoggerDbContext DbContext { get; set; }
 }

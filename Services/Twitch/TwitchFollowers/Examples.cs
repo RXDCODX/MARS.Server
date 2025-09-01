@@ -1,6 +1,4 @@
-﻿using MARS.Server.Services.Twitch.TwitchFollowers;
-
-namespace MARS.Server.Services.Twitch.TwitchFollowers;
+﻿namespace MARS.Server.Services.Twitch.TwitchFollowers;
 
 /// <summary>
 /// Примеры использования сервиса RxdcodxViewersService

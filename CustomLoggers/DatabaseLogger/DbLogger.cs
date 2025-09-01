@@ -55,13 +55,22 @@ public class DbLogger([NotNull] DbLoggerProvider dbLoggerProvider) : ILogger
             return;
         }
 
-        var log = new Log
+        try
         {
-            Message = formatter(state, exception),
-            StackTrace = exception?.StackTrace,
-        };
+            var log = new Log
+            {
+                Message = formatter(state, exception),
+                StackTrace = exception?.StackTrace,
+                LogLevel = logLevel.ToString()
+            };
 
-        _dbLoggerProvider.Options.DbContext.Errors.Add(log);
-        _dbLoggerProvider.Options.DbContext.SaveChanges();
+            _dbLoggerProvider.Options.DbContext.Errors.Add(log);
+            _dbLoggerProvider.Options.DbContext.SaveChanges();
+        }
+        catch (Exception ex)
+        {
+            // Если не удалось записать в БД, выводим в консоль
+            Console.WriteLine($"Failed to write log to database: {ex.Message}");
+        }
     }
 }

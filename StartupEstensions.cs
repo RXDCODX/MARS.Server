@@ -24,7 +24,6 @@ using MARS.Server.Services.Twitch.Rewards.TwitchGaoAlert;
 using MARS.Server.Services.Twitch.Rewards.TwitchHighlitedMessage;
 using MARS.Server.Services.Twitch.Rewards.TwitchRandomArt;
 using MARS.Server.Services.Twitch.Rewards.TwitchRandomMeme;
-using MARS.Server.Services.Twitch.Rewards.TwitchRefundService;
 using MARS.Server.Services.Twitch.Rewards.TwitchScreenParticles;
 using MARS.Server.Services.Twitch.Rewards.TwitchWaifuRolls;
 using MARS.Server.Services.Twitch.SoundBarService;

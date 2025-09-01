@@ -1,7 +1,6 @@
 ﻿using MARS.Server.Services.ServiceManager;
 using MARS.Server.Services.Twitch.Management;
 using TwitchLib.Api.Core.Enums;
-using TwitchLib.Api.Helix.Models.ChannelPoints;
 using TwitchLib.Api.Helix.Models.ChannelPoints.UpdateCustomRewardRedemptionStatus;
 using TwitchLib.EventSub.Websockets;
 

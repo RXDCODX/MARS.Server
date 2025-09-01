@@ -2,7 +2,6 @@
 using MARS.Server.Services.RandomMem.DTOs;
 using MARS.Server.Services.RandomMem.Entity;
 using Microsoft.AspNetCore.Mvc;
-using System.IO;
 
 namespace MARS.Server.Controllers;
 
@@ -337,11 +336,7 @@ public class RandomMemeController(
         }
         catch (Exception ex)
         {
-            logger.LogError(
-                ex,
-                "Error occurred while updating meme order with ID {Id}",
-                id
-            );
+            logger.LogError(ex, "Error occurred while updating meme order with ID {Id}", id);
             return StatusCode(StatusCodes.Status500InternalServerError, "Internal server error");
         }
     }
@@ -446,7 +441,10 @@ public class RandomMemeController(
                 return NotFound($"MemeOrder with ID {id} has no associated MemeType");
             }
 
-            var memeType = await randomMemeService.GetMemeTypeByIdAsync(memeOrder.MemeTypeId.Value, cancellationToken);
+            var memeType = await randomMemeService.GetMemeTypeByIdAsync(
+                memeOrder.MemeTypeId.Value,
+                cancellationToken
+            );
             if (memeType == null)
             {
                 return NotFound($"MemeType with ID {memeOrder.MemeTypeId} not found");
@@ -496,7 +494,10 @@ public class RandomMemeController(
                 return NotFound("Random meme has no associated MemeType");
             }
 
-            var memeType = await randomMemeService.GetMemeTypeByIdAsync(randomMeme.MemeTypeId.Value, cancellationToken);
+            var memeType = await randomMemeService.GetMemeTypeByIdAsync(
+                randomMeme.MemeTypeId.Value,
+                cancellationToken
+            );
             if (memeType == null)
             {
                 return NotFound($"MemeType with ID {randomMeme.MemeTypeId} not found");
@@ -591,7 +592,7 @@ public class RandomMemeController(
             ".mp3" => "audio/mpeg",
             ".wav" => "audio/wav",
             ".ogg" => "audio/ogg",
-            _ => "application/octet-stream"
+            _ => "application/octet-stream",
         };
     }
 

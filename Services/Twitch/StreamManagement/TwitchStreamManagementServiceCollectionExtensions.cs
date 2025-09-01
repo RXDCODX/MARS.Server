@@ -1,6 +1,4 @@
-using Microsoft.Extensions.DependencyInjection;
-
-namespace MARS.Server.Services.Twitch.StreamManagement;
+﻿namespace MARS.Server.Services.Twitch.StreamManagement;
 
 /// <summary>
 /// Расширения для регистрации сервисов управления трансляцией Twitch
@@ -12,7 +10,9 @@ public static class TwitchStreamManagementServiceCollectionExtensions
     /// </summary>
     /// <param name="services">Коллекция сервисов</param>
     /// <returns>Коллекция сервисов с добавленными сервисами управления трансляцией</returns>
-    public static IServiceCollection AddTwitchStreamManagementServices(this IServiceCollection services)
+    public static IServiceCollection AddTwitchStreamManagementServices(
+        this IServiceCollection services
+    )
     {
         // Основной сервис управления трансляцией
         services.AddSingleton<TwitchStreamManagementService>();
@@ -30,7 +30,9 @@ public static class TwitchStreamManagementServiceCollectionExtensions
     /// </summary>
     /// <param name="services">Коллекция сервисов</param>
     /// <returns>Коллекция сервисов с добавленным основным сервисом</returns>
-    public static IServiceCollection AddTwitchStreamManagementServiceOnly(this IServiceCollection services)
+    public static IServiceCollection AddTwitchStreamManagementServiceOnly(
+        this IServiceCollection services
+    )
     {
         services.AddSingleton<TwitchStreamManagementService>();
         services.AddHostedService(sp => sp.GetRequiredService<TwitchStreamManagementService>());

@@ -1,6 +1,5 @@
 ﻿using MARS.Server.Services.ServiceManager;
 using MARS.Server.Services.Twitch.Management;
-using TwitchLib.Api.Helix.Models.Channels;
 using TwitchLib.Api.Helix.Models.Channels.GetChannelInformation;
 using TwitchLib.Api.Helix.Models.Channels.ModifyChannelInformation;
 
@@ -117,6 +116,3 @@ public class TwitchStreamManagementService(
         return IsServiceActive && tokenService.Token?.AccessToken != null;
     }
 }
-
-
-

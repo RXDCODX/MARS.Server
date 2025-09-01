@@ -1,5 +1,4 @@
-﻿using System.Collections.Frozen;
-using MARS.Server.Services.Twitch.Rewards.MiniGames.Entitys.Interfaces;
+﻿using MARS.Server.Services.Twitch.Rewards.MiniGames.Entitys.Interfaces;
 using TwitchLib.Client.Events;
 using TwitchLib.EventSub.Websockets;
 

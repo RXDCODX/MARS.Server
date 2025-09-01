@@ -1,6 +1,4 @@
-using Microsoft.Extensions.DependencyInjection;
-
-namespace MARS.Server.Services.DatabaseBackup;
+﻿namespace MARS.Server.Services.DatabaseBackup;
 
 /// <summary>
 /// Расширения для регистрации сервиса резервного копирования
@@ -18,6 +16,3 @@ public static class DatabaseBackupServiceExtensions
         return services;
     }
 }
-
-
-

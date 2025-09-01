@@ -8,6 +8,8 @@ using MARS.Server.Services.CommandExecutor;
 using MARS.Server.Services.DatabaseBackup;
 using MARS.Server.Services.Honkai;
 using MARS.Server.Services.KeyboardHook;
+using MARS.Server.Services.Logs.Interfaces;
+using MARS.Server.Services.Logs.Services;
 using MARS.Server.Services.MemoryStorageService;
 using MARS.Server.Services.PyroAlerts;
 using MARS.Server.Services.RandomMem;
@@ -132,18 +134,26 @@ public static class Program
         services.AddCinemaQueueServicesAsSingleton();
         services.AddTwitchStreamManagementServiceOnly();
 
-        if (builder.Environment.IsProduction())
+        // Добавляем DbLogger для всех окружений
+        builder.Logging.AddDbLogger(() =>
         {
-            builder.Logging.AddDbLogger(() =>
+            var options = new DbContextOptionsBuilder<LoggerDbContext>();
+            options.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
+            options.EnableThreadSafetyChecks();
+            
+            if (builder.Environment.IsDevelopment())
             {
-                var options = new DbContextOptionsBuilder<LoggerDbContext>();
-                options.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
-                options.EnableThreadSafetyChecks();
+                options.UseNpgsql(configuration.GetConnectionString("Dev_Path"));
+                options.EnableDetailedErrors();
+                options.EnableSensitiveDataLogging();
+            }
+            else
+            {
                 options.UseNpgsql(configuration.GetConnectionString("Prod_Path"));
+            }
 
-                return new DbLoggerOptions { DbContext = new LoggerDbContext(options.Options) };
-            });
-        }
+            return new DbLoggerOptions { DbContext = new LoggerDbContext(options.Options) };
+        });
 
         services.AddSingleton<IDbContextFactory<AppDbContext>>(contextFactory);
 
@@ -210,6 +220,28 @@ public static class Program
 
         // Добавляем сервис перехвата клавиатуры
         services.AddKeyboardHookService();
+
+        // Добавляем сервис для работы с логами
+        services.AddScoped<LoggerDbContext>(sp =>
+        {
+            var options = new DbContextOptionsBuilder<LoggerDbContext>();
+            options.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
+            options.EnableThreadSafetyChecks();
+
+            if (builder.Environment.IsDevelopment())
+            {
+                options.UseNpgsql(configuration.GetConnectionString("Dev_Path"));
+                options.EnableDetailedErrors();
+                options.EnableSensitiveDataLogging();
+            }
+            else
+            {
+                options.UseNpgsql(configuration.GetConnectionString("Prod_Path"));
+            }
+
+            return new LoggerDbContext(options.Options);
+        });
+        services.AddScoped<ILogsService, LogsService>();
 
         builder.AddStaticFilesBrowserOptions();
 

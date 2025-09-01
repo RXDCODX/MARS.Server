@@ -3,6 +3,7 @@ using System;
 using MARS.Server.CustomLoggers.DatabaseLogger;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MARS.Server.Migrations.LoggerMigrations
 {
     [DbContext(typeof(LoggerDbContext))]
-    partial class LoggerDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250901152143_FixLogsTable")]
+    partial class FixLogsTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -28,10 +31,6 @@ namespace MARS.Server.Migrations.LoggerMigrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
-
-                    b.Property<string>("LogLevel")
-                        .IsRequired()
-                        .HasColumnType("text");
 
                     b.Property<string>("Message")
                         .IsRequired()

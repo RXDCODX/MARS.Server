@@ -1,7 +1,4 @@
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
-
-namespace MARS.Server.Services.CinemaQueue.Entitys;
+﻿namespace MARS.Server.Services.CinemaQueue.Entitys;
 
 [Table("CinemaQueue")]
 public class MediaItem
@@ -58,5 +55,5 @@ public enum MediaStatus
     InProgress,
     Completed,
     Cancelled,
-    Postponed
+    Postponed,
 }

@@ -8,4 +8,5 @@ public class Log
     public DateTimeOffset WhenLogged { get; set; } = DateTimeOffset.Now;
     public required string Message { get; set; } = string.Empty;
     public string? StackTrace { get; set; }
+    public string LogLevel { get; set; } = string.Empty;
 }
