@@ -28,18 +28,24 @@ public class EventSubService(
             {
                 var result = await GetEventSubsAsync(token);
 
-                if (
-                    result != null
-                    && !result.Subscriptions.Any(e =>
+                // Проверяем, есть ли активные подписки
+                var hasActiveSubscriptions = result != null
+                    && result.Subscriptions.Any(e =>
                         e.Status.Equals("enabled", StringComparison.OrdinalIgnoreCase)
-                    )
-                )
-                {
-                    await wsClient.DisconnectAsync();
-                }
-            }
+                    );
 
-            await ResubscribeToEventSub(token);
+                if (!hasActiveSubscriptions)
+                {
+                    // Только если нет активных подписок, делаем переподписку
+                    await ResubscribeToEventSub(token);
+                }
+                else if (!_isWsConnected)
+                {
+                    // Если подписки есть, но WebSocket отключен - пробуем переподключить
+                    await TryReconnect();
+                }
+                // Если подписки активны и WebSocket подключен - ничего не делаем
+            }
         }
 
         if (_firstActivation)
@@ -97,19 +103,20 @@ public class EventSubService(
 
         await WsReconnectSlim.WaitAsync(_cancellationToken);
 
-        _isWsConnected = false;
-        while (true)
+        try
         {
+            _isWsConnected = false;
             _isWsConnected = await wsClient.ReconnectAsync();
-            if (_isWsConnected)
+
+            if (!_isWsConnected)
             {
-                break;
+                logger.LogWarning("Не удалось переподключить EventSub WebSocket");
             }
-
-            await Task.Delay(30 * 1000, _cancellationToken);
         }
-
-        WsReconnectSlim.Release();
+        finally
+        {
+            WsReconnectSlim.Release();
+        }
     }
 
     private async Task DeleteAllSubs(TokenInfo token)
@@ -141,15 +148,14 @@ public class EventSubService(
 
             if (!_isWsConnected)
             {
-                while (!_isWsConnected)
+                // Пытаемся переподключить один раз вместо бесконечного цикла
+                if (WsReconnectSlim.CurrentCount > 0)
                 {
-                    if (WsReconnectSlim.CurrentCount > 0)
-                    {
-                        await Task.Factory.StartNew(TryReconnect, _cancellationToken);
-                    }
-
-                    await Task.Delay(30 * 1000, _cancellationToken);
+                    await Task.Factory.StartNew(TryReconnect, _cancellationToken);
                 }
+
+                // Ждем короткое время, чтобы дать шанс на подключение
+                await Task.Delay(5 * 1000, _cancellationToken);
             }
 
             var condition = new Dictionary<string, string>

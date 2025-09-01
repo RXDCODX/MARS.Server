@@ -10,7 +10,7 @@ public class TwitchAuthService(
     TelegramTokenNotification telegramNotificationService
 ) : BackgroundService
 {
-    private const int CheckIntervalSeconds = 30;
+    private const int CheckIntervalMinutes = 5;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -35,7 +35,7 @@ public class TwitchAuthService(
             // Main loop
             while (!stoppingToken.IsCancellationRequested)
             {
-                await Task.Delay(TimeSpan.FromSeconds(CheckIntervalSeconds), stoppingToken);
+                await Task.Delay(TimeSpan.FromMinutes(CheckIntervalMinutes), stoppingToken);
 
                 if (tokenService.Token != null)
                 {
