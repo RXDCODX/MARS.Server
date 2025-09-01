@@ -100,6 +100,25 @@ public static class Program
                 options.SourceName = "BOT";
                 options.MinimumLevel = LogLevel.Warning;
             });
+            loggingBuilder.AddDbLogger(() =>
+            {
+                var options = new DbContextOptionsBuilder<LoggerDbContext>();
+                options.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
+                options.EnableThreadSafetyChecks();
+
+                if (builder.Environment.IsDevelopment())
+                {
+                    options.UseNpgsql(configuration.GetConnectionString("Dev_Path"));
+                    options.EnableDetailedErrors();
+                    options.EnableSensitiveDataLogging();
+                }
+                else
+                {
+                    options.UseNpgsql(configuration.GetConnectionString("Prod_Path"));
+                }
+
+                return new DbLoggerOptions { DbContext = new LoggerDbContext(options.Options) };
+            });
         });
 
         if (builder.Environment.IsProduction() && OperatingSystem.IsWindows())
@@ -133,27 +152,6 @@ public static class Program
         services.AddHonkaiServices();
         services.AddCinemaQueueServicesAsSingleton();
         services.AddTwitchStreamManagementServiceOnly();
-
-        // Добавляем DbLogger для всех окружений
-        builder.Logging.AddDbLogger(() =>
-        {
-            var options = new DbContextOptionsBuilder<LoggerDbContext>();
-            options.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
-            options.EnableThreadSafetyChecks();
-            
-            if (builder.Environment.IsDevelopment())
-            {
-                options.UseNpgsql(configuration.GetConnectionString("Dev_Path"));
-                options.EnableDetailedErrors();
-                options.EnableSensitiveDataLogging();
-            }
-            else
-            {
-                options.UseNpgsql(configuration.GetConnectionString("Prod_Path"));
-            }
-
-            return new DbLoggerOptions { DbContext = new LoggerDbContext(options.Options) };
-        });
 
         services.AddSingleton<IDbContextFactory<AppDbContext>>(contextFactory);
 
