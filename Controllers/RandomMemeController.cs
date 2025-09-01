@@ -2,6 +2,7 @@
 using MARS.Server.Services.RandomMem.DTOs;
 using MARS.Server.Services.RandomMem.Entity;
 using Microsoft.AspNetCore.Mvc;
+using System.IO;
 
 namespace MARS.Server.Controllers;
 
@@ -421,6 +422,106 @@ public class RandomMemeController(
     }
 
     /// <summary>
+    /// Get meme file by ID
+    /// </summary>
+    [HttpGet("file/{id:guid}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetMemeFile(
+        Guid id,
+        CancellationToken cancellationToken = default
+    )
+    {
+        try
+        {
+            var memeOrder = await randomMemeService.GetMemeOrderByIdAsync(id, cancellationToken);
+            if (memeOrder == null)
+            {
+                return NotFound($"MemeOrder with ID {id} not found");
+            }
+
+            if (!memeOrder.MemeTypeId.HasValue)
+            {
+                return NotFound($"MemeOrder with ID {id} has no associated MemeType");
+            }
+
+            var memeType = await randomMemeService.GetMemeTypeByIdAsync(memeOrder.MemeTypeId.Value, cancellationToken);
+            if (memeType == null)
+            {
+                return NotFound($"MemeType with ID {memeOrder.MemeTypeId} not found");
+            }
+
+            var fullFilePath = Path.Combine(memeType.FolderPath, memeOrder.FilePath);
+            if (!System.IO.File.Exists(fullFilePath))
+            {
+                return NotFound($"File not found at path: {fullFilePath}");
+            }
+
+            var fileBytes = await System.IO.File.ReadAllBytesAsync(fullFilePath, cancellationToken);
+            var fileName = Path.GetFileName(memeOrder.FilePath);
+            var contentType = GetContentType(fileName);
+
+            return File(fileBytes, contentType, fileName);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error occurred while getting meme file with ID {Id}", id);
+            return StatusCode(StatusCodes.Status500InternalServerError, "Internal server error");
+        }
+    }
+
+    /// <summary>
+    /// Get random meme file
+    /// </summary>
+    [HttpGet("file/random")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetRandomMemeFile(
+        [FromQuery] int? typeId,
+        CancellationToken cancellationToken = default
+    )
+    {
+        try
+        {
+            var randomMeme = await randomMemeService.GetRandomMemeAsync(typeId, cancellationToken);
+            if (randomMeme == null)
+            {
+                return NotFound("No memes found");
+            }
+
+            if (!randomMeme.MemeTypeId.HasValue)
+            {
+                return NotFound("Random meme has no associated MemeType");
+            }
+
+            var memeType = await randomMemeService.GetMemeTypeByIdAsync(randomMeme.MemeTypeId.Value, cancellationToken);
+            if (memeType == null)
+            {
+                return NotFound($"MemeType with ID {randomMeme.MemeTypeId} not found");
+            }
+
+            var fullFilePath = Path.Combine(memeType.FolderPath, randomMeme.FilePath);
+            if (!System.IO.File.Exists(fullFilePath))
+            {
+                return NotFound($"File not found at path: {fullFilePath}");
+            }
+
+            var fileBytes = await System.IO.File.ReadAllBytesAsync(fullFilePath, cancellationToken);
+            var fileName = Path.GetFileName(randomMeme.FilePath);
+            var contentType = GetContentType(fileName);
+
+            return File(fileBytes, contentType, fileName);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error occurred while getting random meme file");
+            return StatusCode(StatusCodes.Status500InternalServerError, "Internal server error");
+        }
+    }
+
+    /// <summary>
     /// Reorder meme orders for a specific type
     /// </summary>
     [HttpPost("orders/reorder/{typeId:int}")]
@@ -470,6 +571,27 @@ public class RandomMemeController(
             FilePath = memeOrder.FilePath,
             MemeTypeId = memeOrder.MemeTypeId,
             Type = memeOrder.Type != null ? MapToDto(memeOrder.Type) : null,
+        };
+    }
+
+    private static string GetContentType(string fileName)
+    {
+        var extension = Path.GetExtension(fileName).ToLowerInvariant();
+        return extension switch
+        {
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".png" => "image/png",
+            ".gif" => "image/gif",
+            ".bmp" => "image/bmp",
+            ".webp" => "image/webp",
+            ".mp4" => "video/mp4",
+            ".avi" => "video/x-msvideo",
+            ".mov" => "video/quicktime",
+            ".wmv" => "video/x-ms-wmv",
+            ".mp3" => "audio/mpeg",
+            ".wav" => "audio/wav",
+            ".ogg" => "audio/ogg",
+            _ => "application/octet-stream"
         };
     }
 

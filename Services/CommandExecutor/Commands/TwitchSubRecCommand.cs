@@ -18,12 +18,26 @@ public class TwitchSubRecCommand(EventSubService eventSubService) : BaseCommand
         CancellationToken cancellationToken = default
     )
     {
-        await Task.Factory.StartNew(
-            async () => await eventSubService.ResubscribeToEventSub(),
-            cancellationToken
-        );
-
-        return "Отправлена попытка реконекта";
+        try
+        {
+            var force = parameters.TryGetValue("force", out var forceParam) && (bool)forceParam;
+            var result = await eventSubService.ResubscribeToEventSub(force: force);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            return $"Ошибка при реконекте EventSub: {ex.Message}";
+        }
     }
+
+    public override CommandParameterInfo[] Parameters => [
+        new() {
+            Name = "force",
+            Description = "Принудительно выполнить реконект, даже если он уже выполняется",
+            Type = "bool",
+            Required = false,
+            DefaultValue = "false"
+        }
+    ];
 }
 

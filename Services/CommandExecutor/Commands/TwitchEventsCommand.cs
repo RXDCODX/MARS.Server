@@ -36,4 +36,3 @@ public class TwitchEventsCommand(TokenService tokenService, EventSubService even
         return $"Подключенные сабы твича:{Environment.NewLine} {string.Join(Environment.NewLine, subs)}";
     }
 }
-

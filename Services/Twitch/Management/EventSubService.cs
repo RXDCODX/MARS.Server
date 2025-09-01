@@ -10,7 +10,6 @@ public class EventSubService(
     ILogger<EventSubService> logger,
     ITelegramBotClient client,
     TokenService tokenService,
-    IHostEnvironment environment,
     IHostApplicationLifetime lifetime,
     EventSubWebsocketClient wsClient
 ) : BackgroundService
@@ -39,14 +38,16 @@ public class EventSubService(
                     await wsClient.DisconnectAsync();
                 }
             }
+
+            await ResubscribeToEventSub(token);
         }
 
         if (_firstActivation)
         {
-            wsClient.WebsocketConnected += (_, _) =>
+            wsClient.WebsocketConnected += async (_, _) =>
             {
                 _isWsConnected = true;
-                return ResubscribeToEventSub(token);
+                await ResubscribeToEventSub(token);
             };
 
             wsClient.ErrorOccurred += async (_, args) =>
@@ -130,132 +131,135 @@ public class EventSubService(
         }
     }
 
-    public async Task ResubscribeToEventSub(TokenInfo? token = default)
+    public async Task<string> ResubscribeToEventSub(TokenInfo? token = default, bool force = false)
     {
         token ??= tokenService.Token;
         ArgumentException.ThrowIfNullOrWhiteSpace(token?.AccessToken);
         ArgumentException.ThrowIfNullOrWhiteSpace(token?.RefreshToken);
 
-        if (SemaphoreSlim.CurrentCount == 0)
+        try
         {
-            if (environment.IsDevelopment())
+            await DeleteAllSubs(token);
+
+            if (!_isWsConnected)
             {
-                logger.LogException(new Exception("Множественный вызов EventSubSubscribe"));
-            }
-
-            return;
-        }
-
-        await SemaphoreSlim.WaitAsync(_cancellationToken);
-        await DeleteAllSubs(token);
-
-        if (!_isWsConnected)
-        {
-            while (!_isWsConnected)
-            {
-                if (WsReconnectSlim.CurrentCount > 0)
+                while (!_isWsConnected)
                 {
-                    await Task.Factory.StartNew(TryReconnect, _cancellationToken);
-                }
+                    if (WsReconnectSlim.CurrentCount > 0)
+                    {
+                        await Task.Factory.StartNew(TryReconnect, _cancellationToken);
+                    }
 
-                await Task.Delay(30 * 1000, _cancellationToken);
+                    await Task.Delay(30 * 1000, _cancellationToken);
+                }
+            }
+
+            var condition = new Dictionary<string, string>
+            {
+                { "to_broadcaster_user_id", TwitchExstension.ChannelId },
+            };
+
+            await api.Helix.EventSub.CreateEventSubSubscriptionAsync(
+                "channel.raid",
+                "1",
+                condition,
+                EventSubTransportMethod.Websocket,
+                wsClient.SessionId,
+                null,
+                null,
+                api.Settings.ClientId,
+                token.AccessToken
+            );
+
+            condition.Clear();
+            condition.Add("broadcaster_user_id", TwitchExstension.ChannelId);
+
+            await api.Helix.EventSub.CreateEventSubSubscriptionAsync(
+                "stream.online",
+                "1",
+                condition,
+                EventSubTransportMethod.Websocket,
+                wsClient.SessionId,
+                null,
+                null,
+                api.Settings.ClientId,
+                token.AccessToken
+            );
+
+            await api.Helix.EventSub.CreateEventSubSubscriptionAsync(
+                "stream.offline",
+                "1",
+                condition,
+                EventSubTransportMethod.Websocket,
+                wsClient.SessionId,
+                null,
+                null,
+                api.Settings.ClientId,
+                token.AccessToken
+            );
+
+            await api.Helix.EventSub.CreateEventSubSubscriptionAsync(
+                "channel.channel_points_custom_reward_redemption.add",
+                "1",
+                condition,
+                EventSubTransportMethod.Websocket,
+                wsClient.SessionId,
+                null,
+                null,
+                api.Settings.ClientId,
+                token.AccessToken
+            );
+
+            condition.Add("moderator_user_id", TwitchExstension.ChannelId);
+
+            await api.Helix.EventSub.CreateEventSubSubscriptionAsync(
+                "channel.follow",
+                "2",
+                condition,
+                EventSubTransportMethod.Websocket,
+                wsClient.SessionId,
+                null,
+                null,
+                api.Settings.ClientId,
+                token.AccessToken
+            );
+
+            condition.Clear();
+
+            var response = await api
+                .Helix.EventSub.GetEventSubSubscriptionsAsync(
+                    clientId: api.Settings.ClientId,
+                    accessToken: token.AccessToken
+                )
+                .ConfigureAwait(false);
+
+            SemaphoreSlim.Release(1);
+
+            if (response.Subscriptions.Length < 1)
+            {
+                logger.LogError("Не получилось подписать EventSub");
+                return "Ошибка: не удалось подписаться на EventSub";
+            }
+            else
+            {
+                var aa = response.Subscriptions.Select(e => e.Type).Distinct();
+                var message = string.Join(Environment.NewLine, aa);
+                await client.SendMessage(
+                    TelegramExstension.Rxdcodx,
+                    "Подключенные ивенты для твича: " + Environment.NewLine + message,
+                    cancellationToken: _cancellationToken
+                );
+                return $"Реконект EventSub выполнен успешно. Подписки: {string.Join(", ", aa)}";
             }
         }
-
-        var condition = new Dictionary<string, string>
+        catch (Exception ex)
         {
-            { "to_broadcaster_user_id", TwitchExstension.ChannelId },
-        };
-
-        await api.Helix.EventSub.CreateEventSubSubscriptionAsync(
-            "channel.raid",
-            "1",
-            condition,
-            EventSubTransportMethod.Websocket,
-            wsClient.SessionId,
-            null,
-            null,
-            api.Settings.ClientId,
-            token.AccessToken
-        );
-
-        condition.Clear();
-        condition.Add("broadcaster_user_id", TwitchExstension.ChannelId);
-
-        await api.Helix.EventSub.CreateEventSubSubscriptionAsync(
-            "stream.online",
-            "1",
-            condition,
-            EventSubTransportMethod.Websocket,
-            wsClient.SessionId,
-            null,
-            null,
-            api.Settings.ClientId,
-            token.AccessToken
-        );
-
-        await api.Helix.EventSub.CreateEventSubSubscriptionAsync(
-            "stream.offline",
-            "1",
-            condition,
-            EventSubTransportMethod.Websocket,
-            wsClient.SessionId,
-            null,
-            null,
-            api.Settings.ClientId,
-            token.AccessToken
-        );
-
-        await api.Helix.EventSub.CreateEventSubSubscriptionAsync(
-            "channel.channel_points_custom_reward_redemption.add",
-            "1",
-            condition,
-            EventSubTransportMethod.Websocket,
-            wsClient.SessionId,
-            null,
-            null,
-            api.Settings.ClientId,
-            token.AccessToken
-        );
-
-        condition.Add("moderator_user_id", TwitchExstension.ChannelId);
-
-        await api.Helix.EventSub.CreateEventSubSubscriptionAsync(
-            "channel.follow",
-            "2",
-            condition,
-            EventSubTransportMethod.Websocket,
-            wsClient.SessionId,
-            null,
-            null,
-            api.Settings.ClientId,
-            token.AccessToken
-        );
-
-        condition.Clear();
-
-        var response = await api
-            .Helix.EventSub.GetEventSubSubscriptionsAsync(
-                clientId: api.Settings.ClientId,
-                accessToken: token.AccessToken
-            )
-            .ConfigureAwait(false);
-
-        SemaphoreSlim.Release(1);
-
-        if (response.Subscriptions.Length < 1)
-        {
-            logger.LogError("Не получилось подписать EventSub");
+            logger.LogException(ex);
+            return $"Ошибка при реконекте EventSub: {ex.Message}";
         }
-        else
+        finally
         {
-            var aa = response.Subscriptions.Select(e => e.Type).Distinct();
-            var message = string.Join(Environment.NewLine, aa);
-            await client.SendMessage(
-                TelegramExstension.Rxdcodx,
-                "Подключенные ивенты для твича: " + Environment.NewLine + message,
-                cancellationToken: _cancellationToken
-            );
+            SemaphoreSlim.Release(1);
         }
     }
 
