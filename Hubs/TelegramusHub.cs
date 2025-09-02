@@ -74,4 +74,9 @@ public class TelegramusHub(
     {
         return soundBarFactory.CreateSoundBar().Mute(args);
     }
+
+    public Task Explosion()
+    {
+        return Clients.All.Explosion();
+    }
 }

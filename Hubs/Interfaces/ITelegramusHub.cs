@@ -61,6 +61,9 @@ public interface ITelegramusHub
     public Task Adhd(int seconds);
 
     [SignalRMethod]
+    public Task Explosion();
+
+    [SignalRMethod]
     public Task LeroyAlert();
 
     [SignalRMethod]
