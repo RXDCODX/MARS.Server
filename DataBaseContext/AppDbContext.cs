@@ -52,7 +52,6 @@ public sealed class AppDbContext : DbContext
     public DbSet<HostAutoHello> HostsGreetings { get; set; } = null!;
     public DbSet<AutoMessage> AutoMessages { get; set; } = null!;
     public DbSet<TokenInfo> TwitchToken { get; set; } = null!;
-    public DbSet<Log> Logs { get; set; } = null!;
     public DbSet<MemeOrder> RandomMemeOrder { get; set; } = null!;
     public DbSet<MemeType> RandomMemeType { get; set; } = null!;
     public DbSet<FumoUser> FumoUsers { get; set; } = null!;

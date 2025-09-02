@@ -23,8 +23,8 @@ public class LogsController(ILogsService logsService, ILogger<LogsController> lo
         [FromQuery] string? sortBy = "whenlogged",
         [FromQuery] bool sortDescending = true,
         [FromQuery] LogLevel? logLevel = null,
-        [FromQuery] DateTimeOffset? fromDate = null,
-        [FromQuery] DateTimeOffset? toDate = null,
+        [FromQuery] DateTime? fromDate = null,
+        [FromQuery] DateTime? toDate = null,
         [FromQuery] string? searchText = null
     )
     {
@@ -94,8 +94,8 @@ public class LogsController(ILogsService logsService, ILogger<LogsController> lo
     [HttpGet("by-date-range")]
     [ProducesResponseType(typeof(IEnumerable<Log>), 200)]
     public async Task<IActionResult> GetLogsByDateRange(
-        [FromQuery] DateTimeOffset fromDate,
-        [FromQuery] DateTimeOffset toDate
+        [FromQuery] DateTime fromDate,
+        [FromQuery] DateTime toDate
     )
     {
         try
