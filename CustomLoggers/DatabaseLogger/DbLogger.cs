@@ -42,7 +42,7 @@ public class DbLogger([NotNull] DbLoggerProvider dbLoggerProvider) : ILogger
     /// <param name="state">The event's state.</param>
     /// <param name="exception">The event's exception. An instance of <see cref="Exception" /></param>
     /// <param name="formatter">A delegate that formats </param>
-    public void Log<TState>(
+    public async void Log<TState>(
         LogLevel logLevel,
         EventId eventId,
         TState state,
@@ -50,27 +50,32 @@ public class DbLogger([NotNull] DbLoggerProvider dbLoggerProvider) : ILogger
         Func<TState, Exception?, string> formatter
     )
     {
-        if (!IsEnabled(logLevel) || logLevel <= LogLevel.Information)
+        if (!IsEnabled(logLevel) || logLevel < _dbLoggerProvider.Options.MinimumLogLevel)
         {
             return;
         }
 
-        try
+        await Task.Factory.StartNew(async () =>
         {
-            var log = new Log
+            try
             {
-                Message = formatter(state, exception),
-                StackTrace = exception?.StackTrace,
-                LogLevel = logLevel.ToString()
-            };
+                await using var dbContext = _dbLoggerProvider.Options.Factory.CreateDbContext();
 
-            _dbLoggerProvider.Options.DbContext.Errors.Add(log);
-            _dbLoggerProvider.Options.DbContext.SaveChanges();
-        }
-        catch (Exception ex)
-        {
-            // Если не удалось записать в БД, выводим в консоль
-            Console.WriteLine($"Failed to write log to database: {ex.Message}");
-        }
+                var log = new Log
+                {
+                    Message = formatter(state, exception),
+                    StackTrace = exception?.StackTrace,
+                    LogLevel = logLevel,
+                };
+
+                await dbContext.Logs.AddAsync(log);
+                await dbContext.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                // Если не удалось записать в БД, выводим в консоль
+                Console.WriteLine($"Failed to write log to database: {ex.Message}");
+            }
+        });
     }
 }

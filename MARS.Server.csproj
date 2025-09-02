@@ -140,6 +140,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <Folder Include="Migrations\LoggerMigrations\" />
       <Folder Include="Services\SoundRequest\Platforms\SoundCloud\" />
       <Folder Include="Services\SoundRequest\Platforms\YouTube\" />
       <Folder Include="Services\TabletopGames\Entitys\Enums\" />

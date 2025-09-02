@@ -23,7 +23,7 @@ public class HonkaiNotificationService(
     ILogger<HonkaiNotificationService> logger
 ) : IHonkaiNotificationService
 {
-    private readonly Dictionary<Guid, DateTime> _lastNotificationTime = [];
+    private readonly Dictionary<string, DateTime> _lastNotificationTime = [];
     private const int NotificationCooldownHours = 2;
 
     public async Task SendMarkupFailureNotificationAsync(long telegramId, Guid userId)
@@ -109,7 +109,7 @@ public class HonkaiNotificationService(
         // Проверяем кулдаун уведомлений
         var notificationKey = $"{user.Id}_{gameUid}_{threshold}";
         if (
-            _lastNotificationTime.TryGetValue(Guid.Parse(notificationKey), out var lastNotification)
+            _lastNotificationTime.TryGetValue(notificationKey, out var lastNotification)
         )
         {
             if (DateTime.UtcNow - lastNotification < TimeSpan.FromHours(NotificationCooldownHours))
@@ -144,7 +144,7 @@ public class HonkaiNotificationService(
             }
 
             // Обновляем время последнего уведомления
-            _lastNotificationTime[Guid.Parse(notificationKey)] = DateTime.UtcNow;
+            _lastNotificationTime[notificationKey] = DateTime.UtcNow;
 
             logger.LogInformation(
                 "Energy notification sent for user {UserId} (account {GameUid}): {CurrentEnergy}/{MaxEnergy}",

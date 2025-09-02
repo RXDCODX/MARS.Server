@@ -103,21 +103,37 @@ public static class Program
             loggingBuilder.AddDbLogger(() =>
             {
                 var options = new DbContextOptionsBuilder<LoggerDbContext>();
-                options.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
-                options.EnableThreadSafetyChecks();
 
-                if (builder.Environment.IsDevelopment())
+                return new DbLoggerOptions
                 {
-                    options.UseNpgsql(configuration.GetConnectionString("Dev_Path"));
-                    options.EnableDetailedErrors();
-                    options.EnableSensitiveDataLogging();
-                }
-                else
-                {
-                    options.UseNpgsql(configuration.GetConnectionString("Prod_Path"));
-                }
+                    Factory = new LoggerDbContextFactory(
+                        (contextOptionsBuilder) =>
+                        {
+                            contextOptionsBuilder.UseQueryTrackingBehavior(
+                                QueryTrackingBehavior.NoTracking
+                            );
+                            contextOptionsBuilder.EnableThreadSafetyChecks();
 
-                return new DbLoggerOptions { DbContext = new LoggerDbContext(options.Options) };
+                            if (builder.Environment.IsDevelopment())
+                            {
+                                contextOptionsBuilder.UseNpgsql(
+                                    configuration.GetConnectionString("Dev_Path")
+                                );
+                                contextOptionsBuilder.EnableDetailedErrors();
+                                contextOptionsBuilder.EnableSensitiveDataLogging();
+                            }
+                            else
+                            {
+                                contextOptionsBuilder.UseNpgsql(
+                                    configuration.GetConnectionString("Prod_Path")
+                                );
+                            }
+                        }
+                    ),
+                    MinimumLogLevel = builder.Environment.IsProduction()
+                        ? LogLevel.Warning
+                        : LogLevel.Information,
+                };
             });
         });
 

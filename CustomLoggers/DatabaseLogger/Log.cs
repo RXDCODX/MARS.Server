@@ -5,8 +5,8 @@ public class Log
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     [Key]
     public Guid Id { get; set; }
-    public DateTimeOffset WhenLogged { get; set; } = DateTimeOffset.Now;
+    public DateTime WhenLogged { get; set; } = DateTime.Now;
     public required string Message { get; set; } = string.Empty;
     public string? StackTrace { get; set; }
-    public string LogLevel { get; set; } = string.Empty;
+    public LogLevel LogLevel { get; set; }
 }

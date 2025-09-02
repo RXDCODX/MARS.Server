@@ -2,5 +2,6 @@
 
 public class DbLoggerOptions
 {
-    public required LoggerDbContext DbContext { get; set; }
+    public required LoggerDbContextFactory Factory { get; set; }
+    public required LogLevel MinimumLogLevel { get; set; }
 }

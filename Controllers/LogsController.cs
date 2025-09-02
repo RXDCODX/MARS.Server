@@ -22,7 +22,7 @@ public class LogsController(ILogsService logsService, ILogger<LogsController> lo
         [FromQuery] int pageSize = 50,
         [FromQuery] string? sortBy = "whenlogged",
         [FromQuery] bool sortDescending = true,
-        [FromQuery] string? logLevel = null,
+        [FromQuery] LogLevel? logLevel = null,
         [FromQuery] DateTimeOffset? fromDate = null,
         [FromQuery] DateTimeOffset? toDate = null,
         [FromQuery] string? searchText = null
@@ -74,7 +74,7 @@ public class LogsController(ILogsService logsService, ILogger<LogsController> lo
     /// </summary>
     [HttpGet("by-level/{logLevel}")]
     [ProducesResponseType(typeof(IEnumerable<Log>), 200)]
-    public async Task<IActionResult> GetLogsByLevel(string logLevel)
+    public async Task<IActionResult> GetLogsByLevel(LogLevel logLevel)
     {
         try
         {
@@ -169,7 +169,7 @@ public class LogsController(ILogsService logsService, ILogger<LogsController> lo
 /// </summary>
 public class LogResponse
 {
-    public IEnumerable<Log> Logs { get; set; } = new List<Log>();
+    public IEnumerable<Log> Logs { get; set; } = [];
     public int TotalCount { get; set; }
     public int Page { get; set; }
     public int PageSize { get; set; }
