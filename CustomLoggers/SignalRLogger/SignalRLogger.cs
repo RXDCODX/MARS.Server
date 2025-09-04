@@ -4,11 +4,12 @@ namespace MARS.Server.CustomLoggers.SignalRLogger;
 
 public class SignalRLogger(
     string category,
-    IHubContext<LoggerHub, ILoggerHub> hubContext,
     SignalRLoggerOptions options,
     Func<string, LogLevel, bool>? filter
 ) : ILogger
 {
+    public static IHubContext<LoggerHub, ILoggerHub>? HubContext { get; set; }
+
     private readonly Func<string, LogLevel, bool> _filter = filter ?? ((cat, logLevel) => true);
 
     public void Log<TState>(
@@ -19,7 +20,7 @@ public class SignalRLogger(
         Func<TState, Exception?, string> formatter
     )
     {
-        if (!IsEnabled(logLevel))
+        if (!IsEnabled(logLevel) || HubContext is null)
         {
             return;
         }
@@ -74,7 +75,7 @@ public class SignalRLogger(
         {
             try
             {
-                await hubContext.Clients.All.Log(logMessage);
+                await HubContext.Clients.All.Log(logMessage);
             }
             catch (Exception ex)
             {

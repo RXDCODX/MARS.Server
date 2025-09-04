@@ -307,7 +307,7 @@ public static class Program
         app.MapHub<TunaHub>("/hubs/tuna");
         //app.MapHub<SoundBarHub>("/hubs/soundbar");
         app.MapHub<ScoreboardHub>("/hubs/scoreboard");
-        app.MapHub<LoggerHub>("/hubs/logger");
+        app.AddLogerHub();
         if (IsUseSoundRequest)
         {
             app.MapHub<SoundRequestHub>("/hubs/soundrequest");

@@ -1,5 +1,6 @@
 ﻿using MARS.Server.ApplicationState;
 using MARS.Server.Services._365Genius.Entitys;
+using MARS.Server.Services.DatabaseBackup.Models;
 using MARS.Server.Services.Framedata.Entitys;
 using MARS.Server.Services.Framedata.Entitys.Pending;
 using MARS.Server.Services.Honkai.Entitys;
@@ -76,6 +77,7 @@ public sealed class AppDbContext : DbContext
     public DbSet<WaifuRollGuarantee> WaifuRollGuarantees { get; set; } = null!;
     public DbSet<MARS.Server.Services.CinemaQueue.Entitys.MediaItem> CinemaQueue { get; set; } =
         null!;
+    public DbSet<PgDumpSettings> PgDumpSettings { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -13,6 +13,7 @@ public static class DatabaseBackupServiceExtensions
     public static IServiceCollection AddDatabaseBackupService(this IServiceCollection services)
     {
         services.AddScoped<IDatabaseBackupService, DatabaseBackupService>();
+        services.AddScoped<IPgDumpSettingsService, PgDumpSettingsService>();
         return services;
     }
 }

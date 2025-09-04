@@ -1,7 +1,9 @@
 ﻿using MARS.Server.Hubs.Models.LoggerHub;
+using SignalRSwaggerGen.Attributes;
 
 namespace MARS.Server.Hubs.Interfaces;
 
+[SignalRHub("/hubs/logger")]
 public interface ILoggerHub
 {
     /// <summary>

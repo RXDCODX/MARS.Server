@@ -11,12 +11,10 @@ namespace MARS.Server.Controllers;
 [Route("api/[controller]")]
 public class DatabaseBackupController(
     IDatabaseBackupService backupService,
+    IPgDumpSettingsService pgDumpSettingsService,
     ILogger<DatabaseBackupController> logger
 ) : ControllerBase
 {
-    private readonly IDatabaseBackupService _backupService = backupService;
-    private readonly ILogger<DatabaseBackupController> _logger = logger;
-
     /// <summary>
     /// Создает резервную копию указанной базы данных
     /// </summary>
@@ -32,7 +30,7 @@ public class DatabaseBackupController(
                 return BadRequest("Имя базы данных не может быть пустым");
             }
 
-            var downloadUrl = await _backupService.CreateBackupAsync(databaseName);
+            var downloadUrl = await backupService.CreateBackupAsync(databaseName);
             var fileName = downloadUrl.Split('/').Last();
 
             return Ok(
@@ -52,7 +50,7 @@ public class DatabaseBackupController(
         }
         catch (Exception ex)
         {
-            _logger.LogError(
+            logger.LogError(
                 ex,
                 "Ошибка при создании резервной копии базы данных {DatabaseName}",
                 databaseName
@@ -83,7 +81,7 @@ public class DatabaseBackupController(
                 return BadRequest("Имя файла не может быть пустым");
             }
 
-            var backupStream = await _backupService.GetBackupFileAsync(fileName);
+            var backupStream = await backupService.GetBackupFileAsync(fileName);
 
             return File(backupStream, "application/sql", fileName);
         }
@@ -93,7 +91,7 @@ public class DatabaseBackupController(
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Ошибка при скачивании резервной копии {FileName}", fileName);
+            logger.LogError(ex, "Ошибка при скачивании резервной копии {FileName}", fileName);
             return StatusCode(
                 500,
                 new
@@ -114,12 +112,12 @@ public class DatabaseBackupController(
     {
         try
         {
-            var backupFileNames = await _backupService.GetAvailableBackupsAsync();
+            var backupFileNames = await backupService.GetAvailableBackupsAsync();
             var backupInfo = new List<BackupFileInfo>();
 
             foreach (var fileName in backupFileNames)
             {
-                var fileInfo = await _backupService.GetBackupFileInfoAsync(fileName);
+                var fileInfo = await backupService.GetBackupFileInfoAsync(fileName);
                 if (fileInfo is not null)
                 {
                     backupInfo.Add(fileInfo);
@@ -140,7 +138,7 @@ public class DatabaseBackupController(
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Ошибка при получении списка резервных копий");
+            logger.LogError(ex, "Ошибка при получении списка резервных копий");
             return StatusCode(500, new BackupListResponse { Success = false });
         }
     }
@@ -160,7 +158,7 @@ public class DatabaseBackupController(
                 return BadRequest("Количество сохраняемых копий должно быть больше 0");
             }
 
-            var deletedCount = await _backupService.CleanupOldBackupsAsync(keepCount);
+            var deletedCount = await backupService.CleanupOldBackupsAsync(keepCount);
 
             return Ok(
                 new CleanupBackupsResponse
@@ -174,7 +172,7 @@ public class DatabaseBackupController(
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Ошибка при очистке старых резервных копий");
+            logger.LogError(ex, "Ошибка при очистке старых резервных копий");
             return StatusCode(
                 500,
                 new CleanupBackupsResponse
@@ -195,7 +193,7 @@ public class DatabaseBackupController(
     {
         try
         {
-            var backupFileNames = await _backupService.GetAvailableBackupsAsync();
+            var backupFileNames = await backupService.GetAvailableBackupsAsync();
             var backupFiles = backupFileNames.ToList();
 
             var totalSize = 0L;
@@ -206,7 +204,7 @@ public class DatabaseBackupController(
             {
                 foreach (var fileName in backupFiles)
                 {
-                    var fileInfo = await _backupService.GetBackupFileInfoAsync(fileName);
+                    var fileInfo = await backupService.GetBackupFileInfoAsync(fileName);
                     if (fileInfo is not null)
                     {
                         totalSize += fileInfo.Size;
@@ -242,8 +240,241 @@ public class DatabaseBackupController(
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Ошибка при получении статуса резервного копирования");
+            logger.LogError(ex, "Ошибка при получении статуса резервного копирования");
             return StatusCode(500, new BackupStatusResponse { Success = false });
+        }
+    }
+
+    /// <summary>
+    /// Получает текущие настройки pg_dump
+    /// </summary>
+    /// <returns>Текущие настройки pg_dump</returns>
+    [HttpGet("pg-dump/settings")]
+    public async Task<IActionResult> GetPgDumpSettings()
+    {
+        try
+        {
+            var settings = await pgDumpSettingsService.GetActiveSettingsAsync();
+            if (settings == null)
+            {
+                return Ok(
+                    new PgDumpSettingsResponse
+                    {
+                        Success = false,
+                        Message =
+                            "Настройки pg_dump не найдены. Пожалуйста, настройте путь к pg_dump.",
+                    }
+                );
+            }
+
+            var validationInfo = await pgDumpSettingsService.ValidatePgDumpPathAsync(
+                settings.PgDumpPath
+            );
+
+            return Ok(
+                new PgDumpSettingsResponse
+                {
+                    Success = true,
+                    Message = "Настройки pg_dump получены успешно",
+                    Settings = settings,
+                    ValidationInfo = validationInfo,
+                }
+            );
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при получении настроек pg_dump");
+            return StatusCode(
+                500,
+                new PgDumpSettingsResponse
+                {
+                    Success = false,
+                    Message = "Внутренняя ошибка сервера при получении настроек pg_dump",
+                }
+            );
+        }
+    }
+
+    /// <summary>
+    /// Обновляет настройки pg_dump
+    /// </summary>
+    /// <param name="request">Запрос с новыми настройками</param>
+    /// <returns>Результат обновления настроек</returns>
+    [HttpPost("pg-dump/settings")]
+    public async Task<IActionResult> UpdatePgDumpSettings(
+        [FromBody] UpdatePgDumpSettingsRequest request
+    )
+    {
+        try
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(
+                    new PgDumpSettingsResponse
+                    {
+                        Success = false,
+                        Message = "Некорректные данные запроса",
+                    }
+                );
+            }
+
+            // Валидируем путь перед сохранением
+            var validationInfo = await pgDumpSettingsService.ValidatePgDumpPathAsync(
+                request.PgDumpPath
+            );
+            if (!validationInfo.FileExists)
+            {
+                return BadRequest(
+                    new PgDumpSettingsResponse
+                    {
+                        Success = false,
+                        Message =
+                            $"pg_dump не найден по указанному пути: {request.PgDumpPath}. {validationInfo.Message}",
+                        ValidationInfo = validationInfo,
+                    }
+                );
+            }
+
+            var updatedSettings = await pgDumpSettingsService.UpdateSettingsAsync(request);
+
+            return Ok(
+                new PgDumpSettingsResponse
+                {
+                    Success = true,
+                    Message = "Настройки pg_dump обновлены успешно",
+                    Settings = updatedSettings,
+                    ValidationInfo = validationInfo,
+                }
+            );
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при обновлении настроек pg_dump");
+            return StatusCode(
+                500,
+                new PgDumpSettingsResponse
+                {
+                    Success = false,
+                    Message = "Внутренняя ошибка сервера при обновлении настроек pg_dump",
+                }
+            );
+        }
+    }
+
+    /// <summary>
+    /// Валидирует путь к pg_dump
+    /// </summary>
+    /// <param name="pgDumpPath">Путь к pg_dump для валидации</param>
+    /// <returns>Результат валидации</returns>
+    [HttpPost("pg-dump/validate")]
+    public async Task<IActionResult> ValidatePgDumpPath([FromQuery] string pgDumpPath)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(pgDumpPath))
+            {
+                return BadRequest(
+                    new PgDumpSettingsResponse
+                    {
+                        Success = false,
+                        Message = "Путь к pg_dump не может быть пустым",
+                    }
+                );
+            }
+
+            var validationInfo = await pgDumpSettingsService.ValidatePgDumpPathAsync(pgDumpPath);
+
+            return Ok(
+                new PgDumpSettingsResponse
+                {
+                    Success = validationInfo.FileExists,
+                    Message = validationInfo.Message,
+                    ValidationInfo = validationInfo,
+                }
+            );
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при валидации пути pg_dump: {PgDumpPath}", pgDumpPath);
+            return StatusCode(
+                500,
+                new PgDumpSettingsResponse
+                {
+                    Success = false,
+                    Message = "Внутренняя ошибка сервера при валидации пути pg_dump",
+                }
+            );
+        }
+    }
+
+    /// <summary>
+    /// Получает историю настроек pg_dump
+    /// </summary>
+    /// <returns>История настроек pg_dump</returns>
+    [HttpGet("pg-dump/history")]
+    public async Task<IActionResult> GetPgDumpSettingsHistory()
+    {
+        try
+        {
+            var history = await pgDumpSettingsService.GetSettingsHistoryAsync();
+
+            return Ok(
+                new
+                {
+                    success = true,
+                    message = "История настроек pg_dump получена успешно",
+                    settings = history,
+                }
+            );
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при получении истории настроек pg_dump");
+            return StatusCode(
+                500,
+                new
+                {
+                    success = false,
+                    message = "Внутренняя ошибка сервера при получении истории настроек pg_dump",
+                }
+            );
+        }
+    }
+
+    /// <summary>
+    /// Проверяет, настроены ли настройки pg_dump
+    /// </summary>
+    /// <returns>Статус конфигурации pg_dump</returns>
+    [HttpGet("pg-dump/configured")]
+    public async Task<IActionResult> IsPgDumpConfigured()
+    {
+        try
+        {
+            var isConfigured = await pgDumpSettingsService.IsConfiguredAsync();
+
+            return Ok(
+                new
+                {
+                    success = true,
+                    message = isConfigured
+                        ? "pg_dump настроен и готов к использованию"
+                        : "pg_dump не настроен",
+                    configured = isConfigured,
+                }
+            );
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при проверке конфигурации pg_dump");
+            return StatusCode(
+                500,
+                new
+                {
+                    success = false,
+                    message = "Внутренняя ошибка сервера при проверке конфигурации pg_dump",
+                    configured = false,
+                }
+            );
         }
     }
 }

@@ -3,7 +3,6 @@
 namespace MARS.Server.CustomLoggers.SignalRLogger;
 
 public class SignalRLoggerProvider(
-    IHubContext<LoggerHub, ILoggerHub> hubContext,
     SignalRLoggerOptions options,
     Func<string, LogLevel, bool>? filter
 ) : ILoggerProvider
@@ -17,7 +16,7 @@ public class SignalRLoggerProvider(
 
     private SignalRLogger CreateLoggerImplementation(string categoryName)
     {
-        return new SignalRLogger(categoryName, hubContext, options, filter);
+        return new SignalRLogger(categoryName, options, filter);
     }
 
     public void Dispose()

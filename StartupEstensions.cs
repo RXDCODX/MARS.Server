@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
+using MARS.Server.CustomLoggers.SignalRLogger;
 using MARS.Server.Services.Framedata;
 using MARS.Server.Services.Scoreboard;
 using MARS.Server.Services.ServiceManager;
@@ -408,5 +409,20 @@ public static class StartupEstensions
         });
 
         return services;
+    }
+
+    internal static WebApplication AddLogerHub(this WebApplication app)
+    {
+        app.MapHub<LoggerHub>("/hubs/logger");
+
+        var lifetime = app.Services.GetRequiredService<IHostApplicationLifetime>();
+
+        lifetime.ApplicationStarted.Register(() =>
+        {
+            var hub = app.Services.GetRequiredService<IHubContext<LoggerHub, ILoggerHub>>();
+            SignalRLogger.HubContext = hub;
+        });
+
+        return app;
     }
 }

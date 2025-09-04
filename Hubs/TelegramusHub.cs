@@ -60,22 +60,26 @@ public class TelegramusHub(
         return prizes;
     }
 
+    [SignalRMethod]
     public Task TwitchMsg(string msg)
     {
         return twitchClient.SendMessageToMainTwitchAsync(msg);
     }
 
+    [SignalRMethod]
     public Task UnmuteSessions()
     {
         return soundBarFactory.CreateSoundBar().Unmute();
     }
 
+    [SignalRMethod]
     public Task MuteAll(params string[] args)
     {
         return soundBarFactory.CreateSoundBar().Mute(args);
     }
 
-    public Task Explosion()
+    [SignalRMethod]
+    public Task ExplosionGo()
     {
         return Clients.All.Explosion();
     }

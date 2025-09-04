@@ -10,10 +10,10 @@ namespace MARS.Server.Services.DatabaseBackup;
 /// </summary>
 public class DatabaseBackupService(
     IConfiguration configuration,
-    ILogger<DatabaseBackupService> logger
+    ILogger<DatabaseBackupService> logger,
+    IPgDumpSettingsService pgDumpSettingsService
 ) : IDatabaseBackupService
 {
-    private readonly string _pgDumpPath = GetPgDumpPath();
 
     // Определяем путь к pg_dump
 
@@ -24,6 +24,24 @@ public class DatabaseBackupService(
     {
         try
         {
+            // Проверяем настройки pg_dump
+            var pgDumpSettings = await pgDumpSettingsService.GetActiveSettingsAsync();
+            if (pgDumpSettings == null)
+            {
+                throw new InvalidOperationException(
+                    "Настройки pg_dump не найдены. Пожалуйста, настройте путь к pg_dump перед созданием резервной копии."
+                );
+            }
+
+            // Валидируем путь к pg_dump
+            var validationInfo = await pgDumpSettingsService.ValidatePgDumpPathAsync(pgDumpSettings.PgDumpPath);
+            if (!validationInfo.FileExists)
+            {
+                throw new InvalidOperationException(
+                    $"pg_dump не найден по указанному пути: {pgDumpSettings.PgDumpPath}. {validationInfo.Message}"
+                );
+            }
+
             var connectionString = GetConnectionString(databaseName);
             if (string.IsNullOrEmpty(connectionString))
             {
@@ -42,7 +60,7 @@ public class DatabaseBackupService(
             {
                 var processStartInfo = new ProcessStartInfo
                 {
-                    FileName = _pgDumpPath,
+                    FileName = pgDumpSettings.PgDumpPath,
                     Arguments = BuildPgDumpArguments(connectionParams, tempFilePath),
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
@@ -341,78 +359,4 @@ public class DatabaseBackupService(
         return string.Join(" ", arguments);
     }
 
-    /// <summary>
-    /// Определяет путь к pg_dump
-    /// </summary>
-    private static string GetPgDumpPath()
-    {
-        // Попытка найти pg_dump в стандартных местах
-        var possiblePaths = new[]
-        {
-            "pg_dump",
-            @"C:\Program Files\PostgreSQL\*\bin\pg_dump.exe",
-            @"C:\Program Files (x86)\PostgreSQL\*\bin\pg_dump.exe",
-        };
-
-        foreach (var path in possiblePaths)
-        {
-            if (path.Contains('*'))
-            {
-                // Для путей с wildcard ищем последнюю версию
-                var directory = Path.GetDirectoryName(path);
-                var fileName = Path.GetFileName(path);
-
-                if (Directory.Exists(directory))
-                {
-                    var versions = Directory
-                        .GetDirectories(directory)
-                        .Where(d => Path.GetFileName(d).StartsWith("PostgreSQL"))
-                        .OrderByDescending(d => Path.GetFileName(d))
-                        .ToList();
-
-                    if (versions.Count > 0)
-                    {
-                        var fullPath = Path.Combine(versions.First(), "bin", fileName);
-                        if (File.Exists(fullPath))
-                        {
-                            return fullPath;
-                        }
-                    }
-                }
-            }
-            else
-            {
-                // Проверяем, доступен ли pg_dump в PATH
-                try
-                {
-                    var processStartInfo = new ProcessStartInfo
-                    {
-                        FileName = path,
-                        Arguments = "--version",
-                        UseShellExecute = false,
-                        RedirectStandardOutput = true,
-                        CreateNoWindow = true,
-                    };
-
-                    using var process = Process.Start(processStartInfo);
-                    if (process != null)
-                    {
-                        process.WaitForExit();
-                        if (process.ExitCode == 0)
-                        {
-                            return path;
-                        }
-                    }
-                }
-                catch
-                {
-                    // Игнорируем ошибки и продолжаем поиск
-                }
-            }
-        }
-
-        throw new InvalidOperationException(
-            "pg_dump не найден. Убедитесь, что PostgreSQL установлен и pg_dump доступен в PATH."
-        );
-    }
 }

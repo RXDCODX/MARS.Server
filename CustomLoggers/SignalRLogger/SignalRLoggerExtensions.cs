@@ -16,13 +16,10 @@ public static class SignalRLoggerExtensions
         var options = new SignalRLoggerOptions();
         configure?.Invoke(options);
 
-        builder.Services.AddSingleton<ILoggerProvider>(serviceProvider =>
-        {
-            var hubContext = serviceProvider.GetRequiredService<
-                IHubContext<LoggerHub, ILoggerHub>
-            >();
-            return new SignalRLoggerProvider(hubContext, options, null);
-        });
+        builder.Services.AddSingleton<ILoggerProvider>(serviceProvider => new SignalRLoggerProvider(
+            options,
+            null
+        ));
 
         return builder;
     }
@@ -43,13 +40,10 @@ public static class SignalRLoggerExtensions
         var options = new SignalRLoggerOptions();
         configure?.Invoke(options);
 
-        builder.Services.AddSingleton<ILoggerProvider>(serviceProvider =>
-        {
-            var hubContext = serviceProvider.GetRequiredService<
-                IHubContext<LoggerHub, ILoggerHub>
-            >();
-            return new SignalRLoggerProvider(hubContext, options, filter);
-        });
+        builder.Services.AddSingleton<ILoggerProvider>(serviceProvider => new SignalRLoggerProvider(
+            options,
+            filter
+        ));
 
         return builder;
     }
