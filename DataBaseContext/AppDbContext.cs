@@ -1,5 +1,4 @@
 ﻿using MARS.Server.ApplicationState;
-using MARS.Server.CustomLoggers.DatabaseLogger;
 using MARS.Server.Services._365Genius.Entitys;
 using MARS.Server.Services.Framedata.Entitys;
 using MARS.Server.Services.Framedata.Entitys.Pending;

@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using BooruSharp.Booru;
 using MARS.Server.CustomLoggers.DatabaseLogger;
+using MARS.Server.CustomLoggers.SignalRLogger;
 using MARS.Server.CustomLoggers.TelegramLogger;
 using MARS.Server.Services._365Genius;
 using MARS.Server.Services.CinemaQueue;
@@ -134,6 +135,26 @@ public static class Program
                         ? LogLevel.Warning
                         : LogLevel.Information,
                 };
+            });
+
+            // Добавляем SignalR логгер
+            loggingBuilder.AddSignalRLogger(options =>
+            {
+                options.MinimumLogLevel = builder.Environment.IsProduction()
+                    ? LogLevel.Warning
+                    : LogLevel.Information;
+                options.SourceName = "MARS.Server";
+                options.IncludeExceptions = true;
+                options.IncludeStackTrace = true;
+                options.MaxMessageLength = 2000;
+
+                // Исключаем некоторые категории для уменьшения шума
+                options.ExcludedCategories =
+                [
+                    "Microsoft.AspNetCore.Hosting.Diagnostics",
+                    "Microsoft.AspNetCore.Routing.EndpointMiddleware",
+                    "Microsoft.AspNetCore.StaticFiles.StaticFileMiddleware",
+                ];
             });
         });
 
@@ -286,6 +307,7 @@ public static class Program
         app.MapHub<TunaHub>("/hubs/tuna");
         //app.MapHub<SoundBarHub>("/hubs/soundbar");
         app.MapHub<ScoreboardHub>("/hubs/scoreboard");
+        app.MapHub<LoggerHub>("/hubs/logger");
         if (IsUseSoundRequest)
         {
             app.MapHub<SoundRequestHub>("/hubs/soundrequest");

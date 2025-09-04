@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Text;
 using MARS.Server.Services.DatabaseBackup.Models;
 using MARS.Server.Services.MemoryStorageService;
 
@@ -49,10 +50,11 @@ public class DatabaseBackupService(
                     CreateNoWindow = true,
                 };
 
-                using var process = new Process { StartInfo = processStartInfo };
+                using var process = new Process();
+                process.StartInfo = processStartInfo;
 
-                var output = new System.Text.StringBuilder();
-                var error = new System.Text.StringBuilder();
+                var output = new StringBuilder();
+                var error = new StringBuilder();
 
                 process.OutputDataReceived += (sender, e) =>
                 {
