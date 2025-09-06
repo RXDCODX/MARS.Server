@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Reflection;
 using BooruSharp.Booru;
 using MARS.Server.CustomLoggers.DatabaseLogger;
 using MARS.Server.CustomLoggers.SignalRLogger;
@@ -36,7 +37,9 @@ public static class Program
 
     public static async Task Main(string[] args)
     {
-        var builder = WebApplication.CreateBuilder(args);
+        var builder = WebApplication.CreateBuilder(
+            new WebApplicationOptions() { Args = args }
+        );
 
         var services = builder.Services;
         var configuration = builder.Configuration;
@@ -277,6 +280,7 @@ public static class Program
             return new LoggerDbContext(options.Options);
         });
         services.AddScoped<ILogsService, LogsService>();
+        services.AddMvc();
 
         builder.AddStaticFilesBrowserOptions();
 

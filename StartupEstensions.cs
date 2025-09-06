@@ -362,13 +362,6 @@ public static class StartupEstensions
         services.AddEndpointsApiExplorer();
         services.AddSwaggerGen(options =>
         {
-            // Two separate documents served by Swashbuckle
-            options.SwaggerDoc("api", new OpenApiInfo { Version = "v1", Title = "Telegramus API" });
-            options.SwaggerDoc(
-                "hubs",
-                new OpenApiInfo { Version = "v1", Title = "Telegramus Hubs" }
-            );
-
             options.AddSignalRSwaggerGen();
             options.UseAllOfToExtendReferenceSchemas();
             options.SupportNonNullableReferenceTypes();
@@ -378,6 +371,10 @@ public static class StartupEstensions
             // Filters
             options.DocumentFilter<Mars.Server.Swagger.DotNetTypesDocumentFilter>();
             options.DocumentFilter<Mars.Server.Swagger.PathPartitionDocumentFilter>();
+
+            // Two separate documents served by Swashbuckle
+            options.SwaggerDoc("api", new OpenApiInfo { Title = "Telegramus API" });
+            options.SwaggerDoc("hubs", new OpenApiInfo { Title = "Telegramus Hubs" });
         });
 
         return services;

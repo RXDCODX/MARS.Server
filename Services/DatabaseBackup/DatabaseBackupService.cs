@@ -54,8 +54,9 @@ public class DatabaseBackupService(
             var backupFileName = $"backup_{databaseName}_{DateTime.Now:yyyyMMdd_HHmmss}.sql";
             var connectionParams = ParseConnectionString(connectionString);
 
-            // Создаем временный файл для pg_dump
-            var tempFilePath = Path.GetTempFileName();
+            // Получаем путь для сохранения резервных копий
+            var backupPath = await GetBackupPathAsync();
+            var tempFilePath = Path.Combine(backupPath, backupFileName);
 
             try
             {
@@ -114,29 +115,20 @@ public class DatabaseBackupService(
                 var downloadUrl = await MemoryStorage.AddFileAsync(backupFileName, backupContent);
 
                 logger.LogInformation(
-                    "Резервная копия создана успешно: {FileName}",
-                    backupFileName
+                    "Резервная копия создана успешно: {FileName} в {BackupPath}",
+                    backupFileName,
+                    backupPath
                 );
                 return downloadUrl;
             }
             finally
             {
-                // Удаляем временный файл
-                if (File.Exists(tempFilePath))
-                {
-                    try
-                    {
-                        File.Delete(tempFilePath);
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.LogWarning(
-                            ex,
-                            "Не удалось удалить временный файл: {TempFilePath}",
-                            tempFilePath
-                        );
-                    }
-                }
+                // Файл сохраняется в настраиваемой директории, поэтому не удаляем его
+                // Это позволяет пользователю иметь локальные копии резервных копий
+                logger.LogDebug(
+                    "Резервная копия сохранена в файловой системе: {FilePath}",
+                    tempFilePath
+                );
             }
         }
         catch (Exception ex)
@@ -155,13 +147,34 @@ public class DatabaseBackupService(
     /// </summary>
     public async Task<Stream> GetBackupFileAsync(string fileName)
     {
-        if (!MemoryStorage.FileExists(fileName))
+        // Сначала проверяем MemoryStorage
+        if (MemoryStorage.FileExists(fileName))
         {
-            throw new FileNotFoundException($"Файл резервной копии не найден: {fileName}");
+            var (stream, _) = await MemoryStorage.GetFileStreamWithContentTypeAsync(fileName);
+            return stream;
         }
 
-        var (stream, _) = await MemoryStorage.GetFileStreamWithContentTypeAsync(fileName);
-        return stream;
+        // Затем проверяем настраиваемую директорию
+        try
+        {
+            var backupPath = await GetBackupPathAsync();
+            var filePath = Path.Combine(backupPath, fileName);
+
+            if (File.Exists(filePath))
+            {
+                return new FileStream(filePath, FileMode.Open, FileAccess.Read);
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(
+                ex,
+                "Ошибка при получении файла из настраиваемой директории: {FileName}",
+                fileName
+            );
+        }
+
+        throw new FileNotFoundException($"Файл резервной копии не найден: {fileName}");
     }
 
     /// <summary>
@@ -171,13 +184,36 @@ public class DatabaseBackupService(
     {
         try
         {
-            var allFiles = await MemoryStorage.GetAllFileNamesAsync();
-            var backupFiles = allFiles
-                .Where(f => f.StartsWith("backup_") && f.EndsWith(".sql"))
-                .OrderByDescending(f => f)
-                .ToList();
+            var backupFiles = new List<string>();
 
-            return backupFiles;
+            // Получаем файлы из MemoryStorage
+            var memoryFiles = await MemoryStorage.GetAllFileNamesAsync();
+            var memoryBackupFiles = memoryFiles
+                .Where(f => f.StartsWith("backup_") && f.EndsWith(".sql"))
+                .ToList();
+            backupFiles.AddRange(memoryBackupFiles);
+
+            // Получаем файлы из настраиваемой директории
+            try
+            {
+                var backupPath = await GetBackupPathAsync();
+                if (Directory.Exists(backupPath))
+                {
+                    var fileSystemFiles = Directory
+                        .GetFiles(backupPath, "backup_*.sql")
+                        .Select(Path.GetFileName)
+                        .Where(f => f != null)
+                        .Cast<string>()
+                        .ToList();
+                    backupFiles.AddRange(fileSystemFiles);
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Ошибка при получении файлов из настраиваемой директории");
+            }
+
+            return backupFiles.Distinct().OrderByDescending(f => f).ToList();
         }
         catch (Exception ex)
         {
@@ -201,9 +237,41 @@ public class DatabaseBackupService(
             {
                 try
                 {
-                    await MemoryStorage.DeleteFileAsync(fileName);
-                    deletedCount++;
-                    logger.LogInformation("Удалена старая резервная копия: {FileName}", fileName);
+                    // Удаляем из MemoryStorage
+                    if (MemoryStorage.FileExists(fileName))
+                    {
+                        await MemoryStorage.DeleteFileAsync(fileName);
+                        deletedCount++;
+                        logger.LogInformation(
+                            "Удалена старая резервная копия из MemoryStorage: {FileName}",
+                            fileName
+                        );
+                    }
+
+                    // Удаляем из настраиваемой директории
+                    try
+                    {
+                        var backupPath = await GetBackupPathAsync();
+                        var filePath = Path.Combine(backupPath, fileName);
+
+                        if (File.Exists(filePath))
+                        {
+                            File.Delete(filePath);
+                            deletedCount++;
+                            logger.LogInformation(
+                                "Удалена старая резервная копия из файловой системы: {FileName}",
+                                fileName
+                            );
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogWarning(
+                            ex,
+                            "Не удалось удалить файл из настраиваемой директории: {FileName}",
+                            fileName
+                        );
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -227,14 +295,48 @@ public class DatabaseBackupService(
     {
         try
         {
-            if (!MemoryStorage.FileExists(fileName))
+            Stream? stream = null;
+            var contentType = "application/sql";
+            long fileSize = 0;
+
+            // Сначала проверяем MemoryStorage
+            if (MemoryStorage.FileExists(fileName))
+            {
+                var (memoryStream, memoryContentType) =
+                    await MemoryStorage.GetFileStreamWithContentTypeAsync(fileName);
+                stream = memoryStream;
+                contentType = memoryContentType;
+                fileSize = stream.Length;
+            }
+            else
+            {
+                // Проверяем настраиваемую директорию
+                try
+                {
+                    var backupPath = await GetBackupPathAsync();
+                    var filePath = Path.Combine(backupPath, fileName);
+
+                    if (File.Exists(filePath))
+                    {
+                        var fileInfo = new FileInfo(filePath);
+                        fileSize = fileInfo.Length;
+                        stream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(
+                        ex,
+                        "Ошибка при получении информации о файле из настраиваемой директории: {FileName}",
+                        fileName
+                    );
+                }
+            }
+
+            if (stream == null)
             {
                 return null;
             }
-
-            var (stream, contentType) = await MemoryStorage.GetFileStreamWithContentTypeAsync(
-                fileName
-            );
 
             // Парсим имя файла для получения информации
             var parts = fileName.Split('_');
@@ -258,7 +360,7 @@ public class DatabaseBackupService(
                         FileName = fileName,
                         DatabaseName = databaseName,
                         Created = created,
-                        Size = stream.Length,
+                        Size = fileSize,
                         ContentType = contentType,
                     };
                 }
@@ -269,7 +371,7 @@ public class DatabaseBackupService(
                 FileName = fileName,
                 DatabaseName = "unknown",
                 Created = DateTime.Now,
-                Size = stream.Length,
+                Size = fileSize,
                 ContentType = contentType,
             };
         }
@@ -278,6 +380,41 @@ public class DatabaseBackupService(
             logger.LogError(ex, "Ошибка при получении информации о файле {FileName}", fileName);
             return null;
         }
+    }
+
+    /// <summary>
+    /// Получает путь для сохранения резервных копий
+    /// </summary>
+    private async Task<string> GetBackupPathAsync()
+    {
+        try
+        {
+            var pgDumpSettings = await pgDumpSettingsService.GetActiveSettingsAsync();
+            if (!string.IsNullOrEmpty(pgDumpSettings?.BackupPath))
+            {
+                // Проверяем, что директория существует или создаем её
+                var backupPath = pgDumpSettings.BackupPath.Trim();
+                if (!Directory.Exists(backupPath))
+                {
+                    Directory.CreateDirectory(backupPath);
+                    logger.LogInformation(
+                        "Создана директория для резервных копий: {BackupPath}",
+                        backupPath
+                    );
+                }
+                return backupPath;
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(
+                ex,
+                "Ошибка при получении пути для резервных копий, используется временная директория"
+            );
+        }
+
+        // Возвращаем временную директорию по умолчанию
+        return Path.GetTempPath();
     }
 
     /// <summary>

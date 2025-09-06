@@ -17,4 +17,10 @@ public class UpdatePgDumpSettingsRequest
     /// </summary>
     [StringLength(1000, ErrorMessage = "Комментарий не может превышать 1000 символов")]
     public string? Comment { get; set; }
+
+    /// <summary>
+    /// Путь для сохранения резервных копий по умолчанию
+    /// </summary>
+    [StringLength(500, ErrorMessage = "Путь для сохранения не может превышать 500 символов")]
+    public string? BackupPath { get; set; }
 }

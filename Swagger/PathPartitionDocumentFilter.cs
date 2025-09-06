@@ -15,9 +15,9 @@ public sealed class PathPartitionDocumentFilter : IDocumentFilter
 
         var title = swaggerDoc.Info.Title ?? string.Empty;
         var isApiDoc =
-            title.Contains("API", StringComparison.OrdinalIgnoreCase)
-            && !title.Contains("Hub", StringComparison.OrdinalIgnoreCase);
-        var isHubsDoc = title.Contains("Hub", StringComparison.OrdinalIgnoreCase);
+            title.Contains("api", StringComparison.OrdinalIgnoreCase)
+            && !title.Contains("hubs", StringComparison.OrdinalIgnoreCase);
+        var isHubsDoc = title.Contains("hub", StringComparison.OrdinalIgnoreCase);
 
         if (!isApiDoc && !isHubsDoc)
         {
@@ -92,12 +92,12 @@ public sealed class PathPartitionDocumentFilter : IDocumentFilter
 
         bool IsHubPath(string path)
         {
-            return path.StartsWith("/hubs/");
+            return path.StartsWith("/hubs/", StringComparison.OrdinalIgnoreCase);
         }
 
         bool IsHubTag(string name)
         {
-            return name.EndsWith("Hub");
+            return name.EndsWith("hub", StringComparison.OrdinalIgnoreCase);
         }
 
         HashSet<string> CollectReferencedSchemas(OpenApiDocument doc)

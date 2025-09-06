@@ -34,6 +34,12 @@ public class PgDumpSettings
     public string? Comment { get; set; }
 
     /// <summary>
+    /// Путь для сохранения резервных копий по умолчанию
+    /// </summary>
+    [StringLength(500, ErrorMessage = "Путь для сохранения не может превышать 500 символов")]
+    public string? BackupPath { get; set; }
+
+    /// <summary>
     /// Флаг активности настроек (только одна запись может быть активной)
     /// </summary>
     public bool IsActive { get; set; } = true;

@@ -60,6 +60,7 @@ public class PgDumpSettingsService(
             {
                 PgDumpPath = request.PgDumpPath.Trim(),
                 Comment = request.Comment?.Trim(),
+                BackupPath = request.BackupPath?.Trim(),
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
