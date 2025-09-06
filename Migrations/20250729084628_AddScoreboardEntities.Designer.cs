@@ -9,7 +9,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace Telegramus.Migrations
+namespace MARS.Server.Migrations
 {
     [DbContext(typeof(AppDbContext))]
     [Migration("20250729084628_AddScoreboardEntities")]

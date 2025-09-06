@@ -1,6 +1,6 @@
 ﻿using MARS.Server.ApplicationState;
 using MARS.Server.Services._365Genius.Entitys;
-using MARS.Server.Services.DatabaseBackup.Models;
+using MARS.Server.Services.DatabaseBackup.Entitys;
 using MARS.Server.Services.Framedata.Entitys;
 using MARS.Server.Services.Framedata.Entitys.Pending;
 using MARS.Server.Services.Honkai.Entitys;
@@ -14,6 +14,7 @@ using MARS.Server.Services.Twitch.HelloVideos.Entitys;
 using MARS.Server.Services.Twitch.Management.Entitys;
 using MARS.Server.Services.Twitch.MiniGamesStats.Entitys;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using WaifuRollGuarantee = MARS.Server.Services.WaifuRoll.Entitys.WaifuRollGuarantee;
 
 namespace MARS.Server.DataBaseContext;
 

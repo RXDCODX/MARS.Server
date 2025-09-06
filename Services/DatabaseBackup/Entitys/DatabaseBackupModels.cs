@@ -1,4 +1,4 @@
-﻿namespace MARS.Server.Services.DatabaseBackup.Models;
+﻿namespace MARS.Server.Services.DatabaseBackup.Entitys;
 
 /// <summary>
 /// Модель для создания резервной копии

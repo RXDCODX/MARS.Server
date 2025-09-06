@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Text;
-using MARS.Server.Services.DatabaseBackup.Models;
+using MARS.Server.Services.DatabaseBackup.Entitys;
 using MARS.Server.Services.MemoryStorageService;
 
 namespace MARS.Server.Services.DatabaseBackup;
@@ -14,7 +14,6 @@ public class DatabaseBackupService(
     IPgDumpSettingsService pgDumpSettingsService
 ) : IDatabaseBackupService
 {
-
     // Определяем путь к pg_dump
 
     /// <summary>
@@ -34,7 +33,9 @@ public class DatabaseBackupService(
             }
 
             // Валидируем путь к pg_dump
-            var validationInfo = await pgDumpSettingsService.ValidatePgDumpPathAsync(pgDumpSettings.PgDumpPath);
+            var validationInfo = await pgDumpSettingsService.ValidatePgDumpPathAsync(
+                pgDumpSettings.PgDumpPath
+            );
             if (!validationInfo.FileExists)
             {
                 throw new InvalidOperationException(
@@ -358,5 +359,4 @@ public class DatabaseBackupService(
 
         return string.Join(" ", arguments);
     }
-
 }

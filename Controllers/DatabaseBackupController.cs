@@ -1,5 +1,5 @@
 ﻿using MARS.Server.Services.DatabaseBackup;
-using MARS.Server.Services.DatabaseBackup.Models;
+using MARS.Server.Services.DatabaseBackup.Entitys;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MARS.Server.Controllers;

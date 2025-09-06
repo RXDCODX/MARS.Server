@@ -1,4 +1,4 @@
-﻿using MARS.Server.Services.DatabaseBackup.Models;
+﻿using MARS.Server.Services.DatabaseBackup.Entitys;
 
 namespace MARS.Server.Services.DatabaseBackup;
 

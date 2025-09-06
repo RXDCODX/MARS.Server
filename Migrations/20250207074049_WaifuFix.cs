@@ -2,7 +2,7 @@
 
 #nullable disable
 
-namespace Telegramus.Migrations;
+namespace MARS.Server.Migrations;
 
 /// <inheritdoc />
 public partial class WaifuFix : Migration

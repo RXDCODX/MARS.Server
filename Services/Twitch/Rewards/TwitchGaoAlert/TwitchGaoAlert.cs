@@ -56,17 +56,28 @@ public class TwitchGaoAlert(
                     if (!isJustText)
                     {
                         text = text.StartsWith('@') ? text.Substring(1) : text;
-                        var twitchUser = await api.Helix.Users.GetUsersAsync(null, [text]);
-                        if (twitchUser is { Users.Length: > 0 })
+                        try
                         {
-                            var user = twitchUser.Users.First();
-                            gaoAlert = new GaoAlertDto() { TwitchUser = user, IsJustText = false };
-                            await hubContext.Clients.All.GaoAlert(gaoAlert);
-                            logger.LogInformation(
-                                "Gao alert with user {userName}",
-                                user.DisplayName
-                            );
-                            return;
+                            var twitchUser = await api.Helix.Users.GetUsersAsync(null, [text]);
+                            if (twitchUser is { Users.Length: > 0 })
+                            {
+                                var user = twitchUser.Users.First();
+                                gaoAlert = new GaoAlertDto()
+                                {
+                                    TwitchUser = user,
+                                    IsJustText = false,
+                                };
+                                await hubContext.Clients.All.GaoAlert(gaoAlert);
+                                logger.LogInformation(
+                                    "Gao alert with user {userName}",
+                                    user.DisplayName
+                                );
+                                return;
+                            }
+                        }
+                        catch
+                        {
+                            //ignored
                         }
                     }
 

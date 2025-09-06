@@ -1,7 +1,7 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Text;
 using MARS.Server.DataBaseContext;
-using MARS.Server.Services.DatabaseBackup.Models;
+using MARS.Server.Services.DatabaseBackup.Entitys;
 using Microsoft.EntityFrameworkCore;
 
 namespace MARS.Server.Services.DatabaseBackup;
@@ -22,10 +22,9 @@ public class PgDumpSettingsService(
         try
         {
             await using var dbContext = await dbContextFactory.CreateDbContextAsync();
-            
+
             return await dbContext
-                .PgDumpSettings
-                .Where(s => s.IsActive)
+                .PgDumpSettings.Where(s => s.IsActive)
                 .OrderByDescending(s => s.UpdatedAt)
                 .FirstOrDefaultAsync();
         }
@@ -44,13 +43,12 @@ public class PgDumpSettingsService(
         try
         {
             await using var dbContext = await dbContextFactory.CreateDbContextAsync();
-            
+
             // Деактивируем все существующие настройки
             var existingSettings = await dbContext
-                .PgDumpSettings
-                .Where(s => s.IsActive)
+                .PgDumpSettings.Where(s => s.IsActive)
                 .ToListAsync();
-            
+
             foreach (var setting in existingSettings)
             {
                 setting.IsActive = false;
@@ -64,7 +62,7 @@ public class PgDumpSettingsService(
                 Comment = request.Comment?.Trim(),
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
+                UpdatedAt = DateTime.UtcNow,
             };
 
             dbContext.PgDumpSettings.Add(newSettings);
@@ -89,10 +87,7 @@ public class PgDumpSettingsService(
     /// </summary>
     public async Task<PgDumpValidationInfo> ValidatePgDumpPathAsync(string pgDumpPath)
     {
-        var validationInfo = new PgDumpValidationInfo
-        {
-            LastChecked = DateTime.UtcNow
-        };
+        var validationInfo = new PgDumpValidationInfo { LastChecked = DateTime.UtcNow };
 
         try
         {
@@ -165,7 +160,11 @@ public class PgDumpSettingsService(
             catch (Exception ex)
             {
                 validationInfo.Message = $"Ошибка при проверке версии pg_dump: {ex.Message}";
-                logger.LogWarning(ex, "Ошибка при проверке версии pg_dump: {PgDumpPath}", pgDumpPath);
+                logger.LogWarning(
+                    ex,
+                    "Ошибка при проверке версии pg_dump: {PgDumpPath}",
+                    pgDumpPath
+                );
             }
         }
         catch (Exception ex)
@@ -185,11 +184,8 @@ public class PgDumpSettingsService(
         try
         {
             await using var dbContext = await dbContextFactory.CreateDbContextAsync();
-            
-            return await dbContext
-                .PgDumpSettings
-                .OrderByDescending(s => s.UpdatedAt)
-                .ToListAsync();
+
+            return await dbContext.PgDumpSettings.OrderByDescending(s => s.UpdatedAt).ToListAsync();
         }
         catch (Exception ex)
         {

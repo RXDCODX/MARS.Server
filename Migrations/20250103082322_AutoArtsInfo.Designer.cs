@@ -8,7 +8,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace Telegramus.Migrations
+namespace MARS.Server.Migrations
 {
     [DbContext(typeof(AppDbContext))]
     [Migration("20250103082322_AutoArtsInfo")]
@@ -24,7 +24,7 @@ namespace Telegramus.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("Telegramus.DataBaseContext.Log", b =>
+            modelBuilder.Entity("MARS.Server.DataBaseContext.Log", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -45,7 +45,7 @@ namespace Telegramus.Migrations
                     b.ToTable("Logs");
                 });
 
-            modelBuilder.Entity("Telegramus.Services.AutoArts.Entitys.AutoArtInfo", b =>
+            modelBuilder.Entity("MARS.Server.Services.AutoArts.Entitys.AutoArtInfo", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -62,7 +62,7 @@ namespace Telegramus.Migrations
                     b.ToTable("AutoArtsInfo");
                 });
 
-            modelBuilder.Entity("Telegramus.Services.PyroAlerts.Entitys.MediaInfo", b =>
+            modelBuilder.Entity("MARS.Server.Services.PyroAlerts.Entitys.MediaInfo", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -73,7 +73,7 @@ namespace Telegramus.Migrations
                     b.ToTable("Alerts");
                 });
 
-            modelBuilder.Entity("Telegramus.Services.RandomMem.Entity.VideoOrder", b =>
+            modelBuilder.Entity("MARS.Server.Services.RandomMem.Entity.VideoOrder", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -94,7 +94,7 @@ namespace Telegramus.Migrations
                     b.ToTable("RandomMemeOrder");
                 });
 
-            modelBuilder.Entity("Telegramus.Services.Resender.Entitys.CrossChat.CrossChatLinks", b =>
+            modelBuilder.Entity("MARS.Server.Services.Resender.Entitys.CrossChat.CrossChatLinks", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -114,7 +114,7 @@ namespace Telegramus.Migrations
                     b.ToTable("ResendLinks");
                 });
 
-            modelBuilder.Entity("Telegramus.Services.Resender.Entitys.CrossChat.CrossChatReply", b =>
+            modelBuilder.Entity("MARS.Server.Services.Resender.Entitys.CrossChat.CrossChatReply", b =>
                 {
                     b.Property<Guid>("Guid")
                         .ValueGeneratedOnAdd()
@@ -134,7 +134,7 @@ namespace Telegramus.Migrations
                     b.ToTable("Replies");
                 });
 
-            modelBuilder.Entity("Telegramus.Services.TelegramBotService.Entitys.TelegramUser", b =>
+            modelBuilder.Entity("MARS.Server.Services.TelegramBotService.Entitys.TelegramUser", b =>
                 {
                     b.Property<long>("UserId")
                         .HasColumnType("bigint");
@@ -171,7 +171,7 @@ namespace Telegramus.Migrations
                     b.ToTable("TelegramUsers");
                 });
 
-            modelBuilder.Entity("Telegramus.Services.Twitch.ClientMessages.AutoMessages.Entitys.AutoMessage", b =>
+            modelBuilder.Entity("MARS.Server.Services.Twitch.ClientMessages.AutoMessages.Entitys.AutoMessage", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -186,7 +186,7 @@ namespace Telegramus.Migrations
                     b.ToTable("AutoMessages");
                 });
 
-            modelBuilder.Entity("Telegramus.Services.Twitch.ClipsReUploader.Entitys.VideoFromTwitchClip", b =>
+            modelBuilder.Entity("MARS.Server.Services.Twitch.ClipsReUploader.Entitys.VideoFromTwitchClip", b =>
                 {
                     b.Property<string>("Id")
                         .HasColumnType("text");
@@ -250,7 +250,7 @@ namespace Telegramus.Migrations
                     b.ToTable("Clips");
                 });
 
-            modelBuilder.Entity("Telegramus.Services.Twitch.FumoFriday.Entitys.FumoUser", b =>
+            modelBuilder.Entity("MARS.Server.Services.Twitch.FumoFriday.Entitys.FumoUser", b =>
                 {
                     b.Property<string>("TwitchId")
                         .HasColumnType("text");
@@ -266,7 +266,7 @@ namespace Telegramus.Migrations
                     b.ToTable("FumoUsers");
                 });
 
-            modelBuilder.Entity("Telegramus.Services.Twitch.HelloVideos.Entitys.HelloVideosUsers", b =>
+            modelBuilder.Entity("MARS.Server.Services.Twitch.HelloVideos.Entitys.HelloVideosUsers", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -296,7 +296,7 @@ namespace Telegramus.Migrations
                     b.ToTable("HelloVideosUsers");
                 });
 
-            modelBuilder.Entity("Telegramus.Services.Twitch.TokenInfo", b =>
+            modelBuilder.Entity("MARS.Server.Services.Twitch.TokenInfo", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -321,7 +321,7 @@ namespace Telegramus.Migrations
                     b.ToTable("TwitchToken");
                 });
 
-            modelBuilder.Entity("Telegramus.Services.WaifuRoll.Entitys.Host", b =>
+            modelBuilder.Entity("MARS.Server.Services.WaifuRoll.Entitys.Host", b =>
                 {
                     b.Property<string>("TwitchId")
                         .HasColumnType("text");
@@ -354,7 +354,7 @@ namespace Telegramus.Migrations
                     b.UseTpcMappingStrategy();
                 });
 
-            modelBuilder.Entity("Telegramus.Services.WaifuRoll.Entitys.HostAutoHello", b =>
+            modelBuilder.Entity("MARS.Server.Services.WaifuRoll.Entitys.HostAutoHello", b =>
                 {
                     b.Property<Guid>("Guid")
                         .ValueGeneratedOnAdd()
@@ -375,7 +375,7 @@ namespace Telegramus.Migrations
                     b.ToTable("AutoHello");
                 });
 
-            modelBuilder.Entity("Telegramus.Services.WaifuRoll.Entitys.HostCoolDown", b =>
+            modelBuilder.Entity("MARS.Server.Services.WaifuRoll.Entitys.HostCoolDown", b =>
                 {
                     b.Property<Guid>("Guid")
                         .ValueGeneratedOnAdd()
@@ -396,7 +396,7 @@ namespace Telegramus.Migrations
                     b.ToTable("CD");
                 });
 
-            modelBuilder.Entity("Telegramus.Services.WaifuRoll.Entitys.Waifu", b =>
+            modelBuilder.Entity("MARS.Server.Services.WaifuRoll.Entitys.Waifu", b =>
                 {
                     b.Property<string>("ShikiId")
                         .HasColumnType("text");
@@ -433,7 +433,7 @@ namespace Telegramus.Migrations
                     b.ToTable("Waifus");
                 });
 
-            modelBuilder.Entity("Telegramus.Services._365.Entitys.Video365", b =>
+            modelBuilder.Entity("MARS.Server.Services._365.Entitys.Video365", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -476,7 +476,7 @@ namespace Telegramus.Migrations
                     b.ToTable("Videos365");
                 });
 
-            modelBuilder.Entity("Telegramus.Services.kuropaw.Entity.TwitchChannelInspector", b =>
+            modelBuilder.Entity("MARS.Server.Services.kuropaw.Entity.TwitchChannelInspector", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -490,9 +490,9 @@ namespace Telegramus.Migrations
                     b.ToTable("TwitchChannelInspectors");
                 });
 
-            modelBuilder.Entity("Telegramus.Services.PyroAlerts.Entitys.MediaInfo", b =>
+            modelBuilder.Entity("MARS.Server.Services.PyroAlerts.Entitys.MediaInfo", b =>
                 {
-                    b.OwnsOne("Telegramus.Services.PyroAlerts.Entitys.MediaFileInfo", "FileInfo", b1 =>
+                    b.OwnsOne("MARS.Server.Services.PyroAlerts.Entitys.MediaFileInfo", "FileInfo", b1 =>
                         {
                             b1.Property<Guid>("MediaInfoId")
                                 .HasColumnType("uuid");
@@ -525,7 +525,7 @@ namespace Telegramus.Migrations
                                 .HasForeignKey("MediaInfoId");
                         });
 
-                    b.OwnsOne("Telegramus.Services.PyroAlerts.Entitys.MediaMetaInfo", "MetaInfo", b1 =>
+                    b.OwnsOne("MARS.Server.Services.PyroAlerts.Entitys.MediaMetaInfo", "MetaInfo", b1 =>
                         {
                             b1.Property<Guid>("MediaInfoId")
                                 .HasColumnType("uuid");
@@ -559,7 +559,7 @@ namespace Telegramus.Migrations
                                 .HasForeignKey("MediaInfoId");
                         });
 
-                    b.OwnsOne("Telegramus.Services.PyroAlerts.Entitys.MediaPositionInfo", "PositionInfo", b1 =>
+                    b.OwnsOne("MARS.Server.Services.PyroAlerts.Entitys.MediaPositionInfo", "PositionInfo", b1 =>
                         {
                             b1.Property<Guid>("MediaInfoId")
                                 .HasColumnType("uuid");
@@ -616,7 +616,7 @@ namespace Telegramus.Migrations
                                 .HasForeignKey("MediaInfoId");
                         });
 
-                    b.OwnsOne("Telegramus.Services.PyroAlerts.Entitys.MediaStylesInfo", "StylesInfo", b1 =>
+                    b.OwnsOne("MARS.Server.Services.PyroAlerts.Entitys.MediaStylesInfo", "StylesInfo", b1 =>
                         {
                             b1.Property<Guid>("MediaInfoId")
                                 .HasColumnType("uuid");
@@ -633,7 +633,7 @@ namespace Telegramus.Migrations
                                 .HasForeignKey("MediaInfoId");
                         });
 
-                    b.OwnsOne("Telegramus.Services.PyroAlerts.Entitys.MediaTextInfo", "TextInfo", b1 =>
+                    b.OwnsOne("MARS.Server.Services.PyroAlerts.Entitys.MediaTextInfo", "TextInfo", b1 =>
                         {
                             b1.Property<Guid>("MediaInfoId")
                                 .HasColumnType("uuid");
@@ -678,29 +678,29 @@ namespace Telegramus.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Telegramus.Services.WaifuRoll.Entitys.HostAutoHello", b =>
+            modelBuilder.Entity("MARS.Server.Services.WaifuRoll.Entitys.HostAutoHello", b =>
                 {
-                    b.HasOne("Telegramus.Services.WaifuRoll.Entitys.Host", "Host")
+                    b.HasOne("MARS.Server.Services.WaifuRoll.Entitys.Host", "Host")
                         .WithOne("HostGreetings")
-                        .HasForeignKey("Telegramus.Services.WaifuRoll.Entitys.HostAutoHello", "HostId")
+                        .HasForeignKey("MARS.Server.Services.WaifuRoll.Entitys.HostAutoHello", "HostId")
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("Host");
                 });
 
-            modelBuilder.Entity("Telegramus.Services.WaifuRoll.Entitys.HostCoolDown", b =>
+            modelBuilder.Entity("MARS.Server.Services.WaifuRoll.Entitys.HostCoolDown", b =>
                 {
-                    b.HasOne("Telegramus.Services.WaifuRoll.Entitys.Host", "Host")
+                    b.HasOne("MARS.Server.Services.WaifuRoll.Entitys.Host", "Host")
                         .WithOne("HostCoolDown")
-                        .HasForeignKey("Telegramus.Services.WaifuRoll.Entitys.HostCoolDown", "HostId")
+                        .HasForeignKey("MARS.Server.Services.WaifuRoll.Entitys.HostCoolDown", "HostId")
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("Host");
                 });
 
-            modelBuilder.Entity("Telegramus.Services.WaifuRoll.Entitys.Host", b =>
+            modelBuilder.Entity("MARS.Server.Services.WaifuRoll.Entitys.Host", b =>
                 {
                     b.Navigation("HostCoolDown")
                         .IsRequired();
