@@ -70,6 +70,16 @@ public class DatabaseBackupService(
                     CreateNoWindow = true,
                 };
 
+                // Устанавливаем переменную окружения PGPASSWORD, если пароль есть в строке подключения
+                if ((connectionParams.TryGetValue("Password", out var password) && !string.IsNullOrEmpty(password)) ||
+                    (connectionParams.TryGetValue("Pwd", out password) && !string.IsNullOrEmpty(password)))
+                {
+                    processStartInfo.EnvironmentVariables["PGPASSWORD"] = password;
+                }
+
+                // Логируем аргументы для отладки (без пароля)
+                logger.LogDebug("Выполняется pg_dump с аргументами: {Arguments}", processStartInfo.Arguments);
+
                 using var process = new Process();
                 process.StartInfo = processStartInfo;
 
@@ -100,9 +110,10 @@ public class DatabaseBackupService(
 
                 if (process.ExitCode != 0)
                 {
-                    var errorMessage = $"Ошибка при создании резервной копии: {error}";
+                    var errorMessage = $"Ошибка при создании резервной копии (код выхода: {process.ExitCode}): {error}";
                     logger.LogError(
-                        "Ошибка при создании резервной копии: {Error}",
+                        "Ошибка при создании резервной копии (код выхода: {ExitCode}): {Error}",
+                        process.ExitCode,
                         error.ToString()
                     );
                     throw new InvalidOperationException(errorMessage);
@@ -115,8 +126,9 @@ public class DatabaseBackupService(
                 var downloadUrl = await MemoryStorage.AddFileAsync(backupFileName, backupContent);
 
                 logger.LogInformation(
-                    "Резервная копия создана успешно: {FileName} в {BackupPath}",
+                    "Резервная копия создана успешно: {FileName} (размер: {Size} байт) в {BackupPath}",
                     backupFileName,
+                    backupContent.Length,
                     backupPath
                 );
                 return downloadUrl;
@@ -467,7 +479,8 @@ public class DatabaseBackupService(
         var arguments = new List<string>();
 
         // Параметры подключения
-        if (connectionParams.TryGetValue("Host", out var host))
+        if (connectionParams.TryGetValue("Host", out var host) || 
+            connectionParams.TryGetValue("Server", out host))
         {
             arguments.Add($"-h {host}");
         }
@@ -477,22 +490,37 @@ public class DatabaseBackupService(
             arguments.Add($"-p {port}");
         }
 
-        if (connectionParams.TryGetValue("Database", out var database))
+        if (connectionParams.TryGetValue("Database", out var database) ||
+            connectionParams.TryGetValue("Initial Catalog", out database))
         {
             arguments.Add($"-d {database}");
         }
 
-        if (connectionParams.TryGetValue("User ID", out var userId))
+        if (connectionParams.TryGetValue("User ID", out var userId) || 
+            connectionParams.TryGetValue("Username", out userId) ||
+            connectionParams.TryGetValue("User", out userId) ||
+            connectionParams.TryGetValue("Uid", out userId))
         {
             arguments.Add($"-U {userId}");
         }
 
-        // Параметры вывода
-        arguments.Add($"-f \"{outputPath}\"");
+        // Параметры вывода - используем правильный синтаксис для pg_dump
+        arguments.Add($"--file=\"{outputPath}\"");
 
         // Дополнительные параметры для лучшего качества резервной копии
         arguments.Add("--verbose");
-        arguments.Add("--no-password");
+        
+        // Если пароль есть в строке подключения, используем его, иначе не запрашиваем пароль
+        if ((connectionParams.ContainsKey("Password") && !string.IsNullOrEmpty(connectionParams["Password"])) ||
+            (connectionParams.ContainsKey("Pwd") && !string.IsNullOrEmpty(connectionParams["Pwd"])))
+        {
+            // Пароль будет передан через переменную окружения PGPASSWORD
+            // Это более безопасно, чем передавать пароль через аргументы командной строки
+        }
+        else
+        {
+            arguments.Add("--no-password");
+        }
 
         return string.Join(" ", arguments);
     }
