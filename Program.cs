@@ -7,7 +7,6 @@ using MARS.Server.CustomLoggers.TelegramLogger;
 using MARS.Server.Services._365Genius;
 using MARS.Server.Services.CinemaQueue;
 using MARS.Server.Services.CommandExecutor;
-using MARS.Server.Services.DatabaseBackup;
 using MARS.Server.Services.Honkai;
 using MARS.Server.Services.KeyboardHook;
 using MARS.Server.Services.Logs.Interfaces;
@@ -37,9 +36,7 @@ public static class Program
 
     public static async Task Main(string[] args)
     {
-        var builder = WebApplication.CreateBuilder(
-            new WebApplicationOptions() { Args = args }
-        );
+        var builder = WebApplication.CreateBuilder(new WebApplicationOptions() { Args = args });
 
         var services = builder.Services;
         var configuration = builder.Configuration;
@@ -252,9 +249,6 @@ public static class Program
 
         // Добавляем инициализатор базы данных
         services.AddDataBaseInitializer();
-
-        // Добавляем сервис резервного копирования базы данных
-        services.AddDatabaseBackupService();
 
         // Добавляем сервис перехвата клавиатуры
         services.AddKeyboardHookService();
