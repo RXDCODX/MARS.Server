@@ -71,14 +71,25 @@ public class DatabaseBackupService(
                 };
 
                 // Устанавливаем переменную окружения PGPASSWORD, если пароль есть в строке подключения
-                if ((connectionParams.TryGetValue("Password", out var password) && !string.IsNullOrEmpty(password)) ||
-                    (connectionParams.TryGetValue("Pwd", out password) && !string.IsNullOrEmpty(password)))
+                if (
+                    (
+                        connectionParams.TryGetValue("Password", out var password)
+                        && !string.IsNullOrEmpty(password)
+                    )
+                    || (
+                        connectionParams.TryGetValue("Pwd", out password)
+                        && !string.IsNullOrEmpty(password)
+                    )
+                )
                 {
                     processStartInfo.EnvironmentVariables["PGPASSWORD"] = password;
                 }
 
                 // Логируем аргументы для отладки (без пароля)
-                logger.LogDebug("Выполняется pg_dump с аргументами: {Arguments}", processStartInfo.Arguments);
+                logger.LogDebug(
+                    "Выполняется pg_dump с аргументами: {Arguments}",
+                    processStartInfo.Arguments
+                );
 
                 using var process = new Process();
                 process.StartInfo = processStartInfo;
@@ -110,7 +121,8 @@ public class DatabaseBackupService(
 
                 if (process.ExitCode != 0)
                 {
-                    var errorMessage = $"Ошибка при создании резервной копии (код выхода: {process.ExitCode}): {error}";
+                    var errorMessage =
+                        $"Ошибка при создании резервной копии (код выхода: {process.ExitCode}): {error}";
                     logger.LogError(
                         "Ошибка при создании резервной копии (код выхода: {ExitCode}): {Error}",
                         process.ExitCode,
@@ -123,6 +135,7 @@ public class DatabaseBackupService(
                 var backupContent = await File.ReadAllBytesAsync(tempFilePath);
 
                 // Добавляем файл в MemoryStorage
+                await File.WriteAllBytesAsync(backupPath, backupContent);
                 var downloadUrl = await MemoryStorage.AddFileAsync(backupFileName, backupContent);
 
                 logger.LogInformation(
@@ -479,8 +492,10 @@ public class DatabaseBackupService(
         var arguments = new List<string>();
 
         // Параметры подключения
-        if (connectionParams.TryGetValue("Host", out var host) || 
-            connectionParams.TryGetValue("Server", out host))
+        if (
+            connectionParams.TryGetValue("Host", out var host)
+            || connectionParams.TryGetValue("Server", out host)
+        )
         {
             arguments.Add($"-h {host}");
         }
@@ -490,16 +505,20 @@ public class DatabaseBackupService(
             arguments.Add($"-p {port}");
         }
 
-        if (connectionParams.TryGetValue("Database", out var database) ||
-            connectionParams.TryGetValue("Initial Catalog", out database))
+        if (
+            connectionParams.TryGetValue("Database", out var database)
+            || connectionParams.TryGetValue("Initial Catalog", out database)
+        )
         {
             arguments.Add($"-d {database}");
         }
 
-        if (connectionParams.TryGetValue("User ID", out var userId) || 
-            connectionParams.TryGetValue("Username", out userId) ||
-            connectionParams.TryGetValue("User", out userId) ||
-            connectionParams.TryGetValue("Uid", out userId))
+        if (
+            connectionParams.TryGetValue("User ID", out var userId)
+            || connectionParams.TryGetValue("Username", out userId)
+            || connectionParams.TryGetValue("User", out userId)
+            || connectionParams.TryGetValue("Uid", out userId)
+        )
         {
             arguments.Add($"-U {userId}");
         }
@@ -509,10 +528,18 @@ public class DatabaseBackupService(
 
         // Дополнительные параметры для лучшего качества резервной копии
         arguments.Add("--verbose");
-        
+
         // Если пароль есть в строке подключения, используем его, иначе не запрашиваем пароль
-        if ((connectionParams.ContainsKey("Password") && !string.IsNullOrEmpty(connectionParams["Password"])) ||
-            (connectionParams.ContainsKey("Pwd") && !string.IsNullOrEmpty(connectionParams["Pwd"])))
+        if (
+            (
+                connectionParams.ContainsKey("Password")
+                && !string.IsNullOrEmpty(connectionParams["Password"])
+            )
+            || (
+                connectionParams.ContainsKey("Pwd")
+                && !string.IsNullOrEmpty(connectionParams["Pwd"])
+            )
+        )
         {
             // Пароль будет передан через переменную окружения PGPASSWORD
             // Это более безопасно, чем передавать пароль через аргументы командной строки
