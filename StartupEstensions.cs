@@ -16,6 +16,7 @@ using MARS.Server.Services.Twitch.FumoFriday;
 using MARS.Server.Services.Twitch.HelloVideos;
 using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.Twitch.MiniGamesStats;
+using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
 using MARS.Server.Services.Twitch.Rewards.CloseGameReward;
 using MARS.Server.Services.Twitch.Rewards.MiniGames;
 using MARS.Server.Services.Twitch.Rewards.TwitchAdhdReward;
@@ -276,6 +277,10 @@ public static class StartupEstensions
 
         services.AddSingleton<TwitchNameActualizer>();
         services.AddHostedService(sp => sp.GetRequiredService<TwitchNameActualizer>());
+
+        services.AddSingleton<ChannelRewardsService>();
+        services.AddSingleton<AlertInitializationService>();
+        services.AddHostedService(sp => sp.GetRequiredService<AlertInitializationService>());
 
         services.AddSingleton<ServiceManager>();
         services.AddSingleton<IServiceManager>(sp => sp.GetRequiredService<ServiceManager>());

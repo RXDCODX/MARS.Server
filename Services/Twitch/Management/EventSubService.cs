@@ -29,7 +29,8 @@ public class EventSubService(
                 var result = await GetEventSubsAsync(token);
 
                 // Проверяем, есть ли активные подписки
-                var hasActiveSubscriptions = result != null
+                var hasActiveSubscriptions =
+                    result != null
                     && result.Subscriptions.Any(e =>
                         e.Status.Equals("enabled", StringComparison.OrdinalIgnoreCase)
                     );
