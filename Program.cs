@@ -25,7 +25,7 @@ using MARS.Server.Services.WaifuRoll.Entitys.Interfaces;
 using MARS.Server.Services.WaifuRoll.helpers;
 using WTelegram;
 
-namespace MARS.Server;
+namespace MARS.Server; 
 
 public class WTelegramClient(int item1, string item2, string item3) : Client(item1, item2, item3);
 
