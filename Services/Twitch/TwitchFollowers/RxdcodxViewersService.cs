@@ -1,4 +1,5 @@
 ﻿using MARS.Server.Services.Twitch.Management;
+using MARS.Server.Services.Twitch.TwitchFollowers.Entitys;
 using TwitchLib.Api.Helix.Models.Channels.GetChannelFollowers;
 using TwitchLib.Api.Helix.Models.Channels.GetChannelVIPs;
 using TwitchLib.Api.Helix.Models.Moderation.GetModerators;
@@ -11,8 +12,32 @@ namespace MARS.Server.Services.Twitch.TwitchFollowers;
 public class RxdcodxViewersService(ITwitchAPI api, TokenService tokenService)
     : IRxdcodxViewersService
 {
-    private const string ChannelId = "785975641"; // ID канала rxdcodx
-    private const string ChannelName = "rxdcodx";
+    private const string ChannelId = TwitchExstension.ChannelId; // ID канала rxdcodx
+    private const string ChannelName = TwitchExstension.Channel;
+
+    public async Task<ChannelUsersResult?> GetChannelUsersAsync()
+    {
+        var moderators = await GetModerators();
+        var vips = await GetAllViPs();
+        var followers = await GetAllFollowers();
+
+        if (moderators is not null && vips is not null && followers is { Count: > 0 })
+        {
+            return new ChannelUsersResult()
+            {
+                Followers = followers
+                    .Where(e =>
+                        moderators.All(t => t.UserId != e.UserId)
+                        && vips.All(t => t.UserId != e.UserId)
+                    )
+                    .ToList(),
+                Moderators = moderators,
+                ViPs = vips,
+            };
+        }
+
+        return null;
+    }
 
     /// <summary>
     /// Получить всех фоловеров канала rxdcodx

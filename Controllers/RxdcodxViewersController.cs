@@ -13,6 +13,21 @@ public class RxdcodxViewersController(
     ILogger<RxdcodxViewersController> logger
 ) : ControllerBase
 {
+    [HttpGet("all")]
+    public async Task<IActionResult> GetAll()
+    {
+        try
+        {
+            var followers = await viewersService.GetChannelUsersAsync();
+            return followers == null ? Unauthorized("Токен недоступен") : Ok(followers);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при получении фоловеров");
+            return StatusCode(500, "Внутренняя ошибка сервера");
+        }
+    }
+
     /// <summary>
     /// Получить всех фоловеров канала rxdcodx
     /// </summary>

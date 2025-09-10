@@ -8,7 +8,7 @@ public class CinemaQueueService(
     ILogger<CinemaQueueService> logger
 ) : ICinemaQueueService
 {
-    public async Task<IEnumerable<MediaItemDto>> GetAllMediaItemsAsync(
+    public async Task<IEnumerable<CinemaMediaItemDto>> GetAllMediaItemsAsync(
         CancellationToken cancellationToken = default
     )
     {
@@ -24,7 +24,7 @@ public class CinemaQueueService(
         }
     }
 
-    public async Task<MediaItemDto?> GetMediaItemByIdAsync(
+    public async Task<CinemaMediaItemDto?> GetMediaItemByIdAsync(
         Guid id,
         CancellationToken cancellationToken = default
     )
@@ -41,7 +41,7 @@ public class CinemaQueueService(
         }
     }
 
-    public async Task<MediaItemDto?> GetNextMediaItemAsync(
+    public async Task<CinemaMediaItemDto?> GetNextMediaItemAsync(
         CancellationToken cancellationToken = default
     )
     {
@@ -57,7 +57,7 @@ public class CinemaQueueService(
         }
     }
 
-    public async Task<IEnumerable<MediaItemDto>> GetMediaItemsByStatusAsync(
+    public async Task<IEnumerable<CinemaMediaItemDto>> GetMediaItemsByStatusAsync(
         MediaStatus status,
         CancellationToken cancellationToken = default
     )
@@ -74,14 +74,14 @@ public class CinemaQueueService(
         }
     }
 
-    public async Task<MediaItemDto> CreateMediaItemAsync(
+    public async Task<CinemaMediaItemDto> CreateMediaItemAsync(
         CreateMediaItemRequest request,
         CancellationToken cancellationToken = default
     )
     {
         try
         {
-            var mediaItem = new MediaItem
+            var mediaItem = new CinemaMediaItem
             {
                 Title = request.Title,
                 Description = request.Description,
@@ -114,7 +114,7 @@ public class CinemaQueueService(
         }
     }
 
-    public async Task<MediaItemDto?> UpdateMediaItemAsync(
+    public async Task<CinemaMediaItemDto?> UpdateMediaItemAsync(
         Guid id,
         UpdateMediaItemRequest request,
         CancellationToken cancellationToken = default
@@ -353,9 +353,9 @@ public class CinemaQueueService(
         }
     }
 
-    private static MediaItemDto MapToDto(MediaItem item)
+    private static CinemaMediaItemDto MapToDto(CinemaMediaItem item)
     {
-        return new MediaItemDto
+        return new CinemaMediaItemDto
         {
             Id = item.Id,
             Title = item.Title,

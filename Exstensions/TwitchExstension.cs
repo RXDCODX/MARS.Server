@@ -20,6 +20,7 @@ public static class TwitchExstension
         "aspirantd",
         "nightbot",
         "moobot",
+        "jeetbot",
     ];
 
     public static Task SendMessageToMainTwitchAsync<T>(

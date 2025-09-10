@@ -18,7 +18,12 @@ public class TwitchFramedate(
 
     public async void FrameDateMessage(object? sender, OnMessageReceivedArgs args)
     {
-        if (args.ChatMessage.Channel.Equals(TwitchExstension.Channel))
+        if (
+            args.ChatMessage.Channel.Equals(TwitchExstension.Channel)
+            && !TwitchExstension.BlackList.Any(t =>
+                t.Equals(args.ChatMessage.Username, StringComparison.OrdinalIgnoreCase)
+            )
+        )
         {
             var channel = args.ChatMessage.Channel;
 

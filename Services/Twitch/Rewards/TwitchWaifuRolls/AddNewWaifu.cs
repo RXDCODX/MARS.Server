@@ -51,7 +51,15 @@ public class AddNewWaifu(
             return;
         }
 
-        if (Guid.Parse(rewardId) == RewardGuid)
+        if (
+            Guid.Parse(rewardId) == RewardGuid
+            && !TwitchExstension.BlackList.Any(t =>
+                t.Equals(
+                    onMessageReceivedArgs.ChatMessage.Username,
+                    StringComparison.OrdinalIgnoreCase
+                )
+            )
+        )
         {
             await Task.Factory.StartNew(async () =>
             {

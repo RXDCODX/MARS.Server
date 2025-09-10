@@ -1,6 +1,6 @@
-namespace MARS.Server.Services.CinemaQueue.Entitys;
+﻿namespace MARS.Server.Services.CinemaQueue.Entitys;
 
-public class MediaItemDto
+public class CinemaMediaItemDto
 {
     public Guid Id { get; set; }
     public required string Title { get; set; }

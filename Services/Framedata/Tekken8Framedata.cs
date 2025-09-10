@@ -39,7 +39,7 @@ public partial class Tekken8FrameData(
     public async Task StartScrupFrameData(
         Chat? chat = default,
         FramedataParserOptions? options = default,
-        FramedataSource? source = default
+        FramedataSource? source = FramedataSource.Tekkendocs
     )
     {
         // Определяем порядок источников из конфигурации

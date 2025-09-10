@@ -98,11 +98,11 @@ public class TwitchCinemaQueueService(
         }
     }
 
-    private Task SendTwitchNotification(string userName, MediaItemDto mediaItem)
+    private Task SendTwitchNotification(string userName, CinemaMediaItemDto cinemaMediaItem)
     {
         try
         {
-            var message = $"@{userName} добавил '{mediaItem.Title}' в очередь просмотра! 🎬";
+            var message = $"@{userName} добавил '{cinemaMediaItem.Title}' в очередь просмотра! 🎬";
             logger.LogInformation("Twitch notification: {Message}", message);
 
             twitchClient.SendMessageToMainTwitchAsync(message);

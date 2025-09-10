@@ -384,3 +384,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+appsettings.Production.json
+appsettings.Development.json
+appsettings.json

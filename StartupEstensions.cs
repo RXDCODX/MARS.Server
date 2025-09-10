@@ -279,8 +279,8 @@ public static class StartupEstensions
         services.AddHostedService(sp => sp.GetRequiredService<TwitchNameActualizer>());
 
         services.AddSingleton<ChannelRewardsService>();
-        services.AddSingleton<AlertInitializationService>();
-        services.AddHostedService(sp => sp.GetRequiredService<AlertInitializationService>());
+        //services.AddSingleton<AlertInitializationService>();
+        //services.AddHostedService(sp => sp.GetRequiredService<AlertInitializationService>());
 
         services.AddSingleton<ServiceManager>();
         services.AddSingleton<IServiceManager>(sp => sp.GetRequiredService<ServiceManager>());

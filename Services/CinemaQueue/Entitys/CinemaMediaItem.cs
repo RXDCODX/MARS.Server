@@ -1,7 +1,7 @@
 ﻿namespace MARS.Server.Services.CinemaQueue.Entitys;
 
 [Table("CinemaQueue")]
-public class MediaItem
+public class CinemaMediaItem
 {
     [Key]
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -9,7 +9,7 @@ public class MediaItem
 
     [Required]
     [MaxLength(200)]
-    public required string Title { get; set; }
+    public required string Title { get; set; } = string.Empty;
 
     [MaxLength(500)]
     public string? Description { get; set; }
@@ -27,7 +27,6 @@ public class MediaItem
     [Required]
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.Now;
 
-    [Required]
     public DateTimeOffset? ScheduledFor { get; set; }
 
     [MaxLength(100)]
@@ -42,10 +41,8 @@ public class MediaItem
     [MaxLength(500)]
     public string? Notes { get; set; }
 
-    [Required]
     public bool IsNext { get; set; } = false;
 
-    [Required]
     public DateTimeOffset? LastModified { get; set; } = DateTimeOffset.Now;
 }
 

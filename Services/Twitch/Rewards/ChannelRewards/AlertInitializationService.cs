@@ -1,4 +1,4 @@
-using MARS.Server.Services.ServiceManager;
+﻿using MARS.Server.Services.ServiceManager;
 using MARS.Server.Services.Twitch.Management;
 using TwitchLib.Api.Helix.Models.ChannelPoints.CreateCustomReward;
 
@@ -46,7 +46,7 @@ public class AlertInitializationService(
             }
 
             // Проверяем, существует ли уже алерт за 16 баллов
-            var existingAlert = existingRewards.FirstOrDefault(r => r.Cost == AlertCost);
+            var existingAlert = existingRewards!.FirstOrDefault(r => r.Cost == AlertCost);
             if (existingAlert != null)
             {
                 logger.LogInformation(
@@ -71,10 +71,13 @@ public class AlertInitializationService(
                 IsUserInputRequired = true,
                 IsMaxPerStreamEnabled = false,
                 IsMaxPerUserPerStreamEnabled = false,
-                IsGlobalCooldownEnabled = false
+                IsGlobalCooldownEnabled = false,
             };
 
-            var rewardId = await channelRewardsService.CreateRewardAsync(request, cancellationToken);
+            var rewardId = await channelRewardsService.CreateRewardAsync(
+                request,
+                cancellationToken
+            );
             if (rewardId != null)
             {
                 logger.LogInformation(
@@ -90,7 +93,7 @@ public class AlertInitializationService(
         }
         catch (Exception ex)
         {
-            logger.LogException(ex, "Ошибка при инициализации алерта за {Cost} баллов", AlertCost);
+            logger.LogException(ex);
         }
     }
 }

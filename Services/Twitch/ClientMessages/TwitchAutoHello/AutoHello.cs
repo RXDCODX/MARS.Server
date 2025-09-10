@@ -34,6 +34,9 @@ public class AutoHello : BackgroundService
                 TwitchExstension.Channel,
                 StringComparison.OrdinalIgnoreCase
             )
+            && !TwitchExstension.BlackList.Any(t =>
+                t.Equals(args.ChatMessage.Username, StringComparison.OrdinalIgnoreCase)
+            )
         )
         {
             await Task.Run(async () =>

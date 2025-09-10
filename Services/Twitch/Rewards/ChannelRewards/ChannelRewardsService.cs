@@ -1,5 +1,6 @@
 ﻿using MARS.Server.Services.ServiceManager;
 using MARS.Server.Services.Twitch.Management;
+using TwitchLib.Api.Helix.Models.ChannelPoints;
 using TwitchLib.Api.Helix.Models.ChannelPoints.CreateCustomReward;
 
 namespace MARS.Server.Services.Twitch.Rewards.ChannelRewards;
@@ -66,7 +67,7 @@ public class ChannelRewardsService(
     /// <summary>
     /// Получает все награды канала.
     /// </summary>
-    public async Task<IEnumerable<TwitchLib.Api.Helix.Models.ChannelPoints.GetCustomReward.CustomReward>?> GetRewardsAsync(
+    public async Task<IEnumerable<CustomReward>?> GetRewardsAsync(
         CancellationToken cancellationToken = default
     )
     {

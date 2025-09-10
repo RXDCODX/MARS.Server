@@ -6,7 +6,7 @@ namespace MARS.Server.Services.CinemaQueue.Repositories;
 public class CinemaQueueRepository(IDbContextFactory<AppDbContext> dbContextFactory)
     : ICinemaQueueRepository
 {
-    public async Task<IEnumerable<MediaItem>> GetAllAsync(
+    public async Task<IEnumerable<CinemaMediaItem>> GetAllAsync(
         CancellationToken cancellationToken = default
     )
     {
@@ -18,7 +18,7 @@ public class CinemaQueueRepository(IDbContextFactory<AppDbContext> dbContextFact
             .ToListAsync(cancellationToken);
     }
 
-    public async Task<MediaItem?> GetByIdAsync(
+    public async Task<CinemaMediaItem?> GetByIdAsync(
         Guid id,
         CancellationToken cancellationToken = default
     )
@@ -29,7 +29,7 @@ public class CinemaQueueRepository(IDbContextFactory<AppDbContext> dbContextFact
             .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
     }
 
-    public async Task<MediaItem?> GetNextAsync(CancellationToken cancellationToken = default)
+    public async Task<CinemaMediaItem?> GetNextAsync(CancellationToken cancellationToken = default)
     {
         await using var context = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         return await context
@@ -40,7 +40,7 @@ public class CinemaQueueRepository(IDbContextFactory<AppDbContext> dbContextFact
             .FirstOrDefaultAsync(cancellationToken);
     }
 
-    public async Task<IEnumerable<MediaItem>> GetByStatusAsync(
+    public async Task<IEnumerable<CinemaMediaItem>> GetByStatusAsync(
         MediaStatus status,
         CancellationToken cancellationToken = default
     )
@@ -54,32 +54,32 @@ public class CinemaQueueRepository(IDbContextFactory<AppDbContext> dbContextFact
             .ToListAsync(cancellationToken);
     }
 
-    public async Task<MediaItem> CreateAsync(
-        MediaItem mediaItem,
+    public async Task<CinemaMediaItem> CreateAsync(
+        CinemaMediaItem cinemaMediaItem,
         CancellationToken cancellationToken = default
     )
     {
         await using var context = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var entity = await context.CinemaQueue.AddAsync(mediaItem, cancellationToken);
+        var entity = await context.CinemaQueue.AddAsync(cinemaMediaItem, cancellationToken);
         await context.SaveChangesAsync(cancellationToken);
         return entity.Entity;
     }
 
-    public async Task<MediaItem?> UpdateAsync(
-        MediaItem mediaItem,
+    public async Task<CinemaMediaItem?> UpdateAsync(
+        CinemaMediaItem cinemaMediaItem,
         CancellationToken cancellationToken = default
     )
     {
         await using var context = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var existingItem = await context.CinemaQueue.FindAsync([mediaItem.Id], cancellationToken);
+        var existingItem = await context.CinemaQueue.FindAsync([cinemaMediaItem.Id], cancellationToken);
 
         if (existingItem == null)
         {
             return null;
         }
 
-        mediaItem.LastModified = DateTimeOffset.Now;
-        context.Entry(existingItem).CurrentValues.SetValues(mediaItem);
+        cinemaMediaItem.LastModified = DateTimeOffset.Now;
+        context.Entry(existingItem).CurrentValues.SetValues(cinemaMediaItem);
         await context.SaveChangesAsync(cancellationToken);
 
         return existingItem;

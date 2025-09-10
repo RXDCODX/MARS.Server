@@ -116,7 +116,12 @@ public class MiniGamesManager(
 
     private async void ClientOnMessageReceived(object? sender, OnMessageReceivedArgs e)
     {
-        if (!IsServiceActive)
+        if (
+            !IsServiceActive
+            || TwitchExstension.BlackList.Any(t =>
+                t.Equals(e.ChatMessage.Username, StringComparison.OrdinalIgnoreCase)
+            )
+        )
         {
             return;
         }

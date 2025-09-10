@@ -23,7 +23,6 @@ public class RandomMemHandler(
         ? [Path.Combine(environment.WebRootPath, "Alerts", "random_meme"), GetDevAlerts()]
         : [Path.Combine(environment.WebRootPath, "Alerts", "random_meme")];
     private string? LastMediaGroupId { get; set; }
-    private bool IsGoldMediaGroup { get; set; }
     private CancellationToken CancellationToken { get; set; } =
         applicationLifetime.ApplicationStopping;
     private List<long> BlockedUsers { get; set; } = [];
@@ -65,7 +64,6 @@ public class RandomMemHandler(
                             {
                                 await Process(client, message);
                                 LastMediaGroupId = null;
-                                IsGoldMediaGroup = false;
                             }
                             else
                             {
@@ -75,13 +73,11 @@ public class RandomMemHandler(
                                 )
                                 {
                                     LastMediaGroupId = message.MediaGroupId;
-                                    var isGold = !string.IsNullOrWhiteSpace(message.Caption);
-                                    IsGoldMediaGroup = isGold;
                                 }
 
                                 if (LastMediaGroupId == message.MediaGroupId)
                                 {
-                                    await Process(client, message, IsGoldMediaGroup);
+                                    await Process(client, message);
                                 }
                             }
                         }
@@ -100,7 +96,7 @@ public class RandomMemHandler(
         return Task.CompletedTask;
     }
 
-    private async Task Process(ITelegramBotClient client, Message message, bool isGold = false)
+    private async Task Process(ITelegramBotClient client, Message message)
     {
         var fileInfo = await helper.GetTgFileInfo(client, message);
 
@@ -109,24 +105,17 @@ public class RandomMemHandler(
             return;
         }
 
-        if (!isGold)
-        {
-            isGold = !string.IsNullOrWhiteSpace(message.Caption);
-        }
-
         string caption = null!;
-        const string answer1 = "Скачал твой файл ({1})";
-        const string answer = "такой файл уже есть ({1}), обновил время последнего акцесса до {0}";
+        const string answer1 = "Скачал твой файл ({1}), номер в очереди: {2}";
+        const string answer =
+            "такой файл уже есть ({1}), обновил время последнего акцесса до {0}, номер в очереди: {2}";
         const string answer2 = "С мемом чето не так, ппц брат.";
-        const string goldAnswer1 = "Скачал твой ЗОЛОТОЙ файл ({1}) и вставил его в качестве мема!";
-        const string goldAnswer =
-            "такой ЗОЛОТОЙ файл уже есть, обновил время последнего акцесса до {0}";
-        const string goldAnswer2 = "С ЗОЛОТЫМ мемом чето не так, ппц брат.";
 
-        for (var index = 0 ; index < AlertsPaths.Length ; index++)
+        var orderInt = -1;
+        for (var index = 0; index < AlertsPaths.Length; index++)
         {
             var alertsPath = AlertsPaths[index];
-            var folderPath = isGold ? Path.Combine(alertsPath, "Gold") : alertsPath;
+            var folderPath = alertsPath;
             var downloadPath = folderPath + "\\" + fileInfo.FilePath;
 
             MediaType type = await Path.GetExtension(fileInfo.FilePath).GetFileMediaTypeAsync();
@@ -139,7 +128,7 @@ public class RandomMemHandler(
                         await helper.DownloadFileAndCache(client, fileInfo, folderPath);
                         if (index == 0)
                         {
-                            caption = isGold ? goldAnswer1 : answer1;
+                            caption = answer1;
                         }
                     }
                     else
@@ -147,7 +136,7 @@ public class RandomMemHandler(
                         File.SetLastAccessTime(downloadPath, DateTimeOffset.Now.LocalDateTime);
                         if (index == 0)
                         {
-                            caption = isGold ? goldAnswer : answer;
+                            caption = answer;
                         }
                     }
 
@@ -158,7 +147,7 @@ public class RandomMemHandler(
                         await helper.DownloadFileAndCache(client, fileInfo, folderPath);
                         if (index == 0)
                         {
-                            caption = isGold ? goldAnswer1 : answer1;
+                            caption = answer1;
                         }
                     }
                     else
@@ -166,7 +155,7 @@ public class RandomMemHandler(
                         File.SetLastAccessTime(downloadPath, DateTimeOffset.Now.LocalDateTime);
                         if (index == 0)
                         {
-                            caption = isGold ? goldAnswer : answer;
+                            caption = answer;
                         }
                     }
 
@@ -174,7 +163,7 @@ public class RandomMemHandler(
                 default:
                     if (index == 0)
                     {
-                        caption = isGold ? goldAnswer2 : answer2;
+                        caption = answer2;
                     }
 
                     break;
@@ -182,7 +171,7 @@ public class RandomMemHandler(
 
             if (index == 0)
             {
-                await CreateMemeOrder(downloadPath);
+                orderInt = await CreateMemeOrder(downloadPath);
             }
         }
 
@@ -192,7 +181,12 @@ public class RandomMemHandler(
             {
                 await client.SendMessage(
                     message.Chat.Id,
-                    string.Format(caption, DateTimeOffset.Now.LocalDateTime, fileInfo.FilePath),
+                    string.Format(
+                        caption,
+                        DateTimeOffset.Now.LocalDateTime,
+                        fileInfo.FilePath,
+                        orderInt
+                    ),
                     cancellationToken: CancellationToken
                 );
             }
@@ -203,7 +197,7 @@ public class RandomMemHandler(
         }
     }
 
-    private async Task CreateMemeOrder(string filePath)
+    private async Task<int> CreateMemeOrder(string filePath)
     {
         await using var dbContext = await contextFactory.CreateDbContextAsync(CancellationToken);
 
@@ -255,6 +249,8 @@ public class RandomMemHandler(
         await dbContext.RandomMemeOrder.AddAsync(newOrder, CancellationToken);
 
         await dbContext.SaveChangesAsync(CancellationToken);
+
+        return newOrder.Order;
     }
 
     private static string GetDevAlerts()

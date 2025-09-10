@@ -123,7 +123,12 @@ public class TekkenVictorinaLeaderbord(
         var channel = e.ChatMessage.Channel;
         var user = e.ChatMessage.DisplayName;
 
-        if (channel.Equals(TwitchExstension.Channel))
+        if (
+            channel.Equals(TwitchExstension.Channel)
+            && !TwitchExstension.BlackList.Any(t =>
+                t.Equals(e.ChatMessage.Username, StringComparison.OrdinalIgnoreCase)
+            )
+        )
         {
             await Task.Factory.StartNew(
                 async () =>

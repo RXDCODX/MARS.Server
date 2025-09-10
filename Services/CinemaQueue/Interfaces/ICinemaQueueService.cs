@@ -7,14 +7,14 @@ public interface ICinemaQueueService
     /// <summary>
     /// Получить все элементы очереди
     /// </summary>
-    Task<IEnumerable<MediaItemDto>> GetAllMediaItemsAsync(
+    Task<IEnumerable<CinemaMediaItemDto>> GetAllMediaItemsAsync(
         CancellationToken cancellationToken = default
     );
 
     /// <summary>
     /// Получить элемент по ID
     /// </summary>
-    Task<MediaItemDto?> GetMediaItemByIdAsync(
+    Task<CinemaMediaItemDto?> GetMediaItemByIdAsync(
         Guid id,
         CancellationToken cancellationToken = default
     );
@@ -22,12 +22,12 @@ public interface ICinemaQueueService
     /// <summary>
     /// Получить следующий элемент для просмотра
     /// </summary>
-    Task<MediaItemDto?> GetNextMediaItemAsync(CancellationToken cancellationToken = default);
+    Task<CinemaMediaItemDto?> GetNextMediaItemAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Получить элементы по статусу
     /// </summary>
-    Task<IEnumerable<MediaItemDto>> GetMediaItemsByStatusAsync(
+    Task<IEnumerable<CinemaMediaItemDto>> GetMediaItemsByStatusAsync(
         MediaStatus status,
         CancellationToken cancellationToken = default
     );
@@ -35,7 +35,7 @@ public interface ICinemaQueueService
     /// <summary>
     /// Создать новый элемент
     /// </summary>
-    Task<MediaItemDto> CreateMediaItemAsync(
+    Task<CinemaMediaItemDto> CreateMediaItemAsync(
         CreateMediaItemRequest request,
         CancellationToken cancellationToken = default
     );
@@ -43,7 +43,7 @@ public interface ICinemaQueueService
     /// <summary>
     /// Обновить элемент
     /// </summary>
-    Task<MediaItemDto?> UpdateMediaItemAsync(
+    Task<CinemaMediaItemDto?> UpdateMediaItemAsync(
         Guid id,
         UpdateMediaItemRequest request,
         CancellationToken cancellationToken = default

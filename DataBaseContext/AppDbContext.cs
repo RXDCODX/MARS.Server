@@ -1,5 +1,6 @@
 ﻿using MARS.Server.ApplicationState;
 using MARS.Server.Services._365Genius.Entitys;
+using MARS.Server.Services.CinemaQueue.Entitys;
 using MARS.Server.Services.Framedata.Entitys;
 using MARS.Server.Services.Framedata.Entitys.Pending;
 using MARS.Server.Services.Honkai.Entitys;
@@ -75,8 +76,7 @@ public sealed class AppDbContext : DbContext
     public DbSet<ScoreboardLayout> ScoreboardLayouts { get; set; } = null!;
     public DbSet<DailyAutoMarkupUser> HonkaiMarkupUser { get; set; } = null!;
     public DbSet<WaifuRollGuarantee> WaifuRollGuarantees { get; set; } = null!;
-    public DbSet<MARS.Server.Services.CinemaQueue.Entitys.MediaItem> CinemaQueue { get; set; } =
-        null!;
+    public DbSet<CinemaMediaItem> CinemaQueue { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -263,7 +263,7 @@ public sealed class AppDbContext : DbContext
 
         modelBuilder
             .Entity<RootState>()
-            .HasData(new RootState() { Id = 1, RandomMemeOnlineIsStop = false });
+            .HasData(new RootState { Id = 1, RandomMemeOnlineIsStop = false });
 
         // Конфигурация для Scoreboard
         modelBuilder

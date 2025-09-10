@@ -24,7 +24,12 @@ public class AutoMessagesController(
 
     public async void OnMessageReceived(object? sender, OnMessageReceivedArgs args)
     {
-        if (args.ChatMessage.Channel.Equals(Channel, StringComparison.OrdinalIgnoreCase))
+        if (
+            args.ChatMessage.Channel.Equals(Channel, StringComparison.OrdinalIgnoreCase)
+            && !TwitchExstension.BlackList.Any(t =>
+                t.Equals(args.ChatMessage.Username, StringComparison.OrdinalIgnoreCase)
+            )
+        )
         {
             MessagesCounter++;
 

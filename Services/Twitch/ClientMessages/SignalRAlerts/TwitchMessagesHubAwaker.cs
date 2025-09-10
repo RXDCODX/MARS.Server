@@ -50,6 +50,9 @@ public class TwitchMessagesHubAwaker : BackgroundService
                 TwitchExstension.Channel,
                 StringComparison.OrdinalIgnoreCase
             )
+            && !TwitchExstension.BlackList.Any(t =>
+                t.Equals(e.ChatMessage.Username, StringComparison.OrdinalIgnoreCase)
+            )
         )
         {
             await Task.Factory.StartNew(
@@ -164,6 +167,9 @@ public class TwitchMessagesHubAwaker : BackgroundService
             args.ChatMessage.Channel.Equals(
                 TwitchExstension.Channel,
                 StringComparison.OrdinalIgnoreCase
+            )
+            && !TwitchExstension.BlackList.Any(e =>
+                e.Equals(args.ChatMessage.Username, StringComparison.OrdinalIgnoreCase)
             )
         )
         {

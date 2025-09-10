@@ -144,6 +144,7 @@
       <Folder Include="Services\SoundRequest\Platforms\SoundCloud\" />
       <Folder Include="Services\SoundRequest\Platforms\YouTube\" />
       <Folder Include="Services\TabletopGames\Entitys\Enums\" />
+      <Folder Include="Services\Twitch\TwitchFollowers\Entitys\" />
     </ItemGroup>
 
     <Target Name="BuildClientApp" BeforeTargets="Publish">

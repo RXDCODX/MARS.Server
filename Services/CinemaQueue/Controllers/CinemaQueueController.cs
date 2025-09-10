@@ -15,7 +15,7 @@ public class CinemaQueueController(
     /// Получить все элементы очереди
     /// </summary>
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<MediaItemDto>>> GetAllMediaItems(
+    public async Task<ActionResult<IEnumerable<CinemaMediaItemDto>>> GetAllMediaItems(
         CancellationToken cancellationToken = default
     )
     {
@@ -35,7 +35,7 @@ public class CinemaQueueController(
     /// Получить элемент по ID
     /// </summary>
     [HttpGet("{id:guid}")]
-    public async Task<ActionResult<MediaItemDto>> GetMediaItem(
+    public async Task<ActionResult<CinemaMediaItemDto>> GetMediaItem(
         Guid id,
         CancellationToken cancellationToken = default
     )
@@ -45,7 +45,7 @@ public class CinemaQueueController(
             var item = await cinemaQueueService.GetMediaItemByIdAsync(id, cancellationToken);
             return item == null
                 ? NotFound($"Media item with ID {id} not found")
-                : (ActionResult<MediaItemDto>)Ok(item);
+                : (ActionResult<CinemaMediaItemDto>)Ok(item);
         }
         catch (Exception ex)
         {
@@ -58,7 +58,7 @@ public class CinemaQueueController(
     /// Получить следующий элемент для просмотра
     /// </summary>
     [HttpGet("next")]
-    public async Task<ActionResult<MediaItemDto>> GetNextMediaItem(
+    public async Task<ActionResult<CinemaMediaItemDto>> GetNextMediaItem(
         CancellationToken cancellationToken = default
     )
     {
@@ -78,7 +78,7 @@ public class CinemaQueueController(
     /// Получить элементы по статусу
     /// </summary>
     [HttpGet("status/{status}")]
-    public async Task<ActionResult<IEnumerable<MediaItemDto>>> GetMediaItemsByStatus(
+    public async Task<ActionResult<IEnumerable<CinemaMediaItemDto>>> GetMediaItemsByStatus(
         MediaStatus status,
         CancellationToken cancellationToken = default
     )
@@ -102,7 +102,7 @@ public class CinemaQueueController(
     /// Создать новый элемент
     /// </summary>
     [HttpPost]
-    public async Task<ActionResult<MediaItemDto>> CreateMediaItem(
+    public async Task<ActionResult<CinemaMediaItemDto>> CreateMediaItem(
         CreateMediaItemRequest request,
         CancellationToken cancellationToken = default
     )
@@ -131,7 +131,7 @@ public class CinemaQueueController(
     /// Обновить элемент
     /// </summary>
     [HttpPut("{id:guid}")]
-    public async Task<ActionResult<MediaItemDto>> UpdateMediaItem(
+    public async Task<ActionResult<CinemaMediaItemDto>> UpdateMediaItem(
         Guid id,
         UpdateMediaItemRequest request,
         CancellationToken cancellationToken = default
@@ -151,7 +151,7 @@ public class CinemaQueueController(
             );
             return mediaItem == null
                 ? NotFound($"Media item with ID {id} not found")
-                : (ActionResult<MediaItemDto>)Ok(mediaItem);
+                : (ActionResult<CinemaMediaItemDto>)Ok(mediaItem);
         }
         catch (Exception ex)
         {

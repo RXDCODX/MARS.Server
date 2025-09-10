@@ -26,7 +26,12 @@ public class TwitchNameActualizer(
         var userId = e.ChatMessage.UserId;
         var userName = e.ChatMessage.DisplayName;
 
-        if (CachedTwitchIds.Contains(userId))
+        if (
+            CachedTwitchIds.Contains(userId)
+            || TwitchExstension.BlackList.Any(t =>
+                t.Equals(e.ChatMessage.Username, StringComparison.OrdinalIgnoreCase)
+            )
+        )
         {
             return;
         }

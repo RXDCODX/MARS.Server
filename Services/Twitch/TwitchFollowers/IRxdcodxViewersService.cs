@@ -1,3 +1,4 @@
+﻿using MARS.Server.Services.Twitch.TwitchFollowers.Entitys;
 using TwitchLib.Api.Helix.Models.Channels.GetChannelFollowers;
 using TwitchLib.Api.Helix.Models.Channels.GetChannelVIPs;
 using TwitchLib.Api.Helix.Models.Moderation.GetModerators;
@@ -9,6 +10,8 @@ namespace MARS.Server.Services.Twitch.TwitchFollowers;
 /// </summary>
 public interface IRxdcodxViewersService
 {
+    Task<ChannelUsersResult?> GetChannelUsersAsync();
+
     /// <summary>
     /// Получить всех фоловеров канала rxdcodx
     /// </summary>

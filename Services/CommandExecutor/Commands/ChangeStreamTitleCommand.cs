@@ -9,7 +9,6 @@ namespace MARS.Server.Services.CommandExecutor.Commands;
 /// </summary>
 public class ChangeStreamTitleCommand(
     TwitchStreamManagementService streamManagementService,
-    ITwitchClient client,
     ILogger<ChangeStreamTitleCommand> logger
 ) : BaseCommand
 {
@@ -63,12 +62,6 @@ public class ChangeStreamTitleCommand(
                 if (success)
                 {
                     var message = $"Название трансляции успешно изменено на: {newTitle}";
-
-                    // Если команда выполнена через Twitch, отправляем сообщение в чат
-                    if (platform == Platform.Twitch)
-                    {
-                        await client.SendMessageToMainTwitchAsync(message, logger);
-                    }
 
                     return message;
                 }

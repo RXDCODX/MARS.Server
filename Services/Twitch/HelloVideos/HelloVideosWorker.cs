@@ -37,63 +37,78 @@ public class HelloVideoWorker(
 
     public async void OnMessageReceived(object? sender, OnMessageReceivedArgs args)
     {
-        if (args.ChatMessage.Channel != TwitchExstension.Channel || !IsServiceActive)
+        if ((args.ChatMessage.Channel != TwitchExstension.Channel || !IsServiceActive))
         {
             return;
         }
 
-        await Task.Factory.StartNew(
-            async () =>
-            {
-                try
+        if (
+            !TwitchExstension.BlackList.Any(t =>
+                t.Equals(args.ChatMessage.Username, StringComparison.OrdinalIgnoreCase)
+            )
+        )
+        {
+            await Task.Factory.StartNew(
+                async () =>
                 {
-                    var now = DateTimeOffset.Now;
-                    await using var dbContext = await dbContextFactory.CreateDbContextAsync(_token);
-                    var user = await dbContext.FumoUsers.FindAsync(args.ChatMessage.UserId, _token);
-
-                    if (now.DayOfWeek == DayOfWeek.Friday && user != null)
+                    try
                     {
-                        return;
-                    }
+                        var now = DateTimeOffset.Now;
+                        await using var dbContext = await dbContextFactory.CreateDbContextAsync(
+                            _token
+                        );
+                        var user = await dbContext.FumoUsers.FindAsync(
+                            args.ChatMessage.UserId,
+                            _token
+                        );
 
-                    if (_users.Contains(args.ChatMessage.Id))
-                    {
-                        return;
-                    }
-
-                    var notifUser = await dbContext
-                        .HelloVideosUsers.Include(e => e.MediaInfo)
-                        .FirstOrDefaultAsync(e => e.TwitchId == args.ChatMessage.UserId, _token);
-
-                    if (notifUser != null)
-                    {
-                        if (notifUser.LastTimeNotif.Day != now.Day)
+                        if (now.DayOfWeek == DayOfWeek.Friday && user != null)
                         {
-                            notifUser.LastTimeNotif = now;
-                            await dbContext.SaveChangesAsync(_token);
-
-                            notifUser.MediaInfo.FixAlertText(
-                                args.ChatMessage.DisplayName,
-                                args.ChatMessage.Message
-                            );
-
-                            notifUser.MediaInfo.MetaInfo.Priority = MediaAlertPriority.High;
-
-                            var mediaDto = new MediaDto { MediaInfo = notifUser.MediaInfo };
-
-                            await hubContext.Clients.All.Alert(mediaDto);
+                            return;
                         }
 
-                        _users.Add(args.ChatMessage.Id);
+                        if (_users.Contains(args.ChatMessage.Id))
+                        {
+                            return;
+                        }
+
+                        var notifUser = await dbContext
+                            .HelloVideosUsers.Include(e => e.MediaInfo)
+                            .FirstOrDefaultAsync(
+                                e => e.TwitchId == args.ChatMessage.UserId,
+                                _token
+                            );
+
+                        if (notifUser != null)
+                        {
+                            if (notifUser.LastTimeNotif.Day != now.Day)
+                            {
+                                notifUser.LastTimeNotif = now;
+                                await dbContext.SaveChangesAsync(_token);
+
+                                notifUser.MediaInfo.FixAlertText(
+                                    args.ChatMessage.DisplayName,
+                                    args.ChatMessage.Message
+                                );
+
+                                notifUser.MediaInfo.MetaInfo.Priority = MediaAlertPriority.High;
+
+                                var mediaDto = new MediaDto { MediaInfo = notifUser.MediaInfo };
+
+                                await hubContext.Clients.All.Alert(mediaDto);
+                            }
+
+                            _users.Add(args.ChatMessage.Id);
+                        }
                     }
-                }
-                catch (Exception ex)
-                {
-                    logger.LogException(ex);
-                }
-            },
-            _token
-        );
+                    catch (Exception ex)
+                    {
+                        logger.LogException(ex);
+                    }
+                },
+                _token
+            );
+        }
     }
 
     public async Task<string?> TestVideo(string name, string? color = "white")

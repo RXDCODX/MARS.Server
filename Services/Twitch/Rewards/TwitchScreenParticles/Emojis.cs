@@ -21,7 +21,13 @@ public class Emojis(
 
     private async void ClientOnOnMessageReceived(object? sender, OnMessageReceivedArgs e)
     {
-        if (!string.IsNullOrWhiteSpace(e.ChatMessage.CustomRewardId) && IsServiceActive)
+        if (
+            !string.IsNullOrWhiteSpace(e.ChatMessage.CustomRewardId)
+            && IsServiceActive
+            && !TwitchExstension.BlackList.Any(t =>
+                t.Equals(e.ChatMessage.Username, StringComparison.OrdinalIgnoreCase)
+            )
+        )
         {
             await Task.Factory.StartNew(
                 async () =>

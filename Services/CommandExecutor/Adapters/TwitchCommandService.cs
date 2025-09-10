@@ -91,122 +91,131 @@ public class TwitchCommandService : PlatformCommandServiceBase<string>, IHostedS
 
     private void ClientOnOnMessageReceived(object? sender, OnMessageReceivedArgs e)
     {
-        Task.Factory.StartNew(async () =>
+        if (
+            TwitchExstension.BlackList.All(t =>
+                !t.Equals(e.ChatMessage.Username, StringComparison.OrdinalIgnoreCase)
+            )
+        )
         {
-            try
+            Task.Factory.StartNew(async () =>
             {
-                var message = e.ChatMessage.Message;
-                var username = e.ChatMessage.Username;
-                var userId = e.ChatMessage.UserId;
-
-                // Проверяем, что сообщение начинается с команды
-                if (!message.StartsWith('!'))
+                try
                 {
-                    return;
-                }
+                    var message = e.ChatMessage.Message;
+                    var username = e.ChatMessage.Username;
+                    var userId = e.ChatMessage.UserId;
 
-                // Разбираем команду
-                var commandParts = message.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
-                if (commandParts.Length == 0)
-                {
-                    return;
-                }
-
-                var commandName = commandParts[0].Substring(1); // Убираем "!"
-                var input = commandParts.Length > 1 ? commandParts[1] : "";
-
-                // Обработка специальной команды commands
-                if (commandName.Equals("commands", StringComparison.OrdinalIgnoreCase))
-                {
-                    var includeAdminCommands = IsAdmin.Invoke(userId);
-
-                    var commandsList = GetCommandsList(
-                        userId,
-                        UserCommands,
-                        AdminCommands,
-                        includeAdminCommands
-                    );
-                    await SendMessage(commandsList);
-                    return;
-                }
-
-                // Проверяем, существует ли команда
-                if (!_commands.TryGetValue(commandName, out var command))
-                {
-                    if (!_aliases.TryGetValue(commandName, out var commandAlias))
+                    // Проверяем, что сообщение начинается с команды
+                    if (!message.StartsWith('!'))
                     {
                         return;
                     }
-                    else
+
+                    // Разбираем команду
+                    var commandParts = message.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
+                    if (commandParts.Length == 0)
                     {
-                        command = _commands[commandAlias];
+                        return;
                     }
-                }
 
-                // Проверяем количество обязательных параметров
-                var commandInfo = command.GetParameterInfo();
-                var requiredParams = commandInfo.Where(p => p.Required).ToArray();
-                var inputParts = string.IsNullOrWhiteSpace(input) ? [] : input.Split(' ');
+                    var commandName = commandParts[0].Substring(1); // Убираем "!"
+                    var input = commandParts.Length > 1 ? commandParts[1] : "";
 
-                if (inputParts.Length < requiredParams.Length)
-                {
-                    var missingParam = requiredParams[inputParts.Length];
-                    await SendMessage(
-                        $"Не хватает параметра '{missingParam.Name}'. Использование: !{commandName} {string.Join(" ", requiredParams.Select(p => $"<{p.Name}>"))}"
-                    );
-                    return;
-                }
+                    // Обработка специальной команды commands
+                    if (commandName.Equals("commands", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var includeAdminCommands = IsAdmin.Invoke(userId);
 
-                // Проверяем права доступа для админских команд
-                if (command.IsAdminCommand && !IsUserAdmin(userId))
-                {
-                    await SendMessage($"Команда '{commandName}' доступна только администраторам.");
-                    return;
-                }
+                        var commandsList = GetCommandsList(
+                            userId,
+                            UserCommands,
+                            AdminCommands,
+                            includeAdminCommands
+                        );
+                        await SendMessage(commandsList);
+                        return;
+                    }
 
-                // Выполняем команду
-                string result;
-                try
-                {
-                    // Разбираем параметры из входной строки
-                    var parameters = command.ParseParameters(input);
+                    // Проверяем, существует ли команда
+                    if (!_commands.TryGetValue(commandName, out var command))
+                    {
+                        if (!_aliases.TryGetValue(commandName, out var commandAlias))
+                        {
+                            return;
+                        }
+                        else
+                        {
+                            command = _commands[commandAlias];
+                        }
+                    }
+
+                    // Проверяем количество обязательных параметров
+                    var commandInfo = command.GetParameterInfo();
+                    var requiredParams = commandInfo.Where(p => p.Required).ToArray();
+                    var inputParts = string.IsNullOrWhiteSpace(input) ? [] : input.Split(' ');
+
+                    if (inputParts.Length < requiredParams.Length)
+                    {
+                        var missingParam = requiredParams[inputParts.Length];
+                        await SendMessage(
+                            $"Не хватает параметра '{missingParam.Name}'. Использование: !{commandName} {string.Join(" ", requiredParams.Select(p => $"<{p.Name}>"))}"
+                        );
+                        return;
+                    }
+
+                    // Проверяем права доступа для админских команд
+                    if (command.IsAdminCommand && !IsUserAdmin(userId))
+                    {
+                        await SendMessage(
+                            $"Команда '{commandName}' доступна только администраторам."
+                        );
+                        return;
+                    }
 
                     // Выполняем команду
-                    result = await command.ExecuteAsync(parameters, Platform.Twitch);
+                    string result;
+                    try
+                    {
+                        // Разбираем параметры из входной строки
+                        var parameters = command.ParseParameters(input);
 
-                    // Валидируем ответ для платформы
-                    result = ValidateResponse(result);
+                        // Выполняем команду
+                        result = await command.ExecuteAsync(parameters, Platform.Twitch);
+
+                        // Валидируем ответ для платформы
+                        result = ValidateResponse(result);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(
+                            ex,
+                            "Ошибка при выполнении команды '{CommandName}' пользователем '{Username}'",
+                            commandName,
+                            username
+                        );
+                        await SendMessage(
+                            $"Ошибка при выполнении команды '{commandName}': {ex.Message}"
+                        );
+                        return;
+                    }
+
+                    // Отправляем результат
+                    await SendMessage(result);
+
+                    _logger.LogInformation(
+                        "Команда '{CommandName}' выполнена пользователем '{Username}' с результатом: {Result}",
+                        commandName,
+                        username,
+                        result
+                    );
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(
-                        ex,
-                        "Ошибка при выполнении команды '{CommandName}' пользователем '{Username}'",
-                        commandName,
-                        username
-                    );
-                    await SendMessage(
-                        $"Ошибка при выполнении команды '{commandName}': {ex.Message}"
-                    );
-                    return;
+                    _logger.LogError(ex, "Ошибка при обработке команды Twitch");
+                    await SendMessage("Произошла ошибка при выполнении команды. Попробуйте позже.");
                 }
-
-                // Отправляем результат
-                await SendMessage(result);
-
-                _logger.LogInformation(
-                    "Команда '{CommandName}' выполнена пользователем '{Username}' с результатом: {Result}",
-                    commandName,
-                    username,
-                    result
-                );
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Ошибка при обработке команды Twitch");
-                await SendMessage("Произошла ошибка при выполнении команды. Попробуйте позже.");
-            }
-        });
+            });
+        }
     }
 
     private async Task SendMessage(string message)
