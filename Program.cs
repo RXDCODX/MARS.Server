@@ -29,7 +29,7 @@ namespace MARS.Server;
 
 public class WTelegramClient(int item1, string item2, string item3) : Client(item1, item2, item3);
 
-public static class Program
+public static class Program 
 {
     public static bool IsUseSoundRequest { get; set; }
     public static bool IsUseSwagger { get; set; }
