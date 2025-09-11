@@ -215,6 +215,30 @@ public class EventSubService(
                 token.AccessToken
             );
 
+            await api.Helix.EventSub.CreateEventSubSubscriptionAsync(
+                "channel.moderator.add",
+                "1",
+                condition,
+                EventSubTransportMethod.Websocket,
+                wsClient.SessionId,
+                null,
+                null,
+                api.Settings.ClientId,
+                token.AccessToken
+            );
+
+            await api.Helix.EventSub.CreateEventSubSubscriptionAsync(
+                "channel.vip.add",
+                "1",
+                condition,
+                EventSubTransportMethod.Websocket,
+                wsClient.SessionId,
+                null,
+                null,
+                api.Settings.ClientId,
+                token.AccessToken
+            );
+
             condition.Add("moderator_user_id", TwitchExstension.ChannelId);
 
             await api.Helix.EventSub.CreateEventSubSubscriptionAsync(

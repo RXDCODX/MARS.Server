@@ -13,7 +13,8 @@ public interface IRxdcodxViewersService
     Task<ChannelUsersResult?> GetChannelUsersAsync();
 
     /// <summary>
-    /// Получить всех фоловеров канала rxdcodx
+    /// Получить всех фоловеров канала rxdcodx (только при наличии токена)
+    /// Для получения данных из кеша используйте GetAllFollowersInfo()
     /// </summary>
     Task<List<ChannelFollower>?> GetAllFollowers();
 
@@ -59,4 +60,30 @@ public interface IRxdcodxViewersService
     /// </summary>
     /// <param name="userId">ID пользователя для проверки</param>
     Task<bool> IsUserModerator(string userId);
+
+    /// <summary>
+    /// Принудительно обновить кеш фоловеров
+    /// </summary>
+    Task RefreshFollowersCacheAsync();
+
+    /// <summary>
+    /// Получить всех фоловеров как FollowerInfo
+    /// </summary>
+    Task<List<FollowerInfo>?> GetAllFollowersInfo();
+
+    /// <summary>
+    /// Получить информацию о конкретном фоловере
+    /// </summary>
+    /// <param name="userId">ID пользователя</param>
+    Task<FollowerInfo?> GetFollowerInfo(string userId);
+
+    /// <summary>
+    /// Получить количество фоловеров в кеше
+    /// </summary>
+    int GetCachedFollowersCount();
+
+    /// <summary>
+    /// Очистить кеш фоловеров
+    /// </summary>
+    void ClearFollowersCache();
 }

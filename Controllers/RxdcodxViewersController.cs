@@ -1,4 +1,5 @@
 ﻿using MARS.Server.Services.Twitch.TwitchFollowers;
+using MARS.Server.Services.Twitch.TwitchFollowers.Entitys;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MARS.Server.Controllers;
@@ -18,12 +19,12 @@ public class RxdcodxViewersController(
     {
         try
         {
-            var followers = await viewersService.GetChannelUsersAsync();
-            return followers == null ? Unauthorized("Токен недоступен") : Ok(followers);
+            var allUsers = await viewersService.GetAllFollowersInfo();
+            return allUsers == null ? Unauthorized("Токен недоступен") : Ok(allUsers);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Ошибка при получении фоловеров");
+            logger.LogError(ex, "Ошибка при получении всех пользователей");
             return StatusCode(500, "Внутренняя ошибка сервера");
         }
     }
@@ -36,22 +37,14 @@ public class RxdcodxViewersController(
     {
         try
         {
-            var followers = await viewersService.GetAllFollowers();
-            return followers == null
-                ? Unauthorized("Токен недоступен")
-                : Ok(
-                    new
-                    {
-                        followers.Count,
-                        Followers = followers.Select(f => new
-                        {
-                            f.UserId,
-                            f.UserLogin,
-                            f.UserName,
-                            f.FollowedAt,
-                        }),
-                    }
-                );
+            var allUsers = await viewersService.GetAllFollowersInfo();
+            if (allUsers == null)
+            {
+                return Unauthorized("Токен недоступен");
+            }
+
+            var followers = allUsers.Where(u => u is { IsModerator: false, IsVip: false }).ToList();
+            return Ok(followers);
         }
         catch (Exception ex)
         {
@@ -68,21 +61,14 @@ public class RxdcodxViewersController(
     {
         try
         {
-            var vips = await viewersService.GetAllViPs();
-            return vips == null
-                ? Unauthorized("Токен недоступен")
-                : Ok(
-                    new
-                    {
-                        vips.Count,
-                        VIPs = vips.Select(v => new
-                        {
-                            v.UserId,
-                            v.UserLogin,
-                            v.UserName,
-                        }),
-                    }
-                );
+            var allUsers = await viewersService.GetAllFollowersInfo();
+            if (allUsers == null)
+            {
+                return Unauthorized("Токен недоступен");
+            }
+
+            var vips = allUsers.Where(u => u.IsVip).ToList();
+            return Ok(vips);
         }
         catch (Exception ex)
         {
@@ -99,21 +85,14 @@ public class RxdcodxViewersController(
     {
         try
         {
-            var moderators = await viewersService.GetModerators();
-            return moderators == null
-                ? Unauthorized("Токен недоступен")
-                : Ok(
-                    new
-                    {
-                        moderators.Count,
-                        Moderators = moderators.Select(m => new
-                        {
-                            m.UserId,
-                            m.UserLogin,
-                            m.UserName,
-                        }),
-                    }
-                );
+            var allUsers = await viewersService.GetAllFollowersInfo();
+            if (allUsers == null)
+            {
+                return Unauthorized("Токен недоступен");
+            }
+
+            var moderators = allUsers.Where(u => u.IsModerator).ToList();
+            return Ok(moderators);
         }
         catch (Exception ex)
         {
@@ -130,9 +109,15 @@ public class RxdcodxViewersController(
     {
         try
         {
-            var followersCount = await viewersService.GetFollowersCount();
-            var vipsCount = await viewersService.GetViPsCount();
-            var moderatorsCount = await viewersService.GetModeratorsCount();
+            var allUsers = await viewersService.GetAllFollowersInfo();
+            if (allUsers == null)
+            {
+                return Unauthorized("Токен недоступен");
+            }
+
+            var followersCount = allUsers.Count(u => u is { IsModerator: false, IsVip: false });
+            var vipsCount = allUsers.Count(u => u.IsVip);
+            var moderatorsCount = allUsers.Count(u => u.IsModerator);
 
             return Ok(
                 new
@@ -141,6 +126,8 @@ public class RxdcodxViewersController(
                     VIPsCount = vipsCount,
                     ModeratorsCount = moderatorsCount,
                     TotalSpecialUsers = vipsCount + moderatorsCount,
+                    TotalUsers = allUsers.Count,
+                    CachedUsersCount = viewersService.GetCachedFollowersCount(),
                 }
             );
         }
@@ -159,27 +146,114 @@ public class RxdcodxViewersController(
     {
         try
         {
-            var isFollower = await viewersService.IsUserFollower(userId);
-            var isVip = await viewersService.IsUserVip(userId);
-            var isModerator = await viewersService.IsUserModerator(userId);
+            var userInfo = await viewersService.GetFollowerInfo(userId);
+            if (userInfo == null)
+            {
+                return Ok(
+                    new
+                    {
+                        UserId = userId,
+                        IsFollower = false,
+                        IsVIP = false,
+                        IsModerator = false,
+                        Status = "Viewer",
+                        Message = "Пользователь не найден в кеше",
+                    }
+                );
+            }
 
             return Ok(
                 new
                 {
                     UserId = userId,
-                    IsFollower = isFollower,
-                    IsVIP = isVip,
-                    IsModerator = isModerator,
-                    Status = isModerator ? "Moderator"
-                    : isVip ? "VIP"
-                    : isFollower ? "Follower"
-                    : "Viewer",
+                    userInfo.UserName,
+                    userInfo.UserLogin,
+                    userInfo.FollowedAt,
+                    userInfo.LastUpdated,
+                    IsFollower = userInfo is { IsModerator: false, IsVip: false },
+                    IsVIP = userInfo.IsVip,
+                    userInfo.IsModerator,
+                    Status = userInfo.IsModerator ? "Moderator"
+                    : userInfo.IsVip ? "VIP"
+                    : "Follower",
                 }
             );
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при проверке статуса пользователя {UserId}", userId);
+            return StatusCode(500, "Внутренняя ошибка сервера");
+        }
+    }
+
+    /// <summary>
+    /// Принудительно обновить кеш фоловеров
+    /// </summary>
+    [HttpPost("refresh-cache")]
+    public async Task<IActionResult> RefreshFollowersCache()
+    {
+        try
+        {
+            await viewersService.RefreshFollowersCacheAsync();
+            return Ok(new { Message = "Кеш фоловеров успешно обновлен" });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при обновлении кеша фоловеров");
+            return StatusCode(500, "Внутренняя ошибка сервера");
+        }
+    }
+
+    /// <summary>
+    /// Получить всех пользователей как FollowerInfo
+    /// </summary>
+    [HttpGet("followers-info")]
+    public async Task<IActionResult> GetFollowersInfo()
+    {
+        try
+        {
+            var followersInfo = await viewersService.GetAllFollowersInfo();
+            return followersInfo == null ? Unauthorized("Токен недоступен") : Ok(followersInfo);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при получении информации о фоловерах");
+            return StatusCode(500, "Внутренняя ошибка сервера");
+        }
+    }
+
+    /// <summary>
+    /// Получить информацию о конкретном пользователе
+    /// </summary>
+    [HttpGet("user/{userId}/info")]
+    public async Task<IActionResult> GetUserInfo(string userId)
+    {
+        try
+        {
+            var userInfo = await viewersService.GetFollowerInfo(userId);
+            return userInfo == null ? NotFound($"Пользователь {userId} не найден") : Ok(userInfo);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при получении информации о пользователе {UserId}", userId);
+            return StatusCode(500, "Внутренняя ошибка сервера");
+        }
+    }
+
+    /// <summary>
+    /// Очистить кеш пользователей
+    /// </summary>
+    [HttpPost("clear-cache")]
+    public IActionResult ClearCache()
+    {
+        try
+        {
+            viewersService.ClearFollowersCache();
+            return Ok(new { Message = "Кеш пользователей успешно очищен" });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при очистке кеша пользователей");
             return StatusCode(500, "Внутренняя ошибка сервера");
         }
     }
