@@ -12,12 +12,7 @@
 
 - **`RxdcodxViewersController.cs`** - REST API контроллер с endpoints для получения данных
 
-### 3. Twitch команды
-
-- **`RxdcodxStatsCommand.cs`** - команда `!rxdcodxstats` для получения статистики
-- **`UserStatusCommand.cs`** - команда `!userstatus` для проверки статуса пользователя
-
-### 4. Документация и примеры
+### 3. Документация и примеры
 
 - **`README.md`** - подробная документация по использованию
 - **`Examples.cs`** - примеры использования сервиса
@@ -27,26 +22,13 @@
 
 ### Основные возможности
 
-✅ Получение списка всех фоловеров канала rxdcodx  
-✅ Получение списка всех VIP канала rxdcodx  
-✅ Получение списка всех модераторов канала rxdcodx  
-✅ Получение количества фоловеров, VIP и модераторов  
-✅ Проверка статуса конкретного пользователя  
+✅ Получение списка всех пользователей канала rxdcodx  
 ✅ Обработка ошибок и отсутствия токена  
 ✅ Пагинация для больших списков (100 записей за запрос)  
 
 ### API Endpoints
 
-- `GET /api/RxdcodxViewers/followers` - список фоловеров
-- `GET /api/RxdcodxViewers/vips` - список VIP
-- `GET /api/RxdcodxViewers/moderators` - список модераторов
-- `GET /api/RxdcodxViewers/stats` - статистика канала
-- `GET /api/RxdcodxViewers/user/{userId}/status` - статус пользователя
-
-### Twitch команды
-
-- `!rxdcodxstats` (алиасы: `!rxstats`, `!rxdcodx`) - статистика канала
-- `!userstatus` (алиасы: `!status`, `!checkuser`, `!userinfo`) - статус пользователя
+- `GET /api/RxdcodxViewers/all` - список всех пользователей
 
 ## Технические детали
 
@@ -55,12 +37,15 @@
 - **Интерфейс** - `IRxdcodxViewersService`
 - **Реализация** - `RxdcodxViewersService`
 - **DI регистрация** - через `RxdcodxViewersServiceExtensions`
+- **Database-First кеширование** - БД используется как основное хранилище
 - **Обработка ошибок** - try-catch с информативными сообщениями
 
 ### Зависимости
 
 - `ITwitchAPI` - для работы с Twitch API
 - `TokenService` - для получения токена доступа
+- `FollowerDbService` - для работы с базой данных
+- `TwitchUserInfoService` - для обогащения данных пользователей
 - `TwitchLib.Api.Helix.Models.*` - модели данных Twitch
 
 ### Регистрация в DI
@@ -84,9 +69,9 @@ public class MyService
         _viewersService = viewersService;
     }
 
-    public async Task<int> GetFollowersCount()
+    public async Task<List<FollowerInfo>> GetFollowers()
     {
-        return await _viewersService.GetFollowersCount();
+        return await _viewersService.GetAllFollowersInfo() ?? new List<FollowerInfo>();
     }
 }
 ```
@@ -94,22 +79,12 @@ public class MyService
 ### В контроллерах
 
 ```csharp
-[HttpGet("followers")]
-public async Task<IActionResult> GetFollowers()
-{
-    var followers = await _viewersService.GetAllFollowers();
-    return Ok(followers);
-}
-```
-
-### В Twitch командах
-
-```csharp
-public override async Task<string> ExecuteAsync(string[] args, string userId, string username)
-{
-    var followersCount = await _viewersService.GetFollowersCount();
-    return $"👥 Фоловеры: {followersCount}";
-}
+    [HttpGet("all")]
+    public async Task<IActionResult> GetAll()
+    {
+        var users = await _viewersService.GetAllFollowersInfo();
+        return Ok(users);
+    }
 ```
 
 ## Безопасность и производительность
@@ -124,7 +99,8 @@ public override async Task<string> ExecuteAsync(string[] args, string userId, st
 
 - Асинхронные методы для всех операций
 - Пагинация для больших списков
-- Кэширование не требуется (данные актуальные)
+- Database-First кеширование (данные персистентны)
+- Оптимизированные запросы к БД с `AsNoTracking()`
 
 ## Мониторинг и логирование
 
@@ -144,10 +120,11 @@ public override async Task<string> ExecuteAsync(string[] args, string userId, st
 
 ### Возможные улучшения
 
-- Кэширование результатов на короткое время
 - Метрики и статистика использования
 - Webhook для уведомлений об изменениях
 - Интеграция с другими сервисами
+- Оптимизация запросов к БД
+- Индексы для быстрого поиска
 
 ### Добавление новых методов
 
@@ -174,3 +151,5 @@ public async Task<List<string>> GetTopFollowers(int count = 10)
 - 🔧 Легко расширяемый
 - 🛡️ Обработка ошибок
 - 📊 REST API + Twitch команды
+- 💾 Database-First архитектура
+- 🔄 Персистентность данных

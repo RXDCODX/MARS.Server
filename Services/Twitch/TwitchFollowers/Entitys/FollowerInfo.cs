@@ -14,16 +14,20 @@ public class FollowerInfo
     /// <summary>
     /// ID пользователя
     /// </summary>
+    [Key]
+    [Required]
     public required string UserId { get; init; }
 
     /// <summary>
     /// Имя пользователя
     /// </summary>
+    [Required]
     public required string UserName { get; set; }
 
     /// <summary>
     /// Логин пользователя
     /// </summary>
+    [Required]
     public required string UserLogin { get; set; }
 
     /// <summary>

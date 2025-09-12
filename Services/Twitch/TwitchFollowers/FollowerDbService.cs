@@ -5,7 +5,10 @@ namespace MARS.Server.Services.Twitch.TwitchFollowers;
 /// <summary>
 /// Сервис для работы с базой данных фоловеров
 /// </summary>
-public class FollowerDbService(AppDbContext context, ILogger<FollowerDbService> logger)
+public class FollowerDbService(
+    IDbContextFactory<AppDbContext> factory,
+    ILogger<FollowerDbService> logger
+)
 {
     /// <summary>
     /// Получить всех фоловеров из базы данных
@@ -15,6 +18,7 @@ public class FollowerDbService(AppDbContext context, ILogger<FollowerDbService> 
     {
         try
         {
+            await using var context = await factory.CreateDbContextAsync();
             var dbEntities = await context.FollowersEntitys.AsNoTracking().ToListAsync();
 
             return [.. dbEntities];
@@ -40,6 +44,7 @@ public class FollowerDbService(AppDbContext context, ILogger<FollowerDbService> 
 
         try
         {
+            await using var context = await factory.CreateDbContextAsync();
             var dbEntity = await context
                 .FollowersEntitys.AsNoTracking()
                 .FirstOrDefaultAsync(f => f.UserId == userId);
@@ -67,6 +72,7 @@ public class FollowerDbService(AppDbContext context, ILogger<FollowerDbService> 
 
         try
         {
+            await using var context = await factory.CreateDbContextAsync();
             var existingEntity = await context.FollowersEntitys.FirstOrDefaultAsync(f =>
                 f.UserId == followerInfo.UserId
             );
@@ -79,8 +85,7 @@ public class FollowerDbService(AppDbContext context, ILogger<FollowerDbService> 
             else
             {
                 // Создаем новую запись
-                var newEntity = followerInfo;
-                context.FollowersEntitys.Add(newEntity);
+                context.FollowersEntitys.Add(followerInfo);
             }
 
             await context.SaveChangesAsync();
@@ -113,6 +118,7 @@ public class FollowerDbService(AppDbContext context, ILogger<FollowerDbService> 
 
         try
         {
+            await using var context = await factory.CreateDbContextAsync();
             var userIds = followersInfo.Select(f => f.UserId).ToList();
             var existingEntities = await context
                 .FollowersEntitys.Where(f => userIds.Contains(f.UserId))
@@ -126,12 +132,10 @@ public class FollowerDbService(AppDbContext context, ILogger<FollowerDbService> 
 
                 if (existingEntity != null)
                 {
-                    // Обновляем существующую запись
                     context.FollowersEntitys.Update(existingEntity);
                 }
                 else
                 {
-                    // Создаем новую запись
                     context.FollowersEntitys.Add(followerInfo);
                 }
             }
@@ -161,6 +165,7 @@ public class FollowerDbService(AppDbContext context, ILogger<FollowerDbService> 
 
         try
         {
+            await using var context = await factory.CreateDbContextAsync();
             var entity = await context.FollowersEntitys.FirstOrDefaultAsync(f =>
                 f.UserId == userId
             );
@@ -189,6 +194,7 @@ public class FollowerDbService(AppDbContext context, ILogger<FollowerDbService> 
     {
         try
         {
+            await using var context = await factory.CreateDbContextAsync();
             return await context.FollowersEntitys.AsNoTracking().CountAsync();
         }
         catch (Exception ex)
@@ -206,6 +212,7 @@ public class FollowerDbService(AppDbContext context, ILogger<FollowerDbService> 
     {
         try
         {
+            await using var context = await factory.CreateDbContextAsync();
             var count = await context.FollowersEntitys.CountAsync();
             context.FollowersEntitys.RemoveRange(context.FollowersEntitys);
             await context.SaveChangesAsync();
@@ -229,6 +236,7 @@ public class FollowerDbService(AppDbContext context, ILogger<FollowerDbService> 
     {
         try
         {
+            await using var context = await factory.CreateDbContextAsync();
             return await context
                 .FollowersEntitys.AsNoTracking()
                 .Where(f => f.LastUpdated < olderThan)

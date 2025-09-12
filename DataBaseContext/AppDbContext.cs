@@ -286,9 +286,6 @@ public sealed class AppDbContext : DbContext
             .WithOne(s => s.Layout)
             .HasForeignKey<ScoreboardLayout>(l => l.ScoreboardStateId)
             .OnDelete(DeleteBehavior.Cascade);
-
-        // Конфигурация для FollowerDbEntity
-        modelBuilder.Entity<FollowerDbEntity>().HasIndex(f => f.UserId).IsUnique();
     }
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)

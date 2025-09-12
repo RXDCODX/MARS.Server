@@ -14,33 +14,16 @@
 
 ### Получение списков пользователей
 
-- `GetAllFollowers()` - получить всех фоловеров (ChannelFollower)
 - `GetAllFollowersInfo()` - получить всех фоловеров (FollowerInfo)
-- `GetAllViPs()` - получить всех VIP
-- `GetModerators()` - получить всех модераторов
-
-### Получение статистики
-
-- `GetFollowersCount()` - количество фоловеров
-- `GetVIPsCount()` - количество VIP
-- `GetModeratorsCount()` - количество модераторов
-
-### Проверка статуса пользователя
-
-- `IsUserFollower(userId)` - проверить, является ли пользователь фоловером
-- `IsUserVIP(userId)` - проверить, является ли пользователь VIP
-- `IsUserModerator(userId)` - проверить, является ли пользователь модератором
-- `GetFollowerInfo(userId)` - получить подробную информацию о фоловере
 
 ### Кеширование фоловеров
 
-- **Автоматическое кеширование** - кеш фоловеров загружается при запуске сервиса
-- **Concurrent коллекции** - потокобезопасное хранение данных
-- **Обновление через события** - кеш автоматически обновляется при получении события `ChannelFollow`
-- **Fallback на кеш** - при ошибках API используются данные из кеша
+- **Database-First кеширование** - база данных используется как основное хранилище кеша
+- **Персистентность данных** - данные сохраняются между перезапусками приложения
+- **Обновление через события** - кеш автоматически обновляется при получении WebSocket событий
+- **Fallback на БД** - при ошибках API используются данные из базы данных
 - `RefreshFollowersCacheAsync()` - принудительное обновление кеша
-- `GetCachedFollowersCount()` - количество фоловеров в кеше
-- `ClearFollowersCache()` - очистка кеша
+- `ClearFollowersCache()` - очистка БД (асинхронный)
 
 ## Установка и настройка
 
@@ -69,9 +52,9 @@ public class MyService
         _viewersService = viewersService;
     }
 
-    public async Task<int> GetChannelFollowersCount()
+    public async Task<List<FollowerInfo>> GetUsers()
     {
-        return await _viewersService.GetFollowersCount();
+        return await _viewersService.GetAllFollowersInfo() ?? new List<FollowerInfo>();
     }
 }
 ```
@@ -90,11 +73,11 @@ public class MyController : ControllerBase
         _viewersService = viewersService;
     }
 
-    [HttpGet("followers")]
-    public async Task<IActionResult> GetFollowers()
+    [HttpGet("all")]
+    public async Task<IActionResult> GetAll()
     {
-        var followers = await _viewersService.GetAllFollowers();
-        return Ok(followers);
+        var users = await _viewersService.GetAllFollowersInfo();
+        return Ok(users);
     }
 }
 ```
@@ -103,24 +86,9 @@ public class MyController : ControllerBase
 
 После регистрации сервиса и контроллера `RxdcodxViewersController` будут доступны следующие endpoints:
 
-### Основные endpoints (возвращают FollowerInfo)
+### Основные endpoints
 
 - `GET /api/RxdcodxViewers/all` - получить всех пользователей с полной информацией
-- `GET /api/RxdcodxViewers/followers` - получить всех фоловеров (только фоловеры)
-- `GET /api/RxdcodxViewers/vips` - получить всех VIP
-- `GET /api/RxdcodxViewers/moderators` - получить всех модераторов
-- `GET /api/RxdcodxViewers/stats` - получить статистику канала
-- `GET /api/RxdcodxViewers/user/{userId}/status` - проверить статус пользователя
-
-### Новые endpoints для работы с FollowerInfo
-
-- `GET /api/RxdcodxViewers/followers-info` - получить всех пользователей как FollowerInfo
-- `GET /api/RxdcodxViewers/user/{userId}/info` - получить полную информацию о пользователе
-
-### Управление кешем
-
-- `POST /api/RxdcodxViewers/refresh-cache` - принудительно обновить кеш
-- `POST /api/RxdcodxViewers/clear-cache` - очистить кеш пользователей
 
 ## Требования
 
@@ -130,33 +98,32 @@ public class MyController : ControllerBase
 
 ## Кеширование фоловеров
 
-### Автоматическое кеширование
+### Database-First кеширование
 
-Сервис автоматически загружает кеш фоловеров при запуске приложения. Это обеспечивает:
+Сервис использует базу данных как основное хранилище кеша. Это обеспечивает:
 
-- **Быстрый доступ** к данным даже при недоступности API
+- **Персистентность** - данные сохраняются между перезапусками приложения
 - **Надежность** - сервис продолжает работать при сбоях Twitch API
 - **Актуальность** - кеш обновляется через WebSocket события
+- **Простота** - нет необходимости в синхронизации между кешем и БД
 
 ### Обновление кеша
 
 Кеш обновляется в следующих случаях:
 
-1. **При запуске сервиса** - полная загрузка всех фоловеров
-2. **При получении события `ChannelFollow`** - добавление нового фоловера
+1. **При запуске сервиса** - загрузка данных из БД или полная загрузка из API
+2. **При получении WebSocket событий** - автоматическое обновление БД
 3. **При вызове `RefreshFollowersCacheAsync()`** - принудительное обновление
-4. **При успешном API запросе** - обновление кеша актуальными данными
+4. **При успешном API запросе** - обновление БД актуальными данными
 
 ### Использование кеша
 
-При ошибках API сервис автоматически переключается на использование кеша:
+При ошибках API сервис автоматически переключается на использование данных из БД:
 
 ```csharp
-// Если API недоступен, вернется кеш
+// Если API недоступен, вернутся данные из БД
 var followers = await _viewersService.GetAllFollowers();
 
-// Проверка статуса пользователя также использует кеш
-var isFollower = await _viewersService.IsUserFollower(userId);
 ```
 
 ## Обработка ошибок
@@ -170,39 +137,17 @@ var isFollower = await _viewersService.IsUserFollower(userId);
 
 ## Примеры использования
 
-### Получение статистики канала
-
-```csharp
-var stats = new
-{
-    Followers = await _viewersService.GetFollowersCount(),
-    VIPs = await _viewersService.GetVIPsCount(),
-    Moderators = await _viewersService.GetModeratorsCount()
-};
-```
-
-### Проверка статуса пользователя
-
-```csharp
-var userId = "123456789";
-var status = await _viewersService.IsUserFollower(userId);
-if (status)
-{
-    Console.WriteLine($"Пользователь {userId} является фоловером");
-}
-```
-
-### Получение всех фоловеров с обработкой ошибок
+### Получение всех пользователей с обработкой ошибок
 
 ```csharp
 try
 {
-    var followers = await _viewersService.GetAllFollowers();
-    if (followers != null)
+    var users = await _viewersService.GetAllFollowersInfo();
+    if (users != null)
     {
-        foreach (var follower in followers)
+        foreach (var user in users)
         {
-            Console.WriteLine($"Фоловер: {follower.UserName} (ID: {follower.UserId})");
+            Console.WriteLine($"Пользователь: {user.UserName} (ID: {user.UserId})");
         }
     }
     else
@@ -237,23 +182,14 @@ if (followersInfo != null)
     }
 }
 
-// Получение информации о конкретном фоловере
-var followerInfo = await _viewersService.GetFollowerInfo("123456789");
-if (followerInfo != null)
-{
-    Console.WriteLine($"Найден фоловер: {followerInfo}");
-}
 ```
 
 ### Управление кешем
 
 ```csharp
-// Получение количества фоловеров в кеше
-var cachedCount = _viewersService.GetCachedFollowersCount();
-Console.WriteLine($"В кеше {cachedCount} фоловеров");
 
-// Очистка кеша
-_viewersService.ClearFollowersCache();
+// Очистка БД (теперь асинхронный)
+await _viewersService.ClearFollowersCache();
 
 // Принудительное обновление кеша
 await _viewersService.RefreshFollowersCacheAsync();
@@ -287,71 +223,13 @@ GET /api/RxdcodxViewers/all
 }
 ```
 
-#### Получение только фоловеров
-
-```bash
-GET /api/RxdcodxViewers/followers
-```
-
-#### Получение только VIP
-
-```bash
-GET /api/RxdcodxViewers/vips
-```
-
-#### Получение только модераторов
-
-```bash
-GET /api/RxdcodxViewers/moderators
-```
-
-#### Получение статистики
-
-```bash
-GET /api/RxdcodxViewers/stats
-```
-
-Ответ:
-
-```json
-{
-  "followersCount": 120,
-  "vipsCount": 15,
-  "moderatorsCount": 5,
-  "totalSpecialUsers": 20,
-  "totalUsers": 140,
-  "cachedUsersCount": 140
-}
-```
-
-#### Проверка статуса пользователя
-
-```bash
-GET /api/RxdcodxViewers/user/123456789/status
-```
-
-#### Получение полной информации о пользователе
-
-```bash
-GET /api/RxdcodxViewers/user/123456789/info
-```
-
-#### Управление кешем
-
-```bash
-# Обновить кеш
-POST /api/RxdcodxViewers/refresh-cache
-
-# Очистить кеш
-POST /api/RxdcodxViewers/clear-cache
-```
-
 ## Примечания
 
 - Все методы асинхронные
 - Сервис использует пагинацию для получения больших списков
-- **Concurrent коллекции** - кеш потокобезопасен и не требует блокировок
+- **Database-First архитектура** - БД используется как основное хранилище кеша
 - **FollowerInfo** - расширенная модель с дополнительными возможностями
 - Рекомендуется использовать `AsNoTracking()` при работе с Entity Framework для лучшей производительности
 - Сервис автоматически обрабатывает ограничения API Twitch (100 записей за запрос)
 - Кеш автоматически обновляется при получении WebSocket событий
+- Данные сохраняются между перезапусками приложения

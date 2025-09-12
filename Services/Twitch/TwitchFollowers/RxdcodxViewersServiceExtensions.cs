@@ -15,9 +15,9 @@ public static class RxdcodxViewersServiceExtensions
     )
     {
         // Регистрируем вспомогательные сервисы
-        services.AddScoped<FollowerDbService>();
-        services.AddScoped<TwitchUserInfoService>();
-        
+        services.AddSingleton<FollowerDbService>();
+        services.AddSingleton<TwitchUserInfoService>();
+
         // Регистрируем основной сервис
         services.AddSingleton<RxdcodxViewersService>();
         services.AddSingleton<IRxdcodxViewersService>(sp =>
