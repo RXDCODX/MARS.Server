@@ -1,4 +1,5 @@
 ﻿using System.Globalization;
+using Newtonsoft.Json;
 using TwitchLib.Api.Helix.Models.Channels.GetChannelFollowers;
 using TwitchLib.Api.Helix.Models.Channels.GetChannelVIPs;
 using TwitchLib.Api.Helix.Models.Moderation.GetModerators;
@@ -14,7 +15,7 @@ public class FollowerInfo
     /// <summary>
     /// ID пользователя
     /// </summary>
-    public required string UserId { get; set; }
+    public required string UserId { get; init; }
 
     /// <summary>
     /// Имя пользователя
@@ -28,6 +29,10 @@ public class FollowerInfo
 
     public bool IsModerator { get; set; }
     public bool IsVip { get; set; }
+
+    [System.Text.Json.Serialization.JsonIgnore]
+    [JsonIgnore]
+    public bool IsJustFollower => !IsModerator && !IsVip;
 
     /// <summary>
     /// Дата подписки на канал
@@ -88,44 +93,6 @@ public class FollowerInfo
             IsVip = true,
             LastUpdated = DateTime.Now,
         };
-    }
-
-    /// <summary>
-    /// Преобразовать в ChannelFollower для совместимости с API
-    /// </summary>
-    /// <returns>Объект ChannelFollower</returns>
-    public ChannelFollower ToChannelFollower()
-    {
-        // Временная заглушка - ChannelFollower имеет только getter'ы
-        // Поэтому возвращаем null и используем напрямую FollowerInfo
-        throw new NotImplementedException(
-            "ChannelFollower имеет только getter'ы и не может быть создан. "
-                + "Используйте FollowerInfo напрямую или методы GetAllFollowersInfo()."
-        );
-    }
-
-    /// <summary>
-    /// Обновить информацию о фоловере
-    /// </summary>
-    /// <param name="follower">Новые данные фоловера</param>
-    public void UpdateFromChannelFollower(ChannelFollower follower)
-    {
-        UserName = follower.UserName;
-        UserLogin = follower.UserLogin;
-        FollowedAt = DateTimeOffset
-            .Parse(follower.FollowedAt, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind)
-            .LocalDateTime;
-        LastUpdated = DateTime.UtcNow;
-    }
-
-    /// <summary>
-    /// Проверить, является ли информация устаревшей
-    /// </summary>
-    /// <param name="maxAge">Максимальный возраст информации в часах</param>
-    /// <returns>True если информация устарела</returns>
-    public bool IsStale(TimeSpan maxAge)
-    {
-        return DateTime.UtcNow - LastUpdated > maxAge;
     }
 
     public override string ToString()

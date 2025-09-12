@@ -6,17 +6,6 @@
 public static class RxdcodxViewersServiceExtensions
 {
     /// <summary>
-    /// Добавить сервис RxdcodxViewersService в DI контейнер
-    /// </summary>
-    /// <param name="services">Коллекция сервисов</param>
-    /// <returns>Коллекция сервисов с добавленным сервисом</returns>
-    public static IServiceCollection AddRxdcodxViewersService(this IServiceCollection services)
-    {
-        services.AddScoped<IRxdcodxViewersService, RxdcodxViewersService>();
-        return services;
-    }
-
-    /// <summary>
     /// Добавить сервис RxdcodxViewersService как синглтон в DI контейнер
     /// </summary>
     /// <param name="services">Коллекция сервисов</param>
@@ -25,7 +14,11 @@ public static class RxdcodxViewersServiceExtensions
         this IServiceCollection services
     )
     {
-        services.AddSingleton<IRxdcodxViewersService, RxdcodxViewersService>();
+        services.AddSingleton<RxdcodxViewersService>();
+        services.AddSingleton<IRxdcodxViewersService>(sp =>
+            sp.GetRequiredService<RxdcodxViewersService>()
+        );
+        services.AddHostedService(sp => sp.GetRequiredService<RxdcodxViewersService>());
         return services;
     }
 }

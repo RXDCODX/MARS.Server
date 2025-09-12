@@ -15,7 +15,8 @@ public class RxdcodxViewersService(
     ITwitchAPI api,
     TokenService tokenService,
     EventSubWebsocketClient wsClient,
-    IHostApplicationLifetime lifetime
+    IHostApplicationLifetime lifetime,
+    ILogger<RxdcodxViewersService> logger
 ) : BackgroundService, IRxdcodxViewersService
 {
     private const string ChannelId = TwitchExstension.ChannelId; // ID канала rxdcodx
@@ -51,7 +52,7 @@ public class RxdcodxViewersService(
         catch (Exception ex)
         {
             // Логируем ошибку, но не прерываем работу сервиса
-            Console.WriteLine($"Ошибка при инициализации кеша фоловеров: {ex.Message}");
+            logger.LogError(ex, "Ошибка при инициализации кеша фоловеров");
         }
     }
 
@@ -99,18 +100,64 @@ public class RxdcodxViewersService(
     /// <summary>
     /// Загрузка фоловеров из API (внутренний метод)
     /// </summary>
-    private async Task<List<FollowerInfo>?> LoadFollowersFromApiAsync()
+    private async Task<ICollection<FollowerInfo>?> LoadFollowersFromApiAsync()
     {
         if (tokenService.Token == null)
         {
-            return null;
+            var startTime = DateTime.Now;
+
+            while (tokenService.Token == null)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(1));
+                if (DateTime.Now - startTime > TimeSpan.FromMinutes(1))
+                {
+                    throw new NullReferenceException(
+                        "TwitchAccessToken так и не был инициализирован спустя минуту"
+                    );
+                }
+            }
+
+            if (tokenService.Token is not { AccessToken: not null })
+            {
+                return null;
+            }
         }
 
         var pagination = "1";
-        var list = new List<FollowerInfo>();
+        var list = new HashSet<FollowerInfo>();
 
         try
         {
+            var result2 = await api.Helix.Moderation.GetModeratorsAsync(
+                ChannelId,
+                null,
+                100,
+                null,
+                tokenService.Token.AccessToken
+            );
+
+            var moderators = result2.Data.Select(FollowerInfo.FromModerator);
+
+            foreach (FollowerInfo followerInfo in moderators)
+            {
+                list.Add(followerInfo);
+            }
+
+            var result3 = await api.Helix.Channels.GetVIPsAsync(
+                ChannelId,
+                null,
+                100,
+                null,
+                tokenService.Token.AccessToken
+            );
+
+            var vips = result3.Data.Select(FollowerInfo.FromVip);
+
+            foreach (FollowerInfo followerInfo in vips)
+            {
+                list.Add(followerInfo);
+            }
+
             while (!string.IsNullOrWhiteSpace(pagination))
             {
                 pagination = string.Empty;
@@ -123,33 +170,34 @@ public class RxdcodxViewersService(
                 );
 
                 pagination = result.Pagination?.Cursor ?? string.Empty;
+                var isSameInfo = false;
                 var followers = result.Data.Select(FollowerInfo.FromChannelFollower);
-                list.AddRange(followers);
+                foreach (FollowerInfo followerInfo in followers)
+                {
+                    var isHaveSameInfo = list.Add(followerInfo);
+
+                    if (!isHaveSameInfo)
+                    {
+                        var userInfo = list.First(e => e.UserId == followerInfo.UserId);
+
+                        if (userInfo.IsJustFollower)
+                        {
+                            isSameInfo = true;
+                            break;
+                        }
+                        else
+                        {
+                            userInfo.FollowedAt = followerInfo.FollowedAt;
+                            userInfo.LastUpdated = DateTime.Now;
+                        }
+                    }
+                }
+
+                if (isSameInfo)
+                {
+                    break;
+                }
             }
-
-            var result2 = await api.Helix.Moderation.GetModeratorsAsync(
-                ChannelId,
-                null,
-                100,
-                null,
-                tokenService.Token.AccessToken
-            );
-
-            var moderators = result2.Data.Select(FollowerInfo.FromModerator);
-
-            list.AddRange(moderators);
-
-            var result3 = await api.Helix.Channels.GetVIPsAsync(
-                ChannelId,
-                null,
-                100,
-                null,
-                tokenService.Token.AccessToken
-            );
-
-            var vips = result3.Data.Select(FollowerInfo.FromVip);
-
-            list.AddRange(vips);
 
             return list;
         }
@@ -178,12 +226,12 @@ public class RxdcodxViewersService(
                     _followersCache.TryAdd(follower.UserId, follower);
                 }
                 _isCacheInitialized = true;
-                Console.WriteLine($"Кеш фоловеров обновлен. Количество: {followers.Count}");
+                logger.LogInformation("Кеш фоловеров обновлен. Количество: {Count}", followers.Count);
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Ошибка при обновлении кеша фоловеров: {ex.Message}");
+            logger.LogError(ex, "Ошибка при обновлении кеша фоловеров");
         }
     }
 
@@ -243,9 +291,7 @@ public class RxdcodxViewersService(
         {
             // При ошибке API возвращаем null для обратной совместимости
             // Используйте GetAllFollowersInfo() для получения данных из кеша
-            Console.WriteLine(
-                $"API недоступен, GetAllFollowers возвращает null. Ошибка: {ex.Message}"
-            );
+            logger.LogWarning(ex, "API недоступен, GetAllFollowers возвращает null");
 
             // Если кеш пуст, пробрасываем исключение
             throw new InvalidOperationException(
@@ -513,8 +559,10 @@ public class RxdcodxViewersService(
                 // Добавляем нового фоловера в кеш
                 if (_followersCache.TryAdd(twEvent.UserId, newFollower))
                 {
-                    Console.WriteLine(
-                        $"Добавлен новый фоловер в кеш: {twEvent.UserName} (ID: {twEvent.UserId})"
+                    logger.LogInformation(
+                        "Добавлен новый фоловер в кеш: {UserName} (ID: {UserId})",
+                        twEvent.UserName,
+                        twEvent.UserId
                     );
                 }
                 else
@@ -525,15 +573,17 @@ public class RxdcodxViewersService(
                         newFollower,
                         _followersCache[twEvent.UserId]
                     );
-                    Console.WriteLine(
-                        $"Обновлен фоловер в кеше: {twEvent.UserName} (ID: {twEvent.UserId})"
+                    logger.LogInformation(
+                        "Обновлен фоловер в кеше: {UserName} (ID: {UserId})",
+                        twEvent.UserName,
+                        twEvent.UserId
                     );
                 }
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Ошибка при обновлении кеша фоловеров: {ex.Message}");
+            logger.LogError(ex, "Ошибка при обновлении кеша фоловеров");
         }
 
         return Task.CompletedTask;
@@ -617,7 +667,7 @@ public class RxdcodxViewersService(
                     _followersCache.TryAdd(follower.UserId, follower);
                 }
                 _isCacheInitialized = true;
-                return followers;
+                return [.. followers];
             }
         }
         catch (Exception ex)
@@ -625,9 +675,7 @@ public class RxdcodxViewersService(
             // При ошибке API возвращаем кеш если он есть
             if (!_followersCache.IsEmpty)
             {
-                Console.WriteLine(
-                    $"API недоступен, используем кеш фоловеров. Ошибка: {ex.Message}"
-                );
+                logger.LogWarning(ex, "API недоступен, используем кеш фоловеров");
                 return [.. _followersCache.Values];
             }
 
@@ -680,9 +728,7 @@ public class RxdcodxViewersService(
             }
             catch (Exception ex)
             {
-                Console.WriteLine(
-                    $"Ошибка при получении информации о фоловере {userId}: {ex.Message}"
-                );
+                logger.LogError(ex, "Ошибка при получении информации о фоловере {UserId}", userId);
             }
         }
 
@@ -704,6 +750,6 @@ public class RxdcodxViewersService(
     {
         _followersCache.Clear();
         _isCacheInitialized = false;
-        Console.WriteLine("Кеш фоловеров очищен");
+        logger.LogInformation("Кеш фоловеров очищен");
     }
 }

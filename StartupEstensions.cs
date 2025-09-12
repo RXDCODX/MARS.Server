@@ -33,7 +33,10 @@ using MARS.Server.Services.Twitch.StreamBotNotifications;
 using MARS.Server.Services.Twitch.TwitchFollowers;
 using Microsoft.OpenApi.Models;
 using TwitchLib.Api;
+using TwitchLib.Api.Core;
 using TwitchLib.Api.Core.Enums;
+using TwitchLib.Api.Core.HttpCallHandlers;
+using TwitchLib.Api.Core.Interfaces;
 using TwitchLib.EventSub.Websockets.Extensions;
 using YandexMusicResolver;
 using YandexMusicResolver.Config;
@@ -159,7 +162,7 @@ public static class StartupEstensions
         return services;
     }
 
-    internal static async Task<IServiceCollection> AddTwitchEvents(
+    internal static IServiceCollection AddTwitchEvents(
         this IServiceCollection services,
         IConfigurationManager manager
     )
@@ -171,12 +174,29 @@ public static class StartupEstensions
 
         services.Configure<TwitchConfiguration>(twitchConfigSection);
         twitchConfigSection.Bind(twitchConfig);
-        var twitchApi = new TwitchAPI { Settings = { ClientId = twitchConfig.ClientId } };
-        twitchApi.Settings.AccessToken = await twitchApi.Auth.GetAccessTokenAsync();
-        twitchApi.Settings.Secret = twitchConfig.ClientSecret;
-        twitchApi.Settings.Scopes = [AuthScopes.Any];
 
-        services.AddSingleton<ITwitchAPI>(twitchApi);
+        services.AddSingleton<IRateLimiter, TwitchApiRateLimiter>();
+
+        // Регистрируем обертку с рейт лимитером как основную реализацию ITwitchAPI
+        services.AddSingleton<ITwitchAPI>(sp =>
+        {
+            var twitchApi = new TwitchAPI(
+                sp.GetRequiredService<ILoggerFactory>(),
+                sp.GetRequiredService<IRateLimiter>(),
+                new ApiSettings() { ClientId = twitchConfig.ClientId },
+                new TwitchHttpClient(sp.GetRequiredService<ILogger<TwitchHttpClient>>())
+            )
+            {
+                Settings =
+                {
+                    //twitchApi.Settings.AccessToken = twitchApi.Auth.GetAccessTokenAsync().GetAwaiter().GetResult();
+                    Secret = twitchConfig.ClientSecret,
+                    Scopes = [AuthScopes.Any],
+                },
+            };
+
+            return twitchApi;
+        });
 
         services.AddSingleton<TwitchConnectionManager>();
         services.AddHostedService(sp => sp.GetRequiredService<TwitchConnectionManager>());
@@ -200,9 +220,6 @@ public static class StartupEstensions
         services.AddSingleton<EventSubService>();
         services.AddSingleton<TelegramTokenNotification>();
         services.AddSingleton<TokenService>();
-
-        // Регистрируем сервис для работы с зрителями канала rxdcodx
-        services.AddRxdcodxViewersService();
 
         services.AddSingleton<AutoHello>();
         services.AddHostedService(sp => sp.GetRequiredService<AutoHello>());
@@ -284,6 +301,9 @@ public static class StartupEstensions
 
         services.AddSingleton<ServiceManager>();
         services.AddSingleton<IServiceManager>(sp => sp.GetRequiredService<ServiceManager>());
+
+        // Регистрируем сервис для работы с зрителями канала rxdcodx
+        services.AddRxdcodxViewersServiceAsSingleton();
 
         return services;
     }
