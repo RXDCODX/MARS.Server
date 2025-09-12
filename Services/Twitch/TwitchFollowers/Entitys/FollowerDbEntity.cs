@@ -62,7 +62,7 @@ public class FollowerDbEntity
     /// <summary>
     /// Дата создания записи в БД
     /// </summary>
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow; 
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     /// <summary>
     /// Преобразовать в FollowerInfo
