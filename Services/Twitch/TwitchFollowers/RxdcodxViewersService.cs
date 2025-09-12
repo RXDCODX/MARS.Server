@@ -5,6 +5,8 @@ using TwitchLib.Api.Helix.Models.Channels.GetChannelVIPs;
 using TwitchLib.Api.Helix.Models.Moderation.GetModerators;
 using TwitchLib.EventSub.Websockets;
 
+// ReSharper disable All
+
 namespace MARS.Server.Services.Twitch.TwitchFollowers;
 
 /// <summary>
@@ -299,12 +301,22 @@ public class RxdcodxViewersService(
                 // Сохраняем в БД (это и есть наш кеш)
                 var isNew = await followerDbService.SaveOrUpdateFollowerAsync(enrichedFollower);
 
-                logger.LogInformation(
-                    message: isNew
-                        ? "Добавлен новый фоловер: {UserName} (ID: {UserId})"
-                        : "Обновлен фоловер: {UserName} (ID: {UserId})",
-                    args: [twEvent.UserName, twEvent.UserId]
-                );
+                if (isNew)
+                {
+                    logger.LogInformation(
+                        "Добавлен новый фоловер: {UserName} (ID: {UserId})",
+                        twEvent.UserName,
+                        twEvent.UserId
+                    );
+                }
+                else
+                {
+                    logger.LogInformation(
+                        "Обновлен фоловер: {UserName} (ID: {UserId})",
+                        twEvent.UserName,
+                        twEvent.UserId
+                    );
+                }
             }
         }
         catch (Exception ex)
@@ -508,14 +520,21 @@ public class RxdcodxViewersService(
                 if (usersWithUpdatedAvatars.Count > 0)
                 {
                     // Сохраняем обновленные данные в БД
-                    var dbUpdatedCount = await followerDbService.UpdateAvatarsAsync(usersWithUpdatedAvatars);
-                    
-                    logger.LogInformation("Успешно обновлено {Count} аватарок в памяти и {DbCount} в БД", 
-                        updatedCount, dbUpdatedCount);
+                    var dbUpdatedCount = await followerDbService.UpdateAvatarsAsync(
+                        usersWithUpdatedAvatars
+                    );
+
+                    logger.LogInformation(
+                        "Успешно обновлено {Count} аватарок в памяти и {DbCount} в БД",
+                        updatedCount,
+                        dbUpdatedCount
+                    );
                 }
                 else
                 {
-                    logger.LogWarning("Аватарки обновились в памяти, но не найдены для сохранения в БД");
+                    logger.LogWarning(
+                        "Аватарки обновились в памяти, но не найдены для сохранения в БД"
+                    );
                 }
             }
 

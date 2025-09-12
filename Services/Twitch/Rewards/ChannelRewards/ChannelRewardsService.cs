@@ -19,10 +19,7 @@ public class ChannelRewardsService(
     /// <summary>
     /// Создает награду канала. Возвращает идентификатор созданной награды.
     /// </summary>
-    public async Task<string?> CreateRewardAsync(
-        CreateCustomRewardsRequest request,
-        CancellationToken cancellationToken = default
-    )
+    public async Task<string?> CreateRewardAsync(CreateCustomRewardsRequest request)
     {
         if (!IsServiceActive)
         {
@@ -67,9 +64,7 @@ public class ChannelRewardsService(
     /// <summary>
     /// Получает все награды канала.
     /// </summary>
-    public async Task<IEnumerable<CustomReward>?> GetRewardsAsync(
-        CancellationToken cancellationToken = default
-    )
+    public async Task<IEnumerable<CustomReward>?> GetRewardsAsync()
     {
         if (!IsServiceActive)
         {
@@ -102,10 +97,7 @@ public class ChannelRewardsService(
     /// <summary>
     /// Удаляет награду канала по её идентификатору.
     /// </summary>
-    public async Task<bool> DeleteRewardAsync(
-        string rewardId,
-        CancellationToken cancellationToken = default
-    )
+    public async Task<bool> DeleteRewardAsync(string rewardId)
     {
         if (!IsServiceActive)
         {

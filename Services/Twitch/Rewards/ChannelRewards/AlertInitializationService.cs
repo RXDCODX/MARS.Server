@@ -23,21 +23,21 @@ public class AlertInitializationService(
 
         if (IsServiceActive)
         {
-            await InitializeAlertAsync(cancellationToken);
+            await InitializeAlertAsync();
         }
     }
 
     /// <summary>
     /// Инициализирует алерт за 16 баллов, если он не существует.
     /// </summary>
-    private async Task InitializeAlertAsync(CancellationToken cancellationToken = default)
+    private async Task InitializeAlertAsync()
     {
         try
         {
             logger.LogInformation("Проверка существования алерта за {Cost} баллов", AlertCost);
 
             // Получаем все существующие награды
-            var existingRewards = await channelRewardsService.GetRewardsAsync(cancellationToken);
+            var existingRewards = await channelRewardsService.GetRewardsAsync();
             if (existingRewards == null)
             {
                 logger.LogError("Не удалось получить список наград канала");
@@ -73,10 +73,7 @@ public class AlertInitializationService(
                 IsGlobalCooldownEnabled = false,
             };
 
-            var rewardId = await channelRewardsService.CreateRewardAsync(
-                request,
-                cancellationToken
-            );
+            var rewardId = await channelRewardsService.CreateRewardAsync(request);
             if (rewardId != null)
             {
                 logger.LogInformation(
