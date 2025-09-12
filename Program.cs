@@ -133,6 +133,7 @@ public static class Program
                     MinimumLogLevel = builder.Environment.IsProduction()
                         ? LogLevel.Warning
                         : LogLevel.Information,
+                    Environment = builder.Environment,
                 };
             });
 

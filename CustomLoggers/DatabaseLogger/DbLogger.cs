@@ -50,7 +50,11 @@ public class DbLogger([NotNull] DbLoggerProvider dbLoggerProvider) : ILogger
         Func<TState, Exception?, string> formatter
     )
     {
-        if (!IsEnabled(logLevel) || logLevel < _dbLoggerProvider.Options.MinimumLogLevel)
+        if (
+            !IsEnabled(logLevel)
+            || logLevel < _dbLoggerProvider.Options.MinimumLogLevel
+            || !_dbLoggerProvider.Options.Environment.IsProduction()
+        )
         {
             return;
         }

@@ -54,6 +54,9 @@ public class RxdcodxViewersService(
                         followers
                     );
 
+                    // Обновляем аватарки для пользователей без них
+                    await userInfoService.UpdateMissingAvatarsAsync(enrichedFollowers);
+
                     // Сохраняем в БД
                     await followerDbService.SaveOrUpdateFollowersAsync(enrichedFollowers);
 
@@ -83,6 +86,9 @@ public class RxdcodxViewersService(
             {
                 // Обогащаем данные дополнительной информацией
                 var enrichedFollowers = await userInfoService.EnrichFollowersInfoAsync(followers);
+
+                // Обновляем аватарки для пользователей без них
+                await userInfoService.UpdateMissingAvatarsAsync(enrichedFollowers);
 
                 // Сохраняем в БД (это и есть наш кеш)
                 await followerDbService.SaveOrUpdateFollowersAsync(enrichedFollowers);
@@ -225,6 +231,9 @@ public class RxdcodxViewersService(
                 // Обогащаем данные дополнительной информацией
                 var enrichedFollowers = await userInfoService.EnrichFollowersInfoAsync(followers);
 
+                // Обновляем аватарки для пользователей без них
+                await userInfoService.UpdateMissingAvatarsAsync(enrichedFollowers);
+
                 // Сохраняем в БД (это и есть наш кеш)
                 await followerDbService.SaveOrUpdateFollowersAsync(enrichedFollowers);
 
@@ -284,6 +293,9 @@ public class RxdcodxViewersService(
                 // Обогащаем данные дополнительной информацией
                 var enrichedFollower = await userInfoService.EnrichFollowerInfoAsync(newFollower);
 
+                // Обновляем аватарку если её нет
+                await userInfoService.UpdateUserAvatarAsync(enrichedFollower);
+
                 // Сохраняем в БД (это и есть наш кеш)
                 var isNew = await followerDbService.SaveOrUpdateFollowerAsync(enrichedFollower);
 
@@ -291,8 +303,7 @@ public class RxdcodxViewersService(
                     message: isNew
                         ? "Добавлен новый фоловер: {UserName} (ID: {UserId})"
                         : "Обновлен фоловер: {UserName} (ID: {UserId})",
-                    twEvent.UserName,
-                    twEvent.UserId
+                    args: [twEvent.UserName, twEvent.UserId]
                 );
             }
         }
@@ -320,6 +331,9 @@ public class RxdcodxViewersService(
 
             // Обогащаем данные дополнительной информацией
             var enrichedVip = await userInfoService.EnrichFollowerInfoAsync(newVip);
+
+            // Обновляем аватарку если её нет
+            await userInfoService.UpdateUserAvatarAsync(enrichedVip);
 
             // Сохраняем в БД (это и есть наш кеш)
             await followerDbService.SaveOrUpdateFollowerAsync(enrichedVip);
@@ -350,6 +364,9 @@ public class RxdcodxViewersService(
 
             // Обогащаем данные дополнительной информацией
             var enrichedModerator = await userInfoService.EnrichFollowerInfoAsync(newModerator);
+
+            // Обновляем аватарку если её нет
+            await userInfoService.UpdateUserAvatarAsync(enrichedModerator);
 
             // Сохраняем в БД (это и есть наш кеш)
             await followerDbService.SaveOrUpdateFollowerAsync(enrichedModerator);
@@ -382,6 +399,9 @@ public class RxdcodxViewersService(
             {
                 // Обогащаем данные дополнительной информацией
                 var enrichedFollowers = await userInfoService.EnrichFollowersInfoAsync(followers);
+
+                // Обновляем аватарки для пользователей без них
+                await userInfoService.UpdateMissingAvatarsAsync(enrichedFollowers);
 
                 // Сохраняем в БД (это и есть наш кеш)
                 await followerDbService.SaveOrUpdateFollowersAsync(enrichedFollowers);
@@ -436,5 +456,75 @@ public class RxdcodxViewersService(
 
         logger.LogInformation("Очищено {Count} фоловеров из базы данных", clearedCount);
         return clearedCount;
+    }
+
+    /// <summary>
+    /// Получить пользователей без аватарок
+    /// </summary>
+    public async Task<List<FollowerInfo>> GetUsersWithoutAvatarsAsync()
+    {
+        return await followerDbService.GetUsersWithoutAvatarsAsync();
+    }
+
+    /// <summary>
+    /// Получить количество пользователей без аватарок
+    /// </summary>
+    public async Task<int> GetUsersWithoutAvatarsCountAsync()
+    {
+        return await followerDbService.GetUsersWithoutAvatarsCountAsync();
+    }
+
+    /// <summary>
+    /// Обновить аватарки для пользователей без них
+    /// </summary>
+    public async Task<int> UpdateMissingAvatarsAsync()
+    {
+        try
+        {
+            // Получаем пользователей без аватарок из БД
+            var usersWithoutAvatars = await followerDbService.GetUsersWithoutAvatarsAsync();
+
+            if (usersWithoutAvatars.Count == 0)
+            {
+                logger.LogInformation("Все пользователи уже имеют аватарки");
+                return 0;
+            }
+
+            logger.LogInformation(
+                "Найдено {Count} пользователей без аватарок, обновляем...",
+                usersWithoutAvatars.Count
+            );
+
+            // Обновляем аватарки через TwitchUserInfoService
+            var updatedCount = await userInfoService.UpdateMissingAvatarsAsync(usersWithoutAvatars);
+
+            if (updatedCount > 0)
+            {
+                // Получаем только пользователей с обновленными аватарками
+                var usersWithUpdatedAvatars = usersWithoutAvatars
+                    .Where(u => !string.IsNullOrWhiteSpace(u.ProfileImageUrl))
+                    .ToList();
+
+                if (usersWithUpdatedAvatars.Count > 0)
+                {
+                    // Сохраняем обновленные данные в БД
+                    var dbUpdatedCount = await followerDbService.UpdateAvatarsAsync(usersWithUpdatedAvatars);
+                    
+                    logger.LogInformation("Успешно обновлено {Count} аватарок в памяти и {DbCount} в БД", 
+                        updatedCount, dbUpdatedCount);
+                }
+                else
+                {
+                    logger.LogWarning("Аватарки обновились в памяти, но не найдены для сохранения в БД");
+                }
+            }
+
+            return updatedCount;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при обновлении аватарок пользователей");
+            return 0;
+        }
     }
 }

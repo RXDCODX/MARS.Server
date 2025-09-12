@@ -50,7 +50,7 @@ public class TwitchUserInfoService(
     {
         var result = new Dictionary<string, User>();
 
-        if (userIds.Count > 0 || tokenService.Token?.AccessToken == null)
+        if (userIds.Count == 0 || tokenService.Token?.AccessToken == null)
         {
             return result;
         }
@@ -67,20 +67,45 @@ public class TwitchUserInfoService(
             // Twitch API позволяет получать до 100 пользователей за запрос
             const int batchSize = 100;
 
+            logger.LogDebug(
+                "Запрашиваем информацию о {Count} пользователях из Twitch API",
+                userIdsList.Count
+            );
+
             for (var i = 0; i < userIdsList.Count; i += batchSize)
             {
-                var batch = userIdsList.Skip(i).Take(batchSize);
+                var batch = userIdsList.Skip(i).Take(batchSize).ToList();
+
+                logger.LogDebug(
+                    "Запрашиваем batch {BatchStart}-{BatchEnd} из {Total}",
+                    i,
+                    i + batch.Count,
+                    userIdsList.Count
+                );
 
                 var response = await api.Helix.Users.GetUsersAsync(
                     ids: [.. batch],
                     accessToken: tokenService.Token.AccessToken
                 );
 
+                logger.LogDebug(
+                    "Получен ответ от Twitch API: {Count} пользователей",
+                    response.Users.Length
+                );
+
                 foreach (var user in response.Users)
                 {
                     result[user.Id] = user;
+                    logger.LogDebug(
+                        "Добавлен пользователь {UserId}: {DisplayName}, Avatar: {Avatar}",
+                        user.Id,
+                        user.DisplayName,
+                        user.ProfileImageUrl ?? "null"
+                    );
                 }
             }
+
+            logger.LogDebug("Итого получено {Count} пользователей с информацией", result.Count);
         }
         catch (Exception ex)
         {
@@ -274,5 +299,148 @@ public class TwitchUserInfoService(
         }
 
         return followersInfo;
+    }
+
+    /// <summary>
+    /// Получить список пользователей без аватарок
+    /// </summary>
+    /// <param name="followersInfo">Список информации о фоловерах</param>
+    /// <returns>Список UserId пользователей без аватарок</returns>
+    public List<string> GetUsersWithoutAvatars(ICollection<FollowerInfo> followersInfo)
+    {
+        return followersInfo.Count == 0
+            ? []
+            :
+            [
+                .. followersInfo
+                    .Where(f => string.IsNullOrWhiteSpace(f.ProfileImageUrl))
+                    .Select(f => f.UserId),
+            ];
+    }
+
+    /// <summary>
+    /// Обновить аватарки для пользователей без них
+    /// </summary>
+    /// <param name="followersInfo">Список информации о фоловерах</param>
+    /// <returns>Количество обновленных аватарок</returns>
+    public async Task<int> UpdateMissingAvatarsAsync(ICollection<FollowerInfo> followersInfo)
+    {
+        if (followersInfo.Count == 0)
+        {
+            return 0;
+        }
+
+        var usersWithoutAvatars = GetUsersWithoutAvatars(followersInfo);
+
+        if (usersWithoutAvatars.Count == 0)
+        {
+            logger.LogInformation("Все пользователи уже имеют аватарки");
+            return 0;
+        }
+
+        logger.LogInformation(
+            "Найдено {Count} пользователей без аватарок",
+            usersWithoutAvatars.Count
+        );
+
+        try
+        {
+            var usersInfo = await GetUsersInfoAsync(usersWithoutAvatars);
+            logger.LogDebug(
+                "Получена информация о {Count} пользователях из Twitch API",
+                usersInfo.Count
+            );
+
+            var updatedCount = 0;
+
+            foreach (var followerInfo in followersInfo)
+            {
+                if (
+                    string.IsNullOrWhiteSpace(followerInfo.ProfileImageUrl)
+                    && usersInfo.TryGetValue(followerInfo.UserId, out var userInfo)
+                )
+                {
+                    if (!string.IsNullOrWhiteSpace(userInfo.ProfileImageUrl))
+                    {
+                        var oldAvatar = followerInfo.ProfileImageUrl;
+                        followerInfo.ProfileImageUrl = userInfo.ProfileImageUrl;
+                        followerInfo.LastUpdated = DateTime.UtcNow;
+                        updatedCount++;
+
+                        logger.LogInformation(
+                            "Обновлена аватарка для пользователя {UserName} (ID: {UserId}): {OldAvatar} -> {NewAvatar}",
+                            followerInfo.UserName,
+                            followerInfo.UserId,
+                            oldAvatar ?? "null",
+                            followerInfo.ProfileImageUrl
+                        );
+                    }
+                    else
+                    {
+                        logger.LogDebug(
+                            "Пользователь {UserId} не имеет аватарки в Twitch API",
+                            followerInfo.UserId
+                        );
+                    }
+                }
+                else if (string.IsNullOrWhiteSpace(followerInfo.ProfileImageUrl))
+                {
+                    logger.LogDebug(
+                        "Не найдена информация о пользователе {UserId} в Twitch API",
+                        followerInfo.UserId
+                    );
+                }
+            }
+
+            logger.LogInformation("Обновлено {Count} аватарок пользователей", updatedCount);
+            return updatedCount;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при обновлении аватарок пользователей");
+            return 0;
+        }
+    }
+
+    /// <summary>
+    /// Обновить аватарки для конкретного пользователя
+    /// </summary>
+    /// <param name="followerInfo">Информация о фоловере</param>
+    /// <returns>True если аватарка была обновлена</returns>
+    public async Task<bool> UpdateUserAvatarAsync(FollowerInfo followerInfo)
+    {
+        if (string.IsNullOrWhiteSpace(followerInfo.UserId))
+        {
+            return false;
+        }
+
+        try
+        {
+            var userInfo = await GetUserInfoAsync(followerInfo.UserId);
+
+            if (userInfo != null && !string.IsNullOrWhiteSpace(userInfo.ProfileImageUrl))
+            {
+                followerInfo.ProfileImageUrl = userInfo.ProfileImageUrl;
+                followerInfo.LastUpdated = DateTime.UtcNow;
+
+                logger.LogDebug(
+                    "Обновлена аватарка для пользователя {UserName} (ID: {UserId})",
+                    followerInfo.UserName,
+                    followerInfo.UserId
+                );
+                return true;
+            }
+
+            return false;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(
+                ex,
+                "Ошибка при обновлении аватарки для пользователя {UserId}",
+                followerInfo.UserId
+            );
+            return false;
+        }
     }
 }

@@ -25,6 +25,9 @@
 - `GetAllFollowersInfo()` - получение фоловеров как `FollowerInfo`
 - `GetFollowerInfo(userId)` - информация о конкретном фоловере
 - `ClearFollowersCache()` - очистка БД (асинхронный)
+- `GetUsersWithoutAvatarsAsync()` - получение пользователей без аватарок
+- `GetUsersWithoutAvatarsCountAsync()` - подсчет пользователей без аватарок
+- `UpdateMissingAvatarsAsync()` - обновление аватарок для пользователей без них
 
 ### 🔧 Улучшения
 
@@ -47,6 +50,8 @@
 - Методы проверки актуальности данных
 - Улучшенное логирование
 - Автоматическое восстановление данных при запуске
+- **Автоматическое обновление аватарок** - поиск и обновление аватарок для пользователей без них
+- **REST API endpoints** для работы с аватарками
 
 ### 📚 Документация
 
@@ -64,6 +69,14 @@
 - `Entitys/README.md` - документация по Entitys
 - `FollowerDbService.cs` - сервис для работы с БД
 - `CHANGELOG.md` - этот файл
+
+#### Новые возможности
+
+- **Автоматическое обновление аватарок** - интегрировано во все методы загрузки данных
+- **REST API endpoints** для работы с аватарками:
+  - `GET /api/RxdcodxViewers/without-avatars` - получить пользователей без аватарок
+  - `GET /api/RxdcodxViewers/without-avatars/count` - подсчет пользователей без аватарок
+  - `POST /api/RxdcodxViewers/update-avatars` - обновить аватарки
 
 ### 🔄 Обратная совместимость
 
@@ -93,6 +106,11 @@ await _viewersService.ClearFollowersCache();
 // Новые возможности
 var followersInfo = await _viewersService.GetAllFollowersInfo();
 var followerInfo = await _viewersService.GetFollowerInfo(userId);
+
+// Работа с аватарками
+var usersWithoutAvatars = await _viewersService.GetUsersWithoutAvatarsAsync();
+var count = await _viewersService.GetUsersWithoutAvatarsCountAsync();
+var updatedCount = await _viewersService.UpdateMissingAvatarsAsync();
 ```
 
 #### Рекомендации
@@ -100,6 +118,8 @@ var followerInfo = await _viewersService.GetFollowerInfo(userId);
 - Используйте `GetAllFollowersInfo()` для новых проектов
 - Применяйте `FollowerInfo` для расширенной работы с данными
 - Обновите вызовы `ClearFollowersCache()` на асинхронные
+- Используйте `UpdateMissingAvatarsAsync()` для поддержания актуальности аватарок
+- Мониторьте количество пользователей без аватарок через API endpoints
 
 ### 🐛 Исправления
 
@@ -107,6 +127,8 @@ var followerInfo = await _viewersService.GetFollowerInfo(userId);
 - Улучшена обработка ошибок в WebSocket событиях
 - Оптимизированы операции поиска в БД
 - Исправлены проблемы с синхронизацией кеша и БД
+- Исправлена логическая ошибка в `GetUsersInfoAsync()` - неправильное условие проверки
+- Улучшена обработка ошибок при работе с аватарками
 
 ### 📊 Статистика изменений
 
@@ -114,3 +136,6 @@ var followerInfo = await _viewersService.GetFollowerInfo(userId);
 - **Изменено**: 12 методов для работы с БД вместо кеша
 - **Удалено**: `ConcurrentDictionary` и связанная логика
 - **Файлов**: +2 новых файла, 3 обновленных файла
+- **Новые методы**: +6 методов для работы с аватарками
+- **API endpoints**: +3 новых endpoint для управления аватарками
+- **Автоматизация**: обновление аватарок интегрировано во все основные методы

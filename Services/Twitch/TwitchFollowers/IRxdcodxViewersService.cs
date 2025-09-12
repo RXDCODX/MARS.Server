@@ -32,4 +32,19 @@ public interface IRxdcodxViewersService
     /// Очистить все данные о фоловерах из базы данных
     /// </summary>
     Task<int> ClearAllFollowersFromDbAsync();
+
+    /// <summary>
+    /// Получить пользователей без аватарок
+    /// </summary>
+    Task<List<FollowerInfo>> GetUsersWithoutAvatarsAsync();
+
+    /// <summary>
+    /// Получить количество пользователей без аватарок
+    /// </summary>
+    Task<int> GetUsersWithoutAvatarsCountAsync();
+
+    /// <summary>
+    /// Обновить аватарки для пользователей без них
+    /// </summary>
+    Task<int> UpdateMissingAvatarsAsync();
 }

@@ -73,14 +73,14 @@ public class FollowerDbService(
         try
         {
             await using var context = await factory.CreateDbContextAsync();
-            var existingEntity = await context.FollowersEntitys.FirstOrDefaultAsync(f =>
-                f.UserId == followerInfo.UserId
-            );
+            var existingEntity = await context
+                .FollowersEntitys.AsNoTracking()
+                .FirstOrDefaultAsync(f => f.UserId == followerInfo.UserId);
 
             if (existingEntity != null)
             {
                 // Обновляем существующую запись
-                context.FollowersEntitys.Update(existingEntity);
+                context.FollowersEntitys.Update(followerInfo);
             }
             else
             {
@@ -121,7 +121,8 @@ public class FollowerDbService(
             await using var context = await factory.CreateDbContextAsync();
             var userIds = followersInfo.Select(f => f.UserId).ToList();
             var existingEntities = await context
-                .FollowersEntitys.Where(f => userIds.Contains(f.UserId))
+                .FollowersEntitys.AsNoTracking()
+                .Where(f => userIds.Contains(f.UserId))
                 .ToListAsync();
 
             foreach (var followerInfo in followersInfo)
@@ -132,7 +133,7 @@ public class FollowerDbService(
 
                 if (existingEntity != null)
                 {
-                    context.FollowersEntitys.Update(existingEntity);
+                    context.FollowersEntitys.Update(followerInfo);
                 }
                 else
                 {
@@ -166,9 +167,9 @@ public class FollowerDbService(
         try
         {
             await using var context = await factory.CreateDbContextAsync();
-            var entity = await context.FollowersEntitys.FirstOrDefaultAsync(f =>
-                f.UserId == userId
-            );
+            var entity = await context
+                .FollowersEntitys.AsNoTracking()
+                .FirstOrDefaultAsync(f => f.UserId == userId);
 
             if (entity != null)
             {
@@ -247,6 +248,181 @@ public class FollowerDbService(
         {
             logger.LogError(ex, "Ошибка при получении списка фоловеров для обновления");
             return [];
+        }
+    }
+
+    /// <summary>
+    /// Получить пользователей без аватарок из базы данных
+    /// </summary>
+    /// <returns>Список FollowerInfo пользователей без аватарок</returns>
+    public async Task<List<FollowerInfo>> GetUsersWithoutAvatarsAsync()
+    {
+        try
+        {
+            await using var context = await factory.CreateDbContextAsync();
+            return await context
+                .FollowersEntitys.AsNoTracking()
+                .Where(f => string.IsNullOrWhiteSpace(f.ProfileImageUrl))
+                .ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при получении пользователей без аватарок из базы данных");
+            return [];
+        }
+    }
+
+    /// <summary>
+    /// Получить количество пользователей без аватарок
+    /// </summary>
+    /// <returns>Количество пользователей без аватарок</returns>
+    public async Task<int> GetUsersWithoutAvatarsCountAsync()
+    {
+        try
+        {
+            await using var context = await factory.CreateDbContextAsync();
+            return await context
+                .FollowersEntitys.AsNoTracking()
+                .CountAsync(f => string.IsNullOrWhiteSpace(f.ProfileImageUrl));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при подсчете пользователей без аватарок в базе данных");
+            return 0;
+        }
+    }
+
+    /// <summary>
+    /// Обновить аватарки для пользователей в базе данных
+    /// </summary>
+    /// <param name="followersInfo">Список информации о фоловерах с обновленными аватарками</param>
+    /// <returns>Количество обновленных записей</returns>
+    public async Task<int> UpdateAvatarsAsync(ICollection<FollowerInfo> followersInfo)
+    {
+        if (followersInfo is not { Count: > 0 })
+        {
+            return 0;
+        }
+
+        var updatedCount = 0;
+
+        try
+        {
+            await using var context = await factory.CreateDbContextAsync();
+
+            // Получаем только пользователей с обновленными аватарками
+            var followersWithAvatars = followersInfo
+                .Where(f => !string.IsNullOrWhiteSpace(f.ProfileImageUrl))
+                .ToList();
+
+            if (followersWithAvatars.Count == 0)
+            {
+                logger.LogWarning("Нет пользователей с аватарками для обновления в БД");
+                return 0;
+            }
+
+            var userIds = followersWithAvatars.Select(f => f.UserId).ToList();
+            var existingEntities = await context
+                .FollowersEntitys.AsNoTracking()
+                .Where(f => userIds.Contains(f.UserId))
+                .ToListAsync();
+
+            logger.LogDebug(
+                "Найдено {Count} существующих записей в БД для обновления аватарок",
+                existingEntities.Count
+            );
+
+            foreach (var followerInfo in followersWithAvatars)
+            {
+                var existingEntity = existingEntities.FirstOrDefault(e =>
+                    e.UserId == followerInfo.UserId
+                );
+
+                if (existingEntity != null)
+                {
+                    // Обновляем аватарку независимо от того, была ли она пустой
+                    existingEntity.ProfileImageUrl = followerInfo.ProfileImageUrl;
+                    existingEntity.LastUpdated = DateTime.UtcNow;
+                    context.FollowersEntitys.Update(existingEntity);
+                    updatedCount++;
+
+                    logger.LogDebug(
+                        "Подготовлено обновление аватарки для пользователя {UserId}: {AvatarUrl}",
+                        followerInfo.UserId,
+                        followerInfo.ProfileImageUrl
+                    );
+                }
+                else
+                {
+                    logger.LogWarning(
+                        "Не найдена запись в БД для пользователя {UserId}",
+                        followerInfo.UserId
+                    );
+                }
+            }
+
+            if (updatedCount > 0)
+            {
+                await context.SaveChangesAsync();
+                logger.LogInformation("Обновлено {Count} аватарок в базе данных", updatedCount);
+            }
+            else
+            {
+                logger.LogWarning("Не было обновлено ни одной записи в БД");
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при обновлении аватарок в базе данных");
+        }
+
+        return updatedCount;
+    }
+
+    /// <summary>
+    /// Обновить аватарку для конкретного пользователя в базе данных
+    /// </summary>
+    /// <param name="userId">ID пользователя</param>
+    /// <param name="profileImageUrl">URL аватарки</param>
+    /// <returns>True если операция успешна</returns>
+    public async Task<bool> UpdateUserAvatarAsync(string userId, string profileImageUrl)
+    {
+        if (string.IsNullOrWhiteSpace(userId) || string.IsNullOrWhiteSpace(profileImageUrl))
+        {
+            return false;
+        }
+
+        try
+        {
+            await using var context = await factory.CreateDbContextAsync();
+            var entity = await context
+                .FollowersEntitys.AsNoTracking()
+                .FirstOrDefaultAsync(f => f.UserId == userId);
+
+            if (entity != null)
+            {
+                entity.ProfileImageUrl = profileImageUrl;
+                entity.LastUpdated = DateTime.UtcNow;
+                context.FollowersEntitys.Update(entity);
+                await context.SaveChangesAsync();
+
+                logger.LogDebug(
+                    "Обновлена аватарка для пользователя {UserId} в базе данных",
+                    userId
+                );
+                return true;
+            }
+
+            return false;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(
+                ex,
+                "Ошибка при обновлении аватарки пользователя {UserId} в базе данных",
+                userId
+            );
+            return false;
         }
     }
 }

@@ -15,6 +15,9 @@
 ### Получение списков пользователей
 
 - `GetAllFollowersInfo()` - получить всех фоловеров (FollowerInfo)
+- `GetUsersWithoutAvatarsAsync()` - получить пользователей без аватарок
+- `GetUsersWithoutAvatarsCountAsync()` - получить количество пользователей без аватарок
+- `UpdateMissingAvatarsAsync()` - обновить аватарки для пользователей без них
 
 ### Кеширование фоловеров
 
@@ -89,14 +92,15 @@ public class MyController : ControllerBase
 ### Основные endpoints
 
 - `GET /api/RxdcodxViewers/all` - получить всех пользователей с полной информацией
+- `GET /api/RxdcodxViewers/without-avatars` - получить пользователей без аватарок
+- `GET /api/RxdcodxViewers/without-avatars/count` - получить количество пользователей без аватарок
+- `POST /api/RxdcodxViewers/update-avatars` - обновить аватарки для пользователей без них
 
 ## Требования
 
 - Валидный токен доступа к Twitch API
 - Сервис `TokenService` должен быть зарегистрирован
 - Сервис `ITwitchAPI` должен быть зарегистрирован
-
-## Кеширование фоловеров
 
 ### Database-First кеширование
 
@@ -195,6 +199,22 @@ await _viewersService.ClearFollowersCache();
 await _viewersService.RefreshFollowersCacheAsync();
 ```
 
+### Работа с аватарками
+
+```csharp
+// Получение пользователей без аватарок
+var usersWithoutAvatars = await _viewersService.GetUsersWithoutAvatarsAsync();
+Console.WriteLine($"Пользователей без аватарок: {usersWithoutAvatars.Count}");
+
+// Получение количества пользователей без аватарок
+var count = await _viewersService.GetUsersWithoutAvatarsCountAsync();
+Console.WriteLine($"Количество пользователей без аватарок: {count}");
+
+// Обновление аватарок для пользователей без них
+var updatedCount = await _viewersService.UpdateMissingAvatarsAsync();
+Console.WriteLine($"Обновлено аватарок: {updatedCount}");
+```
+
 ### Примеры API запросов
 
 #### Получение всех пользователей
@@ -220,6 +240,58 @@ GET /api/RxdcodxViewers/all
       "status": "Follower"
     }
   ]
+}
+```
+
+#### Получение пользователей без аватарок
+
+```bash
+GET /api/RxdcodxViewers/without-avatars
+```
+
+Ответ:
+
+```json
+[
+  {
+    "userId": "123456789",
+    "userName": "username",
+    "userLogin": "username",
+    "profileImageUrl": null,
+    "followedAt": "2024-01-01T00:00:00Z",
+    "isModerator": false,
+    "isVip": false,
+    "lastUpdated": "2024-01-15T10:30:00Z"
+  }
+]
+```
+
+#### Получение количества пользователей без аватарок
+
+```bash
+GET /api/RxdcodxViewers/without-avatars/count
+```
+
+Ответ:
+
+```json
+{
+  "count": 25
+}
+```
+
+#### Обновление аватарок
+
+```bash
+POST /api/RxdcodxViewers/update-avatars
+```
+
+Ответ:
+
+```json
+{
+  "message": "Обновлено 15 аватарок",
+  "updatedCount": 15
 }
 ```
 
