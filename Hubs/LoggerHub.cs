@@ -1,5 +1,4 @@
-﻿using MARS.Server.Hubs.Models.LoggerHub;
-using SignalRSwaggerGen.Attributes;
+﻿using SignalRSwaggerGen.Attributes;
 using SignalRSwaggerGen.Enums;
 
 namespace MARS.Server.Hubs;

@@ -69,7 +69,7 @@ public interface IRxdcodxViewersService
     /// <summary>
     /// Получить всех фоловеров как FollowerInfo
     /// </summary>
-    Task<List<FollowerInfo>?> GetAllFollowersInfo();
+    Task<List<FollowerInfo>?> GetAllFollowersInfo(bool useCash = false);
 
     /// <summary>
     /// Получить информацию о конкретном фоловере
@@ -86,4 +86,21 @@ public interface IRxdcodxViewersService
     /// Очистить кеш фоловеров
     /// </summary>
     void ClearFollowersCache();
+
+    /// <summary>
+    /// Обновить информацию о конкретном фоловере из API
+    /// </summary>
+    /// <param name="userId">ID пользователя</param>
+    Task<bool> UpdateFollowerInfoFromApiAsync(string userId);
+
+    /// <summary>
+    /// Получить фоловеров, которые нужно обновить (старше указанного времени)
+    /// </summary>
+    /// <param name="olderThan">Обновить фоловеров старше этого времени</param>
+    Task<List<string>> GetFollowersToUpdateAsync(DateTime olderThan);
+
+    /// <summary>
+    /// Очистить все данные о фоловерах из базы данных
+    /// </summary>
+    Task<int> ClearAllFollowersFromDbAsync();
 }

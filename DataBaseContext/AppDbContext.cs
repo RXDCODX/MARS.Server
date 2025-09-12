@@ -13,6 +13,7 @@ using MARS.Server.Services.Twitch.FumoFriday.Entitys;
 using MARS.Server.Services.Twitch.HelloVideos.Entitys;
 using MARS.Server.Services.Twitch.Management.Entitys;
 using MARS.Server.Services.Twitch.MiniGamesStats.Entitys;
+using MARS.Server.Services.Twitch.TwitchFollowers.Entitys;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using WaifuRollGuarantee = MARS.Server.Services.WaifuRoll.Entitys.WaifuRollGuarantee;
 
@@ -77,6 +78,7 @@ public sealed class AppDbContext : DbContext
     public DbSet<DailyAutoMarkupUser> HonkaiMarkupUser { get; set; } = null!;
     public DbSet<WaifuRollGuarantee> WaifuRollGuarantees { get; set; } = null!;
     public DbSet<CinemaMediaItem> CinemaQueue { get; set; } = null!;
+    public DbSet<FollowerInfo> FollowersEntitys { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -284,6 +286,9 @@ public sealed class AppDbContext : DbContext
             .WithOne(s => s.Layout)
             .HasForeignKey<ScoreboardLayout>(l => l.ScoreboardStateId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        // Конфигурация для FollowerDbEntity
+        modelBuilder.Entity<FollowerDbEntity>().HasIndex(f => f.UserId).IsUnique();
     }
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)

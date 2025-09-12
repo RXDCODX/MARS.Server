@@ -16,7 +16,9 @@ public class RxdcodxViewersService(
     TokenService tokenService,
     EventSubWebsocketClient wsClient,
     IHostApplicationLifetime lifetime,
-    ILogger<RxdcodxViewersService> logger
+    ILogger<RxdcodxViewersService> logger,
+    FollowerDbService followerDbService,
+    TwitchUserInfoService userInfoService
 ) : BackgroundService, IRxdcodxViewersService
 {
     private const string ChannelId = TwitchExstension.ChannelId; // ID канала rxdcodx
@@ -38,21 +40,93 @@ public class RxdcodxViewersService(
 
         try
         {
-            var followers = await LoadFollowersFromApiAsync();
-            if (followers != null)
+            // Сначала пытаемся загрузить из базы данных
+            var followersFromDb = await followerDbService.GetAllFollowersFromDbAsync();
+
+            if (followersFromDb.Count != 0)
             {
+                // Загружаем из БД и обновляем кеш
                 _followersCache.Clear();
-                foreach (var follower in followers)
+                foreach (var follower in followersFromDb)
                 {
                     _followersCache.TryAdd(follower.UserId, follower);
                 }
                 _isCacheInitialized = true;
+                logger.LogInformation(
+                    "Кеш фоловеров инициализирован из базы данных: {Count} фоловеров",
+                    followersFromDb.Count
+                );
+
+                // Обновляем данные из API в фоновом режиме
+                _ = Task.Run(UpdateFollowersFromApiAsync);
+            }
+            else
+            {
+                // Если в БД нет данных, загружаем из API
+                var followers = await LoadFollowersFromApiAsync();
+                if (followers != null)
+                {
+                    // Обогащаем данные дополнительной информацией
+                    var enrichedFollowers = await userInfoService.EnrichFollowersInfoAsync(
+                        followers
+                    );
+
+                    // Сохраняем в БД
+                    await followerDbService.SaveOrUpdateFollowersAsync(enrichedFollowers);
+
+                    // Обновляем кеш
+                    _followersCache.Clear();
+                    foreach (var follower in enrichedFollowers)
+                    {
+                        _followersCache.TryAdd(follower.UserId, follower);
+                    }
+                    _isCacheInitialized = true;
+                    logger.LogInformation(
+                        "Кеш фоловеров инициализирован из API и сохранен в БД: {Count} фоловеров",
+                        enrichedFollowers.Count
+                    );
+                }
             }
         }
         catch (Exception ex)
         {
             // Логируем ошибку, но не прерываем работу сервиса
             logger.LogError(ex, "Ошибка при инициализации кеша фоловеров");
+        }
+    }
+
+    /// <summary>
+    /// Обновление данных фоловеров из API в фоновом режиме
+    /// </summary>
+    private async Task UpdateFollowersFromApiAsync()
+    {
+        try
+        {
+            var followers = await LoadFollowersFromApiAsync();
+            if (followers != null)
+            {
+                // Обогащаем данные дополнительной информацией
+                var enrichedFollowers = await userInfoService.EnrichFollowersInfoAsync(followers);
+
+                // Сохраняем в БД
+                await followerDbService.SaveOrUpdateFollowersAsync(enrichedFollowers);
+
+                // Обновляем кеш
+                _followersCache.Clear();
+                foreach (var follower in enrichedFollowers)
+                {
+                    _followersCache.TryAdd(follower.UserId, follower);
+                }
+
+                logger.LogInformation(
+                    "Данные фоловеров обновлены из API: {Count} фоловеров",
+                    enrichedFollowers.Count
+                );
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при обновлении данных фоловеров из API");
         }
     }
 
@@ -220,13 +294,24 @@ public class RxdcodxViewersService(
             var followers = await LoadFollowersFromApiAsync();
             if (followers != null)
             {
+                // Обогащаем данные дополнительной информацией
+                var enrichedFollowers = await userInfoService.EnrichFollowersInfoAsync(followers);
+
+                // Сохраняем в БД
+                await followerDbService.SaveOrUpdateFollowersAsync(enrichedFollowers);
+
+                // Обновляем кеш
                 _followersCache.Clear();
-                foreach (var follower in followers)
+                foreach (var follower in enrichedFollowers)
                 {
                     _followersCache.TryAdd(follower.UserId, follower);
                 }
                 _isCacheInitialized = true;
-                logger.LogInformation("Кеш фоловеров обновлен. Количество: {Count}", followers.Count);
+
+                logger.LogInformation(
+                    "Кеш фоловеров обновлен из API и сохранен в БД. Количество: {Count}",
+                    enrichedFollowers.Count
+                );
             }
         }
         catch (Exception ex)
@@ -538,7 +623,7 @@ public class RxdcodxViewersService(
         return Task.CompletedTask;
     }
 
-    private Task WsClientOnChannelFollow(object sender, ChannelFollowArgs args)
+    private async Task WsClientOnChannelFollow(object sender, ChannelFollowArgs args)
     {
         try
         {
@@ -556,11 +641,17 @@ public class RxdcodxViewersService(
                     LastUpdated = DateTime.UtcNow,
                 };
 
-                // Добавляем нового фоловера в кеш
-                if (_followersCache.TryAdd(twEvent.UserId, newFollower))
+                // Обогащаем данные дополнительной информацией
+                var enrichedFollower = await userInfoService.EnrichFollowerInfoAsync(newFollower);
+
+                // Сохраняем в БД
+                await followerDbService.SaveOrUpdateFollowerAsync(enrichedFollower);
+
+                // Добавляем в кеш
+                if (_followersCache.TryAdd(twEvent.UserId, enrichedFollower))
                 {
                     logger.LogInformation(
-                        "Добавлен новый фоловер в кеш: {UserName} (ID: {UserId})",
+                        "Добавлен новый фоловер: {UserName} (ID: {UserId})",
                         twEvent.UserName,
                         twEvent.UserId
                     );
@@ -570,11 +661,11 @@ public class RxdcodxViewersService(
                     // Обновляем существующего фоловера
                     _followersCache.TryUpdate(
                         twEvent.UserId,
-                        newFollower,
+                        enrichedFollower,
                         _followersCache[twEvent.UserId]
                     );
                     logger.LogInformation(
-                        "Обновлен фоловер в кеше: {UserName} (ID: {UserId})",
+                        "Обновлен фоловер: {UserName} (ID: {UserId})",
                         twEvent.UserName,
                         twEvent.UserId
                     );
@@ -585,8 +676,6 @@ public class RxdcodxViewersService(
         {
             logger.LogError(ex, "Ошибка при обновлении кеша фоловеров");
         }
-
-        return Task.CompletedTask;
     }
 
     private async Task WsClientOnChannelVipAdd(object sender, ChannelVipArgs args)
@@ -594,25 +683,24 @@ public class RxdcodxViewersService(
         var twEvent = args.Notification.Payload.Event;
         if (twEvent.BroadcasterUserId.Equals(TwitchExstension.ChannelId))
         {
-            await Task.Factory.StartNew(() =>
+            var newVip = new FollowerInfo()
             {
-                var newModerator = new FollowerInfo()
-                {
-                    FollowedAt = DateTime.UnixEpoch,
-                    LastUpdated = DateTime.UtcNow,
-                    UserId = twEvent.UserId,
-                    UserLogin = twEvent.UserLogin,
-                    UserName = twEvent.UserName,
-                    IsModerator = false,
-                    IsVip = true,
-                };
+                FollowedAt = DateTime.UnixEpoch,
+                LastUpdated = DateTime.UtcNow,
+                UserId = twEvent.UserId,
+                UserLogin = twEvent.UserLogin,
+                UserName = twEvent.UserName,
+                IsModerator = false,
+                IsVip = true,
+            };
 
-                _followersCache.AddOrUpdate(
-                    newModerator.UserId,
-                    newModerator,
-                    (s, info) => newModerator
-                );
-            });
+            // Обогащаем данные дополнительной информацией
+            var enrichedVip = await userInfoService.EnrichFollowerInfoAsync(newVip);
+
+            // Сохраняем в БД
+            await followerDbService.SaveOrUpdateFollowerAsync(enrichedVip);
+
+            _followersCache.AddOrUpdate(enrichedVip.UserId, enrichedVip, (s, info) => enrichedVip);
         }
     }
 
@@ -621,34 +709,37 @@ public class RxdcodxViewersService(
         var twEvent = args.Notification.Payload.Event;
         if (twEvent.BroadcasterUserId.Equals(TwitchExstension.ChannelId))
         {
-            await Task.Factory.StartNew(() =>
+            var newModerator = new FollowerInfo()
             {
-                var newModerator = new FollowerInfo()
-                {
-                    FollowedAt = DateTime.UnixEpoch,
-                    LastUpdated = DateTime.UtcNow,
-                    UserId = twEvent.UserId,
-                    UserLogin = twEvent.UserLogin,
-                    UserName = twEvent.UserName,
-                    IsModerator = true,
-                    IsVip = false,
-                };
+                FollowedAt = DateTime.UnixEpoch,
+                LastUpdated = DateTime.UtcNow,
+                UserId = twEvent.UserId,
+                UserLogin = twEvent.UserLogin,
+                UserName = twEvent.UserName,
+                IsModerator = true,
+                IsVip = false,
+            };
 
-                _followersCache.AddOrUpdate(
-                    newModerator.UserId,
-                    newModerator,
-                    (s, info) => newModerator
-                );
-            });
+            // Обогащаем данные дополнительной информацией
+            var enrichedModerator = await userInfoService.EnrichFollowerInfoAsync(newModerator);
+
+            // Сохраняем в БД
+            await followerDbService.SaveOrUpdateFollowerAsync(enrichedModerator);
+
+            _followersCache.AddOrUpdate(
+                enrichedModerator.UserId,
+                enrichedModerator,
+                (s, info) => enrichedModerator
+            );
         }
     }
 
     /// <summary>
     /// Получить всех фоловеров как FollowerInfo
     /// </summary>
-    public async Task<List<FollowerInfo>?> GetAllFollowersInfo()
+    public async Task<List<FollowerInfo>?> GetAllFollowersInfo(bool useCash = false)
     {
-        if (tokenService.Token == null)
+        if (tokenService.Token == null || useCash)
         {
             // Если токен недоступен, возвращаем кеш если он есть
             return !_followersCache.IsEmpty ? [.. _followersCache.Values] : null;
@@ -751,5 +842,93 @@ public class RxdcodxViewersService(
         _followersCache.Clear();
         _isCacheInitialized = false;
         logger.LogInformation("Кеш фоловеров очищен");
+    }
+
+    /// <summary>
+    /// Обновить информацию о конкретном фоловере из API
+    /// </summary>
+    /// <param name="userId">ID пользователя</param>
+    public async Task<bool> UpdateFollowerInfoFromApiAsync(string userId)
+    {
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return false;
+        }
+
+        try
+        {
+            // Получаем базовую информацию из API
+            var userInfo = await userInfoService.GetUserInfoAsync(userId);
+            var chatColor = await userInfoService.GetUserChatColorAsync(userId);
+
+            if (userInfo == null)
+            {
+                return false;
+            }
+
+            // Создаем обновленную информацию о фоловере
+            var updatedFollower = new FollowerInfo
+            {
+                UserId = userInfo.Id,
+                UserLogin = userInfo.Login,
+                UserName = userInfo.Login,
+                DisplayName = userInfo.DisplayName,
+                ProfileImageUrl = userInfo.ProfileImageUrl,
+                ChatColor = chatColor,
+                LastUpdated = DateTime.UtcNow,
+            };
+
+            // Проверяем, является ли пользователь фоловером
+            var isFollower = await IsUserFollower(userId);
+            if (isFollower)
+            {
+                updatedFollower.FollowedAt = DateTime.UtcNow; // Временная дата
+            }
+
+            // Проверяем статусы модератора и VIP
+            updatedFollower.IsModerator = await IsUserModerator(userId);
+            updatedFollower.IsVip = await IsUserVip(userId);
+
+            // Сохраняем в БД
+            await followerDbService.SaveOrUpdateFollowerAsync(updatedFollower);
+
+            // Обновляем кеш
+            _followersCache.AddOrUpdate(
+                userId,
+                updatedFollower,
+                (key, existing) => updatedFollower
+            );
+
+            logger.LogInformation("Информация о фоловере {UserId} обновлена из API", userId);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при обновлении информации о фоловере {UserId}", userId);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Получить фоловеров, которые нужно обновить (старше указанного времени)
+    /// </summary>
+    /// <param name="olderThan">Обновить фоловеров старше этого времени</param>
+    public async Task<List<string>> GetFollowersToUpdateAsync(DateTime olderThan)
+    {
+        return await followerDbService.GetFollowersToUpdateAsync(olderThan);
+    }
+
+    /// <summary>
+    /// Очистить все данные о фоловерах из базы данных
+    /// </summary>
+    public async Task<int> ClearAllFollowersFromDbAsync()
+    {
+        var clearedCount = await followerDbService.ClearAllFollowersAsync();
+
+        // Также очищаем кеш
+        ClearFollowersCache();
+
+        logger.LogInformation("Очищено {Count} фоловеров из базы данных и кеша", clearedCount);
+        return clearedCount;
     }
 }

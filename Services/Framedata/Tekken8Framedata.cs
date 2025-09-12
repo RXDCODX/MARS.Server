@@ -23,9 +23,13 @@ public partial class Tekken8FrameData(
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(stoppingToken);
         var list = dbContext.TekkenCharacters.AsNoTracking().ToList();
         var character = list.FirstOrDefault();
+
         if (
-            character == null
-            || !IsDateInCurrentWeek(character.LastUpdateTime).GetAwaiter().GetResult()
+            IsMonday()
+            && (
+                character == null
+                || !IsDateInCurrentWeek(character.LastUpdateTime).GetAwaiter().GetResult()
+            )
         )
         {
             await Task.Factory.StartNew(() => StartScrupFrameData(), stoppingToken);

@@ -3,7 +3,6 @@ using Newtonsoft.Json;
 using TwitchLib.Api.Helix.Models.Channels.GetChannelFollowers;
 using TwitchLib.Api.Helix.Models.Channels.GetChannelVIPs;
 using TwitchLib.Api.Helix.Models.Moderation.GetModerators;
-using TwitchLib.EventSub.Core.SubscriptionTypes.Channel;
 
 namespace MARS.Server.Services.Twitch.TwitchFollowers.Entitys;
 
@@ -27,6 +26,21 @@ public class FollowerInfo
     /// </summary>
     public required string UserLogin { get; set; }
 
+    /// <summary>
+    /// Отображаемое имя пользователя
+    /// </summary>
+    public string? DisplayName { get; set; }
+
+    /// <summary>
+    /// Ссылка на аватарку пользователя
+    /// </summary>
+    public string? ProfileImageUrl { get; set; }
+
+    /// <summary>
+    /// Цвет ника пользователя в чате
+    /// </summary>
+    public string? ChatColor { get; set; }
+
     public bool IsModerator { get; set; }
     public bool IsVip { get; set; }
 
@@ -37,7 +51,7 @@ public class FollowerInfo
     /// <summary>
     /// Дата подписки на канал
     /// </summary>
-    public required DateTime FollowedAt { get; set; }
+    public DateTime FollowedAt { get; set; }
 
     /// <summary>
     /// Дата последнего обновления информации
@@ -56,6 +70,7 @@ public class FollowerInfo
             UserId = follower.UserId,
             UserName = follower.UserName,
             UserLogin = follower.UserLogin,
+            DisplayName = follower.UserName, // По умолчанию используем UserName
             FollowedAt = DateTimeOffset
                 .Parse(
                     follower.FollowedAt,
@@ -63,6 +78,44 @@ public class FollowerInfo
                     DateTimeStyles.RoundtripKind
                 )
                 .LocalDateTime,
+            LastUpdated = DateTime.UtcNow,
+        };
+    }
+
+    /// <summary>
+    /// Создать FollowerInfo из данных пользователя Twitch API
+    /// </summary>
+    /// <param name="userId">ID пользователя</param>
+    /// <param name="userLogin">Логин пользователя</param>
+    /// <param name="displayName">Отображаемое имя</param>
+    /// <param name="profileImageUrl">Ссылка на аватарку</param>
+    /// <param name="chatColor">Цвет ника в чате</param>
+    /// <param name="isModerator">Является ли модератором</param>
+    /// <param name="isVip">Является ли VIP</param>
+    /// <param name="followedAt">Дата подписки</param>
+    /// <returns>Новый экземпляр FollowerInfo</returns>
+    public static FollowerInfo FromUserData(
+        string userId,
+        string userLogin,
+        string displayName,
+        string? profileImageUrl = null,
+        string? chatColor = null,
+        bool isModerator = false,
+        bool isVip = false,
+        DateTime? followedAt = null
+    )
+    {
+        return new FollowerInfo
+        {
+            UserId = userId,
+            UserLogin = userLogin,
+            UserName = userLogin, // UserName обычно совпадает с UserLogin
+            DisplayName = displayName,
+            ProfileImageUrl = profileImageUrl,
+            ChatColor = chatColor,
+            IsModerator = isModerator,
+            IsVip = isVip,
+            FollowedAt = followedAt ?? DateTime.UnixEpoch,
             LastUpdated = DateTime.UtcNow,
         };
     }
@@ -75,6 +128,7 @@ public class FollowerInfo
             FollowedAt = DateTime.UnixEpoch,
             UserLogin = moderator.UserLogin,
             UserName = moderator.UserName,
+            DisplayName = moderator.UserName, // По умолчанию используем UserName
             IsModerator = true,
             IsVip = false,
             LastUpdated = DateTime.Now,
@@ -89,6 +143,7 @@ public class FollowerInfo
             UserId = vip.UserId,
             UserLogin = vip.UserLogin,
             UserName = vip.UserName,
+            DisplayName = vip.UserName, // По умолчанию используем UserName
             IsModerator = false,
             IsVip = true,
             LastUpdated = DateTime.Now,

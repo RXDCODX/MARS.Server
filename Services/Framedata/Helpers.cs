@@ -27,6 +27,12 @@ public partial class Tekken8FrameData
         return Task.FromResult(date >= startOfWeek && date <= endOfWeek);
     }
 
+    private static bool IsMonday()
+    {
+        DateTimeOffset currentDate = DateTimeOffset.Now;
+        return currentDate.DayOfWeek == DayOfWeek.Monday;
+    }
+
     private static string ReplaceCommandCharacters(string command)
     {
         return string.IsNullOrEmpty(command)

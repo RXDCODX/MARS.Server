@@ -1,5 +1,4 @@
 ﻿using MARS.Server.Services.Twitch.TwitchFollowers;
-using MARS.Server.Services.Twitch.TwitchFollowers.Entitys;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MARS.Server.Controllers;
@@ -15,11 +14,11 @@ public class RxdcodxViewersController(
 ) : ControllerBase
 {
     [HttpGet("all")]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll([FromQuery] bool forceUseCash)
     {
         try
         {
-            var allUsers = await viewersService.GetAllFollowersInfo();
+            var allUsers = await viewersService.GetAllFollowersInfo(forceUseCash);
             return allUsers == null ? Unauthorized("Токен недоступен") : Ok(allUsers);
         }
         catch (Exception ex)
