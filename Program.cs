@@ -295,11 +295,6 @@ public static class Program
             });
         }
 
-        if (isSpa)
-        {
-            app.UseSpaYarp();
-        }
-
         app.UseCors("CorsPolicy");
         app.MapHub<TelegramusHub>("/hubs/telegramus");
         app.MapHub<TunaHub>("/hubs/tuna");
@@ -315,7 +310,14 @@ public static class Program
 
         app.MapControllers();
 
-        app.MapFallbackToFile("index.html");
+        if (isSpa)
+        {
+            app.UseSpaYarp();
+        }
+        else
+        {
+            app.MapFallbackToFile("index.html");
+        }
 
         try
         {

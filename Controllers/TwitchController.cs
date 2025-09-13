@@ -8,14 +8,14 @@ namespace MARS.Server.Controllers;
 public class TwitchController(TokenService tokenService, ITwitchAPI api, IServer server)
     : Controller
 {
-    [HttpGet("/twitchtoken")]
-    public async Task<IActionResult> Token([FromQuery] string code)
+    [HttpGet("/" + nameof(TwitchUserAuth))]
+    public async Task<IActionResult> TwitchUserAuth([FromQuery] string code)
     {
         var adress = server.Features.Get<IServerAddressesFeature>();
         var authToken = await api.Auth.GetAccessTokenFromCodeAsync(
             code,
             api.Settings.Secret,
-            adress!.Addresses.FirstOrDefault() + "/twitchauth",
+            adress!.Addresses.First() + "/" + nameof(TwitchUserAuth),
             api.Settings.ClientId
         );
 

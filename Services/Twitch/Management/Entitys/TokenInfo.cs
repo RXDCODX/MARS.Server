@@ -13,7 +13,7 @@ public class TokenInfo
 
     [Required]
     public TimeSpan ExpiresIn { get; set; }
-    public DateTimeOffset WhenCreated { get; set; }
-    public DateTimeOffset WhenExpires => WhenCreated.Add(ExpiresIn);
+    public DateTime WhenCreated { get; set; }
+    public DateTime WhenExpires => WhenCreated.Add(ExpiresIn);
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 }

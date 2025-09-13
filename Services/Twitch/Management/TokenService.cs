@@ -30,7 +30,7 @@ public class TokenService(
     public async Task<TokenInfo?> GetTokenAsync(CancellationToken cancellationToken)
     {
         await using var context = await factory.CreateDbContextAsync(cancellationToken);
-        return await context.TwitchToken.SingleOrDefaultAsync(cancellationToken);
+        return await context.TwitchToken.AsNoTracking().SingleOrDefaultAsync(cancellationToken);
     }
 
     public async Task<bool> RefreshTokenAsync(TokenInfo refreshToken)
@@ -45,18 +45,20 @@ public class TokenService(
                 api.Settings.ClientId
             );
 
-            var token = (await dbContext.TwitchToken.Where(e => true).ToListAsync())[0];
+            var token = (await dbContext.TwitchToken.AsNoTracking().Where(e => true).ToListAsync())[
+                0
+            ];
 
             token.AccessToken = result.AccessToken;
             token.ExpiresIn = TimeSpan.FromSeconds(result.ExpiresIn);
             token.RefreshToken = result.RefreshToken;
-            token.WhenCreated = DateTimeOffset.Now.AddSeconds(-30);
+            token.WhenCreated = DateTime.Now.AddSeconds(-30);
             dbContext.TwitchToken.Update(token);
 
             refreshToken.AccessToken = result.AccessToken;
             refreshToken.ExpiresIn = TimeSpan.FromSeconds(result.ExpiresIn);
             refreshToken.RefreshToken = result.RefreshToken;
-            refreshToken.WhenCreated = DateTimeOffset.Now.AddSeconds(-30);
+            refreshToken.WhenCreated = DateTime.Now.AddSeconds(-30);
 
             Token = refreshToken;
 
@@ -75,16 +77,18 @@ public class TokenService(
     {
         await using AppDbContext dbContext = await factory.CreateDbContextAsync();
 
-        if (await dbContext.TwitchToken.AnyAsync())
+        if (await dbContext.TwitchToken.AsNoTracking().AnyAsync())
         {
-            TokenInfo token = await dbContext.TwitchToken.SingleAsync();
+            TokenInfo token = await dbContext.TwitchToken.AsNoTracking().SingleAsync();
 
             token.AccessToken = accessToken;
             token.RefreshToken = refreshToken;
             token.ExpiresIn = TimeSpan.FromSeconds(expiresIn);
-            token.WhenCreated = DateTimeOffset.Now.AddSeconds(-30);
+            token.WhenCreated = DateTime.Now.AddSeconds(-30);
 
             Token = token;
+
+            dbContext.Update(Token);
         }
         else
         {
@@ -93,7 +97,7 @@ public class TokenService(
                 AccessToken = accessToken,
                 RefreshToken = refreshToken,
                 ExpiresIn = TimeSpan.FromSeconds(expiresIn),
-                WhenCreated = DateTimeOffset.Now.AddSeconds(-30),
+                WhenCreated = DateTime.Now.AddSeconds(-30),
             };
 
             await dbContext.AddAsync(tokenInfo);
