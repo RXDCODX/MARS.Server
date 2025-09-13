@@ -25,7 +25,7 @@ public class TelegramTokenNotification(
                 await Task.Delay(1000);
             }
 
-            var address = addressesFeature.Addresses.FirstOrDefault() ?? "http://localhost:9255";
+            var address = addressesFeature.Addresses.First();
 
             var authUrl =
                 $"https://id.twitch.tv/oauth2/authorize?response_type=code&client_id={api.Settings.ClientId}&redirect_uri={address}/{nameof(TwitchController.TwitchUserAuth)}&scope="
