@@ -28,7 +28,11 @@ public class TelegramTokenNotification(
             var address = addressesFeature.Addresses.First();
 
             var authUrl =
-                $"https://id.twitch.tv/oauth2/authorize?response_type=code&client_id={api.Settings.ClientId}&redirect_uri={address}/{nameof(TwitchController.TwitchUserAuth)}&scope="
+                $"https://id.twitch.tv/oauth2/authorize"
+                + $"?response_type=code"
+                + $"&client_id={api.Settings.ClientId}"
+                + $"&redirect_uri={address}/{nameof(TwitchController.TwitchUserAuth)}"
+                + $"&scope="
                 + "analytics:read:extensions"
                 + "+user:edit"
                 + "+user:read:email"
