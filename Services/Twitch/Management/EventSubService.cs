@@ -137,6 +137,32 @@ public class EventSubService(
         }
     }
 
+    private async Task<bool> EnsureWebSocketConnected()
+    {
+        if (_isWsConnected)
+        {
+            return true;
+        }
+
+        logger.LogWarning("WebSocket не подключен, пытаемся переподключить...");
+
+        if (WsReconnectSlim.CurrentCount > 0)
+        {
+            await Task.Factory.StartNew(TryReconnect, _cancellationToken);
+        }
+
+        // Ждем короткое время, чтобы дать шанс на подключение
+        await Task.Delay(5 * 1000, _cancellationToken);
+
+        if (!_isWsConnected)
+        {
+            logger.LogError("Не удалось подключить WebSocket для создания подписок");
+            return false;
+        }
+
+        return true;
+    }
+
     public async Task<string> ResubscribeToEventSub(TokenInfo? token = default)
     {
         token ??= tokenService.Token;
@@ -147,22 +173,22 @@ public class EventSubService(
         {
             await DeleteAllSubs(token);
 
-            if (!_isWsConnected)
+            // Проверяем подключение WebSocket перед созданием подписок
+            if (!await EnsureWebSocketConnected())
             {
-                // Пытаемся переподключить один раз вместо бесконечного цикла
-                if (WsReconnectSlim.CurrentCount > 0)
-                {
-                    await Task.Factory.StartNew(TryReconnect, _cancellationToken);
-                }
-
-                // Ждем короткое время, чтобы дать шанс на подключение
-                await Task.Delay(5 * 1000, _cancellationToken);
+                return "Ошибка: не удалось подключить WebSocket для создания подписок";
             }
 
             var condition = new Dictionary<string, string>
             {
                 { "to_broadcaster_user_id", TwitchExstension.ChannelId },
             };
+
+            // Проверяем подключение перед каждой подпиской
+            if (!await EnsureWebSocketConnected())
+            {
+                return "Ошибка: WebSocket отключился при создании подписки на channel.raid";
+            }
 
             await api.Helix.EventSub.CreateEventSubSubscriptionAsync(
                 "channel.raid",
@@ -179,6 +205,11 @@ public class EventSubService(
             condition.Clear();
             condition.Add("broadcaster_user_id", TwitchExstension.ChannelId);
 
+            if (!await EnsureWebSocketConnected())
+            {
+                return "Ошибка: WebSocket отключился при создании подписки на stream.online";
+            }
+
             await api.Helix.EventSub.CreateEventSubSubscriptionAsync(
                 "stream.online",
                 "1",
@@ -190,6 +221,11 @@ public class EventSubService(
                 api.Settings.ClientId,
                 token.AccessToken
             );
+
+            if (!await EnsureWebSocketConnected())
+            {
+                return "Ошибка: WebSocket отключился при создании подписки на stream.offline";
+            }
 
             await api.Helix.EventSub.CreateEventSubSubscriptionAsync(
                 "stream.offline",
@@ -203,6 +239,11 @@ public class EventSubService(
                 token.AccessToken
             );
 
+            if (!await EnsureWebSocketConnected())
+            {
+                return "Ошибка: WebSocket отключился при создании подписки на channel.channel_points_custom_reward_redemption.add";
+            }
+
             await api.Helix.EventSub.CreateEventSubSubscriptionAsync(
                 "channel.channel_points_custom_reward_redemption.add",
                 "1",
@@ -215,6 +256,11 @@ public class EventSubService(
                 token.AccessToken
             );
 
+            if (!await EnsureWebSocketConnected())
+            {
+                return "Ошибка: WebSocket отключился при создании подписки на channel.moderator.add";
+            }
+
             await api.Helix.EventSub.CreateEventSubSubscriptionAsync(
                 "channel.moderator.add",
                 "1",
@@ -226,6 +272,11 @@ public class EventSubService(
                 api.Settings.ClientId,
                 token.AccessToken
             );
+
+            if (!await EnsureWebSocketConnected())
+            {
+                return "Ошибка: WebSocket отключился при создании подписки на channel.vip.add";
+            }
 
             await api.Helix.EventSub.CreateEventSubSubscriptionAsync(
                 "channel.vip.add",
@@ -240,6 +291,11 @@ public class EventSubService(
             );
 
             condition.Add("moderator_user_id", TwitchExstension.ChannelId);
+
+            if (!await EnsureWebSocketConnected())
+            {
+                return "Ошибка: WebSocket отключился при создании подписки на channel.follow";
+            }
 
             await api.Helix.EventSub.CreateEventSubSubscriptionAsync(
                 "channel.follow",
