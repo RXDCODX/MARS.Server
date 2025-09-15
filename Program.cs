@@ -15,6 +15,7 @@ using MARS.Server.Services.PyroAlerts;
 using MARS.Server.Services.RandomMem;
 using MARS.Server.Services.Scoreboard;
 using MARS.Server.Services.Shikimori;
+using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.Twitch.Rewards;
 using MARS.Server.Services.Twitch.StreamManagement;
 using MARS.Server.Services.Twitch.Synthesizer;
@@ -326,6 +327,14 @@ public static class Program
 
             var appLifeTime = app.Services.GetRequiredService<IHostApplicationLifetime>();
             appLifeTime.ApplicationStopping.Register(MemoryStorage.ClearStorage);
+
+            // Проверяем актуальность Twitch токена перед запуском приложения
+            var tokenService = app.Services.GetRequiredService<TokenService>();
+            var tokenResult = await tokenService.EnsureActualTokenAsync();
+            if (!tokenResult)
+            {
+                logger.LogWarning("Не удалось обеспечить актуальность Twitch токена при запуске приложения");
+            }
 
             await app.RunAsync();
         }

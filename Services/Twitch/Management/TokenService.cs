@@ -45,9 +45,7 @@ public class TokenService(
                 api.Settings.ClientId
             );
 
-            var token = (await dbContext.TwitchToken.AsNoTracking().Where(e => true).ToListAsync())[
-                0
-            ];
+            var token = await dbContext.TwitchToken.AsNoTracking().SingleAsync();
 
             token.AccessToken = result.AccessToken;
             token.ExpiresIn = TimeSpan.FromSeconds(result.ExpiresIn);
@@ -106,5 +104,56 @@ public class TokenService(
         }
 
         await dbContext.SaveChangesAsync();
+    }
+
+    public async Task<bool> EnsureActualTokenAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            // Получаем токен из базы данных
+            var token = await GetTokenAsync(cancellationToken);
+
+            if (token == null)
+            {
+                logger.LogWarning("Токен не найден в базе данных");
+                return false;
+            }
+
+            // Проверяем, не истек ли токен (с запасом в 5 минут)
+            var timeUntilExpiry = token.WhenExpires - DateTime.Now;
+            if (timeUntilExpiry > TimeSpan.FromMinutes(5))
+            {
+                // Токен еще актуален
+                Token = token;
+                logger.LogInformation(
+                    "Токен актуален, истекает через {TimeUntilExpiry}",
+                    timeUntilExpiry
+                );
+                return true;
+            }
+
+            // Токен истекает или уже истек, обновляем его
+            logger.LogInformation(
+                "Токен истекает через {TimeUntilExpiry}, обновляем...",
+                timeUntilExpiry
+            );
+            var refreshResult = await RefreshTokenAsync(token);
+
+            if (refreshResult)
+            {
+                logger.LogInformation("Токен успешно обновлен");
+                return true;
+            }
+            else
+            {
+                logger.LogError("Не удалось обновить токен");
+                return false;
+            }
+        }
+        catch (Exception e)
+        {
+            logger.LogException(e);
+            return false;
+        }
     }
 }

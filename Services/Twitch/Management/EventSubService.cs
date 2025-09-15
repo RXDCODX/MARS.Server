@@ -165,7 +165,11 @@ public class EventSubService(
 
     public async Task<string> ResubscribeToEventSub(TokenInfo? token = default)
     {
-        token ??= tokenService.Token;
+        if (token == null)
+        {
+            await tokenService.EnsureActualTokenAsync(_cancellationToken);
+            token = tokenService.Token;
+        }
         ArgumentException.ThrowIfNullOrWhiteSpace(token?.AccessToken);
         ArgumentException.ThrowIfNullOrWhiteSpace(token?.RefreshToken);
 
