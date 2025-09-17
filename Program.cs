@@ -246,6 +246,11 @@ public static class Program
         services.AddSingleton<WaifuRollWorker>();
         services.AddHostedService(sp => sp.GetRequiredService<WaifuRollWorker>());
 
+        // Добавляем сервис архивирования потоков
+        services.AddSingleton<MARS.Server.Services.StreamAcrhive.Interfaces.IFFmpegService, MARS.Server.Services.StreamAcrhive.FFmpegService>();
+        services.AddSingleton<MARS.Server.Services.StreamAcrhive.Interfaces.IStreamArchiveService, MARS.Server.Services.StreamAcrhive.StreamArchiveService>();
+        services.AddHostedService<MARS.Server.Services.StreamAcrhive.StreamArchiveWorker>();
+
         services.AddSingleton(loggerFactory);
 
         // Добавляем инициализатор базы данных

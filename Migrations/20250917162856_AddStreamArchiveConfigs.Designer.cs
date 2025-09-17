@@ -3,6 +3,7 @@ using System;
 using MARS.Server.DataBaseContext;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MARS.Server.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250917162856_AddStreamArchiveConfigs")]
+    partial class AddStreamArchiveConfigs
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -820,103 +823,6 @@ namespace MARS.Server.Migrations
                     b.ToTable("StreamArchiveConfigs");
                 });
 
-            modelBuilder.Entity("MARS.Server.Services.StreamAcrhive.Entitys.StreamArchiveFile", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<int>("ChunksCount")
-                        .HasColumnType("integer");
-
-                    b.Property<Guid>("ConfigId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("DiscoveredAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("ErrorMessage")
-                        .HasColumnType("text");
-
-                    b.Property<string>("OriginalFileName")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("OriginalFilePath")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<long>("OriginalFileSize")
-                        .HasColumnType("bigint");
-
-                    b.Property<string>("ProcessedFileName")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime?>("ProcessingCompletedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime?>("ProcessingStartedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("integer");
-
-                    b.Property<long?>("TelegramMessageId")
-                        .HasColumnType("bigint");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ConfigId", "OriginalFilePath")
-                        .IsUnique();
-
-                    b.ToTable("StreamArchiveFiles");
-                });
-
-            modelBuilder.Entity("MARS.Server.Services.StreamAcrhive.Entitys.StreamArchiveFileChunk", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("ChunkFileName")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<int>("ChunkNumber")
-                        .HasColumnType("integer");
-
-                    b.Property<long>("ChunkSize")
-                        .HasColumnType("bigint");
-
-                    b.Property<string>("ErrorMessage")
-                        .HasColumnType("text");
-
-                    b.Property<Guid>("FileId")
-                        .HasColumnType("uuid");
-
-                    b.Property<long>("OffsetInOriginalFile")
-                        .HasColumnType("bigint");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("integer");
-
-                    b.Property<long?>("TelegramMessageId")
-                        .HasColumnType("bigint");
-
-                    b.Property<int>("TotalChunks")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("UploadedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("FileId");
-
-                    b.ToTable("StreamArchiveFileChunks");
-                });
-
             modelBuilder.Entity("MARS.Server.Services.TelegramBotService.Entitys.TelegramUpdateReceiverOffset", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1645,28 +1551,6 @@ namespace MARS.Server.Migrations
                     b.Navigation("RequestedTrack");
                 });
 
-            modelBuilder.Entity("MARS.Server.Services.StreamAcrhive.Entitys.StreamArchiveFile", b =>
-                {
-                    b.HasOne("MARS.Server.Services.StreamAcrhive.Entitys.StreamArchiveConfig", "Config")
-                        .WithMany()
-                        .HasForeignKey("ConfigId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Config");
-                });
-
-            modelBuilder.Entity("MARS.Server.Services.StreamAcrhive.Entitys.StreamArchiveFileChunk", b =>
-                {
-                    b.HasOne("MARS.Server.Services.StreamAcrhive.Entitys.StreamArchiveFile", "File")
-                        .WithMany("Chunks")
-                        .HasForeignKey("FileId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("File");
-                });
-
             modelBuilder.Entity("MARS.Server.Services.Twitch.HelloVideos.Entitys.HelloVideosUsers", b =>
                 {
                     b.HasOne("MARS.Server.Services.PyroAlerts.Entitys.MediaInfo", "MediaInfo")
@@ -1715,11 +1599,6 @@ namespace MARS.Server.Migrations
                     b.Navigation("Layout");
 
                     b.Navigation("Players");
-                });
-
-            modelBuilder.Entity("MARS.Server.Services.StreamAcrhive.Entitys.StreamArchiveFile", b =>
-                {
-                    b.Navigation("Chunks");
                 });
 
             modelBuilder.Entity("MARS.Server.Services.WaifuRoll.Entitys.Host", b =>

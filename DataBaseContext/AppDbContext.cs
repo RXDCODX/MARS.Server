@@ -14,6 +14,7 @@ using MARS.Server.Services.Twitch.HelloVideos.Entitys;
 using MARS.Server.Services.Twitch.Management.Entitys;
 using MARS.Server.Services.Twitch.MiniGamesStats.Entitys;
 using MARS.Server.Services.Twitch.TwitchFollowers.Entitys;
+using MARS.Server.Services.StreamAcrhive.Entitys;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using WaifuRollGuarantee = MARS.Server.Services.WaifuRoll.Entitys.WaifuRollGuarantee;
 
@@ -79,6 +80,9 @@ public sealed class AppDbContext : DbContext
     public DbSet<WaifuRollGuarantee> WaifuRollGuarantees { get; set; } = null!;
     public DbSet<CinemaMediaItem> CinemaQueue { get; set; } = null!;
     public DbSet<FollowerInfo> FollowersEntitys { get; set; } = null!;
+    public DbSet<StreamArchiveConfig> StreamArchiveConfigs { get; set; } = null!;
+    public DbSet<StreamArchiveFile> StreamArchiveFiles { get; set; } = null!;
+    public DbSet<StreamArchiveFileChunk> StreamArchiveFileChunks { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -286,6 +290,26 @@ public sealed class AppDbContext : DbContext
             .WithOne(s => s.Layout)
             .HasForeignKey<ScoreboardLayout>(l => l.ScoreboardStateId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        // Конфигурация для StreamArchive
+        modelBuilder
+            .Entity<StreamArchiveFile>()
+            .HasOne(f => f.Config)
+            .WithMany()
+            .HasForeignKey(f => f.ConfigId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder
+            .Entity<StreamArchiveFileChunk>()
+            .HasOne(c => c.File)
+            .WithMany(f => f.Chunks)
+            .HasForeignKey(c => c.FileId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder
+            .Entity<StreamArchiveFile>()
+            .HasIndex(f => new { f.ConfigId, f.OriginalFilePath })
+            .IsUnique();
     }
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)

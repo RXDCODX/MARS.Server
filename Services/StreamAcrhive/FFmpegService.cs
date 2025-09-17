@@ -1,0 +1,329 @@
+﻿using System.Diagnostics;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using MARS.Server.Services.StreamAcrhive.Interfaces;
+
+namespace MARS.Server.Services.StreamAcrhive;
+
+public class FFmpegService(ILogger<FFmpegService> logger) : IFFmpegService
+{
+    private readonly string _ffmpegPath = FindFFmpegPath();
+
+    // Пытаемся найти FFmpeg в системе
+
+    public async Task<List<string>> SplitVideoFileAsync(
+        string inputPath,
+        string outputDirectory,
+        long maxChunkSizeBytes,
+        CancellationToken cancellationToken = default
+    )
+    {
+        try
+        {
+            if (!await IsFFmpegAvailableAsync(cancellationToken))
+            {
+                throw new InvalidOperationException("FFmpeg не доступен в системе");
+            }
+
+            // Получаем информацию о видео
+            var videoInfo =
+                await GetVideoInfoAsync(inputPath, cancellationToken)
+                ?? throw new InvalidOperationException(
+                    "Не удалось получить информацию о видеофайле"
+                );
+
+            // Вычисляем длительность каждой части в секундах
+            var totalDuration = videoInfo.Duration.TotalSeconds;
+            var chunkDurationSeconds = (double)maxChunkSizeBytes / (videoInfo.Bitrate / 8.0);
+            var totalChunks = (int)Math.Ceiling(totalDuration / chunkDurationSeconds);
+
+            logger.LogInformation(
+                "Разбивка файла {FilePath} на {ChunkCount} частей по {ChunkDuration} секунд",
+                inputPath,
+                totalChunks,
+                chunkDurationSeconds
+            );
+
+            var outputFiles = new List<string>();
+            var baseFileName = Path.GetFileNameWithoutExtension(inputPath);
+            var extension = Path.GetExtension(inputPath);
+
+            for (var i = 0; i < totalChunks; i++)
+            {
+                var startTime = i * chunkDurationSeconds;
+                var endTime = Math.Min((i + 1) * chunkDurationSeconds, totalDuration);
+                var chunkFileName = $"{baseFileName}_part_{i + 1}_of_{totalChunks}{extension}";
+                var outputPath = Path.Combine(outputDirectory, chunkFileName);
+
+                await CreateVideoChunkAsync(
+                    inputPath,
+                    outputPath,
+                    startTime,
+                    endTime - startTime,
+                    cancellationToken
+                );
+                outputFiles.Add(outputPath);
+
+                logger.LogDebug(
+                    "Создана часть {PartNumber} из {TotalParts}: {OutputPath}",
+                    i + 1,
+                    totalChunks,
+                    outputPath
+                );
+            }
+
+            return outputFiles;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при разбивке файла {FilePath}", inputPath);
+            throw;
+        }
+    }
+
+    public async Task<VideoInfo?> GetVideoInfoAsync(
+        string filePath,
+        CancellationToken cancellationToken = default
+    )
+    {
+        try
+        {
+            var arguments =
+                $"-v quiet -print_format json -show_format -show_streams \"{filePath}\"";
+
+            using var process = new Process();
+            process.StartInfo = new ProcessStartInfo
+            {
+                FileName = _ffmpegPath.Replace("ffmpeg", "ffprobe"),
+                Arguments = arguments,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+            };
+
+            process.Start();
+            var output = await process.StandardOutput.ReadToEndAsync(cancellationToken);
+            await process.WaitForExitAsync(cancellationToken);
+
+            if (process.ExitCode != 0)
+            {
+                logger.LogError(
+                    "FFprobe завершился с кодом {ExitCode} для файла {FilePath}",
+                    process.ExitCode,
+                    filePath
+                );
+                return null;
+            }
+
+            var probeData = JsonSerializer.Deserialize<FFprobeOutput>(output);
+            if (
+                probeData?.Format is null
+                || probeData.Streams is null
+                || probeData.Streams.Count == 0
+            )
+            {
+                return null;
+            }
+
+            var videoStream = probeData.Streams.FirstOrDefault(s => s.CodecType == "video");
+            return videoStream is null
+                ? null
+                : new VideoInfo
+                {
+                    Duration = TimeSpan.FromSeconds(double.Parse(probeData.Format.Duration ?? "0")),
+                    Width = videoStream.Width,
+                    Height = videoStream.Height,
+                    Codec = videoStream.CodecName,
+                    Bitrate = long.TryParse(probeData.Format.BitRate, out var bitrate)
+                        ? bitrate
+                        : 0,
+                    FrameRate = videoStream.RFrameRate is not null
+                        ? ParseFrameRate(videoStream.RFrameRate)
+                        : 0,
+                };
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при получении информации о видео {FilePath}", filePath);
+            return null;
+        }
+    }
+
+    public async Task<bool> IsFFmpegAvailableAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            using var process = new Process();
+            process.StartInfo = new ProcessStartInfo
+            {
+                FileName = _ffmpegPath,
+                Arguments = "-version",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+            };
+
+            process.Start();
+            await process.WaitForExitAsync(cancellationToken);
+
+            if (process.ExitCode == 0)
+            {
+                logger.LogInformation("FFmpeg доступен по пути: {Path}", _ffmpegPath);
+                return true;
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "FFmpeg не найден или недоступен");
+        }
+
+        return false;
+    }
+
+    private async Task CreateVideoChunkAsync(
+        string inputPath,
+        string outputPath,
+        double startTime,
+        double duration,
+        CancellationToken cancellationToken
+    )
+    {
+        var arguments =
+            $"-i \"{inputPath}\" -ss {startTime:F2} -t {duration:F2} -c copy \"{outputPath}\"";
+
+        using var process = new Process();
+        process.StartInfo = new ProcessStartInfo
+        {
+            FileName = _ffmpegPath,
+            Arguments = arguments,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+        };
+
+        process.Start();
+        await process.WaitForExitAsync(cancellationToken);
+
+        if (process.ExitCode != 0)
+        {
+            var error = await process.StandardError.ReadToEndAsync(cancellationToken);
+            throw new InvalidOperationException($"FFmpeg завершился с ошибкой: {error}");
+        }
+    }
+
+    private static string FindFFmpegPath()
+    {
+        // Список возможных путей к FFmpeg
+        var possiblePaths = new[]
+        {
+            "ffmpeg", // В PATH
+            "C:\\ffmpeg\\bin\\ffmpeg.exe",
+            "C:\\Program Files\\ffmpeg\\bin\\ffmpeg.exe",
+            "C:\\Program Files (x86)\\ffmpeg\\bin\\ffmpeg.exe",
+            "/usr/bin/ffmpeg",
+            "/usr/local/bin/ffmpeg",
+        };
+
+        foreach (var path in possiblePaths)
+        {
+            try
+            {
+                using var process = new Process();
+                process.StartInfo = new ProcessStartInfo
+                {
+                    FileName = path,
+                    Arguments = "-version",
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                };
+
+                process.Start();
+                process.WaitForExit(5000); // Ждем максимум 5 секунд
+
+                if (process.ExitCode == 0)
+                {
+                    return path;
+                }
+            }
+            catch
+            {
+                // Продолжаем поиск
+            }
+        }
+
+        // Возвращаем "ffmpeg" как fallback
+        return "ffmpeg";
+    }
+
+    private static double ParseFrameRate(string frameRate)
+    {
+        try
+        {
+            if (frameRate.Contains('/'))
+            {
+                var parts = frameRate.Split('/');
+                if (
+                    parts.Length == 2
+                    && double.TryParse(parts[0], out var numerator)
+                    && double.TryParse(parts[1], out var denominator)
+                    && denominator != 0
+                )
+                {
+                    return numerator / denominator;
+                }
+            }
+            else if (double.TryParse(frameRate, out var rate))
+            {
+                return rate;
+            }
+        }
+        catch
+        {
+            // Игнорируем ошибки парсинга
+        }
+
+        return 0;
+    }
+}
+
+// Модели для десериализации вывода FFprobe
+public class FFprobeOutput
+{
+    [JsonPropertyName("format")]
+    public FFprobeFormat? Format { get; set; }
+
+    [JsonPropertyName("streams")]
+    public List<FFprobeStream>? Streams { get; set; }
+}
+
+public class FFprobeFormat
+{
+    [JsonPropertyName("duration")]
+    public string? Duration { get; set; }
+
+    [JsonPropertyName("bit_rate")]
+    public string? BitRate { get; set; }
+}
+
+public class FFprobeStream
+{
+    [JsonPropertyName("codec_type")]
+    public string? CodecType { get; set; }
+
+    [JsonPropertyName("codec_name")]
+    public string? CodecName { get; set; }
+
+    [JsonPropertyName("width")]
+    public int Width { get; set; }
+
+    [JsonPropertyName("height")]
+    public int Height { get; set; }
+
+    [JsonPropertyName("r_frame_rate")]
+    public string? RFrameRate { get; set; }
+}
