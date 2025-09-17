@@ -1,4 +1,5 @@
-﻿using MARS.Server.Services.Twitch.Management.Entitys;
+﻿using System.Timers;
+using MARS.Server.Services.Twitch.Management.Entitys;
 
 namespace MARS.Server.Services.Twitch.Management;
 
@@ -11,6 +12,7 @@ public class TwitchAuthService(
 ) : BackgroundService
 {
     private const int CheckIntervalMinutes = 5;
+    private static Timer? _timer;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -32,16 +34,11 @@ public class TwitchAuthService(
                 tokenService.Token = tokenInfo;
             }
 
-            // Main loop
-            while (!stoppingToken.IsCancellationRequested)
-            {
-                await Task.Delay(TimeSpan.FromMinutes(CheckIntervalMinutes), stoppingToken);
+            _timer = new Timer(TimeSpan.FromMinutes(CheckIntervalMinutes)) { AutoReset = true };
 
-                if (tokenService.Token != null)
-                {
-                    await ValidateAndRefreshToken(tokenService.Token);
-                }
-            }
+            _timer.Elapsed += TimerOnElapsed;
+
+            _timer.Start();
         }
         catch (OperationCanceledException)
         {
@@ -50,6 +47,17 @@ public class TwitchAuthService(
         catch (Exception e)
         {
             logger.LogException(e);
+        }
+    }
+
+    private async void TimerOnElapsed(object? sender, ElapsedEventArgs e)
+    {
+        if (tokenService.Token != null)
+        {
+            await Task.Factory.StartNew(async () =>
+            {
+                await ValidateAndRefreshToken(tokenService.Token);
+            });
         }
     }
 

@@ -38,7 +38,7 @@ public class EventSubService(
                 if (!hasActiveSubscriptions)
                 {
                     // Только если нет активных подписок, делаем переподписку
-                    await ResubscribeToEventSub(token);
+                    await ResubscribeToEventSub();
                 }
                 else if (!_isWsConnected)
                 {
@@ -54,7 +54,7 @@ public class EventSubService(
             wsClient.WebsocketConnected += async (_, _) =>
             {
                 _isWsConnected = true;
-                await ResubscribeToEventSub(token);
+                await ResubscribeToEventSub();
             };
 
             wsClient.ErrorOccurred += async (_, args) =>
@@ -69,7 +69,7 @@ public class EventSubService(
                 _isWsConnected = true;
                 if (token != null)
                 {
-                    await ResubscribeToEventSub(token);
+                    await ResubscribeToEventSub();
                 }
 
                 await Task.Delay(1000, _cancellationToken);
@@ -128,11 +128,36 @@ public class EventSubService(
         {
             foreach (var subscription in response.Subscriptions)
             {
-                await api.Helix.EventSub.DeleteEventSubSubscriptionAsync(
-                    subscription.Id,
-                    api.Settings.ClientId,
-                    token.AccessToken
-                );
+                try
+                {
+                    await api.Helix.EventSub.DeleteEventSubSubscriptionAsync(
+                        subscription.Id,
+                        api.Settings.ClientId,
+                        token.AccessToken
+                    );
+                }
+                catch (HttpRequestException httpEx)
+                    when (httpEx.Message.Contains("401") || httpEx.Message.Contains("Unauthorized"))
+                {
+                    if (
+                        await HandleUnauthorizedError(token, $"удаление подписки {subscription.Id}")
+                    )
+                    {
+                        token = tokenService.Token ?? token;
+                        await api.Helix.EventSub.DeleteEventSubSubscriptionAsync(
+                            subscription.Id,
+                            api.Settings.ClientId,
+                            token.AccessToken
+                        );
+                    }
+                    else
+                    {
+                        logger.LogError(
+                            "Не удалось обновить токен для удаления подписки {SubscriptionId}",
+                            subscription.Id
+                        );
+                    }
+                }
             }
         }
     }
@@ -163,8 +188,31 @@ public class EventSubService(
         return true;
     }
 
+    private async Task<bool> HandleUnauthorizedError(TokenInfo token, string operation)
+    {
+        logger.LogWarning("Получена ошибка 401 при {Operation}. Обновляем токен...", operation);
+        var refreshResult = await tokenService.RefreshTokenAsync(token);
+        if (refreshResult)
+        {
+            logger.LogInformation("Токен успешно обновлен для {Operation}", operation);
+            return true;
+        }
+        else
+        {
+            logger.LogError("Не удалось обновить токен для {Operation}", operation);
+            return false;
+        }
+    }
+
     public async Task<string> ResubscribeToEventSub(TokenInfo? token = default)
     {
+        if (SemaphoreSlim.CurrentCount == 0)
+        {
+            return "Семафор запретил заход";
+        }
+
+        await SemaphoreSlim.WaitAsync(_cancellationToken);
+
         if (token == null)
         {
             await tokenService.EnsureActualTokenAsync(_cancellationToken);
@@ -194,17 +242,43 @@ public class EventSubService(
                 return "Ошибка: WebSocket отключился при создании подписки на channel.raid";
             }
 
-            await api.Helix.EventSub.CreateEventSubSubscriptionAsync(
-                "channel.raid",
-                "1",
-                condition,
-                EventSubTransportMethod.Websocket,
-                wsClient.SessionId,
-                null,
-                null,
-                api.Settings.ClientId,
-                token.AccessToken
-            );
+            try
+            {
+                await api.Helix.EventSub.CreateEventSubSubscriptionAsync(
+                    "channel.raid",
+                    "1",
+                    condition,
+                    EventSubTransportMethod.Websocket,
+                    wsClient.SessionId,
+                    null,
+                    null,
+                    api.Settings.ClientId,
+                    token.AccessToken
+                );
+            }
+            catch (HttpRequestException httpEx)
+                when (httpEx.Message.Contains("401") || httpEx.Message.Contains("Unauthorized"))
+            {
+                if (await HandleUnauthorizedError(token, "создание подписки на channel.raid"))
+                {
+                    token = tokenService.Token ?? token;
+                    await api.Helix.EventSub.CreateEventSubSubscriptionAsync(
+                        "channel.raid",
+                        "1",
+                        condition,
+                        EventSubTransportMethod.Websocket,
+                        wsClient.SessionId,
+                        null,
+                        null,
+                        api.Settings.ClientId,
+                        token.AccessToken
+                    );
+                }
+                else
+                {
+                    return "Ошибка: не удалось обновить токен для создания подписки на channel.raid";
+                }
+            }
 
             condition.Clear();
             condition.Add("broadcaster_user_id", TwitchExstension.ChannelId);
@@ -214,85 +288,225 @@ public class EventSubService(
                 return "Ошибка: WebSocket отключился при создании подписки на stream.online";
             }
 
-            await api.Helix.EventSub.CreateEventSubSubscriptionAsync(
-                "stream.online",
-                "1",
-                condition,
-                EventSubTransportMethod.Websocket,
-                wsClient.SessionId,
-                null,
-                null,
-                api.Settings.ClientId,
-                token.AccessToken
-            );
+            try
+            {
+                await api.Helix.EventSub.CreateEventSubSubscriptionAsync(
+                    "stream.online",
+                    "1",
+                    condition,
+                    EventSubTransportMethod.Websocket,
+                    wsClient.SessionId,
+                    null,
+                    null,
+                    api.Settings.ClientId,
+                    token.AccessToken
+                );
+            }
+            catch (HttpRequestException httpEx)
+                when (httpEx.Message.Contains("401") || httpEx.Message.Contains("Unauthorized"))
+            {
+                if (await HandleUnauthorizedError(token, "создание подписки на stream.online"))
+                {
+                    token = tokenService.Token ?? token;
+                    await api.Helix.EventSub.CreateEventSubSubscriptionAsync(
+                        "stream.online",
+                        "1",
+                        condition,
+                        EventSubTransportMethod.Websocket,
+                        wsClient.SessionId,
+                        null,
+                        null,
+                        api.Settings.ClientId,
+                        token.AccessToken
+                    );
+                }
+                else
+                {
+                    return "Ошибка: не удалось обновить токен для создания подписки на stream.online";
+                }
+            }
 
             if (!await EnsureWebSocketConnected())
             {
                 return "Ошибка: WebSocket отключился при создании подписки на stream.offline";
             }
 
-            await api.Helix.EventSub.CreateEventSubSubscriptionAsync(
-                "stream.offline",
-                "1",
-                condition,
-                EventSubTransportMethod.Websocket,
-                wsClient.SessionId,
-                null,
-                null,
-                api.Settings.ClientId,
-                token.AccessToken
-            );
+            try
+            {
+                await api.Helix.EventSub.CreateEventSubSubscriptionAsync(
+                    "stream.offline",
+                    "1",
+                    condition,
+                    EventSubTransportMethod.Websocket,
+                    wsClient.SessionId,
+                    null,
+                    null,
+                    api.Settings.ClientId,
+                    token.AccessToken
+                );
+            }
+            catch (HttpRequestException httpEx)
+                when (httpEx.Message.Contains("401") || httpEx.Message.Contains("Unauthorized"))
+            {
+                if (await HandleUnauthorizedError(token, "создание подписки на stream.offline"))
+                {
+                    token = tokenService.Token ?? token;
+                    await api.Helix.EventSub.CreateEventSubSubscriptionAsync(
+                        "stream.offline",
+                        "1",
+                        condition,
+                        EventSubTransportMethod.Websocket,
+                        wsClient.SessionId,
+                        null,
+                        null,
+                        api.Settings.ClientId,
+                        token.AccessToken
+                    );
+                }
+                else
+                {
+                    return "Ошибка: не удалось обновить токен для создания подписки на stream.offline";
+                }
+            }
 
             if (!await EnsureWebSocketConnected())
             {
                 return "Ошибка: WebSocket отключился при создании подписки на channel.channel_points_custom_reward_redemption.add";
             }
 
-            await api.Helix.EventSub.CreateEventSubSubscriptionAsync(
-                "channel.channel_points_custom_reward_redemption.add",
-                "1",
-                condition,
-                EventSubTransportMethod.Websocket,
-                wsClient.SessionId,
-                null,
-                null,
-                api.Settings.ClientId,
-                token.AccessToken
-            );
+            try
+            {
+                await api.Helix.EventSub.CreateEventSubSubscriptionAsync(
+                    "channel.channel_points_custom_reward_redemption.add",
+                    "1",
+                    condition,
+                    EventSubTransportMethod.Websocket,
+                    wsClient.SessionId,
+                    null,
+                    null,
+                    api.Settings.ClientId,
+                    token.AccessToken
+                );
+            }
+            catch (HttpRequestException httpEx)
+                when (httpEx.Message.Contains("401") || httpEx.Message.Contains("Unauthorized"))
+            {
+                if (
+                    await HandleUnauthorizedError(
+                        token,
+                        "создание подписки на channel.channel_points_custom_reward_redemption.add"
+                    )
+                )
+                {
+                    token = tokenService.Token ?? token;
+                    await api.Helix.EventSub.CreateEventSubSubscriptionAsync(
+                        "channel.channel_points_custom_reward_redemption.add",
+                        "1",
+                        condition,
+                        EventSubTransportMethod.Websocket,
+                        wsClient.SessionId,
+                        null,
+                        null,
+                        api.Settings.ClientId,
+                        token.AccessToken
+                    );
+                }
+                else
+                {
+                    return "Ошибка: не удалось обновить токен для создания подписки на channel.channel_points_custom_reward_redemption.add";
+                }
+            }
 
             if (!await EnsureWebSocketConnected())
             {
                 return "Ошибка: WebSocket отключился при создании подписки на channel.moderator.add";
             }
 
-            await api.Helix.EventSub.CreateEventSubSubscriptionAsync(
-                "channel.moderator.add",
-                "1",
-                condition,
-                EventSubTransportMethod.Websocket,
-                wsClient.SessionId,
-                null,
-                null,
-                api.Settings.ClientId,
-                token.AccessToken
-            );
+            try
+            {
+                await api.Helix.EventSub.CreateEventSubSubscriptionAsync(
+                    "channel.moderator.add",
+                    "1",
+                    condition,
+                    EventSubTransportMethod.Websocket,
+                    wsClient.SessionId,
+                    null,
+                    null,
+                    api.Settings.ClientId,
+                    token.AccessToken
+                );
+            }
+            catch (HttpRequestException httpEx)
+                when (httpEx.Message.Contains("401") || httpEx.Message.Contains("Unauthorized"))
+            {
+                if (
+                    await HandleUnauthorizedError(
+                        token,
+                        "создание подписки на channel.moderator.add"
+                    )
+                )
+                {
+                    token = tokenService.Token ?? token;
+                    await api.Helix.EventSub.CreateEventSubSubscriptionAsync(
+                        "channel.moderator.add",
+                        "1",
+                        condition,
+                        EventSubTransportMethod.Websocket,
+                        wsClient.SessionId,
+                        null,
+                        null,
+                        api.Settings.ClientId,
+                        token.AccessToken
+                    );
+                }
+                else
+                {
+                    return "Ошибка: не удалось обновить токен для создания подписки на channel.moderator.add";
+                }
+            }
 
             if (!await EnsureWebSocketConnected())
             {
                 return "Ошибка: WebSocket отключился при создании подписки на channel.vip.add";
             }
 
-            await api.Helix.EventSub.CreateEventSubSubscriptionAsync(
-                "channel.vip.add",
-                "1",
-                condition,
-                EventSubTransportMethod.Websocket,
-                wsClient.SessionId,
-                null,
-                null,
-                api.Settings.ClientId,
-                token.AccessToken
-            );
+            try
+            {
+                await api.Helix.EventSub.CreateEventSubSubscriptionAsync(
+                    "channel.vip.add",
+                    "1",
+                    condition,
+                    EventSubTransportMethod.Websocket,
+                    wsClient.SessionId,
+                    null,
+                    null,
+                    api.Settings.ClientId,
+                    token.AccessToken
+                );
+            }
+            catch (HttpRequestException httpEx)
+                when (httpEx.Message.Contains("401") || httpEx.Message.Contains("Unauthorized"))
+            {
+                if (await HandleUnauthorizedError(token, "создание подписки на channel.vip.add"))
+                {
+                    token = tokenService.Token ?? token;
+                    await api.Helix.EventSub.CreateEventSubSubscriptionAsync(
+                        "channel.vip.add",
+                        "1",
+                        condition,
+                        EventSubTransportMethod.Websocket,
+                        wsClient.SessionId,
+                        null,
+                        null,
+                        api.Settings.ClientId,
+                        token.AccessToken
+                    );
+                }
+                else
+                {
+                    return "Ошибка: не удалось обновить токен для создания подписки на channel.vip.add";
+                }
+            }
 
             condition.Add("moderator_user_id", TwitchExstension.ChannelId);
 
@@ -301,26 +515,74 @@ public class EventSubService(
                 return "Ошибка: WebSocket отключился при создании подписки на channel.follow";
             }
 
-            await api.Helix.EventSub.CreateEventSubSubscriptionAsync(
-                "channel.follow",
-                "2",
-                condition,
-                EventSubTransportMethod.Websocket,
-                wsClient.SessionId,
-                null,
-                null,
-                api.Settings.ClientId,
-                token.AccessToken
-            );
+            try
+            {
+                await api.Helix.EventSub.CreateEventSubSubscriptionAsync(
+                    "channel.follow",
+                    "2",
+                    condition,
+                    EventSubTransportMethod.Websocket,
+                    wsClient.SessionId,
+                    null,
+                    null,
+                    api.Settings.ClientId,
+                    token.AccessToken
+                );
+            }
+            catch (HttpRequestException httpEx)
+                when (httpEx.Message.Contains("401") || httpEx.Message.Contains("Unauthorized"))
+            {
+                if (await HandleUnauthorizedError(token, "создание подписки на channel.follow"))
+                {
+                    token = tokenService.Token ?? token;
+                    await api.Helix.EventSub.CreateEventSubSubscriptionAsync(
+                        "channel.follow",
+                        "2",
+                        condition,
+                        EventSubTransportMethod.Websocket,
+                        wsClient.SessionId,
+                        null,
+                        null,
+                        api.Settings.ClientId,
+                        token.AccessToken
+                    );
+                }
+                else
+                {
+                    return "Ошибка: не удалось обновить токен для создания подписки на channel.follow";
+                }
+            }
 
             condition.Clear();
 
-            var response = await api
-                .Helix.EventSub.GetEventSubSubscriptionsAsync(
-                    clientId: api.Settings.ClientId,
-                    accessToken: token.AccessToken
-                )
-                .ConfigureAwait(false);
+            GetEventSubSubscriptionsResponse? response;
+            try
+            {
+                response = await api
+                    .Helix.EventSub.GetEventSubSubscriptionsAsync(
+                        clientId: api.Settings.ClientId,
+                        accessToken: token.AccessToken
+                    )
+                    .ConfigureAwait(false);
+            }
+            catch (HttpRequestException httpEx)
+                when (httpEx.Message.Contains("401") || httpEx.Message.Contains("Unauthorized"))
+            {
+                if (await HandleUnauthorizedError(token, "получение списка подписок EventSub"))
+                {
+                    token = tokenService.Token ?? token;
+                    response = await api
+                        .Helix.EventSub.GetEventSubSubscriptionsAsync(
+                            clientId: api.Settings.ClientId,
+                            accessToken: token.AccessToken
+                        )
+                        .ConfigureAwait(false);
+                }
+                else
+                {
+                    return "Ошибка: не удалось обновить токен для получения списка подписок EventSub";
+                }
+            }
 
             SemaphoreSlim.Release(1);
 
@@ -360,6 +622,30 @@ public class EventSubService(
                 clientId: api.Settings.ClientId,
                 accessToken: token.AccessToken
             );
+        }
+        catch (HttpRequestException httpEx)
+            when (httpEx.Message.Contains("401") || httpEx.Message.Contains("Unauthorized"))
+        {
+            logger.LogWarning(
+                "Получена ошибка 401 (Unauthorized) при получении EventSub подписок. Пытаемся обновить токен..."
+            );
+
+            // Пытаемся обновить токен
+            var refreshResult = await tokenService.RefreshTokenAsync(token);
+            if (refreshResult)
+            {
+                logger.LogInformation("Токен успешно обновлен, повторяем запрос...");
+                // Повторяем запрос с обновленным токеном
+                return await api.Helix.EventSub.GetEventSubSubscriptionsAsync(
+                    clientId: api.Settings.ClientId,
+                    accessToken: tokenService.Token?.AccessToken ?? token.AccessToken
+                );
+            }
+            else
+            {
+                logger.LogError("Не удалось обновить токен после получения ошибки 401");
+                return null;
+            }
         }
         catch (Exception e)
         {

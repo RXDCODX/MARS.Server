@@ -328,14 +328,7 @@ public static class Program
             var appLifeTime = app.Services.GetRequiredService<IHostApplicationLifetime>();
             appLifeTime.ApplicationStopping.Register(MemoryStorage.ClearStorage);
 
-            // Проверяем актуальность Twitch токена перед запуском приложения
-            var tokenService = app.Services.GetRequiredService<TokenService>();
-            var tokenResult = await tokenService.EnsureActualTokenAsync();
-            if (!tokenResult)
-            {
-                logger.LogWarning("Не удалось обеспечить актуальность Twitch токена при запуске приложения");
-            }
-
+            //// Проверяем актуальность Twitch токена перед запуском приложения
             await app.RunAsync();
         }
         catch (Exception e)

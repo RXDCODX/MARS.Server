@@ -8,14 +8,13 @@ namespace MARS.Server.Services.Twitch.Client;
 public class TwitchConnectionManager : IHostedService
 {
     private readonly ILogger<TwitchConnectionManager> _logger;
-    private readonly IOptions<TwitchConfiguration> _twitchOptions;
 
     private readonly WebSocketClient _webSocketClient;
     private readonly TwitchClient _client;
     private readonly ConnectionCredentials _credentials;
     private bool _initialized;
 
-    private volatile bool _isConnected;
+    private bool IsConnected => _webSocketClient.IsConnected;
     private DateTimeOffset? _lastConnectedAt;
     private DateTimeOffset? _lastDisconnectedAt;
     private string? _lastDisconnectReason;
@@ -29,7 +28,6 @@ public class TwitchConnectionManager : IHostedService
     )
     {
         _logger = logger;
-        _twitchOptions = twitchOptions;
 
         var clientOptions = new ClientOptions
         {
@@ -47,26 +45,23 @@ public class TwitchConnectionManager : IHostedService
 
         _credentials = new ConnectionCredentials(
             TwitchExstension.BotName,
-            _twitchOptions.Value.OAuth
+            twitchOptions.Value.OAuth
         );
 
         _client.OnConnected += (_, _) =>
         {
-            _isConnected = true;
             _lastConnectedAt = DateTimeOffset.Now;
             _logger.LogInformation("Twitch chat connected as {Bot}", TwitchExstension.BotName);
         };
 
         _client.OnDisconnected += (_, _) =>
         {
-            _isConnected = false;
             _lastDisconnectedAt = DateTimeOffset.Now;
             _logger.LogWarning("Twitch chat disconnected");
         };
 
         _client.OnConnectionError += (_, args) =>
         {
-            _isConnected = false;
             _lastDisconnectedAt = DateTimeOffset.Now;
             _lastDisconnectReason = args.Error?.Message ?? "Unknown";
             _logger.LogError("Twitch connection error: {Message}", args.Error?.Message);
@@ -107,7 +102,7 @@ public class TwitchConnectionManager : IHostedService
     public string GetStatus()
     {
         var joined = string.Join(", ", _client.JoinedChannels.Select(c => c.Channel));
-        return $"Connected: {_isConnected}\n"
+        return $"Connected: {IsConnected}\n"
             + $"JoinedChannels: {(string.IsNullOrWhiteSpace(joined) ? "-" : joined)}\n"
             + $"LastConnectedAt: {_lastConnectedAt?.ToString("yyyy-MM-dd HH:mm:ss") ?? "-"}\n"
             + $"LastDisconnectedAt: {_lastDisconnectedAt?.ToString("yyyy-MM-dd HH:mm:ss") ?? "-"}\n"
