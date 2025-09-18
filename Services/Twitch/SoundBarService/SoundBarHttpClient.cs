@@ -1,6 +1,7 @@
 ﻿using System.Text;
 using System.Text.Json;
 using MARS.Server.Services.Twitch.SoundBarService.Entitys;
+using MARS.Server.Services.Twitch.SoundBarService.Models;
 
 namespace MARS.Server.Services.Twitch.SoundBarService;
 
@@ -121,8 +122,3 @@ public class SoundBarHttpClient(
     }
 }
 
-public class BagCountResponse
-{
-    public bool Success { get; set; }
-    public string BagCount { get; set; } = string.Empty;
-}

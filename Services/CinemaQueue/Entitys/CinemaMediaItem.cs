@@ -46,11 +46,3 @@ public class CinemaMediaItem
     public DateTimeOffset? LastModified { get; set; } = DateTimeOffset.Now;
 }
 
-public enum MediaStatus
-{
-    Pending,
-    InProgress,
-    Completed,
-    Cancelled,
-    Postponed,
-}

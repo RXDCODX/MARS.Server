@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using MARS.Server.Services.StreamAcrhive.Interfaces;
+using MARS.Server.Services.StreamAcrhive.Models;
 
 namespace MARS.Server.Services.StreamAcrhive;
 
@@ -291,39 +291,3 @@ public class FFmpegService(ILogger<FFmpegService> logger) : IFFmpegService
     }
 }
 
-// Модели для десериализации вывода FFprobe
-public class FFprobeOutput
-{
-    [JsonPropertyName("format")]
-    public FFprobeFormat? Format { get; set; }
-
-    [JsonPropertyName("streams")]
-    public List<FFprobeStream>? Streams { get; set; }
-}
-
-public class FFprobeFormat
-{
-    [JsonPropertyName("duration")]
-    public string? Duration { get; set; }
-
-    [JsonPropertyName("bit_rate")]
-    public string? BitRate { get; set; }
-}
-
-public class FFprobeStream
-{
-    [JsonPropertyName("codec_type")]
-    public string? CodecType { get; set; }
-
-    [JsonPropertyName("codec_name")]
-    public string? CodecName { get; set; }
-
-    [JsonPropertyName("width")]
-    public int Width { get; set; }
-
-    [JsonPropertyName("height")]
-    public int Height { get; set; }
-
-    [JsonPropertyName("r_frame_rate")]
-    public string? RFrameRate { get; set; }
-}
