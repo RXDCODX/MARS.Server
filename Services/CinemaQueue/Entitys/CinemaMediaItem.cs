@@ -8,10 +8,8 @@ public class CinemaMediaItem
     public Guid Id { get; set; }
 
     [Required]
-    [MaxLength(200)]
     public required string Title { get; set; } = string.Empty;
 
-    [MaxLength(500)]
     public string? Description { get; set; }
 
     [Required]
@@ -38,11 +36,9 @@ public class CinemaMediaItem
     [MaxLength(100)]
     public string? TwitchUsername { get; set; }
 
-    [MaxLength(500)]
     public string? Notes { get; set; }
 
     public bool IsNext { get; set; } = false;
 
     public DateTimeOffset? LastModified { get; set; } = DateTimeOffset.Now;
 }
-

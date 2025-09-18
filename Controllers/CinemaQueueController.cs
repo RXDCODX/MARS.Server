@@ -3,7 +3,7 @@ using MARS.Server.Services.CinemaQueue.Interfaces;
 using MARS.Server.Services.CinemaQueue.Services;
 using Microsoft.AspNetCore.Mvc;
 
-namespace MARS.Server.Services.CinemaQueue.Controllers;
+namespace MARS.Server.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
@@ -117,10 +117,17 @@ public class CinemaQueueController(
             }
 
             // Если title или description не указаны, пытаемся получить их из URL
-            if ((string.IsNullOrWhiteSpace(request.Title) || string.IsNullOrWhiteSpace(request.Description)) 
-                && !string.IsNullOrWhiteSpace(request.MediaUrl))
+            if (
+                (
+                    string.IsNullOrWhiteSpace(request.Title)
+                    || string.IsNullOrWhiteSpace(request.Description)
+                ) && !string.IsNullOrWhiteSpace(request.MediaUrl)
+            )
             {
-                var metadata = await metadataService.GetMetadataAsync(request.MediaUrl, cancellationToken);
+                var metadata = await metadataService.GetMetadataAsync(
+                    request.MediaUrl,
+                    cancellationToken
+                );
                 if (metadata != null)
                 {
                     if (string.IsNullOrWhiteSpace(request.Title))
