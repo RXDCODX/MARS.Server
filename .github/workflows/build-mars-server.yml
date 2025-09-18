@@ -2,13 +2,9 @@ name: Build MARS.Server (server-only)
 
 on:
   push:
-    paths:
-      - "MARS.Projects/MARS.Server/**"
-      - "MARS.Projects/MARS.Server/.github/workflows/build-mars-server.yml"
+    branches: [main, master, develop]
   pull_request:
-    paths:
-      - "MARS.Projects/MARS.Server/**"
-      - "MARS.Projects/MARS.Server/.github/workflows/build-mars-server.yml"
+    branches: [main, master, develop]
 
 permissions:
   contents: read
