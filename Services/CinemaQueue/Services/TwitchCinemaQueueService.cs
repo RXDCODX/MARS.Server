@@ -8,7 +8,8 @@ public class TwitchCinemaQueueService(
     ICinemaQueueService cinemaQueueService,
     EventSubWebsocketClient wsClient,
     ILogger<TwitchCinemaQueueService> logger,
-    ITwitchClient twitchClient
+    ITwitchClient twitchClient,
+    IMediaMetadataService metadataService
 ) : BackgroundService
 {
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
@@ -69,14 +70,40 @@ public class TwitchCinemaQueueService(
             var rewardTitle = e.Notification.Payload.Event.Reward.Title;
             var userName = e.Notification.Payload.Event.UserName;
             var userId = e.Notification.Payload.Event.UserId;
+            var userInput = e.Notification.Payload.Event.UserInput;
+
+            if (string.IsNullOrWhiteSpace(userInput))
+            {
+                logger.LogWarning("User input is empty for reward redemption by {UserName}", userName);
+                return;
+            }
+
+            // Получаем метаданные из ссылки
+            var metadata = await metadataService.GetMetadataAsync(userInput);
+            
+            string title;
+            string? description;
+
+            if (metadata != null)
+            {
+                title = metadata.Title;
+                description = metadata.Description;
+                logger.LogInformation("Получены метаданные для {Url}: {Title}", userInput, title);
+            }
+            else
+            {
+                // Fallback на случай, если не удалось получить метаданные
+                title = $"Requested by {userName}";
+                description = $"Added to queue via Twitch reward: {rewardTitle}";
+                logger.LogWarning("Не удалось получить метаданные для URL: {Url}", userInput);
+            }
 
             // Создаем запрос на добавление в очередь
             var request = new CreateMediaItemRequest
             {
-                Title = $"Requested by {userName}",
-                Description =
-                    $"Added to queue via Twitch reward: {e.Notification.Payload.Event.Reward.Title}",
-                MediaUrl = e.Notification.Payload.Event.UserInput, // Заглушка, в реальности нужно получать от пользователя
+                Title = title,
+                Description = description,
+                MediaUrl = userInput,
                 AddedBy = userName,
                 TwitchUserId = userId,
                 TwitchUsername = userName,

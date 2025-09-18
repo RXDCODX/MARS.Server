@@ -34,8 +34,20 @@ public static class CinemaQueueServiceCollectionExtensions
         // Регистрируем основной сервис как Singleton
         services.AddSingleton<ICinemaQueueService, CinemaQueueService>();
 
+        // Регистрируем сервис Кинопоиска
+        services.AddSingleton<IKinopoiskService, KinopoiskService>();
+
+        // Регистрируем сервис метаданных
+        services.AddSingleton<IMediaMetadataService, MediaMetadataService>();
+
+        // Регистрируем сервис уведомлений
+        services.AddSingleton<ICinemaQueueNotificationService, CinemaQueueNotificationService>();
+
         // Регистрируем Twitch интеграцию как BackgroundService
         services.AddHostedService<TwitchCinemaQueueService>();
+
+        // Регистрируем сервис уведомлений как BackgroundService
+        services.AddHostedService<CinemaQueueNotificationService>();
 
         return services;
     }

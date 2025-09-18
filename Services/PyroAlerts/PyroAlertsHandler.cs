@@ -21,10 +21,8 @@ public class PyroAlertsHandler(
                 case MessageType.Sticker:
                     if (
                         whitelist.Any(e =>
-                            (
-                                e.Name?.Equals(message.Chat.Username)
-                                ?? e.UserId.Equals(message.Chat.Id)
-                            ) && e.PyroAlertsAccess
+                            (e.Name == message.Chat.Username || e.UserId.Equals(message.Chat.Id))
+                            && e.PyroAlertsAccess
                         )
                     )
                     {

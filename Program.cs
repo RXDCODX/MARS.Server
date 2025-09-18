@@ -15,6 +15,8 @@ using MARS.Server.Services.PyroAlerts;
 using MARS.Server.Services.RandomMem;
 using MARS.Server.Services.Scoreboard;
 using MARS.Server.Services.Shikimori;
+using MARS.Server.Services.StreamAcrhive;
+using MARS.Server.Services.StreamAcrhive.Interfaces;
 using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.Twitch.Rewards;
 using MARS.Server.Services.Twitch.StreamManagement;
@@ -247,9 +249,9 @@ public static class Program
         services.AddHostedService(sp => sp.GetRequiredService<WaifuRollWorker>());
 
         // Добавляем сервис архивирования потоков
-        services.AddSingleton<MARS.Server.Services.StreamAcrhive.Interfaces.IFFmpegService, MARS.Server.Services.StreamAcrhive.FFmpegService>();
-        services.AddSingleton<MARS.Server.Services.StreamAcrhive.Interfaces.IStreamArchiveService, MARS.Server.Services.StreamAcrhive.StreamArchiveService>();
-        services.AddHostedService<MARS.Server.Services.StreamAcrhive.StreamArchiveWorker>();
+        //services.AddSingleton<IFFmpegService, FFmpegService>();
+        //services.AddSingleton<IStreamArchiveService, StreamArchiveService>();
+        //services.AddHostedService<StreamArchiveWorker>();
 
         services.AddSingleton(loggerFactory);
 

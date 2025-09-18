@@ -1,0 +1,44 @@
+name: Build MARS.Server (server-only)
+
+on:
+  push:
+    paths:
+      - "MARS.Projects/MARS.Server/**"
+      - "MARS.Projects/MARS.Server/.github/workflows/build-mars-server.yml"
+  pull_request:
+    paths:
+      - "MARS.Projects/MARS.Server/**"
+      - "MARS.Projects/MARS.Server/.github/workflows/build-mars-server.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Restore
+        run: dotnet restore MARS.Projects/MARS.Server/MARS.Server.csproj
+
+      - name: Build (skip frontend/publish targets)
+        run: dotnet build MARS.Projects/MARS.Server/MARS.Server.csproj -c Release --no-restore -warnaserror
+
+      # Важно: не вызываем dotnet publish, чтобы не срабатывали BeforeTargets/AfterTargets "Publish"
+      # из csproj (они запускают yarn и сборку фронта). Нам нужна лишь проверка успешной сборки бэкенда.

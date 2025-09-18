@@ -31,9 +31,7 @@ public class TelegramLoggerSender : IDisposable
             _outputTask.Wait(1500);
         }
         catch (TaskCanceledException) { }
-        catch (AggregateException ex)
-            when (ex.InnerExceptions.Count == 1 && ex.InnerExceptions[0] is TaskCanceledException)
-        { }
+        catch (AggregateException ex) when (ex.InnerExceptions is [TaskCanceledException]) { }
         GC.SuppressFinalize(this);
     }
 

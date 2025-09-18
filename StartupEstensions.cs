@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
+using MARS.Server.Configuration;
 using MARS.Server.CustomLoggers.SignalRLogger;
 using MARS.Server.Services.Framedata;
 using MARS.Server.Services.Scoreboard;
@@ -331,6 +332,9 @@ public static class StartupEstensions
         services.Configure<ShikimoriClientOptions>(
             configuration.GetSection(AppBase.Base).GetSection(ShikimoriClientOptions.Options)
         );
+        services.Configure<KinopoiskConfiguration>(
+            configuration.GetSection(AppBase.Base).GetSection(KinopoiskConfiguration.SectionName)
+        );
         services.Configure<DiscordConfiguration>(
             configuration.GetSection(AppBase.Base).GetSection(DiscordConfiguration.Configuration)
         );
@@ -357,6 +361,9 @@ public static class StartupEstensions
         );
         services.Configure<YandexMusicConfiguration>(
             configuration.GetSection(AppBase.Base).GetSection(YandexMusicConfiguration.SectionName)
+        );
+        services.Configure<KinopoiskConfiguration>(
+            configuration.GetSection(AppBase.Base).GetSection(KinopoiskConfiguration.SectionName)
         );
 
         return services;

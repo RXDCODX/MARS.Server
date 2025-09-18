@@ -1,5 +1,6 @@
 ﻿using MARS.Server.Services.CinemaQueue.Entitys;
 using MARS.Server.Services.CinemaQueue.Interfaces;
+using MARS.Server.Services.CinemaQueue.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MARS.Server.Services.CinemaQueue.Controllers;
@@ -8,7 +9,8 @@ namespace MARS.Server.Services.CinemaQueue.Controllers;
 [Route("api/[controller]")]
 public class CinemaQueueController(
     ICinemaQueueService cinemaQueueService,
-    ILogger<CinemaQueueController> logger
+    ILogger<CinemaQueueController> logger,
+    IMediaMetadataService metadataService
 ) : ControllerBase
 {
     /// <summary>
@@ -112,6 +114,24 @@ public class CinemaQueueController(
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
+            }
+
+            // Если title или description не указаны, пытаемся получить их из URL
+            if ((string.IsNullOrWhiteSpace(request.Title) || string.IsNullOrWhiteSpace(request.Description)) 
+                && !string.IsNullOrWhiteSpace(request.MediaUrl))
+            {
+                var metadata = await metadataService.GetMetadataAsync(request.MediaUrl, cancellationToken);
+                if (metadata != null)
+                {
+                    if (string.IsNullOrWhiteSpace(request.Title))
+                    {
+                        request.Title = metadata.Title;
+                    }
+                    if (string.IsNullOrWhiteSpace(request.Description))
+                    {
+                        request.Description = metadata.Description;
+                    }
+                }
             }
 
             var mediaItem = await cinemaQueueService.CreateMediaItemAsync(
@@ -272,6 +292,34 @@ public class CinemaQueueController(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error getting cinema queue statistics");
+            return StatusCode(500, "Internal server error");
+        }
+    }
+
+    /// <summary>
+    /// Получить метаданные из URL (Кинопоиск или Шикимори)
+    /// </summary>
+    [HttpGet("metadata")]
+    public async Task<ActionResult<MediaMetadata>> GetMetadata(
+        [FromQuery] string url,
+        CancellationToken cancellationToken = default
+    )
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(url))
+            {
+                return BadRequest("URL parameter is required");
+            }
+
+            var metadata = await metadataService.GetMetadataAsync(url, cancellationToken);
+            return metadata == null
+                ? NotFound("Metadata not found for the provided URL")
+                : Ok(metadata);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error getting metadata for URL: {Url}", url);
             return StatusCode(500, "Internal server error");
         }
     }

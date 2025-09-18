@@ -49,7 +49,9 @@ public abstract class BaseCommand
         {
             // Добавляем значения по умолчанию для необязательных параметров
             foreach (
-                var param in commandParameters.Where(p => !p.Required && p.DefaultValue != null)
+                var param in commandParameters.Where(p =>
+                    p is { Required: false, DefaultValue: not null }
+                )
             )
             {
                 parameters[param.Name] = ConvertValue(param.DefaultValue!, param.Type);
