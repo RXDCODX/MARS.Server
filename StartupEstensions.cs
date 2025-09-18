@@ -1,6 +1,5 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
-using MARS.Server.Configuration;
 using MARS.Server.CustomLoggers.SignalRLogger;
 using MARS.Server.Services.Framedata;
 using MARS.Server.Services.Scoreboard;

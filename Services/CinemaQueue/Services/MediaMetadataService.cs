@@ -1,6 +1,5 @@
 ﻿using System.Text.RegularExpressions;
 using MARS.Server.Services.Shikimori;
-using ShikimoriSharp.Classes;
 
 namespace MARS.Server.Services.CinemaQueue.Services;
 

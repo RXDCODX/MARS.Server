@@ -1,7 +1,4 @@
-﻿using Telegram.Bot;
-using Telegram.Bot.Extensions;
-
-namespace MARS.Server.Exstensions;
+﻿namespace MARS.Server.Exstensions;
 
 public static class TelegramExstension
 {

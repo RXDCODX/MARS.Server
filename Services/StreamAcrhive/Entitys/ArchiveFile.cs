@@ -1,7 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
-
-namespace MARS.Server.Services.StreamAcrhive.Entitys;
+﻿namespace MARS.Server.Services.StreamAcrhive.Entitys;
 
 public class StreamArchiveFile
 {

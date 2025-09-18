@@ -1,7 +1,6 @@
 ﻿using MARS.Server.Services.CommandExecutor.Entitys;
 using MARS.Server.Services.CommandExecutor.Entitys.Commands;
 using MARS.Server.Services.Twitch.Management;
-using TwitchLib.Api.Core.Interfaces;
 
 namespace MARS.Server.Services.CommandExecutor.Commands;
 

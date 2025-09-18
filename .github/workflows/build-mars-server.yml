@@ -31,10 +31,10 @@ jobs:
             ${{ runner.os }}-nuget-
 
       - name: Restore
-        run: dotnet restore MARS.Projects/MARS.Server/MARS.Server.csproj
+        run: dotnet restore MARS.Server.csproj
 
       - name: Build (skip frontend/publish targets)
-        run: dotnet build MARS.Projects/MARS.Server/MARS.Server.csproj -c Release --no-restore -warnaserror
+        run: dotnet build MARS.Server.csproj -c Release --no-restore -warnaserror
 
       # Важно: не вызываем dotnet publish, чтобы не срабатывали BeforeTargets/AfterTargets "Publish"
       # из csproj (они запускают yarn и сборку фронта). Нам нужна лишь проверка успешной сборки бэкенда.

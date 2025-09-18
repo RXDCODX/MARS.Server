@@ -1,14 +1,19 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.RegularExpressions;
-using MARS.Server.Configuration;
 using MARS.Server.Services.CinemaQueue.Models;
 
 namespace MARS.Server.Services.CinemaQueue.Services;
 
 public interface IKinopoiskService
 {
-    Task<KinopoiskMovieDto?> GetMovieByIdAsync(int movieId, CancellationToken cancellationToken = default);
-    Task<KinopoiskMovieDto?> GetMovieByUrlAsync(string url, CancellationToken cancellationToken = default);
+    Task<KinopoiskMovieDto?> GetMovieByIdAsync(
+        int movieId,
+        CancellationToken cancellationToken = default
+    );
+    Task<KinopoiskMovieDto?> GetMovieByUrlAsync(
+        string url,
+        CancellationToken cancellationToken = default
+    );
 }
 
 public class KinopoiskService(
@@ -19,14 +24,20 @@ public class KinopoiskService(
 {
     private readonly HttpClient _httpClient = httpClientFactory.CreateClient();
     private readonly KinopoiskConfiguration _config = kinopoiskOptions.Value;
-    private static readonly Regex KinopoiskUrlRegex = new(@"https://www\.kinopoisk\.ru/film/(\d+)", RegexOptions.Compiled);
-    
+    private static readonly Regex KinopoiskUrlRegex = new(
+        @"https://www\.kinopoisk\.ru/film/(\d+)",
+        RegexOptions.Compiled
+    );
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
-        PropertyNameCaseInsensitive = true
+        PropertyNameCaseInsensitive = true,
     };
 
-    public async Task<KinopoiskMovieDto?> GetMovieByIdAsync(int movieId, CancellationToken cancellationToken = default)
+    public async Task<KinopoiskMovieDto?> GetMovieByIdAsync(
+        int movieId,
+        CancellationToken cancellationToken = default
+    )
     {
         try
         {
@@ -44,12 +55,19 @@ public class KinopoiskService(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Ошибка при получении фильма по ID {MovieId} из Кинопоиска", movieId);
+            logger.LogError(
+                ex,
+                "Ошибка при получении фильма по ID {MovieId} из Кинопоиска",
+                movieId
+            );
             return null;
         }
     }
 
-    public async Task<KinopoiskMovieDto?> GetMovieByUrlAsync(string url, CancellationToken cancellationToken = default)
+    public async Task<KinopoiskMovieDto?> GetMovieByUrlAsync(
+        string url,
+        CancellationToken cancellationToken = default
+    )
     {
         try
         {

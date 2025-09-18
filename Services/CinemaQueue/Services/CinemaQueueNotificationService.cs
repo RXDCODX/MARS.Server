@@ -1,9 +1,5 @@
-﻿using MARS.Server.Exstensions;
-using MARS.Server.Services.CinemaQueue.Entitys;
+﻿using MARS.Server.Services.CinemaQueue.Entitys;
 using MARS.Server.Services.CinemaQueue.Interfaces;
-using Telegram.Bot;
-using Telegram.Bot.Extensions;
-using Telegram.Bot.Types;
 
 namespace MARS.Server.Services.CinemaQueue.Services;
 

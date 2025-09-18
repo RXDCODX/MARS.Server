@@ -1,7 +1,5 @@
-﻿using MARS.Server.DataBaseContext;
-using MARS.Server.Services.StreamAcrhive.Entitys;
+﻿using MARS.Server.Services.StreamAcrhive.Entitys;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace MARS.Server.Controllers;
 
