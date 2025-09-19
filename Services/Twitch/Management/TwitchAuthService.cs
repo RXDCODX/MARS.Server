@@ -63,7 +63,7 @@ public class TwitchAuthService(
 
     private async Task<bool> ValidateAndRefreshToken(TokenInfo token)
     {
-        if (DateTimeOffset.Now < token.WhenExpires)
+        if (DateTime.Now < token.WhenExpires)
         {
             await eventSubService.UpdateEventSubbAsync(token);
             return true;

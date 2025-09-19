@@ -107,12 +107,19 @@ public class EventSubService(
         try
         {
             _isWsConnected = false;
-            _isWsConnected = await wsClient.ReconnectAsync();
+            await wsClient.DisconnectAsync();
+            await wsClient.ConnectAsync();
+            _isWsConnected = true;
 
             if (!_isWsConnected)
             {
                 logger.LogWarning("Не удалось переподключить EventSub WebSocket");
             }
+        }
+        catch
+        {
+            WsReconnectSlim.Release();
+            await TryReconnect();
         }
         finally
         {

@@ -1,0 +1,105 @@
+---
+globs: *.cs
+description: Правило для написания кода в стиле "один вход - один выход" с предварительным объявлением результата
+---
+
+# Стиль кодирования: Один вход - один выход
+
+## Основные принципы
+
+1. **Предварительное объявление результата**: В начале метода всегда объявляйте переменную результата с дефолтным значением
+2. **Позитивный сценарий**: Код должен быть написан с предположением успешного выполнения
+3. **Один выход**: Метод должен иметь только один `return` в конце
+4. **Раннее возвращение для негативных сценариев**: Используйте `if (!condition)` для проверки негативных условий
+
+## Структура метода
+
+```csharp
+public ReturnType MethodName(ParameterType parameter)
+{
+    // 1. Предварительное объявление результата
+    var result = default(ReturnType);
+    
+    // 2. Проверка позитивных условий с ранним возвращением
+    if (!string.IsNullOrWhiteSpace(parameter))
+    {
+          // 3. Основная логика (позитивный сценарий)
+        // Выполняем основную работу
+        result = ProcessData(parameter);
+    } 
+    else 
+    
+    // 4. Единственный выход
+    return result;
+}
+```
+
+## Примеры
+
+### ✅ Правильно
+
+```csharp
+public string ProcessUserInput(string input)
+{
+    var result = string.Empty;
+    
+    if (!string.IsNullOrWhiteSpace(input))
+    {
+        result = input.Trim().ToUpper();
+    } 
+    else
+    {
+        result = "bad idea";
+    }
+    
+    return result;
+}
+```
+
+### ✅ Правильно с Entity Framework
+
+```csharp
+public async Task<User?> GetUserByIdAsync(int id)
+{
+    User? result = null;
+    
+    if (id == 0)
+    {
+        result = await _context.Users
+          .AsNoTracking()
+          .FirstOrDefaultAsync(u => u.Id == id);
+    } else {
+        result = result;
+    }
+    
+    return result;
+}
+```
+
+### ❌ Неправильно
+
+```csharp
+public string ProcessUserInput(string input)
+{
+    if (string.IsNullOrWhiteSpace(input))
+    {
+        return string.Empty; // Множественные return
+    }
+    
+    var processed = input.Trim().ToUpper();
+    return processed; // Множественные return
+}
+```
+
+## Исключения
+
+- Методы с `void` возвращаемым типом могут не следовать этому правилу
+- Методы с `async Task` без возвращаемого значения
+- Простые getter/setter свойства
+
+## Преимущества
+
+1. **Читаемость**: Легко понять, что возвращает метод
+2. **Отладка**: Проще установить breakpoint на единственном return
+3. **Рефакторинг**: Легче модифицировать логику возврата
+4. **Тестирование**: Проще тестировать различные сценарии
