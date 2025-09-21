@@ -1,5 +1,4 @@
 ﻿using MARS.Server.Services.RandomMem.Entity;
-using MARS.Server.Services.ServiceManager;
 using TwitchLib.EventSub.Websockets;
 
 namespace MARS.Server.Services.Twitch.Rewards.TwitchRandomMeme;
@@ -9,14 +8,10 @@ public class RandomMeme(
     IWebHostEnvironment webHostEnvironment,
     IDbContextFactory<AppDbContext> dbContextFactory,
     IHostApplicationLifetime applicationLifetime,
-    ILogger<RandomMeme> logger,
     EventSubWebsocketClient wsClient
-) : ManagedServiceBase(logger)
+) : BackgroundService
 {
-    public override string ServiceName => "randommeme";
-    public override string DisplayName => "Random Meme";
-    public override string Description => "Случайные мемы Twitch";
-    public override bool IsServiceActive { get; set; }
+    public bool IsServiceActive { get; set; }
     private readonly CancellationToken _stoppingToken = applicationLifetime.ApplicationStopping;
 
     public async Task RandomMemeHandler(object sender, ChannelPointsCustomRewardRedemptionArgs args)
@@ -147,23 +142,20 @@ public class RandomMeme(
         return nextVideoOrder;
     }
 
-    public override async Task StartAsync(CancellationToken cancellationToken = default)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        await base.StartAsync(cancellationToken);
-
         if (IsServiceActive)
         {
-            applicationLifetime.ApplicationStarted.Register(() =>
-            {
-                wsClient.ChannelPointsCustomRewardRedemptionAdd += RandomMemeHandler;
-            });
+            wsClient.ChannelPointsCustomRewardRedemptionAdd += RandomMemeHandler;
         }
+
+        // Ждем остановки сервиса
+        await Task.Delay(Timeout.Infinite, stoppingToken);
     }
 
-    public override Task StopAsync(CancellationToken cancellationToken = default)
+    public override async Task StopAsync(CancellationToken cancellationToken)
     {
         wsClient.ChannelPointsCustomRewardRedemptionAdd -= RandomMemeHandler;
-
-        return base.StopAsync(cancellationToken);
+        await base.StopAsync(cancellationToken);
     }
 }

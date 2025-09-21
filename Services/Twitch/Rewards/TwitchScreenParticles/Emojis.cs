@@ -1,19 +1,14 @@
-﻿using MARS.Server.Services.ServiceManager;
-using TwitchLib.Client.Events;
+﻿using TwitchLib.Client.Events;
 
 namespace MARS.Server.Services.Twitch.Rewards.TwitchScreenParticles;
 
 public class Emojis(
-    ILogger<Confetty> logger,
     IHubContext<TelegramusHub, ITelegramusHub> hub,
     IHostApplicationLifetime lifetime,
     ITwitchClient client
-) : ManagedServiceBase(logger)
+) : BackgroundService
 {
-    public override string ServiceName => "emojis";
-    public override string DisplayName => "Emojis";
-    public override string Description => "Эмодзи на Twitch";
-    public override bool IsServiceActive { get; set; }
+    public bool IsServiceActive { get; set; }
 
     private readonly CancellationToken _token = lifetime.ApplicationStopping;
 
@@ -50,22 +45,20 @@ public class Emojis(
         }
     }
 
-    public override async Task StartAsync(CancellationToken cancellationToken = default)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        await base.StartAsync(cancellationToken);
-
         if (IsServiceActive)
         {
-            lifetime.ApplicationStarted.Register(() =>
-            {
-                client.OnMessageReceived += ClientOnOnMessageReceived;
-            });
+            client.OnMessageReceived += ClientOnOnMessageReceived;
         }
+
+        // Ждем остановки сервиса
+        await Task.Delay(Timeout.Infinite, stoppingToken);
     }
 
-    public override Task StopAsync(CancellationToken cancellationToken = default)
+    public override async Task StopAsync(CancellationToken cancellationToken)
     {
         client.OnMessageReceived -= ClientOnOnMessageReceived;
-        return base.StopAsync(cancellationToken);
+        await base.StopAsync(cancellationToken);
     }
 }

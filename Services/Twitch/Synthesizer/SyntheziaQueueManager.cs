@@ -1,6 +1,4 @@
 ﻿using System.Collections.Concurrent;
-using MARS.Server.Services.ServiceManager;
-using MARS.Server.Services.ServiceManager.Entitys;
 using MARS.Server.Services.Twitch.Synthesizer.Enitity;
 using TwitchLib.Client.Events;
 
@@ -8,16 +6,12 @@ namespace MARS.Server.Services.Twitch.Synthesizer;
 
 public class SyntheziaQueueManager(
     IVoicer voicer,
-    IHostApplicationLifetime hostApplicationLifetime,
     ITwitchClient client,
     ILogger<SyntheziaQueueManager> logger
-) : ManagedServiceBase(logger)
+) : BackgroundService
 {
     private readonly ConcurrentQueue<MessageToSynthezid?> _queue = new();
-    public override string ServiceName => "syntheziaqueue";
-    public override string DisplayName => "Синтезатор сообщений Twitch";
-    public override string Description => "Озвучка сообщений из чата Twitch";
-    public override bool IsServiceActive { get; set; }
+    public bool IsServiceActive { get; set; }
 
     private string _lastMessage = string.Empty;
     private bool _isRepeatMessageSad = false;
@@ -42,7 +36,6 @@ public class SyntheziaQueueManager(
                     if (isDequeued && result is not null)
                     {
                         await voicer.Sound(result);
-                        UpdateActivity();
                     }
 
                     await Task.Delay(500);
@@ -115,44 +108,20 @@ public class SyntheziaQueueManager(
         }
     }
 
-    public override async Task StartAsync(CancellationToken cancellationToken = default)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        await base.StartAsync(cancellationToken);
-
         if (IsServiceActive)
         {
-            hostApplicationLifetime.ApplicationStarted.Register(() =>
-            {
-                client.OnMessageReceived += HandMessageToVoice;
-            });
+            client.OnMessageReceived += HandMessageToVoice;
         }
+
+        // Ждем остановки сервиса
+        await Task.Delay(Timeout.Infinite, stoppingToken);
     }
 
-    public override async Task StopAsync(CancellationToken cancellationToken = default)
+    public override async Task StopAsync(CancellationToken cancellationToken)
     {
-        await base.StopAsync(cancellationToken);
-
         client.OnMessageReceived -= HandMessageToVoice;
-    }
-
-    public override List<ServiceCommandInfo> GetAvailableCommands()
-    {
-        return [];
-    }
-
-    public override Task<bool> ExecuteCommandAsync(string command)
-    {
-        if (command == "interrupt")
-        {
-#if WINDOWS
-            if (voicer is SyntheziaVoicer synthVoicer)
-            {
-                synthVoicer.InterruptSpeech();
-                logger.LogInformation("Озвучка прервана по команде.");
-                return Task.FromResult(true);
-            }
-#endif
-        }
-        return Task.FromResult(false);
+        await base.StopAsync(cancellationToken);
     }
 }

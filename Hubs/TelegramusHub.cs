@@ -1,4 +1,5 @@
 ﻿using MARS.Server.Services.Twitch.SoundBarService;
+using MARS.Server.Services.WaifuRoll;
 using SignalRSwaggerGen.Attributes;
 using SignalRSwaggerGen.Enums;
 using Swashbuckle.AspNetCore.Annotations;
@@ -17,17 +18,14 @@ namespace MARS.Server.Hubs;
     HubMethodsScan.Default
 )]
 public class TelegramusHub(
-    IDbContextFactory<AppDbContext> factory,
-    IOptions<ShikimoriClientOptions> shikiOptions,
     IOptions<TwitchConfiguration> twitchConfiguration,
     ITwitchClient twitchClient,
-    SoundBarFactory soundBarFactory
+    SoundBarFactory soundBarFactory,
+    WaifuPrizesService waifuPrizesService
 ) : Hub<ITelegramusHub>
 {
     private readonly TwitchConfiguration _twitchConfiguration =
         twitchConfiguration.Value ?? throw new NullReferenceException();
-
-    private string ShikimoriSite => shikiOptions.Value.ShikimoriSite;
 
     [SwaggerIgnore]
     public override async Task OnConnectedAsync()
@@ -36,28 +34,8 @@ public class TelegramusHub(
             _twitchConfiguration.ClientId,
             _twitchConfiguration.ClientSecret
         );
-        var prizes = await GetWaifuPrizesAsync();
-        await Clients.Caller.UpdateWaifuPrizes(prizes);
-    }
-
-    [SwaggerIgnore]
-    private async Task<ICollection<PrizeType>> GetWaifuPrizesAsync(
-        AppDbContext? dbContext = default
-    )
-    {
-        dbContext ??= await factory.CreateDbContextAsync();
-        var prizes = await dbContext
-            .Waifus.AsNoTracking()
-            .Where(e => true)
-            .Select(e => new PrizeType()
-            {
-                Id = e.ShikiId,
-                Image = ShikimoriSite + "/" + e.ImageUrl,
-                Text = e.Name,
-            })
-            .ToListAsync();
-
-        return prizes;
+        var result = await waifuPrizesService.GetWaifuPrizesAsync();
+        await Clients.Caller.UpdateWaifuPrizes(result.Data);
     }
 
     [SignalRMethod]

@@ -1,12 +1,14 @@
 ﻿using MARS.Server.Services.CommandExecutor.Entitys;
 using MARS.Server.Services.CommandExecutor.Entitys.Commands;
 using MARS.Server.Services.WaifuRoll;
+using MARS.Server.Services.WaifuRoll.helpers;
 
 namespace MARS.Server.Services.CommandExecutor.Commands;
 
 public class RollWaifuCommand(
     WaifuRollService waifoRollService,
-    IHubContext<TelegramusHub, ITelegramusHub> alertsHub
+    IHubContext<TelegramusHub, ITelegramusHub> alertsHub,
+    WaifuRollEnsurenceService waifuDbHelper
 ) : BaseCommand
 {
     public override string CommandName => "rollwaifu";
@@ -46,15 +48,20 @@ public class RollWaifuCommand(
         {
             var resultRoll = await waifoRollService.TelegramRollWaifu(username);
 
-            if (resultRoll is { host: not null, waifu: not null })
+            if (resultRoll.Data is { Host: not null, Waifu: not null })
             {
+                // Убеждаемся, что поля аниме и манги заполнены
+                var waifu = await waifuDbHelper.EnsureMangaAndAnimeTitleExists(
+                    resultRoll.Data.Waifu
+                );
+
                 var result =
-                    $"Вайфу ролл с вайфучкой {resultRoll.waifu.Name} для {resultRoll.host.Name} выполнен!";
+                    $"Вайфу ролл с вайфучкой {waifu.Name} для {resultRoll.Data.Host.Name} выполнен!";
 
                 await alertsHub.Clients.All.WaifuRoll(
-                    resultRoll.waifu,
-                    resultRoll.host.Name ?? throw new NullReferenceException(),
-                    resultRoll.husband
+                    waifu,
+                    resultRoll.Data.Host.Name ?? throw new NullReferenceException(),
+                    resultRoll.Data.Husband
                 );
 
                 return result;

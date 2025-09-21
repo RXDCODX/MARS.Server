@@ -1,5 +1,4 @@
-﻿using MARS.Server.Services.ServiceManager;
-using MARS.Server.Services.Twitch.Management;
+﻿using MARS.Server.Services.Twitch.Management;
 using TwitchLib.EventSub.Websockets;
 
 namespace MARS.Server.Services.Twitch.Rewards.TwitchClipCreator;
@@ -12,34 +11,29 @@ public class TwitchClipCreatorService(
     TokenService tokenService,
     ILogger<TwitchClipCreatorService> logger,
     EventSubWebsocketClient wsClient
-) : ManagedServiceBase(logger)
+) : BackgroundService
 {
-    public override string ServiceName => "twitchclipcreator";
-    public override string DisplayName => "Twitch Clip Creator";
-    public override string Description => "Создание клипов Twitch";
-    public override bool IsServiceActive { get; set; }
+    public bool IsServiceActive { get; set; }
 
     private readonly CancellationToken _cancellationToken = lifetime.ApplicationStopping;
 
-    public override async Task StartAsync(CancellationToken cancellationToken = default)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        await base.StartAsync(cancellationToken);
-
         if (IsServiceActive)
         {
-            lifetime.ApplicationStarted.Register(() =>
-            {
-                wsClient.ChannelPointsCustomRewardRedemptionAdd +=
-                    WsClientOnChannelPointsCustomRewardRedemptionAdd;
-            });
+            wsClient.ChannelPointsCustomRewardRedemptionAdd +=
+                WsClientOnChannelPointsCustomRewardRedemptionAdd;
         }
+
+        // Ждем остановки сервиса
+        await Task.Delay(Timeout.Infinite, stoppingToken);
     }
 
-    public override Task StopAsync(CancellationToken cancellationToken = default)
+    public override async Task StopAsync(CancellationToken cancellationToken)
     {
         wsClient.ChannelPointsCustomRewardRedemptionAdd -=
             WsClientOnChannelPointsCustomRewardRedemptionAdd;
-        return base.StopAsync(cancellationToken);
+        await base.StopAsync(cancellationToken);
     }
 
     private async Task WsClientOnChannelPointsCustomRewardRedemptionAdd(

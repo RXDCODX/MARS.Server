@@ -1,5 +1,4 @@
-﻿using MARS.Server.Services.ServiceManager;
-using TwitchLib.Client.Events;
+﻿using TwitchLib.Client.Events;
 using TwitchLib.EventSub.Core.SubscriptionTypes.Channel;
 using TwitchLib.EventSub.Websockets;
 
@@ -10,16 +9,12 @@ public class TwitchMediaAlerts(
     IDbContextFactory<AppDbContext> dbContextFactory,
     ITwitchClient client,
     IHostApplicationLifetime applicationLifetime,
-    ILogger<TwitchMediaAlerts> logger,
     EventSubWebsocketClient wsClient
-) : ManagedServiceBase(logger)
+) : BackgroundService
 {
     private readonly CancellationToken _token = applicationLifetime.ApplicationStopping;
 
-    public override string ServiceName => "twitchmediaalerts";
-    public override string DisplayName => "Twitch Media Alerts";
-    public override string Description => "Медиа-алерты Twitch";
-    public override bool IsServiceActive { get; set; }
+    public bool IsServiceActive { get; set; }
 
     internal async void TwitchClientOnNormalMessage(object? sender, OnMessageReceivedArgs args)
     {
@@ -144,24 +139,22 @@ public class TwitchMediaAlerts(
         }
     }
 
-    public override async Task StartAsync(CancellationToken cancellationToken = default)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        await base.StartAsync(cancellationToken);
-
         if (IsServiceActive)
         {
-            applicationLifetime.ApplicationStarted.Register(() =>
-            {
-                client.OnMessageReceived += TwitchClientOnNormalMessage;
-                wsClient.ChannelPointsCustomRewardRedemptionAdd += TwitchClientOnOnMessageSend;
-            });
+            client.OnMessageReceived += TwitchClientOnNormalMessage;
+            wsClient.ChannelPointsCustomRewardRedemptionAdd += TwitchClientOnOnMessageSend;
         }
+
+        // Ждем остановки сервиса
+        await Task.Delay(Timeout.Infinite, stoppingToken);
     }
 
-    public override Task StopAsync(CancellationToken cancellationToken = default)
+    public override async Task StopAsync(CancellationToken cancellationToken)
     {
         client.OnMessageReceived -= TwitchClientOnNormalMessage;
         wsClient.ChannelPointsCustomRewardRedemptionAdd -= TwitchClientOnOnMessageSend;
-        return base.StopAsync(cancellationToken);
+        await base.StopAsync(cancellationToken);
     }
 }

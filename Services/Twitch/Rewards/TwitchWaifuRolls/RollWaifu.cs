@@ -1,6 +1,6 @@
 ﻿using System.Globalization;
-using MARS.Server.Services.ServiceManager;
 using MARS.Server.Services.WaifuRoll;
+using MARS.Server.Services.WaifuRoll.helpers;
 using TwitchLib.EventSub.Core.SubscriptionTypes.Channel;
 using TwitchLib.EventSub.Websockets;
 
@@ -13,14 +13,11 @@ public class RollWaifu(
     IHubContext<TelegramusHub, ITelegramusHub> hubContext,
     IDbContextFactory<AppDbContext> factory,
     ITwitchAPI api,
-    IHostApplicationLifetime lifetime,
-    EventSubWebsocketClient wsClient
-) : ManagedServiceBase(logger)
+    EventSubWebsocketClient wsClient,
+    WaifuRollEnsurenceService waifuDbHelper
+) : BackgroundService
 {
-    public override string ServiceName => "rollwaifu";
-    public override string DisplayName => "Roll Waifu";
-    public override string Description => "Ролл вайфу через Twitch";
-    public override bool IsServiceActive { get; set; }
+    public bool IsServiceActive { get; set; }
 
     public async Task RollWaifuTwitchEvent(
         object sender,
@@ -44,6 +41,9 @@ public class RollWaifu(
 
                 if (waifu is not null)
                 {
+                    // Убеждаемся, что поля аниме и манги заполнены
+                    waifu = await waifuDbHelper.EnsureMangaAndAnimeTitleExists(waifu);
+                    
                     var color = await api.Helix.Chat.GetUserChatColorAsync([twEvent.UserId]);
                     await using AppDbContext dbContext2 = await factory.CreateDbContextAsync();
                     var husband =
@@ -88,23 +88,20 @@ public class RollWaifu(
         }
     }
 
-    public override async Task StartAsync(CancellationToken cancellationToken = default)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        await base.StartAsync(cancellationToken);
-
         if (IsServiceActive)
         {
-            lifetime.ApplicationStarted.Register(() =>
-            {
-                wsClient.ChannelPointsCustomRewardRedemptionAdd += RollWaifuTwitchEvent;
-            });
+            wsClient.ChannelPointsCustomRewardRedemptionAdd += RollWaifuTwitchEvent;
         }
+
+        // Ждем остановки сервиса
+        await Task.Delay(Timeout.Infinite, stoppingToken);
     }
 
-    public override Task StopAsync(CancellationToken cancellationToken = default)
+    public override async Task StopAsync(CancellationToken cancellationToken)
     {
         wsClient.ChannelPointsCustomRewardRedemptionAdd -= RollWaifuTwitchEvent;
-
-        return base.StopAsync(cancellationToken);
+        await base.StopAsync(cancellationToken);
     }
 }

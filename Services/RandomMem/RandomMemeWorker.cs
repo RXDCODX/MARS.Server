@@ -1,144 +1,121 @@
 ﻿using MARS.Server.Services.RandomMem.Entity;
-using MARS.Server.Services.ServiceManager;
 
 namespace MARS.Server.Services.RandomMem;
 
 public class RandomMemeWorker(
     IDbContextFactory<AppDbContext> contextFactory,
-    IWebHostEnvironment webHostEnvironment,
-    ILogger<RandomMemeWorker> logger
-) : ManagedServiceBase(logger)
+    IWebHostEnvironment webHostEnvironment
+) : BackgroundService
 {
-    public override string ServiceName => "randommemeworker";
-    public override string DisplayName => "Random Meme Worker";
-    public override string Description => "Фоновый обработчик очереди мемов";
-    public override bool IsServiceActive { get; set; }
+    public bool IsServiceActive { get; set; }
     private readonly string _folderPath = Path.Combine(webHostEnvironment.WebRootPath, "Alerts");
 
-    private static Task? _timerTask;
-
-    public override Task StartAsync(CancellationToken cancellationToken = default)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _timerTask = Task.Factory.StartNew(
-            async () =>
+        while (!stoppingToken.IsCancellationRequested && IsServiceActive)
+        {
+            await using var dbContext = await contextFactory.CreateDbContextAsync(stoppingToken);
+
+            var files = Directory
+                .GetFiles(_folderPath, "*", SearchOption.AllDirectories)
+                .ToHashSet();
+            var orders = await dbContext.RandomMemeOrder.ToListAsync(stoppingToken);
+
+            var fileNamesInDb = orders.Select(o => o.FilePath).ToHashSet();
+
+            // Remove missing files from queue
+            var missingFiles = fileNamesInDb.Except(files).ToList();
+            if (missingFiles.Count != 0)
             {
-                while (!cancellationToken.IsCancellationRequested && IsServiceActive)
+                orders.RemoveAll(o => missingFiles.Contains(o.FilePath));
+
+                dbContext.RandomMemeOrder.RemoveRange(
+                    await dbContext
+                        .RandomMemeOrder.Where(o => missingFiles.Contains(o.FilePath))
+                        .ToListAsync(stoppingToken)
+                );
+            }
+
+            // Ставим тип мема для файлов без типа
+            var memeTypes = await dbContext
+                .RandomMemeType.AsNoTracking()
+                .OrderByDescending(e => e.FolderPath.Length)
+                .ToArrayAsync(stoppingToken);
+
+            foreach (var memeOrder in orders.Where(e => e.MemeTypeId is null))
+            {
+                foreach (var memeType in memeTypes)
                 {
-                    await using var dbContext = await contextFactory.CreateDbContextAsync(
-                        cancellationToken
-                    );
-
-                    var files = Directory
-                        .GetFiles(_folderPath, "*", SearchOption.AllDirectories)
-                        .ToHashSet();
-                    var orders = await dbContext.RandomMemeOrder.ToListAsync(cancellationToken);
-
-                    var fileNamesInDb = orders.Select(o => o.FilePath).ToHashSet();
-
-                    // Remove missing files from queue
-                    var missingFiles = fileNamesInDb.Except(files).ToList();
-                    if (missingFiles.Count != 0)
+                    if (
+                        !memeOrder.FilePath.Contains(
+                            memeType.FolderPath,
+                            StringComparison.OrdinalIgnoreCase
+                        )
+                    )
                     {
-                        orders.RemoveAll(o => missingFiles.Contains(o.FilePath));
-
-                        dbContext.RandomMemeOrder.RemoveRange(
-                            await dbContext
-                                .RandomMemeOrder.Where(o => missingFiles.Contains(o.FilePath))
-                                .ToListAsync(cancellationToken)
-                        );
+                        continue;
                     }
 
-                    // Ставим тип мема для файлов без типа
-                    var memeTypes = await dbContext
-                        .RandomMemeType.AsNoTracking()
-                        .OrderByDescending(e => e.FolderPath.Length)
-                        .ToArrayAsync(cancellationToken);
-
-                    foreach (var memeOrder in orders.Where(e => e.MemeTypeId is null))
-                    {
-                        foreach (var memeType in memeTypes)
-                        {
-                            if (
-                                !memeOrder.FilePath.Contains(
-                                    memeType.FolderPath,
-                                    StringComparison.OrdinalIgnoreCase
-                                )
-                            )
-                            {
-                                continue;
-                            }
-
-                            memeOrder.MemeTypeId = memeType.Id;
-                            break;
-                        }
-                    }
-
-                    // Добавляем новые файлы в конец очереди и пересчитываем их MemeOrder.Order
-                    var newFiles = files.Except(fileNamesInDb).ToArray();
-                    Random.Shared.Shuffle(newFiles);
-                    if (newFiles.Length != 0)
-                    {
-                        foreach (var type in memeTypes)
-                        {
-                            var typedOrders = orders
-                                .Where(e => e.MemeTypeId == type.Id)
-                                .OrderBy(e => e.Order)
-                                .ToArray();
-
-                            var typedNewFiles = newFiles
-                                .Where(e =>
-                                    e.Contains(type.FolderPath, StringComparison.OrdinalIgnoreCase)
-                                )
-                                .ToArray();
-
-                            newFiles = [.. newFiles.Except(typedNewFiles)];
-
-                            var counter = 1;
-
-                            foreach (var typedOrder in typedOrders)
-                            {
-                                typedOrder.Order = counter;
-                                checked
-                                {
-                                    counter++;
-                                }
-                            }
-
-                            var newOrders = typedNewFiles
-                                .Select(
-                                    (file, index) =>
-                                        new MemeOrder
-                                        {
-                                            FilePath = file,
-                                            Order = counter + index,
-                                            MemeTypeId = type.Id,
-                                        }
-                                )
-                                .ToList();
-                            dbContext.RandomMemeOrder.AddRange(newOrders);
-                        }
-
-                        var cunter = 1;
-                        dbContext.RandomMemeOrder.AddRange(
-                            newFiles.Select(
-                                (a) => new MemeOrder() { FilePath = a, Order = cunter++ }
-                            )
-                        );
-                    }
-
-                    if (missingFiles.Count != 0 || newFiles.Length != 0)
-                    {
-                        await dbContext.SaveChangesAsync(cancellationToken);
-                    }
-
-                    await Task.Delay(TimeSpan.FromMinutes(30), cancellationToken);
+                    memeOrder.MemeTypeId = memeType.Id;
+                    break;
                 }
-            },
-            cancellationToken,
-            TaskCreationOptions.LongRunning,
-            TaskScheduler.Default
-        );
+            }
 
-        return base.StartAsync(cancellationToken);
+            // Добавляем новые файлы в конец очереди и пересчитываем их MemeOrder.Order
+            var newFiles = files.Except(fileNamesInDb).ToArray();
+            Random.Shared.Shuffle(newFiles);
+            if (newFiles.Length != 0)
+            {
+                foreach (var type in memeTypes)
+                {
+                    var typedOrders = orders
+                        .Where(e => e.MemeTypeId == type.Id)
+                        .OrderBy(e => e.Order)
+                        .ToArray();
+
+                    var typedNewFiles = newFiles
+                        .Where(e => e.Contains(type.FolderPath, StringComparison.OrdinalIgnoreCase))
+                        .ToArray();
+
+                    newFiles = [.. newFiles.Except(typedNewFiles)];
+
+                    var counter = 1;
+
+                    foreach (var typedOrder in typedOrders)
+                    {
+                        typedOrder.Order = counter;
+                        checked
+                        {
+                            counter++;
+                        }
+                    }
+
+                    var newOrders = typedNewFiles
+                        .Select(
+                            (file, index) =>
+                                new MemeOrder
+                                {
+                                    FilePath = file,
+                                    Order = counter + index,
+                                    MemeTypeId = type.Id,
+                                }
+                        )
+                        .ToList();
+                    dbContext.RandomMemeOrder.AddRange(newOrders);
+                }
+
+                var cunter = 1;
+                dbContext.RandomMemeOrder.AddRange(
+                    newFiles.Select((a) => new MemeOrder() { FilePath = a, Order = cunter++ })
+                );
+            }
+
+            if (missingFiles.Count != 0 || newFiles.Length != 0)
+            {
+                await dbContext.SaveChangesAsync(stoppingToken);
+            }
+
+            await Task.Delay(TimeSpan.FromMinutes(30), stoppingToken);
+        }
     }
 }

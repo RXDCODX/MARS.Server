@@ -1,5 +1,4 @@
-﻿using MARS.Server.Services.ServiceManager;
-using MARS.Server.Services.Twitch.Management;
+﻿using MARS.Server.Services.Twitch.Management;
 using TwitchLib.Api.Core.Enums;
 using TwitchLib.Api.Helix.Models.ChannelPoints.UpdateCustomRewardRedemptionStatus;
 using TwitchLib.EventSub.Websockets;
@@ -12,40 +11,33 @@ namespace MARS.Server.Services.Twitch.Rewards.TwitchRefundService;
 public class TwitchRefundService(
     ITwitchAPI api,
     ITwitchClient client,
-    IHostApplicationLifetime applicationLifetime,
     ILogger<TwitchRefundService> logger,
     EventSubWebsocketClient wsClient,
     TokenService tokenService
-) : ManagedServiceBase(logger)
+) : BackgroundService
 {
-    public override string ServiceName => "twitchrefund";
-    public override string DisplayName => "Twitch Refund";
-    public override string Description =>
-        "Сервис для возврата баллов канала при активации алерта с текстом 'asp'";
-    public override bool IsServiceActive { get; set; } = true;
+    public bool IsServiceActive { get; set; } = true;
 
     private const int RefundRewardCost = 160;
     private const string RefundRewardId = "e0af123a-3987-4924-a86b-393a702d2857\r\n";
     private static readonly string[] AspVariations = ["asp", "ASP", "Asp", "асп", "Асп", "АСП"];
 
-    public override Task StartAsync(CancellationToken cancellationToken = default)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         if (IsServiceActive)
         {
-            applicationLifetime.ApplicationStarted.Register(() =>
-            {
-                wsClient.ChannelPointsCustomRewardRedemptionAdd +=
-                    OnChannelPointsCustomRewardRedemption;
-            });
+            wsClient.ChannelPointsCustomRewardRedemptionAdd +=
+                OnChannelPointsCustomRewardRedemption;
         }
 
-        return base.StartAsync(cancellationToken);
+        // Ждем остановки сервиса
+        await Task.Delay(Timeout.Infinite, stoppingToken);
     }
 
-    public override Task StopAsync(CancellationToken cancellationToken = default)
+    public override async Task StopAsync(CancellationToken cancellationToken)
     {
         wsClient.ChannelPointsCustomRewardRedemptionAdd -= OnChannelPointsCustomRewardRedemption;
-        return base.StopAsync(cancellationToken);
+        await base.StopAsync(cancellationToken);
     }
 
     private async Task OnChannelPointsCustomRewardRedemption(

@@ -1,5 +1,4 @@
-﻿using MARS.Server.Services.ServiceManager;
-using TwitchLib.Client.Events;
+﻿using TwitchLib.Client.Events;
 
 namespace MARS.Server.Services.Twitch.StreamManagement;
 
@@ -9,35 +8,28 @@ namespace MARS.Server.Services.Twitch.StreamManagement;
 public class TwitchTitleChangeCommand(
     TwitchStreamManagementService streamManagementService,
     ITwitchClient client,
-    ILogger<TwitchTitleChangeCommand> logger,
-    IHostApplicationLifetime applicationLifetime
-) : ManagedServiceBase(logger)
+    ILogger<TwitchTitleChangeCommand> logger
+) : BackgroundService
 {
-    public override string ServiceName => "twitchtitlecommand";
-    public override string DisplayName => "Twitch Title Command";
-    public override string Description =>
-        "Обработка команды !title в Twitch чате (смена и получение названия)";
-    public override bool IsServiceActive { get; set; } = true;
+    public bool IsServiceActive { get; set; } = true;
 
     private const string CommandPrefix = "!title";
 
-    public override async Task StartAsync(CancellationToken cancellationToken = default)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        await base.StartAsync(cancellationToken);
-
         if (IsServiceActive)
         {
-            applicationLifetime.ApplicationStarted.Register(() =>
-            {
-                client.OnMessageReceived += OnMessageReceived;
-            });
+            client.OnMessageReceived += OnMessageReceived;
         }
+
+        // Ждем остановки сервиса
+        await Task.Delay(Timeout.Infinite, stoppingToken);
     }
 
-    public override Task StopAsync(CancellationToken cancellationToken = default)
+    public override async Task StopAsync(CancellationToken cancellationToken)
     {
         client.OnMessageReceived -= OnMessageReceived;
-        return base.StopAsync(cancellationToken);
+        await base.StopAsync(cancellationToken);
     }
 
     private async void OnMessageReceived(object? sender, OnMessageReceivedArgs args)

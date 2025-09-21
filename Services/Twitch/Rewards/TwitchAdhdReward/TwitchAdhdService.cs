@@ -1,5 +1,4 @@
-﻿using MARS.Server.Services.ServiceManager;
-using TwitchLib.EventSub.Websockets;
+﻿using TwitchLib.EventSub.Websockets;
 
 namespace MARS.Server.Services.Twitch.Rewards.TwitchAdhdReward;
 
@@ -8,37 +7,31 @@ namespace MARS.Server.Services.Twitch.Rewards.TwitchAdhdReward;
 /// </summary>
 public class TwitchAdhdService(
     IHubContext<TelegramusHub, ITelegramusHub> hubContext,
-    IHostApplicationLifetime applicationLifetime,
     ILogger<TwitchAdhdService> logger,
     EventSubWebsocketClient wsClient
-) : ManagedServiceBase(logger)
+) : BackgroundService
 {
-    public override string ServiceName => "twitchadhd";
-    public override string DisplayName => "Twitch ADHD";
-    public override string Description => "Сервис для обработки награды ADHD на Twitch";
-    public override bool IsServiceActive { get; set; } = true;
+    public bool IsServiceActive { get; set; } = true;
 
     private const int AdhdRewardCost = 2002;
     private const int AdhdDurationSeconds = 60;
 
-    public override Task StartAsync(CancellationToken cancellationToken = default)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         if (IsServiceActive)
         {
-            applicationLifetime.ApplicationStarted.Register(() =>
-            {
-                wsClient.ChannelPointsCustomRewardRedemptionAdd +=
-                    OnChannelPointsCustomRewardRedemption;
-            });
+            wsClient.ChannelPointsCustomRewardRedemptionAdd +=
+                OnChannelPointsCustomRewardRedemption;
         }
 
-        return base.StartAsync(cancellationToken);
+        // Ждем остановки сервиса
+        await Task.Delay(Timeout.Infinite, stoppingToken);
     }
 
-    public override Task StopAsync(CancellationToken cancellationToken = default)
+    public override async Task StopAsync(CancellationToken cancellationToken)
     {
         wsClient.ChannelPointsCustomRewardRedemptionAdd -= OnChannelPointsCustomRewardRedemption;
-        return base.StopAsync(cancellationToken);
+        await base.StopAsync(cancellationToken);
     }
 
     private async Task OnChannelPointsCustomRewardRedemption(

@@ -69,4 +69,80 @@ public class ShikimoriService : ITelegramusService
         var character = await _client.Characters.GetCharacterById(id);
         return character;
     }
+
+    public async Task<string?> GetCharacterAnimeTitle(long characterId)
+    {
+        var result = (string?)null;
+
+        try
+        {
+            var character = await GetShikiCharacterById(characterId);
+            if (character?.Animes?.Any() != true)
+            {
+                return result;
+            }
+
+            // Выбираем аниме с самым коротким названием
+            var shortestAnime = character
+                .Animes.Select(a => new
+                {
+                    Title = a.Russian ?? a.Name,
+                    Length = (a.Russian ?? a.Name).Length,
+                })
+                .MinBy(a => a.Length);
+
+            if (shortestAnime != null)
+            {
+                result = shortestAnime.Title;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Ошибка при получении аниме для персонажа {CharacterId}",
+                characterId
+            );
+        }
+
+        return result;
+    }
+
+    public async Task<string?> GetCharacterMangaTitle(long characterId)
+    {
+        var result = (string?)null;
+
+        try
+        {
+            var character = await GetShikiCharacterById(characterId);
+            if (character?.Mangas?.Any() != true)
+            {
+                return result;
+            }
+
+            // Выбираем мангу с самым коротким названием
+            var shortestManga = character
+                .Mangas.Select(m => new
+                {
+                    Title = m.Russian ?? m.Name,
+                    (m.Russian ?? m.Name).Length,
+                })
+                .MinBy(m => m.Length);
+
+            if (shortestManga != null)
+            {
+                result = shortestManga.Title;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Ошибка при получении манги для персонажа {CharacterId}",
+                characterId
+            );
+        }
+
+        return result;
+    }
 }

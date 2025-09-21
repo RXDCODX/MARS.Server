@@ -1,5 +1,4 @@
-﻿using MARS.Server.Services.ServiceManager;
-using TwitchLib.Client.Events;
+﻿using TwitchLib.Client.Events;
 
 namespace MARS.Server.Services.Twitch.HelloVideos;
 
@@ -9,30 +8,24 @@ public class HelloVideoWorker(
     IHostApplicationLifetime hostApplicationLifetime,
     IHubContext<TelegramusHub, ITelegramusHub> hubContext,
     ITwitchClient client
-) : ManagedServiceBase(logger)
+) : BackgroundService
 {
     private readonly CancellationToken _token = hostApplicationLifetime.ApplicationStopping;
     private readonly List<string> _users = [];
-    public override string ServiceName => "hellovideo";
-    public override string DisplayName => "Hello Videos";
-    public override string Description => "Hello Videos Twitch интеграция";
-    public override bool IsServiceActive { get; set; }
+    public bool IsServiceActive { get; set; }
 
-    public override Task StartAsync(CancellationToken cancellationToken = default)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        hostApplicationLifetime.ApplicationStarted.Register(() =>
-        {
-            client.OnMessageReceived += OnMessageReceived;
-        });
+        client.OnMessageReceived += OnMessageReceived;
 
-        return base.StartAsync(cancellationToken);
+        // Ждем остановки сервиса
+        await Task.Delay(Timeout.Infinite, stoppingToken);
     }
 
-    public override Task StopAsync(CancellationToken cancellationToken = default)
+    public override async Task StopAsync(CancellationToken cancellationToken)
     {
         client.OnMessageReceived -= OnMessageReceived;
-
-        return base.StopAsync(cancellationToken);
+        await base.StopAsync(cancellationToken);
     }
 
     public async void OnMessageReceived(object? sender, OnMessageReceivedArgs args)

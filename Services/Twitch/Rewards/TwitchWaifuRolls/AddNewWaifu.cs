@@ -1,9 +1,9 @@
 ﻿using System.Text.RegularExpressions;
-using MARS.Server.Services.ServiceManager;
 using MARS.Server.Services.Shikimori;
 using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.WaifuRoll;
 using MARS.Server.Services.WaifuRoll.Entitys.Interfaces;
+using MARS.Server.Services.WaifuRoll.helpers;
 using ShikimoriSharp.Classes;
 using TwitchLib.Api.Helix.Models.Chat;
 using TwitchLib.Client.Events;
@@ -18,20 +18,17 @@ public class AddNewWaifu(
     WaifuRollService waifuRollService,
     IHubContext<TelegramusHub, ITelegramusHub> hubContext,
     ITwitchAPI api,
-    IHostApplicationLifetime lifetime,
     TokenService tokenService,
-    IWaifuRollGuaranteeService guaranteeService
-) : ManagedServiceBase(logger)
+    IWaifuRollGuaranteeService guaranteeService,
+    WaifuRollEnsurenceService waifuDbHelper
+) : BackgroundService
 {
     private readonly ShikimoriClientOptions _options = options.Value;
 
     private static Guid RewardGuid => Guid.Parse("a0c9d421-cf76-4f76-9bc6-3cf28da1ffaf");
     private const int GuaranteeRolls = 200; // Количество роллов для гаранта
 
-    public override string ServiceName => "addnewwaifu";
-    public override string DisplayName => "Add New Waifu";
-    public override string Description => "Добавление новой вайфу через Twitch";
-    public override bool IsServiceActive { get; set; }
+    public bool IsServiceActive { get; set; }
 
     private async void AddNewWaifuTwitchEvent(
         object? sender,
@@ -98,7 +95,9 @@ public class AddNewWaifu(
                     return;
                 }
 
-                var (waifu, isException) = await waifuRollService.AddNewWaifu(character);
+                var operationResult = await waifuRollService.AddNewWaifu(character);
+                var waifu = operationResult.Data.Waifu;
+                var isException = operationResult.Data.HasError;
 
                 if (waifu is null && !isException)
                 {
@@ -116,6 +115,9 @@ public class AddNewWaifu(
                 {
                     waifu.IsAdded = true;
                     waifu.ImageUrl = _options.ShikimoriSite + waifu.ImageUrl;
+
+                    // Убеждаемся, что поля аниме и манги заполнены
+                    waifu = await waifuDbHelper.EnsureMangaAndAnimeTitleExists(waifu);
 
                     var color = await api.Helix.Chat.GetUserChatColorAsync([userId]);
 
@@ -161,7 +163,7 @@ public class AddNewWaifu(
                                 userId
                             );
                             var rollsUntilGuarantee =
-                                GuaranteeRolls - (guaranteeInfo?.RollCount ?? 0);
+                                GuaranteeRolls - (guaranteeInfo.Data?.RollCount ?? 0);
 
                             var message =
                                 AnswersForTwitchRewards.ReplaceKeywordsInAnswer(
@@ -217,23 +219,20 @@ public class AddNewWaifu(
         return ValueTask.FromResult(long.Parse(characterId));
     }
 
-    public override async Task StartAsync(CancellationToken cancellationToken = default)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        await base.StartAsync(cancellationToken);
-
         if (IsServiceActive)
         {
-            lifetime.ApplicationStarted.Register(() =>
-            {
-                client.OnMessageReceived += AddNewWaifuTwitchEvent;
-            });
+            client.OnMessageReceived += AddNewWaifuTwitchEvent;
         }
+
+        // Ждем остановки сервиса
+        await Task.Delay(Timeout.Infinite, stoppingToken);
     }
 
-    public override Task StopAsync(CancellationToken cancellationToken = default)
+    public override async Task StopAsync(CancellationToken cancellationToken)
     {
         client.OnMessageReceived -= AddNewWaifuTwitchEvent;
-
-        return base.StopAsync(cancellationToken);
+        await base.StopAsync(cancellationToken);
     }
 }

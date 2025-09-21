@@ -12,5 +12,4 @@ public class ServiceInfo
     public DateTime? StartTime { get; set; }
     public DateTime? LastActivity { get; set; }
     public bool IsEnabled { get; set; }
-    public Dictionary<string, object> Configuration { get; set; } = [];
 }

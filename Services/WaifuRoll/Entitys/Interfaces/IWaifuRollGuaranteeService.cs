@@ -1,4 +1,6 @@
-﻿namespace MARS.Server.Services.WaifuRoll.Entitys.Interfaces;
+﻿using MARS.Server.Services.WaifuRoll.Models;
+
+namespace MARS.Server.Services.WaifuRoll.Entitys.Interfaces;
 
 public interface IWaifuRollGuaranteeService
 {
@@ -6,27 +8,34 @@ public interface IWaifuRollGuaranteeService
     /// Проверяет, выпал ли VIP статус пользователю
     /// </summary>
     /// <param name="twitchId">Twitch ID пользователя</param>
-    /// <returns>True если VIP статус выпал, иначе False</returns>
-    Task<bool> CheckVipDropAsync(string twitchId);
+    /// <returns>Результат проверки VIP статуса</returns>
+    Task<OperationResult<VipDropResponse>> CheckVipDropAsync(string twitchId);
 
     /// <summary>
     /// Увеличивает счетчик роллов пользователя
     /// </summary>
     /// <param name="twitchId">Twitch ID пользователя</param>
-    /// <returns>True если операция выполнена успешно</returns>
-    Task<bool> IncrementRollCountAsync(string twitchId);
+    /// <returns>Результат увеличения счетчика</returns>
+    Task<OperationResult<RollCountResponse>> IncrementRollCountAsync(string twitchId);
 
     /// <summary>
     /// Получает информацию о гаранте пользователя
     /// </summary>
     /// <param name="twitchId">Twitch ID пользователя</param>
-    /// <returns>Информация о гаранте или null если не найден</returns>
-    Task<WaifuRollGuarantee?> GetGuaranteeInfoAsync(string twitchId);
+    /// <returns>Информация о гаранте</returns>
+    Task<OperationResult<WaifuRollGuarantee?>> GetGuaranteeInfoAsync(string twitchId);
 
     /// <summary>
     /// Сбрасывает счетчик роллов пользователя (при выпадении VIP)
     /// </summary>
     /// <param name="twitchId">Twitch ID пользователя</param>
-    /// <returns>True если операция выполнена успешно</returns>
-    Task<bool> ResetRollCountAsync(string twitchId);
+    /// <returns>Результат сброса счетчика</returns>
+    Task<OperationResult<RollCountResponse>> ResetRollCountAsync(string twitchId);
+
+    /// <summary>
+    /// Удаляет пользователя из системы гарантов (при выпадении VIP по гаранту)
+    /// </summary>
+    /// <param name="twitchId">Twitch ID пользователя</param>
+    /// <returns>Результат удаления</returns>
+    Task<OperationResult<bool>> DeleteGuaranteeAsync(string twitchId);
 }

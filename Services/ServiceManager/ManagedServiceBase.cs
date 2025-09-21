@@ -64,23 +64,42 @@ public abstract class ManagedServiceBase(ILogger logger) : IHostedService
     /// <summary>
     /// Запуск сервиса
     /// </summary>
-    public virtual Task StartAsync(CancellationToken cancellationToken = default)
+    public virtual async Task StartAsync(CancellationToken cancellationToken = default)
     {
+        var result = false;
+        
+        if (!IsServiceActive)
+        {
+            Logger.LogWarning("Service {ServiceName} is disabled and cannot be started", ServiceName);
+            return;
+        }
+        
         if (Status == ServiceStatus.Running)
         {
-            return EvenStarted();
+            Logger.LogInformation("Service {ServiceName} is already running", ServiceName);
+            return;
         }
+        
         Status = ServiceStatus.Starting;
         Logger.LogInformation("Starting service {ServiceName}", ServiceName);
 
         try
         {
-            // Логика запуска сервиса (реализуется в наследнике при необходимости)
-            Status = ServiceStatus.Running;
-            StartTime = DateTime.UtcNow;
-            LastActivity = DateTime.UtcNow;
-            Logger.LogInformation("Service {ServiceName} started successfully", ServiceName);
-            IsServiceActive = true;
+            // Вызываем абстрактный метод, который должен быть реализован в наследнике
+            result = await OnStartAsync(cancellationToken);
+            
+            if (result)
+            {
+                Status = ServiceStatus.Running;
+                StartTime = DateTime.UtcNow;
+                LastActivity = DateTime.UtcNow;
+                Logger.LogInformation("Service {ServiceName} started successfully", ServiceName);
+            }
+            else
+            {
+                Status = ServiceStatus.Error;
+                Logger.LogError("Service {ServiceName} failed to start", ServiceName);
+            }
         }
         catch (Exception ex)
         {
@@ -88,33 +107,53 @@ public abstract class ManagedServiceBase(ILogger logger) : IHostedService
             Logger.LogError(ex, "Failed to start service {ServiceName}", ServiceName);
             throw;
         }
-
-        return Task.CompletedTask;
     }
 
     /// <summary>
-    /// Вызывается когда произошла попытка запуска уже запущенного сервиса
+    /// Абстрактный метод для реализации логики запуска в наследниках
     /// </summary>
-    /// <returns>Task</returns>
-    private static Task EvenStarted()
-    {
-        return Task.CompletedTask;
-    }
+    /// <param name="cancellationToken">Токен отмены</param>
+    /// <returns>true если сервис успешно запущен, false в противном случае</returns>
+    protected abstract Task<bool> OnStartAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Абстрактный метод для реализации логики остановки в наследниках
+    /// </summary>
+    /// <param name="cancellationToken">Токен отмены</param>
+    /// <returns>true если сервис успешно остановлен, false в противном случае</returns>
+    protected abstract Task<bool> OnStopAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Остановка сервиса
     /// </summary>
-    public virtual Task StopAsync(CancellationToken cancellationToken = default)
+    public virtual async Task StopAsync(CancellationToken cancellationToken = default)
     {
+        var result = false;
+        
+        if (Status == ServiceStatus.Stopped)
+        {
+            Logger.LogInformation("Service {ServiceName} is already stopped", ServiceName);
+            return;
+        }
+        
         Status = ServiceStatus.Stopping;
         Logger.LogInformation("Stopping service {ServiceName}", ServiceName);
 
         try
         {
-            // Логика остановки сервиса (реализуется в наследнике при необходимости)
-            Status = ServiceStatus.Stopped;
-            Logger.LogInformation("Service {ServiceName} stopped successfully", ServiceName);
-            IsServiceActive = false;
+            // Вызываем абстрактный метод, который должен быть реализован в наследнике
+            result = await OnStopAsync(cancellationToken);
+            
+            if (result)
+            {
+                Status = ServiceStatus.Stopped;
+                Logger.LogInformation("Service {ServiceName} stopped successfully", ServiceName);
+            }
+            else
+            {
+                Status = ServiceStatus.Error;
+                Logger.LogError("Service {ServiceName} failed to stop", ServiceName);
+            }
         }
         catch (Exception ex)
         {
@@ -122,7 +161,6 @@ public abstract class ManagedServiceBase(ILogger logger) : IHostedService
             Logger.LogError(ex, "Failed to stop service {ServiceName}", ServiceName);
             throw;
         }
-        return Task.CompletedTask;
     }
 
     /// <summary>
@@ -147,31 +185,9 @@ public abstract class ManagedServiceBase(ILogger logger) : IHostedService
             StartTime = StartTime,
             LastActivity = LastActivity,
             IsEnabled = IsServiceActive,
-            Configuration = GetServiceConfiguration(),
         };
     }
 
-    /// <summary>
-    /// Получение конфигурации сервиса (переопределяется в наследниках)
-    /// </summary>
-    public virtual Dictionary<string, object> GetServiceConfiguration()
-    {
-        return [];
-    }
 
-    /// <summary>
-    /// Получение списка доступных команд сервиса (переопределяется в наследниках)
-    /// </summary>
-    public virtual List<ServiceCommandInfo> GetAvailableCommands()
-    {
-        return [];
-    }
-
-    /// <summary>
-    /// Универсальный вызов команды сервиса (переопределяется в наследниках)
-    /// </summary>
-    public virtual Task<bool> ExecuteCommandAsync(string command)
-    {
-        return Task.FromResult(false);
-    }
 }
+

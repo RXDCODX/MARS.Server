@@ -207,7 +207,8 @@ public static class Program
         services.AddSingleton<ScoreboardService>();
 
         services.AddSingleton<WaifuRollService>();
-        services.AddSingleton<WaifuRollDataBaseHelper>();
+        services.AddSingleton<WaifuRollEnsurenceService>();
+        services.AddSingleton<WaifuPrizesService>();
         services.AddSingleton<IWaifuRollGuaranteeService, WaifuRollGuaranteeService>();
 
         services.AddSingleton<RandomMemHandler>();
@@ -242,8 +243,8 @@ public static class Program
             };
         });
 
-        services.AddSingleton<WaifuRollWorker>();
-        services.AddHostedService(sp => sp.GetRequiredService<WaifuRollWorker>());
+        services.AddSingleton<WaifuRollService>();
+        services.AddHostedService(sp => sp.GetRequiredService<WaifuRollService>());
 
         // Добавляем сервис архивирования потоков
         //services.AddSingleton<IFFmpegService, FFmpegService>();

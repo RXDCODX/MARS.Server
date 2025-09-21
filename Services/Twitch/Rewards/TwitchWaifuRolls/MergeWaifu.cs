@@ -1,5 +1,4 @@
-﻿using MARS.Server.Services.ServiceManager;
-using MARS.Server.Services.Twitch.Management;
+﻿using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.WaifuRoll;
 using MARS.Server.Services.WaifuRoll.helpers;
 using TwitchLib.Api.Helix.Models.Chat;
@@ -16,17 +15,14 @@ public class MergeWaifu(
     ITwitchAPI api,
     TokenService tokenService,
     IHostApplicationLifetime lifetime,
-    WaifuRollDataBaseHelper waifuDbHelper,
+    WaifuRollEnsurenceService waifuDbHelper,
     IOptions<ShikimoriClientOptions> options,
     EventSubWebsocketClient wsClient
-) : ManagedServiceBase(logger)
+) : BackgroundService
 {
     private readonly CancellationToken _cancellationToken = lifetime.ApplicationStopping;
 
-    public override string ServiceName => "mergewaifu";
-    public override string DisplayName => "Merge Waifu";
-    public override string Description => "Свадьба вайфу через Twitch";
-    public override bool IsServiceActive { get; set; }
+    public bool IsServiceActive { get; set; }
 
     public async Task MergeWaifuTwitchEvent(
         object sender,
@@ -77,10 +73,12 @@ public class MergeWaifu(
                                 if (string.IsNullOrWhiteSpace(waifu.ImageUrl))
                                 {
                                     waifu = await waifuDbHelper.EnsureWaifuHaveImageIrl(waifu);
-
-                                    dbContext.Waifus.Update(waifu);
                                 }
 
+                                // Убеждаемся, что поля аниме и манги заполнены
+                                waifu = await waifuDbHelper.EnsureMangaAndAnimeTitleExists(waifu);
+
+                                dbContext.Waifus.Update(waifu);
                                 await dbContext.SaveChangesAsync(_cancellationToken);
 
                                 waifu.IsMerged = true;
@@ -362,22 +360,20 @@ public class MergeWaifu(
         return (null, null);
     }
 
-    public override async Task StartAsync(CancellationToken cancellationToken = default)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        await base.StartAsync(cancellationToken);
-
         if (IsServiceActive)
         {
-            lifetime.ApplicationStarted.Register(() =>
-            {
-                wsClient.ChannelPointsCustomRewardRedemptionAdd += MergeWaifuTwitchEvent;
-            });
+            wsClient.ChannelPointsCustomRewardRedemptionAdd += MergeWaifuTwitchEvent;
         }
+
+        // Ждем остановки сервиса
+        await Task.Delay(Timeout.Infinite, stoppingToken);
     }
 
-    public override Task StopAsync(CancellationToken cancellationToken = default)
+    public override async Task StopAsync(CancellationToken cancellationToken)
     {
         wsClient.ChannelPointsCustomRewardRedemptionAdd -= MergeWaifuTwitchEvent;
-        return base.StopAsync(cancellationToken);
+        await base.StopAsync(cancellationToken);
     }
 }

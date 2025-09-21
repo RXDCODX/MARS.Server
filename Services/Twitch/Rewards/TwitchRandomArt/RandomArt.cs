@@ -1,6 +1,5 @@
 ﻿using BooruSharp.Booru;
 using BooruSharp.Search.Post;
-using MARS.Server.Services.ServiceManager;
 using Microsoft.AspNetCore.StaticFiles.Infrastructure;
 using TwitchLib.EventSub.Websockets;
 
@@ -8,18 +7,14 @@ namespace MARS.Server.Services.Twitch.Rewards.TwitchRandomArt;
 
 public class RandomArt(
     IHubContext<TelegramusHub, ITelegramusHub> hub,
-    IHostApplicationLifetime lifetime,
     ITwitchClient client,
     Gelbooru site,
     ILogger<RandomArt> logger,
     EventSubWebsocketClient wsClient,
     SharedOptions staticFilesOptions
-) : ManagedServiceBase(logger)
+) : BackgroundService
 {
-    public override string ServiceName => "randomart";
-    public override string DisplayName => "Random Art";
-    public override string Description => "Случайное искусство на Twitch";
-    public override bool IsServiceActive { get; set; }
+    public bool IsServiceActive { get; set; }
 
     private async Task WsClientOnChannelPointsCustomRewardRedemptionAdd(
         object sender,
@@ -130,21 +125,19 @@ public class RandomArt(
         }
     }
 
-    public override Task StartAsync(CancellationToken cancellationToken = default)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        lifetime.ApplicationStarted.Register(() =>
-        {
-            wsClient.ChannelPointsCustomRewardRedemptionAdd +=
-                WsClientOnChannelPointsCustomRewardRedemptionAdd;
-        });
+        wsClient.ChannelPointsCustomRewardRedemptionAdd +=
+            WsClientOnChannelPointsCustomRewardRedemptionAdd;
 
-        return base.StartAsync(cancellationToken);
+        // Ждем остановки сервиса
+        await Task.Delay(Timeout.Infinite, stoppingToken);
     }
 
-    public override Task StopAsync(CancellationToken cancellationToken = default)
+    public override async Task StopAsync(CancellationToken cancellationToken)
     {
         wsClient.ChannelPointsCustomRewardRedemptionAdd -=
             WsClientOnChannelPointsCustomRewardRedemptionAdd;
-        return base.StopAsync(cancellationToken);
+        await base.StopAsync(cancellationToken);
     }
 }

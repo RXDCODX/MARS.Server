@@ -1,14 +1,10 @@
-﻿using MARS.Server.Services.ServiceManager;
-using TwitchLib.EventSub.Websockets;
+﻿using TwitchLib.EventSub.Websockets;
 
 namespace MARS.Server.Services.Twitch.Rewards.TwitchScreenParticles;
 
-public class Fireworks : ManagedServiceBase
+public class Fireworks : BackgroundService
 {
-    public override string ServiceName => "fireworks";
-    public override string DisplayName => "Fireworks";
-    public override string Description => "Фейерверки на Twitch";
-    public override bool IsServiceActive { get; set; }
+    public bool IsServiceActive { get; set; }
     private readonly IHubContext<TelegramusHub, ITelegramusHub> _hub;
     private readonly ITwitchClient _client;
     private readonly EventSubWebsocketClient _wsClient;
@@ -20,7 +16,7 @@ public class Fireworks : ManagedServiceBase
         ITwitchClient client,
         EventSubWebsocketClient wsClient
     )
-        : base(logger)
+        : base()
     {
         _hub = hub;
         _client = client;
@@ -32,16 +28,15 @@ public class Fireworks : ManagedServiceBase
         });
     }
 
-    public override Task StartAsync(CancellationToken cancellationToken = default)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        // Здесь можно добавить инициализацию, если потребуется
-        return base.StartAsync(cancellationToken);
+        // Ждем остановки сервиса
+        await Task.Delay(Timeout.Infinite, stoppingToken);
     }
 
-    public override Task StopAsync(CancellationToken cancellationToken = default)
+    public override async Task StopAsync(CancellationToken cancellationToken)
     {
-        // Здесь можно добавить очистку ресурсов, если потребуется
-        return base.StopAsync(cancellationToken);
+        await base.StopAsync(cancellationToken);
     }
 
     private Task WsClientOnChannelPointsCustomRewardRedemptionAdd(

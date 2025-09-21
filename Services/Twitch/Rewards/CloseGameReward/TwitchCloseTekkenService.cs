@@ -1,36 +1,29 @@
 ﻿using System.Diagnostics;
-using MARS.Server.Services.ServiceManager;
 using TwitchLib.EventSub.Websockets;
 
 namespace MARS.Server.Services.Twitch.Rewards.CloseGameReward;
 
 public class TwitchCloseTekkenService(
-    IHostApplicationLifetime lifetime,
     ILogger<TwitchCloseTekkenService> logger,
     EventSubWebsocketClient wsClient
-) : ManagedServiceBase(logger)
+) : BackgroundService
 {
-    public override string ServiceName => "twitchclosetekken";
-    public override string DisplayName => "Twitch Close Tekken";
-    public override string Description => "Закрытие Tekken через Twitch";
-    public override bool IsServiceActive { get; set; }
+    public bool IsServiceActive { get; set; }
 
-    public override Task StartAsync(CancellationToken cancellationToken = default)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        lifetime.ApplicationStarted.Register(() =>
-        {
-            wsClient.ChannelPointsCustomRewardRedemptionAdd +=
-                WsClientOnChannelPointsCustomRewardRedemptionAdd;
-        });
+        wsClient.ChannelPointsCustomRewardRedemptionAdd +=
+            WsClientOnChannelPointsCustomRewardRedemptionAdd;
 
-        return base.StartAsync(cancellationToken);
+        // Ждем остановки сервиса
+        await Task.Delay(Timeout.Infinite, stoppingToken);
     }
 
-    public override Task StopAsync(CancellationToken cancellationToken = default)
+    public override async Task StopAsync(CancellationToken cancellationToken)
     {
         wsClient.ChannelPointsCustomRewardRedemptionAdd -=
             WsClientOnChannelPointsCustomRewardRedemptionAdd;
-        return base.StopAsync(cancellationToken);
+        await base.StopAsync(cancellationToken);
     }
 
     private async Task WsClientOnChannelPointsCustomRewardRedemptionAdd(

@@ -1,5 +1,4 @@
-﻿using MARS.Server.Services.ServiceManager;
-using MARS.Server.Services.Twitch.Management;
+﻿using MARS.Server.Services.Twitch.Management;
 using TwitchLib.Api.Helix.Models.ChannelPoints;
 using TwitchLib.Api.Helix.Models.ChannelPoints.CreateCustomReward;
 
@@ -9,12 +8,15 @@ public class ChannelRewardsService(
     ITwitchAPI api,
     TokenService tokenService,
     ILogger<ChannelRewardsService> logger
-) : ManagedServiceBase(logger)
+) : BackgroundService
 {
-    public override string ServiceName => "channelrewards";
-    public override string DisplayName => "Channel Rewards Management";
-    public override string Description => "Создание и удаление наград канала Twitch";
-    public override bool IsServiceActive { get; set; } = true;
+    public bool IsServiceActive { get; set; } = true;
+
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        // Ждем остановки сервиса
+        await Task.Delay(Timeout.Infinite, stoppingToken);
+    }
 
     /// <summary>
     /// Создает награду канала. Возвращает идентификатор созданной награды.
@@ -23,7 +25,7 @@ public class ChannelRewardsService(
     {
         if (!IsServiceActive)
         {
-            logger.LogWarning("{Service} выключен", ServiceName);
+            logger.LogWarning("ChannelRewardsService выключен");
             return null;
         }
 
@@ -68,7 +70,7 @@ public class ChannelRewardsService(
     {
         if (!IsServiceActive)
         {
-            logger.LogWarning("{Service} выключен", ServiceName);
+            logger.LogWarning("ChannelRewardsService выключен");
             return null;
         }
 
@@ -101,7 +103,7 @@ public class ChannelRewardsService(
     {
         if (!IsServiceActive)
         {
-            logger.LogWarning("{Service} выключен", ServiceName);
+            logger.LogWarning("ChannelRewardsService выключен");
             return false;
         }
 

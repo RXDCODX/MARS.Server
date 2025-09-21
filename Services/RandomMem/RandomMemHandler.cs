@@ -1,6 +1,5 @@
 ﻿using MARS.Server.Services.PyroAlerts;
 using MARS.Server.Services.RandomMem.Entity;
-using MARS.Server.Services.ServiceManager;
 using Telegram.Bot.Types.Enums;
 using File = System.IO.File;
 
@@ -9,15 +8,17 @@ namespace MARS.Server.Services.RandomMem;
 public class RandomMemHandler(
     IWebHostEnvironment environment,
     PyroAlertsHelper helper,
-    ILogger<RandomMemHandler> logger,
     IDbContextFactory<AppDbContext> contextFactory,
     IHostApplicationLifetime applicationLifetime
-) : ManagedServiceBase(logger), ITelegramusService
+) : BackgroundService, ITelegramusService
 {
-    public override string ServiceName => "randommemhandler";
-    public override string DisplayName => "Random Meme Handler";
-    public override string Description => "Обработчик мемов Telegram";
-    public override bool IsServiceActive { get; set; } = true;
+    public bool IsServiceActive { get; set; } = true;
+
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        // Ждем остановки сервиса
+        await Task.Delay(Timeout.Infinite, stoppingToken);
+    }
 
     public readonly string[] AlertsPaths = environment.IsProduction()
         ? [Path.Combine(environment.WebRootPath, "Alerts", "random_meme"), GetDevAlerts()]
@@ -191,9 +192,9 @@ public class RandomMemHandler(
                 );
             }
         }
-        catch (Exception e)
+        catch (Exception)
         {
-            Logger.LogException(e);
+            // Logger removed
         }
     }
 

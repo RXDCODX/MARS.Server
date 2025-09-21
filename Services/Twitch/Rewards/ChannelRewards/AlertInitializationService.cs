@@ -1,30 +1,27 @@
-﻿using MARS.Server.Services.ServiceManager;
-using TwitchLib.Api.Helix.Models.ChannelPoints.CreateCustomReward;
+﻿using TwitchLib.Api.Helix.Models.ChannelPoints.CreateCustomReward;
 
 namespace MARS.Server.Services.Twitch.Rewards.ChannelRewards;
 
 public class AlertInitializationService(
     ChannelRewardsService channelRewardsService,
     ILogger<AlertInitializationService> logger
-) : ManagedServiceBase(logger)
+) : BackgroundService
 {
-    public override string ServiceName => "alertinitialization";
-    public override string DisplayName => "Alert Initialization";
-    public override string Description => "Инициализация алерта за 16 баллов канала";
-    public override bool IsServiceActive { get; set; } = true;
+    public bool IsServiceActive { get; set; } = true;
 
     private const int AlertCost = 16;
     private const string AlertTitle = "Алерт";
     private const string AlertPrompt = "Введите текст для алерта";
 
-    public override async Task StartAsync(CancellationToken cancellationToken = default)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        await base.StartAsync(cancellationToken);
-
         if (IsServiceActive)
         {
             await InitializeAlertAsync();
         }
+
+        // Ждем остановки сервиса
+        await Task.Delay(Timeout.Infinite, stoppingToken);
     }
 
     /// <summary>

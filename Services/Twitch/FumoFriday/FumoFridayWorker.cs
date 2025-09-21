@@ -1,5 +1,4 @@
-﻿using MARS.Server.Services.ServiceManager;
-using MARS.Server.Services.Twitch.FumoFriday.Entitys;
+﻿using MARS.Server.Services.Twitch.FumoFriday.Entitys;
 using TwitchLib.Client.Events;
 using TwitchLib.EventSub.Websockets;
 
@@ -13,12 +12,9 @@ public class FumoFridayWorker(
     ITwitchClient twitchClient,
     ITwitchAPI twitchApi,
     EventSubWebsocketClient wsClient
-) : ManagedServiceBase(logger)
+) : BackgroundService
 {
-    public override string ServiceName => "fumofriday";
-    public override string DisplayName => "Fumo Friday";
-    public override string Description => "Fumo Friday Twitch интеграция";
-    public override bool IsServiceActive { get; set; }
+    public bool IsServiceActive { get; set; }
 
     private readonly CancellationToken _cancellationToken =
         hostApplicationLifetime.ApplicationStopping;
@@ -167,22 +163,19 @@ public class FumoFridayWorker(
         }
     }
 
-    public override Task StartAsync(CancellationToken cancellationToken = default)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        hostApplicationLifetime.ApplicationStarted.Register(() =>
-        {
-            twitchClient.OnMessageReceived += OnMessageReceived;
-            wsClient.ChannelPointsCustomRewardRedemptionAdd += OnRewardRedemption;
-        });
+        twitchClient.OnMessageReceived += OnMessageReceived;
+        wsClient.ChannelPointsCustomRewardRedemptionAdd += OnRewardRedemption;
 
-        return base.StartAsync(cancellationToken);
+        // Ждем остановки сервиса
+        await Task.Delay(Timeout.Infinite, stoppingToken);
     }
 
-    public override Task StopAsync(CancellationToken cancellationToken = default)
+    public override async Task StopAsync(CancellationToken cancellationToken)
     {
         twitchClient.OnMessageReceived -= OnMessageReceived;
         wsClient.ChannelPointsCustomRewardRedemptionAdd -= OnRewardRedemption;
-
-        return base.StopAsync(cancellationToken);
+        await base.StopAsync(cancellationToken);
     }
 }

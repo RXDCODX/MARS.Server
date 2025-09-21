@@ -1,5 +1,4 @@
-﻿using MARS.Server.Services.ServiceManager;
-using MARS.Server.Services.Twitch.Management;
+﻿using MARS.Server.Services.Twitch.Management;
 using TwitchLib.Api.Helix.Models.Channels.GetChannelInformation;
 using TwitchLib.Api.Helix.Models.Channels.ModifyChannelInformation;
 
@@ -12,12 +11,15 @@ public class TwitchStreamManagementService(
     ITwitchAPI api,
     TokenService tokenService,
     ILogger<TwitchStreamManagementService> logger
-) : ManagedServiceBase(logger)
+) : BackgroundService
 {
-    public override string ServiceName => "twitchstreammanagement";
-    public override string DisplayName => "Twitch Stream Management";
-    public override string Description => "Управление параметрами трансляции Twitch";
-    public override bool IsServiceActive { get; set; } = true;
+    public bool IsServiceActive { get; set; } = true;
+
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        // Ждем остановки сервиса
+        await Task.Delay(Timeout.Infinite, stoppingToken);
+    }
 
     /// <summary>
     /// Смена названия трансляции

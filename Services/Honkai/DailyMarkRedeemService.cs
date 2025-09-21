@@ -1,24 +1,17 @@
 ﻿using MARS.Server.Services.Honkai.Entitys;
-using MARS.Server.Services.ServiceManager;
 
 namespace MARS.Server.Services.Honkai;
 
 public class DailyMarkRedeemService(
     IOptions<HoyolabConfiguration> options,
     ILogger<DailyMarkRedeemService> logger,
-    IHostApplicationLifetime lifetime,
     IHonkaiApiService honkaiApiService,
     IHonkaiNotificationService notificationService,
     IDbContextFactory<AppDbContext> dbContextFactory,
     IHttpClientFactory httpClientFactory,
     IHostEnvironment environment
-) : ManagedServiceBase(logger)
+) : BackgroundService
 {
-    public override string ServiceName => "honkai-daily-mark-redeem";
-    public override string DisplayName => "Honkai Daily Mark Redeem";
-    public override string Description =>
-        "Автоматическая активация ежедневных отметок в Honkai: Star Rail";
-    public override bool IsServiceActive { get; set; } = true;
 
     private readonly HoyolabConfiguration _configuration = options.Value;
     private Timer? _dailyTimer;
@@ -27,34 +20,32 @@ public class DailyMarkRedeemService(
         "China Standard Time" // UTC+8
     );
 
-    public override Task StartAsync(CancellationToken cancellationToken = default)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        lifetime.ApplicationStarted.Register(() =>
-        {
-            logger.LogInformation("Запуск сервиса автоматических отметок Honkai: Star Rail");
+        logger.LogInformation("Запуск сервиса автоматических отметок Honkai: Star Rail");
 
-            // Запускаем таймер для проверки каждые 30 минут
-            _dailyTimer = new Timer(TimeSpan.FromMinutes(30).TotalMilliseconds);
-            _dailyTimer.Elapsed += async (sender, e) => await PerformDailyMarkRedeem();
-            _dailyTimer.AutoReset = true;
-            _dailyTimer.Start();
+        // Запускаем таймер для проверки каждые 30 минут
+        _dailyTimer = new Timer(TimeSpan.FromMinutes(30).TotalMilliseconds);
+        _dailyTimer.Elapsed += async (sender, e) => await PerformDailyMarkRedeem();
+        _dailyTimer.AutoReset = true;
+        _dailyTimer.Start();
 
-            Task.Factory.StartNew(async () => await PerformDailyMarkRedeem(), cancellationToken);
+        await PerformDailyMarkRedeem();
 
-            logger.LogInformation("Таймер запущен - проверка каждые 30 минут");
+        logger.LogInformation("Таймер запущен - проверка каждые 30 минут");
 
-            // Планируем отправку уведомлений об ошибках за 2 часа до 00:00 по UTC+8
-            ScheduleErrorNotifications();
-        });
+        // Планируем отправку уведомлений об ошибках за 2 часа до 00:00 по UTC+8
+        ScheduleErrorNotifications();
 
-        return base.StartAsync(cancellationToken);
+        // Ждем остановки сервиса
+        await Task.Delay(Timeout.Infinite, stoppingToken);
     }
 
-    public override Task StopAsync(CancellationToken cancellationToken = default)
+    public override async Task StopAsync(CancellationToken cancellationToken)
     {
         _dailyTimer?.Dispose();
         _errorNotificationTimer?.Dispose();
-        return base.StopAsync(cancellationToken);
+        await base.StopAsync(cancellationToken);
     }
 
     private void ScheduleErrorNotifications()
@@ -270,18 +261,5 @@ public class DailyMarkRedeemService(
         {
             throw new Exception($"Ошибка при работе с Honkai API: {ex.Message}");
         }
-    }
-
-    public override Dictionary<string, object> GetServiceConfiguration()
-    {
-        return new Dictionary<string, object>
-        {
-            ["TimeZone"] = _honkaiTimeZone.DisplayName,
-            ["CheckInterval"] = "30 минут",
-            ["CycleResetTime"] = "00:00 UTC+8",
-            ["ErrorNotificationTime"] = "22:00 UTC+8 (за 2 часа до 00:00)",
-            ["Description"] =
-                "Проверка каждые 30 минут + уведомления об ошибках за 2 часа до 00:00 по UTC+8",
-        };
     }
 }

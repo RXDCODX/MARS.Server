@@ -1,5 +1,4 @@
 ﻿using MARS.Server.Services.Honkai.Entitys;
-using MARS.Server.Services.ServiceManager;
 
 namespace MARS.Server.Services.Honkai;
 
@@ -9,18 +8,14 @@ public class EnergyNotificationService(
     IHttpClientFactory httpClientFactory,
     IHonkaiApiService honkaiApiService,
     IHonkaiNotificationService notificationService
-) : ManagedServiceBase(logger)
+) : BackgroundService
 {
-    public override string ServiceName => "honkai-energy-notification";
-    public override string DisplayName => "Honkai Energy Notification";
-    public override string Description => "Уведомления об энергии в Honkai: Star Rail";
-    public override bool IsServiceActive { get; set; } = true;
 
     private Timer? _energyCheckTimer;
     private const int EnergyThreshold240 = 240;
     private const int EnergyThreshold300 = 300;
 
-    public override Task StartAsync(CancellationToken cancellationToken = default)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         logger.LogInformation("Запуск сервиса уведомлений об энергии Honkai: Star Rail");
 
@@ -30,15 +25,16 @@ public class EnergyNotificationService(
         _energyCheckTimer.AutoReset = true;
         _energyCheckTimer.Start();
 
-        Task.Factory.StartNew(async () => await CheckEnergyForAllUsers(), cancellationToken);
+        await CheckEnergyForAllUsers();
 
-        return base.StartAsync(cancellationToken);
+        // Ждем остановки сервиса
+        await Task.Delay(Timeout.Infinite, stoppingToken);
     }
 
-    public override Task StopAsync(CancellationToken cancellationToken = default)
+    public override async Task StopAsync(CancellationToken cancellationToken)
     {
         _energyCheckTimer?.Dispose();
-        return base.StopAsync(cancellationToken);
+        await base.StopAsync(cancellationToken);
     }
 
     private async Task CheckEnergyForAllUsers()
@@ -137,16 +133,5 @@ public class EnergyNotificationService(
                 ex.Message
             );
         }
-    }
-
-    public override Dictionary<string, object> GetServiceConfiguration()
-    {
-        return new Dictionary<string, object>
-        {
-            ["EnergyCheckInterval"] = "15 минут",
-            ["EnergyThreshold240"] = EnergyThreshold240,
-            ["EnergyThreshold300"] = EnergyThreshold300,
-            ["SupportedPlatforms"] = "Telegram, Twitch",
-        };
     }
 }
