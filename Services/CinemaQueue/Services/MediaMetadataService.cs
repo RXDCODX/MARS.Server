@@ -39,33 +39,34 @@ public class MediaMetadataService(
         CancellationToken cancellationToken = default
     )
     {
-        if (string.IsNullOrWhiteSpace(url))
+        MediaMetadata? result = null;
+        
+        if (!string.IsNullOrWhiteSpace(url))
         {
-            return null;
-        }
-
-        try
-        {
-            // Проверяем, является ли ссылка Кинопоиском
-            if (KinopoiskUrlRegex.IsMatch(url))
+            try
             {
-                return await GetKinopoiskMetadataAsync(url, cancellationToken);
+                // Проверяем, является ли ссылка Кинопоиском
+                if (KinopoiskUrlRegex.IsMatch(url))
+                {
+                    result = await GetKinopoiskMetadataAsync(url, cancellationToken);
+                }
+                else if (ShikimoriUrlRegex.IsMatch(url))
+                {
+                    // Проверяем, является ли ссылка Шикимори
+                    result = await GetShikimoriMetadataAsync(url);
+                }
+                else
+                {
+                    logger.LogWarning("Неподдерживаемый домен для URL: {Url}", url);
+                }
             }
-
-            // Проверяем, является ли ссылка Шикимори
-            if (ShikimoriUrlRegex.IsMatch(url))
+            catch (Exception ex)
             {
-                return await GetShikimoriMetadataAsync(url);
+                logger.LogError(ex, "Ошибка при получении метаданных для URL: {Url}", url);
             }
-
-            logger.LogWarning("Неподдерживаемый домен для URL: {Url}", url);
-            return null;
         }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Ошибка при получении метаданных для URL: {Url}", url);
-            return null;
-        }
+        
+        return result;
     }
 
     private async Task<MediaMetadata?> GetKinopoiskMetadataAsync(
@@ -73,79 +74,89 @@ public class MediaMetadataService(
         CancellationToken cancellationToken
     )
     {
+        MediaMetadata? result = null;
+        
         try
         {
             var movie = await kinopoiskService.GetMovieByUrlAsync(url, cancellationToken);
-            if (movie == null)
+            if (movie != null)
+            {
+                // Формируем title с годом, если есть
+                var title = movie.Name;
+                if (!string.IsNullOrWhiteSpace(title) && movie.Year.HasValue)
+                {
+                    title = $"{title} ({movie.Year})";
+                }
+
+                // Используем description или shortDescription
+                var description = movie.Description ?? movie.ShortDescription;
+
+                // Используем постер, если есть
+                var imageUrl = movie.Poster?.Url;
+
+                if (!string.IsNullOrWhiteSpace(title))
+                {
+                    result = new MediaMetadata
+                    {
+                        Title = title,
+                        Description = description,
+                        ImageUrl = imageUrl,
+                        SourceUrl = url,
+                    };
+                }
+                else
+                {
+                    logger.LogWarning("Не удалось получить title для фильма из Кинопоиска: {Url}", url);
+                }
+            }
+            else
             {
                 logger.LogWarning("Фильм не найден в Кинопоиске для URL: {Url}", url);
-                return null;
             }
-
-            // Формируем title с годом, если есть
-            var title = movie.Name;
-            if (!string.IsNullOrWhiteSpace(title) && movie.Year.HasValue)
-            {
-                title = $"{title} ({movie.Year})";
-            }
-
-            // Используем description или shortDescription
-            var description = movie.Description ?? movie.ShortDescription;
-
-            // Используем постер, если есть
-            var imageUrl = movie.Poster?.Url;
-
-            if (string.IsNullOrWhiteSpace(title))
-            {
-                logger.LogWarning("Не удалось получить title для фильма из Кинопоиска: {Url}", url);
-                return null;
-            }
-
-            return new MediaMetadata
-            {
-                Title = title,
-                Description = description,
-                ImageUrl = imageUrl,
-                SourceUrl = url,
-            };
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при получении метаданных Кинопоиска для URL: {Url}", url);
-            return null;
         }
+        
+        return result;
     }
 
     private async Task<MediaMetadata?> GetShikimoriMetadataAsync(string url)
     {
+        MediaMetadata? result = null;
+        
         try
         {
             var match = ShikimoriUrlRegex.Match(url);
-            if (!match.Success || !long.TryParse(match.Groups[1].Value, out var animeId))
+            if (match.Success && long.TryParse(match.Groups[1].Value, out var animeId))
+            {
+                var anime = await shikimoriService.GetAnimeById(animeId);
+                if (anime != null)
+                {
+                    result = new MediaMetadata
+                    {
+                        Title = $"{anime.Russian ?? anime.Name} ({anime.AiredOn?.Year})",
+                        Description = anime.Description,
+                        ImageUrl = anime.Image?.Original,
+                        SourceUrl = url,
+                    };
+                }
+                else
+                {
+                    logger.LogWarning("Аниме не найдено в Шикимори для ID: {AnimeId}", animeId);
+                }
+            }
+            else
             {
                 logger.LogWarning("Не удалось извлечь ID аниме из URL Шикимори: {Url}", url);
-                return null;
             }
-
-            var anime = await shikimoriService.GetAnimeById(animeId);
-            if (anime == null)
-            {
-                logger.LogWarning("Аниме не найдено в Шикимори для ID: {AnimeId}", animeId);
-                return null;
-            }
-
-            return new MediaMetadata
-            {
-                Title = $"{anime.Russian ?? anime.Name} ({anime.AiredOn?.Year})",
-                Description = anime.Description,
-                ImageUrl = anime.Image?.Original,
-                SourceUrl = url,
-            };
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при получении метаданных Шикимори для URL: {Url}", url);
-            return null;
         }
+        
+        return result;
     }
 }

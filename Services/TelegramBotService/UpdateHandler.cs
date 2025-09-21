@@ -54,29 +54,32 @@ public class UpdateHandler : IUpdateHandler
         CancellationToken cancellationToken
     )
     {
-        try
+        if (update != null)
         {
-            await UpdateOffset(update.Id, cancellationToken);
+            try
+            {
+                await UpdateOffset(update.Id, cancellationToken);
 
-            ResendMessage(update);
+                ResendMessage(update);
+            }
+            catch (Exception e)
+            {
+                _logger.LogException(e);
+            }
+
+            Task handler = update switch
+            {
+                //{ ChannelPost: {} channelPost } => BotOnChannelPost(channelPost, cancellationToken),
+                { InlineQuery: { } inlineQuery } => BotOnInlineQueryReceived(
+                    inlineQuery,
+                    cancellationToken
+                ),
+                _ => UnknownUpdateHandlerAsync(update, cancellationToken),
+            };
+
+            await handler;
+            await TelegramUpdate.Invoke(_, update);
         }
-        catch (Exception e)
-        {
-            _logger.LogException(e);
-        }
-
-        Task handler = update switch
-        {
-            //{ ChannelPost: {} channelPost } => BotOnChannelPost(channelPost, cancellationToken),
-            { InlineQuery: { } inlineQuery } => BotOnInlineQueryReceived(
-                inlineQuery,
-                cancellationToken
-            ),
-            _ => UnknownUpdateHandlerAsync(update, cancellationToken),
-        };
-
-        await handler;
-        await TelegramUpdate.Invoke(_, update);
     }
 
     public Task HandleErrorAsync(
@@ -95,19 +98,22 @@ public class UpdateHandler : IUpdateHandler
         CancellationToken cancellationToken
     )
     {
-        var errorMessage = exception switch
+        if (exception != null)
         {
-            ApiRequestException apiRequestException =>
-                $"Telegram API Error:\n[{apiRequestException.ErrorCode}]\n{apiRequestException.Message}",
-            _ => exception.ToString(),
-        };
+            var errorMessage = exception switch
+            {
+                ApiRequestException apiRequestException =>
+                    $"Telegram API Error:\n[{apiRequestException.ErrorCode}]\n{apiRequestException.Message}",
+                _ => exception.ToString(),
+            };
 
-        _logger.LogInformation("HandleError: {ErrorMessage}", errorMessage);
+            _logger.LogInformation("HandleError: {ErrorMessage}", errorMessage);
 
-        // Cooldown in case of network connection error
-        if (exception is RequestException)
-        {
-            await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
+            // Cooldown in case of network connection error
+            if (exception is RequestException)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
+            }
         }
     }
 
@@ -115,32 +121,35 @@ public class UpdateHandler : IUpdateHandler
 
     private async void ResendMessage(Update update)
     {
-        foreach (var id in _options.AdminIdsArray)
+        if (update != null && _options.AdminIdsArray != null)
         {
-            switch (update.Type)
+            foreach (var id in _options.AdminIdsArray)
             {
-                case UpdateType.Message:
-                    var messageId = update.Message!.MessageId;
-                    var chatId = update.Message.Chat.Id;
+                switch (update.Type)
+                {
+                    case UpdateType.Message:
+                        var messageId = update.Message!.MessageId;
+                        var chatId = update.Message.Chat.Id;
 
-                    if (update.Message.HasProtectedContent != true)
-                    {
-                        await _botClient.ForwardMessage(id, chatId, messageId);
-                    }
+                        if (update.Message.HasProtectedContent != true)
+                        {
+                            await _botClient.ForwardMessage(id, chatId, messageId);
+                        }
 
-                    break;
-                case UpdateType.ChannelPost:
-                    messageId = update.ChannelPost!.MessageId;
-                    chatId = update.ChannelPost.Chat.Id;
+                        break;
+                    case UpdateType.ChannelPost:
+                        messageId = update.ChannelPost!.MessageId;
+                        chatId = update.ChannelPost.Chat.Id;
 
-                    if (update.ChannelPost.HasProtectedContent != true)
-                    {
-                        await _botClient.ForwardMessage(id, chatId, messageId);
-                    }
+                        if (update.ChannelPost.HasProtectedContent != true)
+                        {
+                            await _botClient.ForwardMessage(id, chatId, messageId);
+                        }
 
-                    //if (_environment.IsDevelopment())
-                    //    _logger.LogCritical(update.ChannelPost.Text);
-                    break;
+                        //if (_environment.IsDevelopment())
+                        //    _logger.LogCritical(update.ChannelPost.Text);
+                        break;
+                }
             }
         }
     }
@@ -152,24 +161,27 @@ public class UpdateHandler : IUpdateHandler
         CancellationToken cancellationToken
     )
     {
-        _logger.LogInformation(
-            "Received inline query from: {InlineQueryFromId}",
-            inlineQuery.From.Id
-        );
+        if (inlineQuery != null)
+        {
+            _logger.LogInformation(
+                "Received inline query from: {InlineQueryFromId}",
+                inlineQuery.From.Id
+            );
 
-        InlineQueryResult[] results =
-        [
-            // displayed result
-            new InlineQueryResultArticle("1", "TgBots", new InputTextMessageContent("hello")),
-        ];
+            InlineQueryResult[] results =
+            [
+                // displayed result
+                new InlineQueryResultArticle("1", "TgBots", new InputTextMessageContent("hello")),
+            ];
 
-        await _botClient.AnswerInlineQuery(
-            inlineQuery.Id,
-            results,
-            0,
-            true,
-            cancellationToken: cancellationToken
-        );
+            await _botClient.AnswerInlineQuery(
+                inlineQuery.Id,
+                results,
+                0,
+                true,
+                cancellationToken: cancellationToken
+            );
+        }
     }
 
     #endregion
@@ -184,34 +196,37 @@ public class UpdateHandler : IUpdateHandler
 
     private async Task UpdateOffset(int updateId, CancellationToken cancellationToken)
     {
-        await using var dbContext = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
-
-        var offset = await dbContext.TelegramUpdateReceiverOffset.SingleOrDefaultAsync(
-            cancellationToken: cancellationToken
-        );
-
-        if (offset is not null)
+        if (updateId > 0)
         {
-            if (updateId != offset.Offset + 1)
+            await using var dbContext = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
+
+            var offset = await dbContext.TelegramUpdateReceiverOffset.SingleOrDefaultAsync(
+                cancellationToken: cancellationToken
+            );
+
+            if (offset is not null)
             {
-                offset.Offset = updateId;
+                if (updateId != offset.Offset + 1)
+                {
+                    offset.Offset = updateId;
+                }
+                else
+                {
+                    offset.Offset += 1;
+                }
             }
             else
             {
-                offset.Offset += 1;
+                var obset = new TelegramUpdateReceiverOffset()
+                {
+                    Offset = updateId,
+                    Id = Guid.NewGuid(),
+                };
+
+                await dbContext.TelegramUpdateReceiverOffset.AddAsync(obset, cancellationToken);
             }
-        }
-        else
-        {
-            var obset = new TelegramUpdateReceiverOffset()
-            {
-                Offset = updateId,
-                Id = Guid.NewGuid(),
-            };
 
-            await dbContext.TelegramUpdateReceiverOffset.AddAsync(obset, cancellationToken);
+            await dbContext.SaveChangesAsync(cancellationToken);
         }
-
-        await dbContext.SaveChangesAsync(cancellationToken);
     }
 }

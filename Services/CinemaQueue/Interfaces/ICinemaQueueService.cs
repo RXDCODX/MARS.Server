@@ -36,7 +36,7 @@ public interface ICinemaQueueService
     /// Создать новый элемент
     /// </summary>
     Task<CinemaMediaItemDto> CreateMediaItemAsync(
-        CreateMediaItemRequest request,
+        CreateMediaItemRequest? request,
         CancellationToken cancellationToken = default
     );
 
@@ -82,4 +82,3 @@ public interface ICinemaQueueService
     /// </summary>
     Task<CinemaQueueStatistics> GetStatisticsAsync(CancellationToken cancellationToken = default);
 }
-

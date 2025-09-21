@@ -10,7 +10,6 @@ public class Fireworks : BackgroundService
     private readonly EventSubWebsocketClient _wsClient;
 
     public Fireworks(
-        ILogger<Fireworks> logger,
         IHubContext<TelegramusHub, ITelegramusHub> hub,
         IHostApplicationLifetime lifetime,
         ITwitchClient client,

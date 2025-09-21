@@ -22,10 +22,17 @@ public class RandomMemeService(
         CancellationToken cancellationToken = default
     )
     {
-        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
-        return await context
-            .RandomMemeType.AsNoTracking()
-            .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        MemeType? result = null;
+
+        if (id > 0)
+        {
+            await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+            result = await context
+                .RandomMemeType.AsNoTracking()
+                .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        }
+
+        return result;
     }
 
     public async Task<MemeType> CreateMemeTypeAsync(
@@ -33,15 +40,33 @@ public class RandomMemeService(
         CancellationToken cancellationToken = default
     )
     {
-        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+        MemeType result = new()
+        {
+            Name = string.Empty,
+            FolderPath = string.Empty
+        };
 
-        var entity = new MemeType { Name = memeType.Name, FolderPath = memeType.FolderPath };
+        if (
+            !string.IsNullOrWhiteSpace(memeType.Name)
+            && !string.IsNullOrWhiteSpace(memeType.FolderPath)
+        )
+        {
+            await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
 
-        context.RandomMemeType.Add(entity);
-        await context.SaveChangesAsync(cancellationToken);
+            var entity = new MemeType { Name = memeType.Name, FolderPath = memeType.FolderPath };
 
-        logger.LogInformation("Created new MemeType: {Name} with ID: {Id}", entity.Name, entity.Id);
-        return entity;
+            context.RandomMemeType.Add(entity);
+            await context.SaveChangesAsync(cancellationToken);
+
+            logger.LogInformation(
+                "Created new MemeType: {Name} with ID: {Id}",
+                entity.Name,
+                entity.Id
+            );
+            result = entity;
+        }
+
+        return result;
     }
 
     public async Task<MemeType> UpdateMemeTypeAsync(
@@ -49,25 +74,38 @@ public class RandomMemeService(
         CancellationToken cancellationToken = default
     )
     {
-        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
-
-        var existingEntity = await context.RandomMemeType.FirstOrDefaultAsync(
-            x => x.Id == memeType.Id,
-            cancellationToken
-        );
-
-        if (existingEntity != null)
+        MemeType result = new()
         {
-            existingEntity.Name = memeType.Name;
-            existingEntity.FolderPath = memeType.FolderPath;
+            Name = string.Empty,
+            FolderPath = string.Empty
+        };
 
-            await context.SaveChangesAsync(cancellationToken);
+        if (
+            memeType.Id > 0
+            && !string.IsNullOrWhiteSpace(memeType.Name)
+            && !string.IsNullOrWhiteSpace(memeType.FolderPath)
+        )
+        {
+            await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
 
-            logger.LogInformation("Updated MemeType with ID: {Id}", memeType.Id);
-            return existingEntity;
+            var existingEntity = await context.RandomMemeType.FirstOrDefaultAsync(
+                x => x.Id == memeType.Id,
+                cancellationToken
+            );
+
+            if (existingEntity != null)
+            {
+                existingEntity.Name = memeType.Name;
+                existingEntity.FolderPath = memeType.FolderPath;
+
+                await context.SaveChangesAsync(cancellationToken);
+
+                logger.LogInformation("Updated MemeType with ID: {Id}", memeType.Id);
+                result = existingEntity;
+            }
         }
 
-        throw new InvalidOperationException($"MemeType with ID {memeType.Id} not found");
+        return result;
     }
 
     public async Task<bool> DeleteMemeTypeAsync(
@@ -75,36 +113,37 @@ public class RandomMemeService(
         CancellationToken cancellationToken = default
     )
     {
-        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var result = false;
 
-        var entity = await context.RandomMemeType.FirstOrDefaultAsync(
-            x => x.Id == id,
-            cancellationToken
-        );
-
-        if (entity == null)
+        if (id > 0)
         {
-            return false;
-        }
+            await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
 
-        // Check if there are any MemeOrders using this type
-        var hasOrders = await context.RandomMemeOrder.AnyAsync(
-            x => x.MemeTypeId == id,
-            cancellationToken
-        );
-
-        if (hasOrders)
-        {
-            throw new InvalidOperationException(
-                $"Cannot delete MemeType with ID {id} because it has associated MemeOrders"
+            var entity = await context.RandomMemeType.FirstOrDefaultAsync(
+                x => x.Id == id,
+                cancellationToken
             );
+
+            if (entity != null)
+            {
+                // Check if there are any MemeOrders using this type
+                var hasOrders = await context.RandomMemeOrder.AnyAsync(
+                    x => x.MemeTypeId == id,
+                    cancellationToken
+                );
+
+                if (!hasOrders)
+                {
+                    context.RandomMemeType.Remove(entity);
+                    await context.SaveChangesAsync(cancellationToken);
+
+                    logger.LogInformation("Deleted MemeType with ID: {Id}", id);
+                    result = true;
+                }
+            }
         }
 
-        context.RandomMemeType.Remove(entity);
-        await context.SaveChangesAsync(cancellationToken);
-
-        logger.LogInformation("Deleted MemeType with ID: {Id}", id);
-        return true;
+        return result;
     }
 
     #endregion
@@ -129,11 +168,18 @@ public class RandomMemeService(
         CancellationToken cancellationToken = default
     )
     {
-        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
-        return await context
-            .RandomMemeOrder.AsNoTracking()
-            .Include(x => x.Type)
-            .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        MemeOrder? result = null;
+
+        if (id != Guid.Empty)
+        {
+            await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+            result = await context
+                .RandomMemeOrder.AsNoTracking()
+                .Include(x => x.Type)
+                .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        }
+
+        return result;
     }
 
     public async Task<IEnumerable<MemeOrder>> GetMemeOrdersByTypeAsync(
@@ -141,13 +187,20 @@ public class RandomMemeService(
         CancellationToken cancellationToken = default
     )
     {
-        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
-        return await context
-            .RandomMemeOrder.AsNoTracking()
-            .Include(x => x.Type)
-            .Where(x => x.MemeTypeId == typeId)
-            .OrderBy(x => x.Order)
-            .ToListAsync(cancellationToken);
+        IEnumerable<MemeOrder> result = [];
+
+        if (typeId > 0)
+        {
+            await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+            result = await context
+                .RandomMemeOrder.AsNoTracking()
+                .Include(x => x.Type)
+                .Where(x => x.MemeTypeId == typeId)
+                .OrderBy(x => x.Order)
+                .ToListAsync(cancellationToken);
+        }
+
+        return result;
     }
 
     public async Task<MemeOrder> CreateMemeOrderAsync(
@@ -155,30 +208,40 @@ public class RandomMemeService(
         CancellationToken cancellationToken = default
     )
     {
-        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
-
-        // Get the next order number for this type
-        var maxOrder =
-            await context
-                .RandomMemeOrder.Where(x => x.MemeTypeId == memeOrder.MemeTypeId)
-                .MaxAsync(x => (int?)x.Order, cancellationToken) ?? 0;
-
-        var entity = new MemeOrder
+        MemeOrder result = new()
         {
-            FilePath = memeOrder.FilePath,
-            MemeTypeId = memeOrder.MemeTypeId,
-            Order = maxOrder + 1,
+            FilePath = string.Empty
         };
 
-        context.RandomMemeOrder.Add(entity);
-        await context.SaveChangesAsync(cancellationToken);
+        if (!string.IsNullOrWhiteSpace(memeOrder.FilePath) && memeOrder.MemeTypeId > 0)
+        {
+            await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
 
-        logger.LogInformation(
-            "Created new MemeOrder: {FilePath} with Order: {Order}",
-            entity.FilePath,
-            entity.Order
-        );
-        return entity;
+            // Get the next order number for this type
+            var maxOrder =
+                await context
+                    .RandomMemeOrder.Where(x => x.MemeTypeId == memeOrder.MemeTypeId)
+                    .MaxAsync(x => (int?)x.Order, cancellationToken) ?? 0;
+
+            var entity = new MemeOrder
+            {
+                FilePath = memeOrder.FilePath,
+                MemeTypeId = memeOrder.MemeTypeId,
+                Order = maxOrder + 1,
+            };
+
+            context.RandomMemeOrder.Add(entity);
+            await context.SaveChangesAsync(cancellationToken);
+
+            logger.LogInformation(
+                "Created new MemeOrder: {FilePath} with Order: {Order}",
+                entity.FilePath,
+                entity.Order
+            );
+            result = entity;
+        }
+
+        return result;
     }
 
     public async Task<MemeOrder> UpdateMemeOrderAsync(
@@ -186,26 +249,38 @@ public class RandomMemeService(
         CancellationToken cancellationToken = default
     )
     {
-        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
-
-        var existingEntity = await context.RandomMemeOrder.FirstOrDefaultAsync(
-            x => x.Id == memeOrder.Id,
-            cancellationToken
-        );
-
-        if (existingEntity != null)
+        MemeOrder result = new()
         {
-            existingEntity.FilePath = memeOrder.FilePath;
-            existingEntity.MemeTypeId = memeOrder.MemeTypeId;
-            existingEntity.Order = memeOrder.Order;
+            FilePath = string.Empty
+        };
 
-            await context.SaveChangesAsync(cancellationToken);
+        if (
+            memeOrder.Id != Guid.Empty
+            && !string.IsNullOrWhiteSpace(memeOrder.FilePath)
+            && memeOrder.MemeTypeId > 0
+        )
+        {
+            await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
 
-            logger.LogInformation("Updated MemeOrder with ID: {Id}", memeOrder.Id);
-            return existingEntity;
+            var existingEntity = await context.RandomMemeOrder.FirstOrDefaultAsync(
+                x => x.Id == memeOrder.Id,
+                cancellationToken
+            );
+
+            if (existingEntity != null)
+            {
+                existingEntity.FilePath = memeOrder.FilePath;
+                existingEntity.MemeTypeId = memeOrder.MemeTypeId;
+                existingEntity.Order = memeOrder.Order;
+
+                await context.SaveChangesAsync(cancellationToken);
+
+                logger.LogInformation("Updated MemeOrder with ID: {Id}", memeOrder.Id);
+                result = existingEntity;
+            }
         }
 
-        throw new InvalidOperationException($"MemeOrder with ID {memeOrder.Id} not found");
+        return result;
     }
 
     public async Task<bool> DeleteMemeOrderAsync(
@@ -213,26 +288,31 @@ public class RandomMemeService(
         CancellationToken cancellationToken = default
     )
     {
-        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var result = false;
 
-        var entity = await context.RandomMemeOrder.FirstOrDefaultAsync(
-            x => x.Id == id,
-            cancellationToken
-        );
-
-        if (entity == null)
+        if (id != Guid.Empty)
         {
-            return false;
+            await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+
+            var entity = await context.RandomMemeOrder.FirstOrDefaultAsync(
+                x => x.Id == id,
+                cancellationToken
+            );
+
+            if (entity != null)
+            {
+                context.RandomMemeOrder.Remove(entity);
+                await context.SaveChangesAsync(cancellationToken);
+
+                // Reorder remaining orders for this type
+                await ReorderMemeOrdersAsync(entity.MemeTypeId ?? 0, cancellationToken);
+
+                logger.LogInformation("Deleted MemeOrder with ID: {Id}", id);
+                result = true;
+            }
         }
 
-        context.RandomMemeOrder.Remove(entity);
-        await context.SaveChangesAsync(cancellationToken);
-
-        // Reorder remaining orders for this type
-        await ReorderMemeOrdersAsync(entity.MemeTypeId ?? 0, cancellationToken);
-
-        logger.LogInformation("Deleted MemeOrder with ID: {Id}", id);
-        return true;
+        return result;
     }
 
     #endregion
@@ -244,23 +324,28 @@ public class RandomMemeService(
         CancellationToken cancellationToken = default
     )
     {
+        MemeOrder? result = null;
+
         await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
 
         var query = context.RandomMemeOrder.AsNoTracking();
 
-        if (typeId.HasValue)
+        if (typeId.HasValue && typeId.Value > 0)
         {
             query = query.Where(x => x.MemeTypeId == typeId.Value);
         }
 
         var count = await query.CountAsync(cancellationToken);
-        if (count == 0)
+        if (count > 0)
         {
-            return null;
+            var randomIndex = Random.Shared.Next(count);
+            result = await query
+                .Include(x => x.Type)
+                .Skip(randomIndex)
+                .FirstAsync(cancellationToken);
         }
 
-        var randomIndex = Random.Shared.Next(count);
-        return await query.Include(x => x.Type).Skip(randomIndex).FirstAsync(cancellationToken);
+        return result;
     }
 
     public async Task<int> GetMemeOrderCountAsync(
@@ -268,16 +353,20 @@ public class RandomMemeService(
         CancellationToken cancellationToken = default
     )
     {
+        var result = 0;
+
         await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
 
         var query = context.RandomMemeOrder.AsNoTracking();
 
-        if (typeId.HasValue)
+        if (typeId.HasValue && typeId.Value > 0)
         {
             query = query.Where(x => x.MemeTypeId == typeId.Value);
         }
 
-        return await query.CountAsync(cancellationToken);
+        result = await query.CountAsync(cancellationToken);
+
+        return result;
     }
 
     public async Task ReorderMemeOrdersAsync(
@@ -285,25 +374,28 @@ public class RandomMemeService(
         CancellationToken cancellationToken = default
     )
     {
-        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
-
-        var orders = await context
-            .RandomMemeOrder.Where(x => x.MemeTypeId == typeId)
-            .OrderBy(x => x.Order)
-            .ToListAsync(cancellationToken);
-
-        for (var i = 0; i < orders.Count; i++)
+        if (typeId > 0)
         {
-            orders[i].Order = i + 1;
+            await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+
+            var orders = await context
+                .RandomMemeOrder.Where(x => x.MemeTypeId == typeId)
+                .OrderBy(x => x.Order)
+                .ToListAsync(cancellationToken);
+
+            for (var i = 0; i < orders.Count; i++)
+            {
+                orders[i].Order = i + 1;
+            }
+
+            await context.SaveChangesAsync(cancellationToken);
+
+            logger.LogInformation(
+                "Reordered {Count} MemeOrders for type {TypeId}",
+                orders.Count,
+                typeId
+            );
         }
-
-        await context.SaveChangesAsync(cancellationToken);
-
-        logger.LogInformation(
-            "Reordered {Count} MemeOrders for type {TypeId}",
-            orders.Count,
-            typeId
-        );
     }
 
     #endregion

@@ -18,67 +18,74 @@ public class FFmpegService(ILogger<FFmpegService> logger) : IFFmpegService
         CancellationToken cancellationToken = default
     )
     {
-        try
+        List<string> result = [];
+
+        if (
+            !string.IsNullOrWhiteSpace(inputPath)
+            && !string.IsNullOrWhiteSpace(outputDirectory)
+            && maxChunkSizeBytes > 0
+        )
         {
-            if (!await IsFFmpegAvailableAsync(cancellationToken))
+            try
             {
-                throw new InvalidOperationException("FFmpeg не доступен в системе");
+                if (await IsFFmpegAvailableAsync(cancellationToken))
+                {
+                    // Получаем информацию о видео
+                    var videoInfo = await GetVideoInfoAsync(inputPath, cancellationToken);
+
+                    if (videoInfo != null)
+                    {
+                        // Вычисляем длительность каждой части в секундах
+                        var totalDuration = videoInfo.Duration.TotalSeconds;
+                        var chunkDurationSeconds =
+                            (double)maxChunkSizeBytes / (videoInfo.Bitrate / 8.0);
+                        var totalChunks = (int)Math.Ceiling(totalDuration / chunkDurationSeconds);
+
+                        logger.LogInformation(
+                            "Разбивка файла {FilePath} на {ChunkCount} частей по {ChunkDuration} секунд",
+                            inputPath,
+                            totalChunks,
+                            chunkDurationSeconds
+                        );
+
+                        var baseFileName = Path.GetFileNameWithoutExtension(inputPath);
+                        var extension = Path.GetExtension(inputPath);
+
+                        for (var i = 0; i < totalChunks; i++)
+                        {
+                            var startTime = i * chunkDurationSeconds;
+                            var endTime = Math.Min((i + 1) * chunkDurationSeconds, totalDuration);
+                            var chunkFileName =
+                                $"{baseFileName}_part_{i + 1}_of_{totalChunks}{extension}";
+                            var outputPath = Path.Combine(outputDirectory, chunkFileName);
+
+                            await CreateVideoChunkAsync(
+                                inputPath,
+                                outputPath,
+                                startTime,
+                                endTime - startTime,
+                                cancellationToken
+                            );
+                            result.Add(outputPath);
+
+                            logger.LogDebug(
+                                "Создана часть {PartNumber} из {TotalParts}: {OutputPath}",
+                                i + 1,
+                                totalChunks,
+                                outputPath
+                            );
+                        }
+                    }
+                }
             }
-
-            // Получаем информацию о видео
-            var videoInfo =
-                await GetVideoInfoAsync(inputPath, cancellationToken)
-                ?? throw new InvalidOperationException(
-                    "Не удалось получить информацию о видеофайле"
-                );
-
-            // Вычисляем длительность каждой части в секундах
-            var totalDuration = videoInfo.Duration.TotalSeconds;
-            var chunkDurationSeconds = (double)maxChunkSizeBytes / (videoInfo.Bitrate / 8.0);
-            var totalChunks = (int)Math.Ceiling(totalDuration / chunkDurationSeconds);
-
-            logger.LogInformation(
-                "Разбивка файла {FilePath} на {ChunkCount} частей по {ChunkDuration} секунд",
-                inputPath,
-                totalChunks,
-                chunkDurationSeconds
-            );
-
-            var outputFiles = new List<string>();
-            var baseFileName = Path.GetFileNameWithoutExtension(inputPath);
-            var extension = Path.GetExtension(inputPath);
-
-            for (var i = 0; i < totalChunks; i++)
+            catch (Exception ex)
             {
-                var startTime = i * chunkDurationSeconds;
-                var endTime = Math.Min((i + 1) * chunkDurationSeconds, totalDuration);
-                var chunkFileName = $"{baseFileName}_part_{i + 1}_of_{totalChunks}{extension}";
-                var outputPath = Path.Combine(outputDirectory, chunkFileName);
-
-                await CreateVideoChunkAsync(
-                    inputPath,
-                    outputPath,
-                    startTime,
-                    endTime - startTime,
-                    cancellationToken
-                );
-                outputFiles.Add(outputPath);
-
-                logger.LogDebug(
-                    "Создана часть {PartNumber} из {TotalParts}: {OutputPath}",
-                    i + 1,
-                    totalChunks,
-                    outputPath
-                );
+                logger.LogError(ex, "Ошибка при разбивке файла {FilePath}", inputPath);
+                throw;
             }
+        }
 
-            return outputFiles;
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Ошибка при разбивке файла {FilePath}", inputPath);
-            throw;
-        }
+        return result;
     }
 
     public async Task<VideoInfo?> GetVideoInfoAsync(
@@ -86,72 +93,84 @@ public class FFmpegService(ILogger<FFmpegService> logger) : IFFmpegService
         CancellationToken cancellationToken = default
     )
     {
-        try
+        VideoInfo? result = null;
+
+        if (!string.IsNullOrWhiteSpace(filePath))
         {
-            var arguments =
-                $"-v quiet -print_format json -show_format -show_streams \"{filePath}\"";
-
-            using var process = new Process();
-            process.StartInfo = new ProcessStartInfo
+            try
             {
-                FileName = _ffmpegPath.Replace("ffmpeg", "ffprobe"),
-                Arguments = arguments,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true,
-            };
+                var arguments =
+                    $"-v quiet -print_format json -show_format -show_streams \"{filePath}\"";
 
-            process.Start();
-            var output = await process.StandardOutput.ReadToEndAsync(cancellationToken);
-            await process.WaitForExitAsync(cancellationToken);
-
-            if (process.ExitCode != 0)
-            {
-                logger.LogError(
-                    "FFprobe завершился с кодом {ExitCode} для файла {FilePath}",
-                    process.ExitCode,
-                    filePath
-                );
-                return null;
-            }
-
-            var probeData = JsonSerializer.Deserialize<FFprobeOutput>(output);
-            if (
-                probeData?.Format is null
-                || probeData.Streams is null
-                || probeData.Streams.Count == 0
-            )
-            {
-                return null;
-            }
-
-            var videoStream = probeData.Streams.FirstOrDefault(s => s.CodecType == "video");
-            return videoStream is null
-                ? null
-                : new VideoInfo
+                using var process = new Process();
+                process.StartInfo = new ProcessStartInfo
                 {
-                    Duration = TimeSpan.FromSeconds(double.Parse(probeData.Format.Duration ?? "0")),
-                    Width = videoStream.Width,
-                    Height = videoStream.Height,
-                    Codec = videoStream.CodecName,
-                    Bitrate = long.TryParse(probeData.Format.BitRate, out var bitrate)
-                        ? bitrate
-                        : 0,
-                    FrameRate = videoStream.RFrameRate is not null
-                        ? ParseFrameRate(videoStream.RFrameRate)
-                        : 0,
+                    FileName = _ffmpegPath.Replace("ffmpeg", "ffprobe"),
+                    Arguments = arguments,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
                 };
+
+                process.Start();
+                var output = await process.StandardOutput.ReadToEndAsync(cancellationToken);
+                await process.WaitForExitAsync(cancellationToken);
+
+                if (process.ExitCode == 0)
+                {
+                    var probeData = JsonSerializer.Deserialize<FFprobeOutput>(output);
+                    if (
+                        probeData?.Format is not null
+                        && probeData.Streams is not null
+                        && probeData.Streams.Count > 0
+                    )
+                    {
+                        var videoStream = probeData.Streams.FirstOrDefault(s =>
+                            s.CodecType == "video"
+                        );
+                        if (videoStream is not null)
+                        {
+                            result = new VideoInfo
+                            {
+                                Duration = TimeSpan.FromSeconds(
+                                    double.Parse(probeData.Format.Duration ?? "0")
+                                ),
+                                Width = videoStream.Width,
+                                Height = videoStream.Height,
+                                Codec = videoStream.CodecName,
+                                Bitrate = long.TryParse(probeData.Format.BitRate, out var bitrate)
+                                    ? bitrate
+                                    : 0,
+                                FrameRate = videoStream.RFrameRate is not null
+                                    ? ParseFrameRate(videoStream.RFrameRate)
+                                    : 0,
+                            };
+                        }
+                    }
+                }
+                else
+                {
+                    logger.LogError(
+                        "FFprobe завершился с кодом {ExitCode} для файла {FilePath}",
+                        process.ExitCode,
+                        filePath
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Ошибка при получении информации о видео {FilePath}", filePath);
+            }
         }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Ошибка при получении информации о видео {FilePath}", filePath);
-            return null;
-        }
+
+        return result;
     }
 
     public async Task<bool> IsFFmpegAvailableAsync(CancellationToken cancellationToken = default)
     {
+        var result = false;
+
         try
         {
             using var process = new Process();
@@ -171,7 +190,7 @@ public class FFmpegService(ILogger<FFmpegService> logger) : IFFmpegService
             if (process.ExitCode == 0)
             {
                 logger.LogInformation("FFmpeg доступен по пути: {Path}", _ffmpegPath);
-                return true;
+                result = true;
             }
         }
         catch (Exception ex)
@@ -179,7 +198,7 @@ public class FFmpegService(ILogger<FFmpegService> logger) : IFFmpegService
             logger.LogWarning(ex, "FFmpeg не найден или недоступен");
         }
 
-        return false;
+        return result;
     }
 
     private async Task CreateVideoChunkAsync(
@@ -290,4 +309,3 @@ public class FFmpegService(ILogger<FFmpegService> logger) : IFFmpegService
         return 0;
     }
 }
-

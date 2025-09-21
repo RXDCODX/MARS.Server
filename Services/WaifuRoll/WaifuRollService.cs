@@ -1,8 +1,8 @@
 ﻿using MARS.Server.Services.Shikimori;
 using MARS.Server.Services.Twitch.Rewards;
 using MARS.Server.Services.WaifuRoll.helpers;
-using MARS.Server.Services.WaifuRoll.Models;
 using MARS.Server.Services.WaifuRoll.Interfaces;
+using MARS.Server.Services.WaifuRoll.Models;
 using ShikimoriSharp.Classes;
 
 namespace MARS.Server.Services.WaifuRoll;
@@ -24,34 +24,47 @@ public class WaifuRollService(
         bool forcePass = false
     )
     {
-        var pass = false;
+        Waifu? result = null;
 
-        await using AppDbContext dbContext = await factory.CreateDbContextAsync();
-        var host = dbContext
-            .Hosts.Include(e => e.HostCoolDown)
-            .FirstOrDefault(e => e.TwitchId == id);
-        var cd = host?.HostCoolDown;
-        if (host != null)
+        if (!string.IsNullOrWhiteSpace(id))
         {
-            if (cd is not null)
-            {
-                if (cd.HostId == host.TwitchId)
-                {
-                    var now = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
-                    var cdTime = cd.Time.ToOffset(TimeSpan.FromHours(3));
+            var pass = false;
 
-                    var isCDed = now - cdTime >= TimeSpan.FromHours(1);
-                    if (isCDed)
+            await using AppDbContext dbContext = await factory.CreateDbContextAsync();
+            var host = dbContext
+                .Hosts.Include(e => e.HostCoolDown)
+                .FirstOrDefault(e => e.TwitchId == id);
+            var cd = host?.HostCoolDown;
+            if (host != null)
+            {
+                if (cd is not null)
+                {
+                    if (cd.HostId == host.TwitchId)
                     {
+                        var now = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
+                        var cdTime = cd.Time.ToOffset(TimeSpan.FromHours(3));
+
+                        var isCDed = now - cdTime >= TimeSpan.FromHours(1);
+                        if (isCDed)
+                        {
+                            pass = true;
+                        }
+                    }
+                    else
+                    {
+                        cd.HostId = host.TwitchId;
+                        cd.Time = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
+
+                        await dbContext.AddAsync(cd);
                         pass = true;
                     }
                 }
                 else
                 {
-                    cd.HostId = host.TwitchId;
-                    cd.Time = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
+                    cd = new HostCoolDown { HostId = id };
 
-                    await dbContext.AddAsync(cd);
+                    await dbContext.HostsCoolDowns.AddAsync(cd);
+
                     pass = true;
                 }
             }
@@ -59,114 +72,122 @@ public class WaifuRollService(
             {
                 cd = new HostCoolDown { HostId = id };
 
-                await dbContext.HostsCoolDowns.AddAsync(cd);
+                host = new Host
+                {
+                    TwitchId = id,
+                    Name = displayName,
+                    HostGreetings = new HostAutoHello { HostId = id },
+                    HostCoolDown = cd,
+                };
+
+                await dbContext.Hosts.AddAsync(host);
 
                 pass = true;
             }
-        }
-        else
-        {
-            cd = new HostCoolDown { HostId = id };
 
-            host = new Host
+            await dbContext.SaveChangesAsync();
+
+            if (id == TwitchExstension.ChannelId || forcePass)
             {
-                TwitchId = id,
-                Name = displayName,
-                HostGreetings = new HostAutoHello { HostId = id },
-                HostCoolDown = cd,
-            };
+                pass = true;
+            }
 
-            await dbContext.Hosts.AddAsync(host);
-
-            pass = true;
-        }
-
-        await dbContext.SaveChangesAsync();
-
-        if (id == TwitchExstension.ChannelId || forcePass)
-        {
-            pass = true;
-        }
-
-        if (pass)
-        {
-            var waifu = await dbContext
-                .Waifus.Where(e => !e.IsPrivated)
-                .OrderBy(e => e.LastOrder)
-                .FirstOrDefaultAsync();
-
-            if (waifu != null)
+            if (pass)
             {
-                host.WaifuRollId = waifu.ShikiId;
-                host.WhenOrdered = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
-                host.OrderCount++;
-                host.HostCoolDown.Time = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
+                var waifu = await dbContext
+                    .Waifus.Where(e => !e.IsPrivated)
+                    .OrderBy(e => e.LastOrder)
+                    .FirstOrDefaultAsync();
 
-                waifu.LastOrder = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
-                waifu.OrderCount++;
-
-                if (string.IsNullOrWhiteSpace(waifu.ImageUrl))
+                if (waifu != null)
                 {
-                    waifu = await waifuDbHelper.EnsureWaifuHaveImageIrl(waifu);
+                    host.WaifuRollId = waifu.ShikiId;
+                    host.WhenOrdered = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
+                    host.OrderCount++;
+                    host.HostCoolDown.Time = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
+
+                    waifu.LastOrder = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
+                    waifu.OrderCount++;
+
+                    if (string.IsNullOrWhiteSpace(waifu.ImageUrl))
+                    {
+                        waifu = await waifuDbHelper.EnsureWaifuHaveImageIrl(waifu);
+                    }
+
+                    // Убеждаемся, что поля аниме и манги заполнены
+                    waifu = await waifuDbHelper.EnsureMangaAndAnimeTitleExists(waifu);
+                    dbContext.Waifus.Update(waifu);
+
+                    cd.Time = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
+                    await dbContext.SaveChangesAsync();
+
+                    waifu.ImageUrl = options.Value.ShikimoriSite + waifu.ImageUrl;
+
+                    result = waifu;
                 }
-
-                // Убеждаемся, что поля аниме и манги заполнены
-                waifu = await waifuDbHelper.EnsureMangaAndAnimeTitleExists(waifu);
-                dbContext.Waifus.Update(waifu);
-
-                cd.Time = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
-                await dbContext.SaveChangesAsync();
-
-                waifu.ImageUrl = options.Value.ShikimoriSite + waifu.ImageUrl;
-
-                return waifu;
             }
         }
 
-        return null;
+        return result;
     }
 
     public async Task<OperationResult<TelegramRollWaifuResponse>> TelegramRollWaifu(string name)
     {
-        var result = OperationResult<TelegramRollWaifuResponse>.Bad("Ошибка при ролле вайфу через Telegram");
-        
-        try
+        var result = OperationResult<TelegramRollWaifuResponse>.Bad(
+            "Ошибка при ролле вайфу через Telegram"
+        );
+
+        if (!string.IsNullOrWhiteSpace(name))
         {
-            await using var dbContext = await factory.CreateDbContextAsync();
-
-            var host = await dbContext.Hosts.FirstOrDefaultAsync(e =>
-                e.Name != null && EF.Functions.Like(e.Name, $"%{name}%")
-            );
-
-            if (host is not null)
+            try
             {
-                var waifu = await RollTheWaifu(host.TwitchId, host.Name, true);
+                await using var dbContext = await factory.CreateDbContextAsync();
 
-                var response = new TelegramRollWaifuResponse
-                {
-                    Waifu = waifu,
-                    Host = host,
-                    Husband = null
-                };
+                var host = await dbContext.Hosts.FirstOrDefaultAsync(e =>
+                    e.Name != null && EF.Functions.Like(e.Name, $"%{name}%")
+                );
 
-                if (waifu is { IsPrivated: true })
+                if (host is not null)
                 {
-                    var husband = await dbContext.Hosts.FirstAsync(e =>
-                        e.WaifuBrideId == waifu.ShikiId
+                    var waifu = await RollTheWaifu(host.TwitchId, host.Name, true);
+
+                    var response = new TelegramRollWaifuResponse
+                    {
+                        Waifu = waifu,
+                        Host = host,
+                        Husband = null,
+                    };
+
+                    if (waifu is { IsPrivated: true })
+                    {
+                        var husband = await dbContext.Hosts.FirstAsync(e =>
+                            e.WaifuBrideId == waifu.ShikiId
+                        );
+                        response.Husband = husband;
+                    }
+
+                    result = OperationResult<TelegramRollWaifuResponse>.Ok(
+                        "Вайфу успешно выпала",
+                        response
                     );
-                    response.Husband = husband;
                 }
-
-                result = OperationResult<TelegramRollWaifuResponse>.Ok("Вайфу успешно выпала", response);
+                else
+                {
+                    result = OperationResult<TelegramRollWaifuResponse>.Bad("Хост не найден");
+                }
             }
-            else
+            catch (Exception ex)
             {
-                result = OperationResult<TelegramRollWaifuResponse>.Bad("Хост не найден");
+                result = OperationResult<TelegramRollWaifuResponse>.Bad(
+                    $"Ошибка при ролле вайфу: {ex.Message}"
+                );
             }
         }
-        catch (Exception ex)
+        else
         {
-            result = OperationResult<TelegramRollWaifuResponse>.Bad($"Ошибка при ролле вайфу: {ex.Message}");
+            result = OperationResult<TelegramRollWaifuResponse>.Bad(
+                "Имя хоста не может быть пустым"
+            );
         }
 
         return result;
@@ -176,52 +197,60 @@ public class WaifuRollService(
     {
         var result = OperationResult<AddNewWaifuResponse>.Bad("Ошибка при добавлении новой вайфу");
 
-        try
+        if (character != null)
         {
-            await using AppDbContext dbContext = await factory.CreateDbContextAsync();
-
-            if (dbContext.Waifus.Any(e => e.ShikiId == character.Id.ToString()))
+            try
             {
-                result = OperationResult<AddNewWaifuResponse>.Bad("Вайфу уже существует в базе данных");
-                return result;
+                await using AppDbContext dbContext = await factory.CreateDbContextAsync();
+
+                if (dbContext.Waifus.Any(e => e.ShikiId == character.Id.ToString()))
+                {
+                    result = OperationResult<AddNewWaifuResponse>.Bad(
+                        "Вайфу уже существует в базе данных"
+                    );
+                }
+                else
+                {
+                    var waifu = new Waifu
+                    {
+                        ShikiId = character.Id.ToString(),
+                        Name = character.Name ?? character.Russian ?? "Unknown",
+                        ImageUrl = character.Image?.Original ?? string.Empty,
+                        WhenAdded = DateTimeOffset.Now,
+                        LastOrder = DateTimeOffset.Now,
+                        OrderCount = 0,
+                        IsPrivated = false,
+                        Manga = character.Mangas.MinBy(e => e.Russian.Length)?.Russian,
+                        Anime = character.Animes.MinBy(e => e.Russian.Length)?.Russian,
+                    };
+
+                    waifu = await waifuDbHelper.EnsureWaifuHaveImageIrl(waifu);
+                    waifu = await waifuDbHelper.EnsureMangaAndAnimeTitleExists(waifu);
+
+                    await dbContext.Waifus.AddAsync(waifu);
+                    await dbContext.SaveChangesAsync();
+
+                    var response = new AddNewWaifuResponse { Waifu = waifu, HasError = false };
+
+                    result = OperationResult<AddNewWaifuResponse>.Ok(
+                        "Вайфу успешно добавлена",
+                        response
+                    );
+                }
             }
-
-            var waifu = new Waifu
+            catch (Exception ex)
             {
-                ShikiId = character.Id.ToString(),
-                Name = character.Name ?? character.Russian ?? "Unknown",
-                ImageUrl = character.Image?.Original ?? string.Empty,
-                WhenAdded = DateTimeOffset.Now,
-                LastOrder = DateTimeOffset.Now,
-                OrderCount = 0,
-                IsPrivated = false,
-                Manga = character.Mangas.MinBy(e => e.Russian.Length)?.Russian,
-                Anime = character.Animes.MinBy(e => e.Russian.Length)?.Russian,
-            };
-            
-            waifu = await waifuDbHelper.EnsureWaifuHaveImageIrl(waifu);
-            waifu = await waifuDbHelper.EnsureMangaAndAnimeTitleExists(waifu);
+                var response = new AddNewWaifuResponse { Waifu = null, HasError = true };
 
-            await dbContext.Waifus.AddAsync(waifu);
-            await dbContext.SaveChangesAsync();
-            
-            var response = new AddNewWaifuResponse
-            {
-                Waifu = waifu,
-                HasError = false
-            };
-            
-            result = OperationResult<AddNewWaifuResponse>.Ok("Вайфу успешно добавлена", response);
+                result = OperationResult<AddNewWaifuResponse>.Bad(
+                    $"Ошибка при добавлении вайфу: {ex.Message}",
+                    response
+                );
+            }
         }
-        catch (Exception ex)
+        else
         {
-            var response = new AddNewWaifuResponse
-            {
-                Waifu = null,
-                HasError = true
-            };
-            
-            result = OperationResult<AddNewWaifuResponse>.Bad($"Ошибка при добавлении вайфу: {ex.Message}", response);
+            result = OperationResult<AddNewWaifuResponse>.Bad("Персонаж не может быть null");
         }
 
         return result;
@@ -229,117 +258,131 @@ public class WaifuRollService(
 
     public async Task<bool> MergeTheWaifu(Host host, Waifu waifu, bool makeprivate = true)
     {
-        await using AppDbContext dbContext = await factory.CreateDbContextAsync();
+        var result = false;
 
-        if (makeprivate)
+        if (host != null && waifu != null)
         {
-            waifu.IsPrivated = true;
-            host.IsPrivated = true;
-            host.WaifuBrideId = waifu.ShikiId;
-            host.WhenPrivated = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
-        }
-        else
-        {
-            waifu.IsPrivated = false;
-            host.IsPrivated = false;
+            await using AppDbContext dbContext = await factory.CreateDbContextAsync();
+
+            if (makeprivate)
+            {
+                waifu.IsPrivated = true;
+                host.IsPrivated = true;
+                host.WaifuBrideId = waifu.ShikiId;
+                host.WhenPrivated = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
+            }
+            else
+            {
+                waifu.IsPrivated = false;
+                host.IsPrivated = false;
+            }
+
+            dbContext.Waifus.Update(waifu);
+            dbContext.Hosts.Update(host);
+
+            result = await dbContext.SaveChangesAsync() != 0;
         }
 
-        dbContext.Waifus.Update(waifu);
-        dbContext.Hosts.Update(host);
-
-        return await dbContext.SaveChangesAsync() != 0;
+        return result;
     }
 
     public async Task<string?> AutoHello(string id, string displayName)
     {
-        await using AppDbContext dbContext = await factory.CreateDbContextAsync();
+        string? result = null;
 
-        var host = dbContext.Hosts.Find(id);
-
-        if (host?.IsPrivated ?? false)
+        if (!string.IsNullOrWhiteSpace(id) && !string.IsNullOrWhiteSpace(displayName))
         {
-            var isChecked = false;
+            await using AppDbContext dbContext = await factory.CreateDbContextAsync();
 
-            HostAutoHello? greet = dbContext.HostsGreetings.FirstOrDefault(e => e.HostId == id);
-            if (greet is null)
+            var host = dbContext.Hosts.Find(id);
+
+            if (host?.IsPrivated ?? false)
             {
-                isChecked = true;
+                var isChecked = false;
 
-                greet = new HostAutoHello { HostId = id, Time = DateTimeOffset.Now };
-
-                dbContext.Add(greet);
-
-                await dbContext.SaveChangesAsync();
-            }
-            else if (greet.Time <= DateTimeOffset.Now.AddHours(-20))
-            {
-                isChecked = true;
-            }
-
-            if (isChecked)
-            {
-                if (host.WaifuBrideId != null)
+                HostAutoHello? greet = dbContext.HostsGreetings.FirstOrDefault(e => e.HostId == id);
+                if (greet is null)
                 {
-                    Waifu? waifu = await dbContext.Waifus.FindAsync(host.WaifuBrideId);
-                    var helloMsg = await GetHelloText();
-                    var fixedmsg = await ConvertFixLinksInHelloMessages(helloMsg);
+                    isChecked = true;
 
-                    HostAutoHello? hello = dbContext.HostsGreetings.FirstOrDefault(e =>
-                        e.HostId == id
-                    );
+                    greet = new HostAutoHello { HostId = id, Time = DateTimeOffset.Now };
 
-                    if (hello != default)
-                    {
-                        hello.Time = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
-                    }
-                    else
-                    {
-                        hello = new HostAutoHello
-                        {
-                            HostId = id,
-                            Time = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3)),
-                        };
-
-                        dbContext.Add(hello);
-                    }
+                    dbContext.Add(greet);
 
                     await dbContext.SaveChangesAsync();
+                }
+                else if (greet.Time <= DateTimeOffset.Now.AddHours(-20))
+                {
+                    isChecked = true;
+                }
 
-                    var message = string.Concat(
-                        "@{user}, твой супруг, {waifuName} , оставил(-а) тебе сообщение: \"",
-                        fixedmsg,
-                        " \""
-                    );
-                    message = AnswersForTwitchRewards.ReplaceKeywordsInAnswer(
-                        displayName,
-                        message,
-                        waifu: waifu
-                    );
+                if (isChecked)
+                {
+                    if (host.WaifuBrideId != null)
+                    {
+                        Waifu? waifu = await dbContext.Waifus.FindAsync(host.WaifuBrideId);
+                        var helloMsg = await GetHelloText();
+                        var fixedmsg = await ConvertFixLinksInHelloMessages(helloMsg);
 
-                    return message;
+                        HostAutoHello? hello = dbContext.HostsGreetings.FirstOrDefault(e =>
+                            e.HostId == id
+                        );
+
+                        if (hello != default)
+                        {
+                            hello.Time = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
+                        }
+                        else
+                        {
+                            hello = new HostAutoHello
+                            {
+                                HostId = id,
+                                Time = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3)),
+                            };
+
+                            dbContext.Add(hello);
+                        }
+
+                        await dbContext.SaveChangesAsync();
+
+                        var message = string.Concat(
+                            "@{user}, твой супруг, {waifuName} , оставил(-а) тебе сообщение: \"",
+                            fixedmsg,
+                            " \""
+                        );
+                        message = AnswersForTwitchRewards.ReplaceKeywordsInAnswer(
+                            displayName,
+                            message,
+                            waifu: waifu
+                        );
+
+                        result = message;
+                    }
                 }
             }
-        }
-        else if (host == default)
-        {
-            host = new Host
+            else if (host == default)
             {
-                TwitchId = id,
-                Name = displayName,
-                HostCoolDown = new HostCoolDown { HostId = id },
-                HostGreetings = new HostAutoHello { HostId = id },
-            };
+                host = new Host
+                {
+                    TwitchId = id,
+                    Name = displayName,
+                    HostCoolDown = new HostCoolDown { HostId = id },
+                    HostGreetings = new HostAutoHello { HostId = id },
+                };
 
-            await dbContext.AddAsync(host);
-            await dbContext.SaveChangesAsync();
+                await dbContext.AddAsync(host);
+                await dbContext.SaveChangesAsync();
+            }
         }
 
-        return null;
+        return result;
     }
 
     private async Task<string> ConvertFixLinksInHelloMessages(string message)
     {
-        if (message.Contains("{randomHost}"))
+        var result = message;
+
+        if (!string.IsNullOrWhiteSpace(message) && message.Contains("{randomHost}"))
         {
             await using AppDbContext dbContext = await factory.CreateDbContextAsync();
             var count = dbContext.Hosts.Count(e => !e.IsPrivated);
@@ -354,15 +397,14 @@ public class WaifuRollService(
                     .ElementAtAsync(Random.Shared.Next(count));
 
                 var replace = message.Replace("{randomHost}", host.Name);
-                var finalMessage = string.Concat(
+                result = string.Concat(
                     "@{user}, твой супруг прислал(-а) тебе сообщение: ",
                     replace
                 );
-                return finalMessage;
             }
         }
 
-        return message;
+        return result;
     }
 
     private static ValueTask<string> GetHelloText()

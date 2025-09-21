@@ -7,22 +7,38 @@ public class SoundBarServiceLocal : ISoundBar
 {
     public Task Mute(params string[] args)
     {
-        // Локальная заглушка для разработки
-        Console.WriteLine($"Local SoundBar: Muting processes: {string.Join(", ", args)}");
-        return Task.CompletedTask;
+        Task result = Task.CompletedTask;
+        
+        if (args != null && args.Length > 0)
+        {
+            // Локальная заглушка для разработки
+            Console.WriteLine($"Local SoundBar: Muting processes: {string.Join(", ", args)}");
+        }
+        else
+        {
+            Console.WriteLine("Local SoundBar: Muting processes: (no processes specified)");
+        }
+        
+        return result;
     }
 
     public Task Unmute()
     {
+        Task result = Task.CompletedTask;
+        
         // Локальная заглушка для разработки
         Console.WriteLine("Local SoundBar: Unmuting all processes");
-        return Task.CompletedTask;
+        
+        return result;
     }
 
     public Task<string> GetBagCount()
     {
+        Task<string> result = Task.FromResult("Local: Bag count not available");
+        
         // Локальная заглушка для разработки
         Console.WriteLine("Local SoundBar: GetBagCount called");
-        return Task.FromResult("Local: Bag count not available");
+        
+        return result;
     }
 }

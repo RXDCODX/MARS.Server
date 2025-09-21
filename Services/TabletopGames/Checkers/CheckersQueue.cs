@@ -30,22 +30,22 @@ public class CheckersQueue
     /// <returns>True if the player was successfully added to the queue.</returns>
     public bool AddPlayer(string playerId)
     {
-        if (string.IsNullOrWhiteSpace(playerId))
-        {
-            return false;
-        }
+        var result = false;
 
-        lock (_lockObject)
+        if (!string.IsNullOrWhiteSpace(playerId))
         {
-            if (_playerQueue.Contains(playerId))
+            lock (_lockObject)
             {
-                return false;
+                if (!_playerQueue.Contains(playerId))
+                {
+                    _playerQueue.Enqueue(playerId);
+                    _playerJoinTimes[playerId] = DateTime.UtcNow;
+                    result = true;
+                }
             }
-
-            _playerQueue.Enqueue(playerId);
-            _playerJoinTimes[playerId] = DateTime.UtcNow;
-            return true;
         }
+
+        return result;
     }
 
     /// <summary>
@@ -55,36 +55,36 @@ public class CheckersQueue
     /// <returns>True if the player was successfully removed from the queue.</returns>
     public bool RemovePlayer(string playerId)
     {
-        if (string.IsNullOrWhiteSpace(playerId))
-        {
-            return false;
-        }
+        var result = false;
 
-        lock (_lockObject)
+        if (!string.IsNullOrWhiteSpace(playerId))
         {
-            if (!_playerQueue.Contains(playerId))
+            lock (_lockObject)
             {
-                return false;
-            }
-
-            var tempQueue = new Queue<string>();
-            while (_playerQueue.Count > 0)
-            {
-                var currentPlayer = _playerQueue.Dequeue();
-                if (currentPlayer != playerId)
+                if (_playerQueue.Contains(playerId))
                 {
-                    tempQueue.Enqueue(currentPlayer);
+                    var tempQueue = new Queue<string>();
+                    while (_playerQueue.Count > 0)
+                    {
+                        var currentPlayer = _playerQueue.Dequeue();
+                        if (currentPlayer != playerId)
+                        {
+                            tempQueue.Enqueue(currentPlayer);
+                        }
+                    }
+
+                    while (tempQueue.Count > 0)
+                    {
+                        _playerQueue.Enqueue(tempQueue.Dequeue());
+                    }
+
+                    _playerJoinTimes.Remove(playerId);
+                    result = true;
                 }
             }
-
-            while (tempQueue.Count > 0)
-            {
-                _playerQueue.Enqueue(tempQueue.Dequeue());
-            }
-
-            _playerJoinTimes.Remove(playerId);
-            return true;
         }
+
+        return result;
     }
 
     /// <summary>
@@ -93,10 +93,17 @@ public class CheckersQueue
     /// <returns>The next player's ID, or null if the queue is empty.</returns>
     public string? PeekNextPlayer()
     {
+        string? result = null;
+
         lock (_lockObject)
         {
-            return _playerQueue.Count > 0 ? _playerQueue.Peek() : null;
+            if (_playerQueue.Count > 0)
+            {
+                result = _playerQueue.Peek();
+            }
         }
+
+        return result;
     }
 
     /// <summary>
@@ -105,17 +112,19 @@ public class CheckersQueue
     /// <returns>The next player's ID, or null if the queue is empty.</returns>
     public string? GetNextPlayer()
     {
+        string? result = null;
+
         lock (_lockObject)
         {
-            if (_playerQueue.Count == 0)
+            if (_playerQueue.Count > 0)
             {
-                return null;
+                var playerId = _playerQueue.Dequeue();
+                _playerJoinTimes.Remove(playerId);
+                result = playerId;
             }
-
-            var playerId = _playerQueue.Dequeue();
-            _playerJoinTimes.Remove(playerId);
-            return playerId;
         }
+
+        return result;
     }
 
     /// <summary>
@@ -124,21 +133,23 @@ public class CheckersQueue
     /// <returns>A tuple containing the two player IDs, or null if there aren't enough players.</returns>
     public (string player1, string player2)? GetNextGamePlayers()
     {
+        (string player1, string player2)? result = null;
+
         lock (_lockObject)
         {
-            if (_playerQueue.Count < 2)
+            if (_playerQueue.Count >= 2)
             {
-                return null;
+                var player1 = _playerQueue.Dequeue();
+                var player2 = _playerQueue.Dequeue();
+
+                _playerJoinTimes.Remove(player1);
+                _playerJoinTimes.Remove(player2);
+
+                result = (player1, player2);
             }
-
-            var player1 = _playerQueue.Dequeue();
-            var player2 = _playerQueue.Dequeue();
-
-            _playerJoinTimes.Remove(player1);
-            _playerJoinTimes.Remove(player2);
-
-            return (player1, player2);
         }
+
+        return result;
     }
 
     /// <summary>
@@ -148,25 +159,27 @@ public class CheckersQueue
     /// <returns>The player's position (1-based), or -1 if not found.</returns>
     public int GetPlayerPosition(string playerId)
     {
-        if (string.IsNullOrWhiteSpace(playerId))
-        {
-            return -1;
-        }
+        var result = -1;
 
-        lock (_lockObject)
+        if (!string.IsNullOrWhiteSpace(playerId))
         {
-            var position = 1;
-            foreach (var player in _playerQueue)
+            lock (_lockObject)
             {
-                if (player == playerId)
+                var position = 1;
+                foreach (var player in _playerQueue)
                 {
-                    return position;
-                }
+                    if (player == playerId)
+                    {
+                        result = position;
+                        break;
+                    }
 
-                position++;
+                    position++;
+                }
             }
-            return -1;
         }
+
+        return result;
     }
 
     /// <summary>
@@ -176,17 +189,20 @@ public class CheckersQueue
     /// <returns>The time span the player has been waiting, or null if not found.</returns>
     public TimeSpan? GetPlayerWaitTime(string playerId)
     {
-        if (string.IsNullOrWhiteSpace(playerId))
+        TimeSpan? result = null;
+
+        if (!string.IsNullOrWhiteSpace(playerId))
         {
-            return null;
+            lock (_lockObject)
+            {
+                if (_playerJoinTimes.TryGetValue(playerId, out var joinTime))
+                {
+                    result = DateTime.UtcNow - joinTime;
+                }
+            }
         }
 
-        lock (_lockObject)
-        {
-            return !_playerJoinTimes.TryGetValue(playerId, out var joinTime)
-                ? null
-                : DateTime.UtcNow - joinTime;
-        }
+        return result;
     }
 
     /// <summary>
@@ -220,14 +236,16 @@ public class CheckersQueue
     /// <returns>True if the player is in the queue.</returns>
     public bool ContainsPlayer(string playerId)
     {
-        if (string.IsNullOrWhiteSpace(playerId))
+        var result = false;
+
+        if (!string.IsNullOrWhiteSpace(playerId))
         {
-            return false;
+            lock (_lockObject)
+            {
+                result = _playerQueue.Contains(playerId);
+            }
         }
 
-        lock (_lockObject)
-        {
-            return _playerQueue.Contains(playerId);
-        }
+        return result;
     }
 }

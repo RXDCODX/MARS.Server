@@ -28,34 +28,40 @@ public class HonkaiApiService(ILogger<HonkaiApiService> logger, IHostEnvironment
         HttpClient httpClient
     )
     {
-        try
+        StarRailUser? result = null;
+        
+        if (user != null && httpClient != null)
         {
-            var client = CreateMarchSevenClient(user, httpClient);
-            var gameRoles = await client.GetGameRoles();
-
-            var starRailRole = gameRoles.Data?.List?.FirstOrDefault(r =>
-                r.GameRegionName == "hkrpg_global"
-            );
-
-            if (starRailRole == null)
+            try
             {
-                logger.LogDebug("Star Rail role not found for user {UserId}", user.Id);
-                return null;
+                var client = CreateMarchSevenClient(user, httpClient);
+                var gameRoles = await client.GetGameRoles();
+
+                var starRailRole = gameRoles.Data?.List?.FirstOrDefault(r =>
+                    r.GameRegionName == "hkrpg_global"
+                );
+
+                if (starRailRole != null)
+                {
+                    var hsrUser = new StarRailUser(int.Parse(starRailRole.GameUid));
+                    logger.LogDebug("UID: {Uid}, Server: {Server}", hsrUser.Uid, hsrUser.Server);
+                    result = hsrUser;
+                }
+                else
+                {
+                    logger.LogDebug("Star Rail role not found for user {UserId}", user.Id);
+                }
             }
-
-            var hsrUser = new StarRailUser(int.Parse(starRailRole.GameUid));
-            logger.LogDebug("UID: {Uid}, Server: {Server}", hsrUser.Uid, hsrUser.Server);
-
-            return hsrUser;
-        }
-        catch (Exception ex)
-        {
-            if (!environment.IsProduction())
+            catch (Exception ex)
             {
-                logger.LogError(ex, "Error getting Star Rail user for user {UserId}", user.Id);
+                if (!environment.IsProduction())
+                {
+                    logger.LogError(ex, "Error getting Star Rail user for user {UserId}", user.Id);
+                }
             }
-            return null;
         }
+        
+        return result;
     }
 
     public async Task<(bool Success, string? RewardName, int? Amount)> ClaimDailyRewardAsync(
@@ -63,33 +69,40 @@ public class HonkaiApiService(ILogger<HonkaiApiService> logger, IHostEnvironment
         HttpClient httpClient
     )
     {
-        try
+        (bool Success, string? RewardName, int? Amount) result = (false, null, null);
+        
+        if (user != null && httpClient != null)
         {
-            var client = CreateMarchSevenClient(user, httpClient);
-            var response = await client.StarRail.ClaimDailyRewardAsync();
-
-            logger.LogInformation(
-                "Daily reward claimed successfully for user {UserId}: {RewardName} x{Amount}",
-                user.Id,
-                response.RewardName,
-                response.Amount
-            );
-
-            return (true, response.RewardName, response.Amount);
-        }
-        catch (DailyRewardAlreadyReceivedException)
-        {
-            logger.LogInformation("Daily reward already received for user {UserId}", user.Id);
-            return (false, null, null);
-        }
-        catch (Exception ex)
-        {
-            if (!environment.IsProduction())
+            try
             {
-                logger.LogError(ex, "Error claiming daily reward for user {UserId}", user.Id);
+                var client = CreateMarchSevenClient(user, httpClient);
+                var response = await client.StarRail.ClaimDailyRewardAsync();
+
+                logger.LogInformation(
+                    "Daily reward claimed successfully for user {UserId}: {RewardName} x{Amount}",
+                    user.Id,
+                    response.RewardName,
+                    response.Amount
+                );
+
+                result = (true, response.RewardName, response.Amount);
             }
-            throw;
+            catch (DailyRewardAlreadyReceivedException)
+            {
+                logger.LogInformation("Daily reward already received for user {UserId}", user.Id);
+                result = (false, null, null);
+            }
+            catch (Exception ex)
+            {
+                if (!environment.IsProduction())
+                {
+                    logger.LogError(ex, "Error claiming daily reward for user {UserId}", user.Id);
+                }
+                throw;
+            }
         }
+        
+        return result;
     }
 
     public async Task<StarRailDailyNote?> GetDailyNoteAsync(
@@ -97,28 +110,29 @@ public class HonkaiApiService(ILogger<HonkaiApiService> logger, IHostEnvironment
         HttpClient httpClient
     )
     {
-        try
+        StarRailDailyNote? result = null;
+        
+        if (user != null && httpClient != null)
         {
-            var starRailUser = await GetStarRailUserAsync(user, httpClient);
-            if (starRailUser == null)
+            try
             {
-                return null;
+                var starRailUser = await GetStarRailUserAsync(user, httpClient);
+                if (starRailUser != null)
+                {
+                    var client = CreateMarchSevenClient(user, httpClient);
+                    result = await client.StarRail.FetchDailyNoteAsync(starRailUser);
+                }
             }
-
-            var client = CreateMarchSevenClient(user, httpClient);
-            var dailyNote = await client.StarRail.FetchDailyNoteAsync(starRailUser);
-
-            return dailyNote;
-        }
-        catch (Exception ex)
-        {
-            if (!environment.IsProduction())
+            catch (Exception ex)
             {
-                logger.LogError(ex, "Error getting daily note for user {UserId}", user.Id);
+                if (!environment.IsProduction())
+                {
+                    logger.LogError(ex, "Error getting daily note for user {UserId}", user.Id);
+                }
             }
-
-            return null;
         }
+        
+        return result;
     }
 
     public async Task<UserStatsData?> GetUserStatsAsync(
@@ -126,28 +140,34 @@ public class HonkaiApiService(ILogger<HonkaiApiService> logger, IHostEnvironment
         HttpClient httpClient
     )
     {
-        try
+        UserStatsData? result = null;
+        
+        if (user != null && httpClient != null)
         {
-            var client = CreateMarchSevenClient(user, httpClient);
-            var accountInfo = await client.StarRail.FetchUserStatsAsync();
-
-            if (accountInfo?.Data?.GameLists == null)
+            try
             {
-                logger.LogWarning("Failed to get account info for user {UserId}", user.Id);
-                return null;
-            }
+                var client = CreateMarchSevenClient(user, httpClient);
+                var accountInfo = await client.StarRail.FetchUserStatsAsync();
 
-            return accountInfo.Data;
-        }
-        catch (Exception ex)
-        {
-            if (!environment.IsProduction())
+                if (accountInfo?.Data?.GameLists != null)
+                {
+                    result = accountInfo.Data;
+                }
+                else
+                {
+                    logger.LogWarning("Failed to get account info for user {UserId}", user.Id);
+                }
+            }
+            catch (Exception ex)
             {
-                logger.LogError(ex, "Error getting user stats for user {UserId}", user.Id);
+                if (!environment.IsProduction())
+                {
+                    logger.LogError(ex, "Error getting user stats for user {UserId}", user.Id);
+                }
             }
-
-            return null;
         }
+        
+        return result;
     }
 
     private static MarchSevenClient CreateMarchSevenClient(

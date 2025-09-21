@@ -80,76 +80,93 @@ public class ApiCommandService : PlatformCommandServiceBase<string>
         CancellationToken cancellationToken = default
     )
     {
-        try
-        {
-            // Обработка специальной команды commands
-            if (commandName.Equals("commands", StringComparison.OrdinalIgnoreCase))
-            {
-                var includeAdminCommands = IsUserAdmin(string.Empty);
+        var result =
+            $"Команда '{commandName}' не найдена. Используйте /commands для списка доступных команд.";
 
-                return GetCommandsList(
-                    "api_user",
-                    UserCommands,
-                    AdminCommands,
-                    includeAdminCommands
+        if (!string.IsNullOrWhiteSpace(commandName))
+        {
+            try
+            {
+                // Обработка специальной команды commands
+                if (commandName.Equals("commands", StringComparison.OrdinalIgnoreCase))
+                {
+                    var includeAdminCommands = IsUserAdmin(string.Empty);
+
+                    result = GetCommandsList(
+                        "api_user",
+                        UserCommands,
+                        AdminCommands,
+                        includeAdminCommands
+                    );
+                }
+                else
+                {
+                    // Проверяем алиасы
+                    if (_aliases.TryGetValue(commandName, out var actualCommandName))
+                    {
+                        commandName = actualCommandName;
+                    }
+
+                    if (_commands.TryGetValue(commandName, out var command))
+                    {
+                        // Проверяем количество обязательных параметров
+                        var commandInfo = command.GetParameterInfo();
+                        var requiredParams = commandInfo.Where(p => p.Required).ToArray();
+                        var inputParts = string.IsNullOrWhiteSpace(input) ? [] : input.Split(' ');
+
+                        if (inputParts.Length < requiredParams.Length)
+                        {
+                            var missingParam = requiredParams[inputParts.Length];
+                            result =
+                                $"Не хватает параметра '{missingParam.Name}'. Использование: {commandName} {string.Join(" ", requiredParams.Select(p => $"<{p.Name}>"))}";
+                        }
+                        else
+                        {
+                            // Разбираем параметры из входной строки
+                            var parameters = command.ParseParameters(input);
+
+                            // Выполняем команду
+                            var commandResult = await command.ExecuteAsync(
+                                parameters,
+                                Platform.Api,
+                                cancellationToken
+                            );
+
+                            // Валидируем ответ для платформы
+                            result = ValidateResponse(commandResult);
+
+                            _logger.LogInformation(
+                                "Команда '{CommandName}' выполнена через API с результатом: {Result}",
+                                commandName,
+                                result.Length > 100
+                                    ? string.Concat(result.AsSpan(0, 100), "...")
+                                    : result
+                            );
+                        }
+                    }
+                }
+            }
+            catch (ArgumentException ex)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "Ошибка параметров для команды '{CommandName}'",
+                    commandName
                 );
+                result = $"Ошибка параметров: {ex.Message}";
             }
-
-            // Проверяем алиасы
-            if (_aliases.TryGetValue(commandName, out var actualCommandName))
+            catch (Exception ex)
             {
-                commandName = actualCommandName;
+                _logger.LogError(
+                    ex,
+                    "Ошибка при выполнении команды '{CommandName}' через API",
+                    commandName
+                );
+                result = $"Ошибка при выполнении команды '{commandName}': {ex.Message}";
             }
-
-            if (!_commands.TryGetValue(commandName, out var command))
-            {
-                return $"Команда '{commandName}' не найдена. Используйте /commands для списка доступных команд.";
-            }
-
-            // Проверяем количество обязательных параметров
-            var commandInfo = command.GetParameterInfo();
-            var requiredParams = commandInfo.Where(p => p.Required).ToArray();
-            var inputParts = string.IsNullOrWhiteSpace(input) ? [] : input.Split(' ');
-
-            if (inputParts.Length < requiredParams.Length)
-            {
-                var missingParam = requiredParams[inputParts.Length];
-                return $"Не хватает параметра '{missingParam.Name}'. Использование: {commandName} {string.Join(" ", requiredParams.Select(p => $"<{p.Name}>"))}";
-            }
-
-            // Разбираем параметры из входной строки
-            var parameters = command.ParseParameters(input);
-
-            // Выполняем команду
-            var result = await command.ExecuteAsync(parameters, Platform.Api, cancellationToken);
-
-            // Валидируем ответ для платформы
-            var validatedResult = ValidateResponse(result);
-
-            _logger.LogInformation(
-                "Команда '{CommandName}' выполнена через API с результатом: {Result}",
-                commandName,
-                validatedResult.Length > 100
-                    ? string.Concat(validatedResult.AsSpan(0, 100), "...")
-                    : validatedResult
-            );
-
-            return validatedResult;
         }
-        catch (ArgumentException ex)
-        {
-            _logger.LogWarning(ex, "Ошибка параметров для команды '{CommandName}'", commandName);
-            return $"Ошибка параметров: {ex.Message}";
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(
-                ex,
-                "Ошибка при выполнении команды '{CommandName}' через API",
-                commandName
-            );
-            return $"Ошибка при выполнении команды '{commandName}': {ex.Message}";
-        }
+
+        return result;
     }
 
     /// <summary>
@@ -159,22 +176,30 @@ public class ApiCommandService : PlatformCommandServiceBase<string>
     /// <returns>Информация о команде или null</returns>
     public CommandInfo? GetCommandInfo(string commandName)
     {
-        // Проверяем алиасы
-        if (_aliases.TryGetValue(commandName, out var actualCommandName))
+        CommandInfo? result = null;
+
+        if (!string.IsNullOrWhiteSpace(commandName))
         {
-            commandName = actualCommandName;
+            // Проверяем алиасы
+            if (_aliases.TryGetValue(commandName, out var actualCommandName))
+            {
+                commandName = actualCommandName;
+            }
+
+            if (_commands.TryGetValue(commandName, out var command))
+            {
+                result = new CommandInfo
+                {
+                    Name = command.CommandName,
+                    Description = command.Description,
+                    IsAdminCommand = command.IsAdminCommand,
+                    Parameters = command.GetParameterInfo(),
+                    AvailablePlatforms = command.GetAvailablePlatforms(),
+                };
+            }
         }
 
-        return _commands.TryGetValue(commandName, out var command)
-            ? new CommandInfo
-            {
-                Name = command.CommandName,
-                Description = command.Description,
-                IsAdminCommand = command.IsAdminCommand,
-                Parameters = command.GetParameterInfo(),
-                AvailablePlatforms = command.GetAvailablePlatforms(),
-            }
-            : null;
+        return result;
     }
 
     /// <summary>
@@ -202,13 +227,23 @@ public class ApiCommandService : PlatformCommandServiceBase<string>
     /// <returns>True если команда админская</returns>
     public bool IsAdminCommand(string commandName)
     {
-        // Проверяем алиасы
-        if (_aliases.TryGetValue(commandName, out var actualCommandName))
+        var result = false;
+
+        if (!string.IsNullOrWhiteSpace(commandName))
         {
-            commandName = actualCommandName;
+            // Проверяем алиасы
+            if (_aliases.TryGetValue(commandName, out var actualCommandName))
+            {
+                commandName = actualCommandName;
+            }
+
+            if (_commands.TryGetValue(commandName, out var command))
+            {
+                result = command.IsAdminCommand;
+            }
         }
 
-        return _commands.TryGetValue(commandName, out var command) && command.IsAdminCommand;
+        return result;
     }
 
     /// <summary>
@@ -218,14 +253,23 @@ public class ApiCommandService : PlatformCommandServiceBase<string>
     /// <returns>True если команда доступна</returns>
     public override bool IsCommandAvailable(string commandName)
     {
-        // Проверяем алиасы
-        if (_aliases.TryGetValue(commandName, out var actualCommandName))
+        var result = false;
+
+        if (!string.IsNullOrWhiteSpace(commandName))
         {
-            commandName = actualCommandName;
+            // Проверяем алиасы
+            if (_aliases.TryGetValue(commandName, out var actualCommandName))
+            {
+                commandName = actualCommandName;
+            }
+
+            if (_commands.TryGetValue(commandName, out var command))
+            {
+                result = command.IsAvailableOnPlatform(Platform.Api);
+            }
         }
 
-        return _commands.TryGetValue(commandName, out var command)
-            && command.IsAvailableOnPlatform(Platform.Api);
+        return result;
     }
 
     /// <summary>
@@ -307,15 +351,23 @@ public class ApiCommandService : PlatformCommandServiceBase<string>
     /// <returns>Массив параметров команды</returns>
     public Task<CommandParameterInfo[]> GetCommandParametersAsync(string commandName)
     {
-        // Проверяем алиасы
-        if (_aliases.TryGetValue(commandName, out var actualCommandName))
+        CommandParameterInfo[] result = [];
+
+        if (!string.IsNullOrWhiteSpace(commandName))
         {
-            commandName = actualCommandName;
+            // Проверяем алиасы
+            if (_aliases.TryGetValue(commandName, out var actualCommandName))
+            {
+                commandName = actualCommandName;
+            }
+
+            if (_commands.TryGetValue(commandName, out var command))
+            {
+                result = command.GetParameterInfo();
+            }
         }
 
-        return !_commands.TryGetValue(commandName, out var command)
-            ? Task.FromResult(Array.Empty<CommandParameterInfo>())
-            : Task.FromResult(command.GetParameterInfo());
+        return Task.FromResult(result);
     }
 
     /// <summary>

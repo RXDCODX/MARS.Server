@@ -238,14 +238,23 @@ public class TwitchCommandService : PlatformCommandServiceBase<string>, IHostedS
     /// <returns>True если команда доступна</returns>
     public override bool IsCommandAvailable(string commandName)
     {
-        // Проверяем алиасы
-        if (_aliases.TryGetValue(commandName, out var actualCommandName))
+        var result = false;
+
+        if (!string.IsNullOrWhiteSpace(commandName))
         {
-            commandName = actualCommandName;
+            // Проверяем алиасы
+            if (_aliases.TryGetValue(commandName, out var actualCommandName))
+            {
+                commandName = actualCommandName;
+            }
+
+            if (_commands.TryGetValue(commandName, out var command))
+            {
+                result = command.IsAvailableOnPlatform(Platform.Twitch);
+            }
         }
 
-        return _commands.TryGetValue(commandName, out var command)
-            && command.IsAvailableOnPlatform(Platform.Twitch);
+        return result;
     }
 
     /// <summary>
@@ -255,23 +264,27 @@ public class TwitchCommandService : PlatformCommandServiceBase<string>, IHostedS
     /// <returns>Валидный ответ</returns>
     public override string ValidateResponse(string response)
     {
-        if (string.IsNullOrEmpty(response))
+        var result = response ?? string.Empty;
+
+        if (!string.IsNullOrEmpty(response))
         {
-            return response;
+            var maxLength = GetMaxResponseLength();
+
+            response = response.Replace("\n", " ");
+
+            if (response.Length > maxLength)
+            {
+                // Для Twitch используем более короткую обрезку
+                var truncated = response.Substring(0, maxLength - 5);
+                result = truncated + "...";
+            }
+            else
+            {
+                result = response;
+            }
         }
 
-        var maxLength = GetMaxResponseLength();
-
-        response = response.Replace("\n", " ");
-
-        if (response.Length <= maxLength)
-        {
-            return response;
-        }
-
-        // Для Twitch используем более короткую обрезку
-        var truncated = response.Substring(0, maxLength - 5);
-        return truncated + "...";
+        return result;
     }
 
     public Task StartAsync(CancellationToken cancellationToken)

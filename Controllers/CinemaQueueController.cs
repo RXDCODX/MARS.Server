@@ -45,9 +45,7 @@ public class CinemaQueueController(
         try
         {
             var item = await cinemaQueueService.GetMediaItemByIdAsync(id, cancellationToken);
-            return item == null
-                ? NotFound($"Media item with ID {id} not found")
-                : (ActionResult<CinemaMediaItemDto>)Ok(item);
+            return item == null ? NotFound($"Media item with ID {id} not found") : Ok(item);
         }
         catch (Exception ex)
         {
@@ -105,7 +103,7 @@ public class CinemaQueueController(
     /// </summary>
     [HttpPost]
     public async Task<ActionResult<CinemaMediaItemDto>> CreateMediaItem(
-        CreateMediaItemRequest request,
+        CreateMediaItemRequest? request,
         CancellationToken cancellationToken = default
     )
     {
@@ -118,10 +116,12 @@ public class CinemaQueueController(
 
             // Если title или description не указаны, пытаемся получить их из URL
             if (
-                (
+                request != null
+                && (
                     string.IsNullOrWhiteSpace(request.Title)
                     || string.IsNullOrWhiteSpace(request.Description)
-                ) && !string.IsNullOrWhiteSpace(request.MediaUrl)
+                )
+                && !string.IsNullOrWhiteSpace(request.MediaUrl)
             )
             {
                 var metadata = await metadataService.GetMetadataAsync(
@@ -149,7 +149,7 @@ public class CinemaQueueController(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error creating media item: {Title}", request.Title);
+            logger.LogError(ex, "Error creating media item: {Title}", request?.Title);
             return StatusCode(500, "Internal server error");
         }
     }
@@ -178,7 +178,7 @@ public class CinemaQueueController(
             );
             return mediaItem == null
                 ? NotFound($"Media item with ID {id} not found")
-                : (ActionResult<CinemaMediaItemDto>)Ok(mediaItem);
+                : Ok(mediaItem);
         }
         catch (Exception ex)
         {

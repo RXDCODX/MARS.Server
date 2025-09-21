@@ -18,6 +18,8 @@ public class ScoreboardService(
 
     public async Task<ScoreboardDto> GetCurrentStateAsync()
     {
+        ScoreboardDto result = CreateDefaultState();
+
         await using var context = await factory.CreateDbContextAsync();
 
         var state = await context
@@ -27,33 +29,45 @@ public class ScoreboardService(
             .OrderByDescending(s => s.CreatedAt)
             .FirstOrDefaultAsync();
 
-        return state == null ? CreateDefaultState() : MapToDto(state);
+        if (state != null)
+        {
+            result = MapToDto(state);
+        }
+
+        return result;
     }
 
     public async Task<ScoreboardDto> UpdateStateAsync(ScoreboardDto dto)
     {
-        // Генерируем уникальный ключ для этого обновления
-        var updateKey = Guid.NewGuid().ToString();
+        ScoreboardDto result = CreateDefaultState();
 
-        await SemaphoreSlim.WaitAsync();
-        // Отменяем предыдущий таймер, если он существует
-        if (PendingUpdates.TryGetValue(updateKey, out var existing))
+        if (dto != null)
         {
-            await existing.Timer.DisposeAsync();
+            // Генерируем уникальный ключ для этого обновления
+            var updateKey = Guid.NewGuid().ToString();
+
+            await SemaphoreSlim.WaitAsync();
+            // Отменяем предыдущий таймер, если он существует
+            if (PendingUpdates.TryGetValue(updateKey, out var existing))
+            {
+                await existing.Timer.DisposeAsync();
+            }
+
+            // Создаем новый таймер для отложенного обновления
+            var timer = new System.Threading.Timer(
+                async _ => await ProcessDebouncedUpdate(updateKey),
+                null,
+                DebounceDelayMs,
+                Timeout.Infinite
+            );
+            PendingUpdates[updateKey] = (dto, timer);
+            SemaphoreSlim.Release();
+
+            // Возвращаем текущее состояние немедленно
+            result = await GetCurrentStateAsync();
         }
 
-        // Создаем новый таймер для отложенного обновления
-        var timer = new System.Threading.Timer(
-            async _ => await ProcessDebouncedUpdate(updateKey),
-            null,
-            DebounceDelayMs,
-            Timeout.Infinite
-        );
-        PendingUpdates[updateKey] = (dto, timer);
-        SemaphoreSlim.Release();
-
-        // Возвращаем текущее состояние немедленно
-        return await GetCurrentStateAsync() ?? dto;
+        return result;
     }
 
     private async Task ProcessDebouncedUpdate(string updateKey)
@@ -87,93 +101,102 @@ public class ScoreboardService(
 
     private async Task<ScoreboardDto> PerformActualUpdateAsync(ScoreboardDto dto)
     {
-        await using var context = await factory.CreateDbContextAsync();
+        ScoreboardDto result = CreateDefaultState();
 
-        // Деактивируем предыдущее состояние
-        var previousStates = await context.ScoreboardStates.Where(s => s.IsActive).ToListAsync();
-
-        foreach (var state in previousStates)
+        if (dto != null)
         {
-            state.IsActive = false;
-            state.UpdatedAt = DateTime.UtcNow;
-        }
+            await using var context = await factory.CreateDbContextAsync();
 
-        // Создаем новое состояние
-        var newState = new ScoreboardState
-        {
-            Title = dto.Meta.Title,
-            FightRule = dto.Meta.FightRule,
-            MainColor = dto.Colors.MainColor,
-            PlayerNamesColor = dto.Colors.PlayerNamesColor,
-            TournamentTitleColor = dto.Colors.TournamentTitleColor,
-            FightModeColor = dto.Colors.FightModeColor,
-            ScoreColor = dto.Colors.ScoreColor,
-            BackgroundColor = dto.Colors.BackgroundColor,
-            BorderColor = dto.Colors.BorderColor,
-            IsVisible = dto.IsVisible,
-            AnimationDuration = dto.AnimationDuration,
-            CreatedAt = DateTime.UtcNow,
-            IsActive = true,
-        };
+            // Деактивируем предыдущее состояние
+            var previousStates = await context
+                .ScoreboardStates.Where(s => s.IsActive)
+                .ToListAsync();
 
-        // Добавляем игроков
-        newState.Players.Add(
-            new ScoreboardPlayer
+            foreach (var state in previousStates)
             {
-                Name = dto.Player1.Name,
-                Sponsor = dto.Player1.Sponsor,
-                Score = dto.Player1.Score,
-                Tag = dto.Player1.Tag,
-                Flag = dto.Player1.Flag,
-                Final = dto.Player1.Final,
-                Position = 1,
+                state.IsActive = false;
+                state.UpdatedAt = DateTime.UtcNow;
             }
-        );
 
-        newState.Players.Add(
-            new ScoreboardPlayer
+            // Создаем новое состояние
+            var newState = new ScoreboardState
             {
-                Name = dto.Player2.Name,
-                Sponsor = dto.Player2.Sponsor,
-                Score = dto.Player2.Score,
-                Tag = dto.Player2.Tag,
-                Flag = dto.Player2.Flag,
-                Final = dto.Player2.Final,
-                Position = 2,
-            }
-        );
-
-        // Добавляем настройки макета, если они есть
-        if (dto.Layout != null)
-        {
-            newState.Layout = new ScoreboardLayout
-            {
-                HeaderTop = dto.Layout.HeaderTop,
-                HeaderLeft = dto.Layout.HeaderLeft,
-                PlayersTop = dto.Layout.PlayersTop,
-                PlayersLeft = dto.Layout.PlayersLeft,
-                PlayersRight = dto.Layout.PlayersRight,
-                HeaderHeight = dto.Layout.HeaderHeight,
-                HeaderWidth = dto.Layout.HeaderWidth,
-                PlayerBarHeight = dto.Layout.PlayerBarHeight,
-                PlayerBarWidth = dto.Layout.PlayerBarWidth,
-                ScoreSize = dto.Layout.ScoreSize,
-                FlagSize = dto.Layout.FlagSize,
-                Spacing = dto.Layout.Spacing,
-                Padding = dto.Layout.Padding,
-                ShowHeader = dto.Layout.ShowHeader,
-                ShowFlags = dto.Layout.ShowFlags,
-                ShowSponsors = dto.Layout.ShowSponsors,
-                ShowTags = dto.Layout.ShowTags,
+                Title = dto.Meta.Title,
+                FightRule = dto.Meta.FightRule,
+                MainColor = dto.Colors.MainColor,
+                PlayerNamesColor = dto.Colors.PlayerNamesColor,
+                TournamentTitleColor = dto.Colors.TournamentTitleColor,
+                FightModeColor = dto.Colors.FightModeColor,
+                ScoreColor = dto.Colors.ScoreColor,
+                BackgroundColor = dto.Colors.BackgroundColor,
+                BorderColor = dto.Colors.BorderColor,
+                IsVisible = dto.IsVisible,
+                AnimationDuration = dto.AnimationDuration,
+                CreatedAt = DateTime.UtcNow,
+                IsActive = true,
             };
+
+            // Добавляем игроков
+            newState.Players.Add(
+                new ScoreboardPlayer
+                {
+                    Name = dto.Player1.Name,
+                    Sponsor = dto.Player1.Sponsor,
+                    Score = dto.Player1.Score,
+                    Tag = dto.Player1.Tag,
+                    Flag = dto.Player1.Flag,
+                    Final = dto.Player1.Final,
+                    Position = 1,
+                }
+            );
+
+            newState.Players.Add(
+                new ScoreboardPlayer
+                {
+                    Name = dto.Player2.Name,
+                    Sponsor = dto.Player2.Sponsor,
+                    Score = dto.Player2.Score,
+                    Tag = dto.Player2.Tag,
+                    Flag = dto.Player2.Flag,
+                    Final = dto.Player2.Final,
+                    Position = 2,
+                }
+            );
+
+            // Добавляем настройки макета, если они есть
+            if (dto.Layout != null)
+            {
+                newState.Layout = new ScoreboardLayout
+                {
+                    HeaderTop = dto.Layout.HeaderTop,
+                    HeaderLeft = dto.Layout.HeaderLeft,
+                    PlayersTop = dto.Layout.PlayersTop,
+                    PlayersLeft = dto.Layout.PlayersLeft,
+                    PlayersRight = dto.Layout.PlayersRight,
+                    HeaderHeight = dto.Layout.HeaderHeight,
+                    HeaderWidth = dto.Layout.HeaderWidth,
+                    PlayerBarHeight = dto.Layout.PlayerBarHeight,
+                    PlayerBarWidth = dto.Layout.PlayerBarWidth,
+                    ScoreSize = dto.Layout.ScoreSize,
+                    FlagSize = dto.Layout.FlagSize,
+                    Spacing = dto.Layout.Spacing,
+                    Padding = dto.Layout.Padding,
+                    ShowHeader = dto.Layout.ShowHeader,
+                    ShowFlags = dto.Layout.ShowFlags,
+                    ShowSponsors = dto.Layout.ShowSponsors,
+                    ShowTags = dto.Layout.ShowTags,
+                };
+            }
+
+            context.ScoreboardStates.Add(newState);
+            await context.SaveChangesAsync();
+
+            logger.LogInformation("Scoreboard state updated: {Title}", newState.Title);
+
+            result = MapToDto(newState);
         }
 
-        context.ScoreboardStates.Add(newState);
-        await context.SaveChangesAsync();
-
-        logger.LogInformation("Scoreboard state updated: {Title}", newState.Title);
-
-        return MapToDto(newState);
+        return result;
     }
 
     public async Task ForceProcessPendingUpdates()
@@ -194,91 +217,110 @@ public class ScoreboardService(
 
     public async Task<bool> SetVisibilityAsync(bool isVisible)
     {
+        var result = false;
+
         await using var context = await factory.CreateDbContextAsync();
 
         var currentState = await context
             .ScoreboardStates.Where(s => s.IsActive)
             .FirstOrDefaultAsync();
 
-        if (currentState == null)
+        if (currentState != null)
         {
-            return false;
+            currentState.IsVisible = isVisible;
+            currentState.UpdatedAt = DateTime.UtcNow;
+
+            await context.SaveChangesAsync();
+
+            logger.LogInformation("Scoreboard visibility set to: {IsVisible}", isVisible);
+            result = true;
         }
 
-        currentState.IsVisible = isVisible;
-        currentState.UpdatedAt = DateTime.UtcNow;
-
-        await context.SaveChangesAsync();
-
-        logger.LogInformation("Scoreboard visibility set to: {IsVisible}", isVisible);
-        return true;
+        return result;
     }
 
     public async Task<bool> UpdatePlayerScoreAsync(int playerPosition, int newScore)
     {
-        await using var context = await factory.CreateDbContextAsync();
+        var result = false;
 
-        var player = await context
-            .ScoreboardPlayers.Include(p => p.ScoreboardState)
-            .Where(p => p.ScoreboardState.IsActive && p.Position == playerPosition)
-            .FirstOrDefaultAsync();
-
-        if (player == null)
+        if (playerPosition > 0)
         {
-            return false;
+            await using var context = await factory.CreateDbContextAsync();
+
+            var player = await context
+                .ScoreboardPlayers.Include(p => p.ScoreboardState)
+                .Where(p => p.ScoreboardState.IsActive && p.Position == playerPosition)
+                .FirstOrDefaultAsync();
+
+            if (player != null)
+            {
+                player.Score = newScore;
+                player.ScoreboardState.UpdatedAt = DateTime.UtcNow;
+
+                await context.SaveChangesAsync();
+
+                logger.LogInformation(
+                    "Player {Position} score updated to: {Score}",
+                    playerPosition,
+                    newScore
+                );
+                result = true;
+            }
         }
 
-        player.Score = newScore;
-        player.ScoreboardState.UpdatedAt = DateTime.UtcNow;
-
-        await context.SaveChangesAsync();
-
-        logger.LogInformation(
-            "Player {Position} score updated to: {Score}",
-            playerPosition,
-            newScore
-        );
-        return true;
+        return result;
     }
 
     public async Task<bool> SetPlayerFinalAsync(int playerPosition, string final)
     {
-        await using var context = await factory.CreateDbContextAsync();
+        var result = false;
 
-        var player = await context
-            .ScoreboardPlayers.Include(p => p.ScoreboardState)
-            .Where(p => p.ScoreboardState.IsActive && p.Position == playerPosition)
-            .FirstOrDefaultAsync();
-
-        if (player == null)
+        if (playerPosition > 0 && !string.IsNullOrWhiteSpace(final))
         {
-            return false;
+            await using var context = await factory.CreateDbContextAsync();
+
+            var player = await context
+                .ScoreboardPlayers.Include(p => p.ScoreboardState)
+                .Where(p => p.ScoreboardState.IsActive && p.Position == playerPosition)
+                .FirstOrDefaultAsync();
+
+            if (player != null)
+            {
+                player.Final = final;
+                player.ScoreboardState.UpdatedAt = DateTime.UtcNow;
+
+                await context.SaveChangesAsync();
+
+                logger.LogInformation(
+                    "Player {Position} final status set to: {Final}",
+                    playerPosition,
+                    final
+                );
+                result = true;
+            }
         }
 
-        player.Final = final;
-        player.ScoreboardState.UpdatedAt = DateTime.UtcNow;
-
-        await context.SaveChangesAsync();
-
-        logger.LogInformation(
-            "Player {Position} final status set to: {Final}",
-            playerPosition,
-            final
-        );
-        return true;
+        return result;
     }
 
     public async Task<List<ScoreboardDto>> GetHistoryAsync(int count = 10)
     {
-        await using var context = await factory.CreateDbContextAsync();
+        List<ScoreboardDto> result = [];
 
-        var states = await context
-            .ScoreboardStates.Include(s => s.Players)
-            .OrderByDescending(s => s.CreatedAt)
-            .Take(count)
-            .ToListAsync();
+        if (count > 0)
+        {
+            await using var context = await factory.CreateDbContextAsync();
 
-        return [.. states.Select(MapToDto)];
+            var states = await context
+                .ScoreboardStates.Include(s => s.Players)
+                .OrderByDescending(s => s.CreatedAt)
+                .Take(count)
+                .ToListAsync();
+
+            result = [.. states.Select(MapToDto)];
+        }
+
+        return result;
     }
 
     private static ScoreboardDto CreateDefaultState()

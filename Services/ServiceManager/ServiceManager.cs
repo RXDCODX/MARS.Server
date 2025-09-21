@@ -124,108 +124,132 @@ public class ServiceManager : IServiceManager
 
     public Task<Dictionary<string, ServiceStatus>> GetServicesStatusAsync()
     {
-        var statuses = new Dictionary<string, ServiceStatus>();
+        Dictionary<string, ServiceStatus> result = [];
 
         // Управляемые сервисы
         foreach (var service in _managedServices)
         {
-            statuses[service.Key] = service.Value.Status;
+            result[service.Key] = service.Value.Status;
         }
 
         // Обычные hosted сервисы
         foreach (var service in _hostedServices)
         {
             // Для обычных сервисов определяем статус по типу
-            statuses[service.Key] = ServiceStatus.Running; // По умолчанию считаем запущенными
+            result[service.Key] = ServiceStatus.Running; // По умолчанию считаем запущенными
         }
 
-        return Task.FromResult(statuses);
+        return Task.FromResult(result);
     }
 
     public async Task<bool> StartServiceAsync(string serviceName)
     {
-        try
-        {
-            _logger.LogInformation("Attempting to start service: {ServiceName}", serviceName);
+        var result = false;
 
-            if (_managedServices.TryGetValue(serviceName, out var managedService))
+        if (!string.IsNullOrWhiteSpace(serviceName))
+        {
+            try
             {
-                await managedService.StartAsync();
+                _logger.LogInformation("Attempting to start service: {ServiceName}", serviceName);
 
-                // Обновляем состояние в БД
-                await UpdateServiceStateAsync(serviceName, managedService);
+                if (_managedServices.TryGetValue(serviceName, out var managedService))
+                {
+                    await managedService.StartAsync();
 
-                return true;
+                    // Обновляем состояние в БД
+                    await UpdateServiceStateAsync(serviceName, managedService);
+
+                    result = true;
+                }
+                else
+                {
+                    _logger.LogWarning("Service {ServiceName} not found", serviceName);
+                }
             }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to start service: {ServiceName}", serviceName);
+            }
+        }
 
-            _logger.LogWarning("Service {ServiceName} not found", serviceName);
-            return false;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to start service: {ServiceName}", serviceName);
-            return false;
-        }
+        return result;
     }
 
     public async Task<bool> StopServiceAsync(string serviceName)
     {
-        try
-        {
-            _logger.LogInformation("Attempting to stop service: {ServiceName}", serviceName);
+        var result = false;
 
-            if (_managedServices.TryGetValue(serviceName, out var managedService))
+        if (!string.IsNullOrWhiteSpace(serviceName))
+        {
+            try
             {
-                await managedService.StopAsync();
+                _logger.LogInformation("Attempting to stop service: {ServiceName}", serviceName);
 
-                // Обновляем состояние в БД
-                await UpdateServiceStateAsync(serviceName, managedService);
+                if (_managedServices.TryGetValue(serviceName, out var managedService))
+                {
+                    await managedService.StopAsync();
 
-                return true;
+                    // Обновляем состояние в БД
+                    await UpdateServiceStateAsync(serviceName, managedService);
+
+                    result = true;
+                }
+                else
+                {
+                    _logger.LogWarning("Service {ServiceName} not found", serviceName);
+                }
             }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to stop service: {ServiceName}", serviceName);
+            }
+        }
 
-            _logger.LogWarning("Service {ServiceName} not found", serviceName);
-            return false;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to stop service: {ServiceName}", serviceName);
-            return false;
-        }
+        return result;
     }
 
     public async Task<bool> RestartServiceAsync(string serviceName)
     {
-        var stopped = await StopServiceAsync(serviceName);
-        if (!stopped)
+        var result = false;
+
+        if (!string.IsNullOrWhiteSpace(serviceName))
         {
-            return false;
+            var stopped = await StopServiceAsync(serviceName);
+            if (stopped)
+            {
+                await Task.Delay(2000); // Пауза между остановкой и запуском
+                result = await StartServiceAsync(serviceName);
+            }
         }
 
-        await Task.Delay(2000); // Пауза между остановкой и запуском
-        return await StartServiceAsync(serviceName);
+        return result;
     }
 
     public Task<ServiceInfo?> GetServiceInfoAsync(string serviceName)
     {
-        if (_managedServices.TryGetValue(serviceName, out var managedService))
-        {
-            return Task.FromResult<ServiceInfo?>(managedService.GetServiceInfo());
-        }
+        ServiceInfo? result = null;
 
-        // Для обычных hosted сервисов создаем базовую информацию
-        return _hostedServices.TryGetValue(serviceName, out _)
-            ? Task.FromResult<ServiceInfo?>(
-                new ServiceInfo
+        if (!string.IsNullOrWhiteSpace(serviceName))
+        {
+            if (_managedServices.TryGetValue(serviceName, out var managedService))
+            {
+                result = managedService.GetServiceInfo();
+            }
+            else if (_hostedServices.TryGetValue(serviceName, out _))
+            {
+                // Для обычных hosted сервисов создаем базовую информацию
+                result = new ServiceInfo
                 {
                     Name = serviceName,
                     DisplayName = GetServiceDisplayName(serviceName),
                     Description = GetServiceDescription(serviceName),
                     Status = ServiceStatus.Running, // По умолчанию
                     IsEnabled = true,
-                }
-            )
-            : Task.FromResult<ServiceInfo?>(null);
+                };
+            }
+        }
+
+        return Task.FromResult(result);
     }
 
     public async Task<IEnumerable<ServiceLog>> GetServiceLogsAsync(
@@ -233,70 +257,78 @@ public class ServiceManager : IServiceManager
         int count = 100
     )
     {
-        // Здесь будет логика получения логов из базы данных или файлов
-        // Пока что возвращаем заглушку
-        var logs = new List<ServiceLog>();
+        List<ServiceLog> result = [];
 
-        for (var i = 0; i < Math.Min(count, 10); i++)
+        if (!string.IsNullOrWhiteSpace(serviceName) && count > 0)
         {
-            logs.Add(
-                new ServiceLog
-                {
-                    Timestamp = DateTime.UtcNow.AddMinutes(-i),
-                    Level =
-                        i % 3 == 0 ? "Error"
-                        : i % 2 == 0 ? "Warning"
-                        : "Info",
-                    Message = $"Log message {i} for service {serviceName}",
-                    Exception = i % 5 == 0 ? $"Exception {i}" : null,
-                }
-            );
+            // Здесь будет логика получения логов из базы данных или файлов
+            // Пока что возвращаем заглушку
+            for (var i = 0; i < Math.Min(count, 10); i++)
+            {
+                result.Add(
+                    new ServiceLog
+                    {
+                        Timestamp = DateTime.UtcNow.AddMinutes(-i),
+                        Level =
+                            i % 3 == 0 ? "Error"
+                            : i % 2 == 0 ? "Warning"
+                            : "Info",
+                        Message = $"Log message {i} for service {serviceName}",
+                        Exception = i % 5 == 0 ? $"Exception {i}" : null,
+                    }
+                );
+            }
         }
 
-        return await Task.FromResult(logs);
+        return await Task.FromResult(result);
     }
 
     public async Task<bool> SetServiceActiveAsync(string serviceName, bool isActive)
     {
-        try
+        var result = false;
+
+        if (!string.IsNullOrWhiteSpace(serviceName))
         {
-            if (_managedServices.TryGetValue(serviceName, out var managedService))
+            try
             {
-                managedService.IsServiceActive = isActive;
+                if (_managedServices.TryGetValue(serviceName, out var managedService))
+                {
+                    managedService.IsServiceActive = isActive;
 
-                // Обновляем состояние в БД
-                await UpdateServiceStateAsync(serviceName, managedService);
+                    // Обновляем состояние в БД
+                    await UpdateServiceStateAsync(serviceName, managedService);
 
-                _logger.LogInformation(
-                    "Service {ServiceName} active state set to {IsServiceActive}",
+                    _logger.LogInformation(
+                        "Service {ServiceName} active state set to {IsServiceActive}",
+                        serviceName,
+                        isActive
+                    );
+                    result = true;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "Failed to set service {ServiceName} active state to {IsServiceActive}",
                     serviceName,
                     isActive
                 );
-                return true;
             }
+        }
 
-            return false;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(
-                ex,
-                "Failed to set service {ServiceName} active state to {IsServiceActive}",
-                serviceName,
-                isActive
-            );
-            return false;
-        }
+        return result;
     }
 
     public Task<IEnumerable<ServiceInfo>> GetAllServicesAsync()
     {
-        var services = _managedServices.Values.Select(service => service.GetServiceInfo()).ToList();
+        List<ServiceInfo> result = [];
 
         // Управляемые сервисы
+        result.AddRange(_managedServices.Values.Select(service => service.GetServiceInfo()));
 
         // Обычные hosted сервисы
-        services.AddRange(
+        result.AddRange(
             _hostedServices.Select(service => new ServiceInfo
             {
                 Name = service.Key,
@@ -307,7 +339,7 @@ public class ServiceManager : IServiceManager
             })
         );
 
-        return Task.FromResult<IEnumerable<ServiceInfo>>(services);
+        return Task.FromResult<IEnumerable<ServiceInfo>>(result);
     }
 
     private async Task UpdateServiceStateAsync(string serviceName, ManagedServiceBase service)

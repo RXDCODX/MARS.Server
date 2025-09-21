@@ -10,7 +10,6 @@ public class Confetty : BackgroundService
     private readonly EventSubWebsocketClient _wsClient;
 
     public Confetty(
-        ILogger<Confetty> logger,
         IHubContext<TelegramusHub, ITelegramusHub> hub,
         IHostApplicationLifetime lifetime,
         ITwitchClient client,

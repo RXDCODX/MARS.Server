@@ -12,16 +12,20 @@ public class CinemaQueueService(
         CancellationToken cancellationToken = default
     )
     {
+        IEnumerable<CinemaMediaItemDto> result = [];
+
         try
         {
             var items = await repository.GetAllAsync(cancellationToken);
-            return items.Select(MapToDto);
+            result = items.Select(MapToDto);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error getting all media items");
             throw;
         }
+
+        return result;
     }
 
     public async Task<CinemaMediaItemDto?> GetMediaItemByIdAsync(
@@ -29,32 +33,49 @@ public class CinemaQueueService(
         CancellationToken cancellationToken = default
     )
     {
-        try
+        CinemaMediaItemDto? result = null;
+
+        if (id != Guid.Empty)
         {
-            var item = await repository.GetByIdAsync(id, cancellationToken);
-            return item != null ? MapToDto(item) : null;
+            try
+            {
+                var item = await repository.GetByIdAsync(id, cancellationToken);
+                if (item != null)
+                {
+                    result = MapToDto(item);
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error getting media item by id: {Id}", id);
+                throw;
+            }
         }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error getting media item by id: {Id}", id);
-            throw;
-        }
+
+        return result;
     }
 
     public async Task<CinemaMediaItemDto?> GetNextMediaItemAsync(
         CancellationToken cancellationToken = default
     )
     {
+        CinemaMediaItemDto? result = null;
+
         try
         {
             var item = await repository.GetNextAsync(cancellationToken);
-            return item != null ? MapToDto(item) : null;
+            if (item != null)
+            {
+                result = MapToDto(item);
+            }
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error getting next media item");
             throw;
         }
+
+        return result;
     }
 
     public async Task<IEnumerable<CinemaMediaItemDto>> GetMediaItemsByStatusAsync(
@@ -62,56 +83,67 @@ public class CinemaQueueService(
         CancellationToken cancellationToken = default
     )
     {
+        IEnumerable<CinemaMediaItemDto> result = [];
+
         try
         {
             var items = await repository.GetByStatusAsync(status, cancellationToken);
-            return items.Select(MapToDto);
+            result = items.Select(MapToDto);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error getting media items by status: {Status}", status);
             throw;
         }
+
+        return result;
     }
 
     public async Task<CinemaMediaItemDto> CreateMediaItemAsync(
-        CreateMediaItemRequest request,
+        CreateMediaItemRequest? request,
         CancellationToken cancellationToken = default
     )
     {
-        try
+        CinemaMediaItemDto result = new() { Title = string.Empty, MediaUrl = string.Empty };
+
+        if (request != null && !string.IsNullOrWhiteSpace(request.Title))
         {
-            var mediaItem = new CinemaMediaItem
+            try
             {
-                Title = request.Title,
-                Description = request.Description,
-                MediaUrl = request.MediaUrl,
-                Priority = request.Priority,
-                ScheduledFor = request.ScheduledFor,
-                AddedBy = request.AddedBy,
-                TwitchUserId = request.TwitchUserId,
-                TwitchUsername = request.TwitchUsername,
-                Notes = request.Notes,
-                Status = MediaStatus.Pending,
-                IsNext = false,
-                CreatedAt = DateTimeOffset.Now,
-                LastModified = DateTimeOffset.Now,
-            };
+                var mediaItem = new CinemaMediaItem
+                {
+                    Title = request.Title,
+                    Description = request.Description,
+                    MediaUrl = request.MediaUrl,
+                    Priority = request.Priority,
+                    ScheduledFor = request.ScheduledFor,
+                    AddedBy = request.AddedBy,
+                    TwitchUserId = request.TwitchUserId,
+                    TwitchUsername = request.TwitchUsername,
+                    Notes = request.Notes,
+                    Status = MediaStatus.Pending,
+                    IsNext = false,
+                    CreatedAt = DateTimeOffset.Now,
+                    LastModified = DateTimeOffset.Now,
+                };
 
-            var createdItem = await repository.CreateAsync(mediaItem, cancellationToken);
-            logger.LogInformation(
-                "Created media item: {Title} with ID: {Id}",
-                createdItem.Title,
-                createdItem.Id
-            );
+                var createdItem = await repository.CreateAsync(mediaItem, cancellationToken);
+                logger.LogInformation(
+                    "Created media item: {Title} with ID: {Id}",
+                    createdItem.Title,
+                    createdItem.Id
+                );
 
-            return MapToDto(createdItem);
+                result = MapToDto(createdItem);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error creating media item: {Title}", request.Title);
+                throw;
+            }
         }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error creating media item: {Title}", request.Title);
-            throw;
-        }
+
+        return result;
     }
 
     public async Task<CinemaMediaItemDto?> UpdateMediaItemAsync(
@@ -120,68 +152,79 @@ public class CinemaQueueService(
         CancellationToken cancellationToken = default
     )
     {
-        try
+        CinemaMediaItemDto? result = null;
+
+        if (id != Guid.Empty && request != null)
         {
-            var existingItem = await repository.GetByIdAsync(id, cancellationToken);
-            if (existingItem == null)
+            try
             {
-                logger.LogWarning("Media item not found for update: {Id}", id);
-                return null;
-            }
+                var existingItem = await repository.GetByIdAsync(id, cancellationToken);
+                if (existingItem != null)
+                {
+                    // Обновляем только переданные поля
+                    if (request.Title != null)
+                    {
+                        existingItem.Title = request.Title;
+                    }
 
-            // Обновляем только переданные поля
-            if (request.Title != null)
+                    if (request.Description != null)
+                    {
+                        existingItem.Description = request.Description;
+                    }
+
+                    if (request.MediaUrl != null)
+                    {
+                        existingItem.MediaUrl = request.MediaUrl;
+                    }
+
+                    if (request.Status.HasValue)
+                    {
+                        existingItem.Status = request.Status.Value;
+                    }
+
+                    if (request.Priority.HasValue)
+                    {
+                        existingItem.Priority = request.Priority.Value;
+                    }
+
+                    if (request.ScheduledFor.HasValue)
+                    {
+                        existingItem.ScheduledFor = request.ScheduledFor.Value;
+                    }
+
+                    if (request.Notes != null)
+                    {
+                        existingItem.Notes = request.Notes;
+                    }
+
+                    if (request.IsNext.HasValue)
+                    {
+                        existingItem.IsNext = request.IsNext.Value;
+                    }
+
+                    existingItem.LastModified = DateTimeOffset.Now;
+
+                    var updatedItem = await repository.UpdateAsync(existingItem, cancellationToken);
+                    logger.LogInformation("Updated media item: {Id}", id);
+
+                    if (updatedItem != null)
+                    {
+                        result = MapToDto(updatedItem);
+                    }
+                }
+                else
+                {
+                    logger.LogWarning("Media item not found for update: {Id}", id);
+                }
+            }
+            catch (Exception ex)
             {
-                existingItem.Title = request.Title;
+                logger.LogError(ex, "Error updating media item: {Id}", id);
+                throw;
             }
-
-            if (request.Description != null)
-            {
-                existingItem.Description = request.Description;
-            }
-
-            if (request.MediaUrl != null)
-            {
-                existingItem.MediaUrl = request.MediaUrl;
-            }
-
-            if (request.Status.HasValue)
-            {
-                existingItem.Status = request.Status.Value;
-            }
-
-            if (request.Priority.HasValue)
-            {
-                existingItem.Priority = request.Priority.Value;
-            }
-
-            if (request.ScheduledFor.HasValue)
-            {
-                existingItem.ScheduledFor = request.ScheduledFor.Value;
-            }
-
-            if (request.Notes != null)
-            {
-                existingItem.Notes = request.Notes;
-            }
-
-            if (request.IsNext.HasValue)
-            {
-                existingItem.IsNext = request.IsNext.Value;
-            }
-
-            existingItem.LastModified = DateTimeOffset.Now;
-
-            var updatedItem = await repository.UpdateAsync(existingItem, cancellationToken);
-            logger.LogInformation("Updated media item: {Id}", id);
-
-            return updatedItem != null ? MapToDto(updatedItem) : null;
         }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error updating media item: {Id}", id);
-            throw;
-        }
+
+        return result;
     }
 
     public async Task<bool> DeleteMediaItemAsync(
@@ -189,58 +232,72 @@ public class CinemaQueueService(
         CancellationToken cancellationToken = default
     )
     {
-        try
+        var result = false;
+
+        if (id != Guid.Empty)
         {
-            var result = await repository.DeleteAsync(id, cancellationToken);
-            if (result)
+            try
             {
-                logger.LogInformation("Deleted media item: {Id}", id);
+                result = await repository.DeleteAsync(id, cancellationToken);
+                if (result)
+                {
+                    logger.LogInformation("Deleted media item: {Id}", id);
+                }
+                else
+                {
+                    logger.LogWarning("Media item not found for deletion: {Id}", id);
+                }
             }
-            else
+            catch (Exception ex)
             {
-                logger.LogWarning("Media item not found for deletion: {Id}", id);
+                logger.LogError(ex, "Error deleting media item: {Id}", id);
+                throw;
             }
-            return result;
         }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error deleting media item: {Id}", id);
-            throw;
-        }
+
+        return result;
     }
 
     public async Task<bool> MarkAsNextAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        try
+        var result = false;
+
+        if (id != Guid.Empty)
         {
-            var existingItem = await repository.GetByIdAsync(id, cancellationToken);
-            if (existingItem == null)
+            try
             {
-                logger.LogWarning("Media item not found for marking as next: {Id}", id);
-                return false;
+                var existingItem = await repository.GetByIdAsync(id, cancellationToken);
+                if (existingItem != null)
+                {
+                    // Сбрасываем флаг IsNext для всех элементов
+                    await repository.ResetNextFlagsAsync(cancellationToken);
+
+                    // Устанавливаем флаг IsNext для выбранного элемента
+                    existingItem.IsNext = true;
+                    existingItem.LastModified = DateTimeOffset.Now;
+
+                    var updatedItem = await repository.UpdateAsync(existingItem, cancellationToken);
+                    logger.LogInformation(
+                        "Marked media item as next: {Id} - {Title}",
+                        id,
+                        existingItem.Title
+                    );
+
+                    result = updatedItem != null;
+                }
+                else
+                {
+                    logger.LogWarning("Media item not found for marking as next: {Id}", id);
+                }
             }
-
-            // Сбрасываем флаг IsNext для всех элементов
-            await repository.ResetNextFlagsAsync(cancellationToken);
-
-            // Устанавливаем флаг IsNext для выбранного элемента
-            existingItem.IsNext = true;
-            existingItem.LastModified = DateTimeOffset.Now;
-
-            var updatedItem = await repository.UpdateAsync(existingItem, cancellationToken);
-            logger.LogInformation(
-                "Marked media item as next: {Id} - {Title}",
-                id,
-                existingItem.Title
-            );
-
-            return updatedItem != null;
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error marking media item as next: {Id}", id);
+                throw;
+            }
         }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error marking media item as next: {Id}", id);
-            throw;
-        }
+
+        return result;
     }
 
     public async Task<bool> ChangeStatusAsync(
@@ -249,28 +306,40 @@ public class CinemaQueueService(
         CancellationToken cancellationToken = default
     )
     {
-        try
+        var result = false;
+
+        if (id != Guid.Empty)
         {
-            var existingItem = await repository.GetByIdAsync(id, cancellationToken);
-            if (existingItem == null)
+            try
             {
-                logger.LogWarning("Media item not found for status change: {Id}", id);
-                return false;
+                var existingItem = await repository.GetByIdAsync(id, cancellationToken);
+                if (existingItem != null)
+                {
+                    existingItem.Status = status;
+                    existingItem.LastModified = DateTimeOffset.Now;
+
+                    var updatedItem = await repository.UpdateAsync(existingItem, cancellationToken);
+                    logger.LogInformation(
+                        "Changed status of media item {Id} to {Status}",
+                        id,
+                        status
+                    );
+
+                    result = updatedItem != null;
+                }
+                else
+                {
+                    logger.LogWarning("Media item not found for status change: {Id}", id);
+                }
             }
-
-            existingItem.Status = status;
-            existingItem.LastModified = DateTimeOffset.Now;
-
-            var updatedItem = await repository.UpdateAsync(existingItem, cancellationToken);
-            logger.LogInformation("Changed status of media item {Id} to {Status}", id, status);
-
-            return updatedItem != null;
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error changing status of media item: {Id}", id);
+                throw;
+            }
         }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error changing status of media item: {Id}", id);
-            throw;
-        }
+
+        return result;
     }
 
     public async Task<bool> ChangePriorityAsync(
@@ -279,38 +348,48 @@ public class CinemaQueueService(
         CancellationToken cancellationToken = default
     )
     {
-        try
+        var result = false;
+
+        if (id != Guid.Empty)
         {
-            var existingItem = await repository.GetByIdAsync(id, cancellationToken);
-            if (existingItem == null)
+            try
             {
-                logger.LogWarning("Media item not found for priority change: {Id}", id);
-                return false;
+                var existingItem = await repository.GetByIdAsync(id, cancellationToken);
+                if (existingItem != null)
+                {
+                    existingItem.Priority = priority;
+                    existingItem.LastModified = DateTimeOffset.Now;
+
+                    var updatedItem = await repository.UpdateAsync(existingItem, cancellationToken);
+                    logger.LogInformation(
+                        "Changed priority of media item {Id} to {Priority}",
+                        id,
+                        priority
+                    );
+
+                    result = updatedItem != null;
+                }
+                else
+                {
+                    logger.LogWarning("Media item not found for priority change: {Id}", id);
+                }
             }
-
-            existingItem.Priority = priority;
-            existingItem.LastModified = DateTimeOffset.Now;
-
-            var updatedItem = await repository.UpdateAsync(existingItem, cancellationToken);
-            logger.LogInformation(
-                "Changed priority of media item {Id} to {Priority}",
-                id,
-                priority
-            );
-
-            return updatedItem != null;
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error changing priority of media item: {Id}", id);
+                throw;
+            }
         }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error changing priority of media item: {Id}", id);
-            throw;
-        }
+
+        return result;
     }
 
     public async Task<CinemaQueueStatistics> GetStatisticsAsync(
         CancellationToken cancellationToken = default
     )
     {
+        CinemaQueueStatistics result;
+
         try
         {
             var stats = new CinemaQueueStatistics
@@ -344,13 +423,15 @@ public class CinemaQueueService(
                 + stats.CancelledItems
                 + stats.PostponedItems;
 
-            return stats;
+            result = stats;
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error getting cinema queue statistics");
             throw;
         }
+
+        return result;
     }
 
     private static CinemaMediaItemDto MapToDto(CinemaMediaItem item)

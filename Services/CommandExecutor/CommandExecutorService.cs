@@ -31,22 +31,36 @@ public class CommandExecutorService(CommandFactory commandFactory)
 
     public Task<string[]> GetUserCommandsAsync(CancellationToken cancellationToken = default)
     {
-        var commands = _commands
-            .Values.Where(c => !c.IsAdminCommand)
-            .Select(c => $"/{c.CommandName} - {c.Description}")
-            .ToArray();
+        string[] result = [];
 
-        return Task.FromResult(commands);
+        if (_commands.Count > 0)
+        {
+            result =
+            [
+                .. _commands
+                    .Values.Where(c => !c.IsAdminCommand)
+                    .Select(c => $"/{c.CommandName} - {c.Description}"),
+            ];
+        }
+
+        return Task.FromResult(result);
     }
 
     public Task<string[]> GetAdminCommandsAsync(CancellationToken cancellationToken = default)
     {
-        var commands = _commands
-            .Values.Where(c => c.IsAdminCommand)
-            .Select(c => $"/{c.CommandName} - {c.Description}")
-            .ToArray();
+        string[] result = [];
 
-        return Task.FromResult(commands);
+        if (_commands.Count > 0)
+        {
+            result =
+            [
+                .. _commands
+                    .Values.Where(c => c.IsAdminCommand)
+                    .Select(c => $"/{c.CommandName} - {c.Description}"),
+            ];
+        }
+
+        return Task.FromResult(result);
     }
 
     public Task<string[]> GetUserCommandsAsync(
@@ -54,12 +68,19 @@ public class CommandExecutorService(CommandFactory commandFactory)
         CancellationToken cancellationToken = default
     )
     {
-        var commands = _commands
-            .Values.Where(c => !c.IsAdminCommand && c.IsAvailableOnPlatform(platforms))
-            .Select(c => $"/{c.CommandName} - {c.Description}")
-            .ToArray();
+        string[] result = [];
 
-        return Task.FromResult(commands);
+        if (_commands.Count > 0)
+        {
+            result =
+            [
+                .. _commands
+                    .Values.Where(c => !c.IsAdminCommand && c.IsAvailableOnPlatform(platforms))
+                    .Select(c => $"/{c.CommandName} - {c.Description}"),
+            ];
+        }
+
+        return Task.FromResult(result);
     }
 
     public Task<string[]> GetAdminCommandsAsync(
@@ -67,12 +88,19 @@ public class CommandExecutorService(CommandFactory commandFactory)
         CancellationToken cancellationToken = default
     )
     {
-        var commands = _commands
-            .Values.Where(c => c.IsAdminCommand && c.IsAvailableOnPlatform(platforms))
-            .Select(c => $"/{c.CommandName} - {c.Description}")
-            .ToArray();
+        string[] result = [];
 
-        return Task.FromResult(commands);
+        if (_commands.Count > 0)
+        {
+            result =
+            [
+                .. _commands
+                    .Values.Where(c => c.IsAdminCommand && c.IsAvailableOnPlatform(platforms))
+                    .Select(c => $"/{c.CommandName} - {c.Description}"),
+            ];
+        }
+
+        return Task.FromResult(result);
     }
 
     public Task<CommandParameterInfo[]?> GetCommandParametersAsync(
@@ -80,53 +108,75 @@ public class CommandExecutorService(CommandFactory commandFactory)
         CancellationToken cancellationToken = default
     )
     {
-        // Проверяем алиасы
-        if (_aliases.TryGetValue(commandName, out var actualCommandName))
+        CommandParameterInfo[]? result = null;
+
+        if (!string.IsNullOrWhiteSpace(commandName))
         {
-            commandName = actualCommandName;
+            // Проверяем алиасы
+            if (_aliases.TryGetValue(commandName, out var actualCommandName))
+            {
+                commandName = actualCommandName;
+            }
+
+            if (_commands.TryGetValue(commandName, out var command))
+            {
+                result = command.GetParameterInfo();
+            }
         }
 
-        return !_commands.TryGetValue(commandName, out var command)
-            ? Task.FromResult<CommandParameterInfo[]?>(null)
-            : Task.FromResult<CommandParameterInfo[]?>(command.GetParameterInfo());
+        return Task.FromResult(result);
     }
 
     public Task<CommandInfo[]> GetUserCommandsInfoAsync(
         CancellationToken cancellationToken = default
     )
     {
-        var commands = _commands
-            .Values.Where(c => !c.IsAdminCommand)
-            .Select(c => new CommandInfo
-            {
-                Name = c.CommandName,
-                Description = c.Description,
-                IsAdminCommand = c.IsAdminCommand,
-                Parameters = c.GetParameterInfo(),
-                AvailablePlatforms = c.GetAvailablePlatforms(),
-            })
-            .ToArray();
+        CommandInfo[] result = [];
 
-        return Task.FromResult(commands);
+        if (_commands.Count > 0)
+        {
+            result =
+            [
+                .. _commands
+                    .Values.Where(c => !c.IsAdminCommand)
+                    .Select(c => new CommandInfo
+                    {
+                        Name = c.CommandName,
+                        Description = c.Description,
+                        IsAdminCommand = c.IsAdminCommand,
+                        Parameters = c.GetParameterInfo(),
+                        AvailablePlatforms = c.GetAvailablePlatforms(),
+                    }),
+            ];
+        }
+
+        return Task.FromResult(result);
     }
 
     public Task<CommandInfo[]> GetAdminCommandsInfoAsync(
         CancellationToken cancellationToken = default
     )
     {
-        var commands = _commands
-            .Values.Where(c => c.IsAdminCommand)
-            .Select(c => new CommandInfo
-            {
-                Name = c.CommandName,
-                Description = c.Description,
-                IsAdminCommand = c.IsAdminCommand,
-                Parameters = c.GetParameterInfo(),
-                AvailablePlatforms = c.GetAvailablePlatforms(),
-            })
-            .ToArray();
+        CommandInfo[] result = [];
 
-        return Task.FromResult(commands);
+        if (_commands.Count > 0)
+        {
+            result =
+            [
+                .. _commands
+                    .Values.Where(c => c.IsAdminCommand)
+                    .Select(c => new CommandInfo
+                    {
+                        Name = c.CommandName,
+                        Description = c.Description,
+                        IsAdminCommand = c.IsAdminCommand,
+                        Parameters = c.GetParameterInfo(),
+                        AvailablePlatforms = c.GetAvailablePlatforms(),
+                    }),
+            ];
+        }
+
+        return Task.FromResult(result);
     }
 
     public Task<CommandInfo[]> GetUserCommandsInfoAsync(
@@ -134,19 +184,26 @@ public class CommandExecutorService(CommandFactory commandFactory)
         CancellationToken cancellationToken = default
     )
     {
-        var commands = _commands
-            .Values.Where(c => !c.IsAdminCommand && c.IsAvailableOnPlatform(platforms))
-            .Select(c => new CommandInfo
-            {
-                Name = c.CommandName,
-                Description = c.Description,
-                IsAdminCommand = c.IsAdminCommand,
-                Parameters = c.GetParameterInfo(),
-                AvailablePlatforms = c.GetAvailablePlatforms(),
-            })
-            .ToArray();
+        CommandInfo[] result = [];
 
-        return Task.FromResult(commands);
+        if (_commands.Count > 0)
+        {
+            result =
+            [
+                .. _commands
+                    .Values.Where(c => !c.IsAdminCommand && c.IsAvailableOnPlatform(platforms))
+                    .Select(c => new CommandInfo
+                    {
+                        Name = c.CommandName,
+                        Description = c.Description,
+                        IsAdminCommand = c.IsAdminCommand,
+                        Parameters = c.GetParameterInfo(),
+                        AvailablePlatforms = c.GetAvailablePlatforms(),
+                    }),
+            ];
+        }
+
+        return Task.FromResult(result);
     }
 
     public Task<CommandInfo[]> GetAdminCommandsInfoAsync(
@@ -154,19 +211,26 @@ public class CommandExecutorService(CommandFactory commandFactory)
         CancellationToken cancellationToken = default
     )
     {
-        var commands = _commands
-            .Values.Where(c => c.IsAdminCommand && c.IsAvailableOnPlatform(platforms))
-            .Select(c => new CommandInfo
-            {
-                Name = c.CommandName,
-                Description = c.Description,
-                IsAdminCommand = c.IsAdminCommand,
-                Parameters = c.GetParameterInfo(),
-                AvailablePlatforms = c.GetAvailablePlatforms(),
-            })
-            .ToArray();
+        CommandInfo[] result = [];
 
-        return Task.FromResult(commands);
+        if (_commands.Count > 0)
+        {
+            result =
+            [
+                .. _commands
+                    .Values.Where(c => c.IsAdminCommand && c.IsAvailableOnPlatform(platforms))
+                    .Select(c => new CommandInfo
+                    {
+                        Name = c.CommandName,
+                        Description = c.Description,
+                        IsAdminCommand = c.IsAdminCommand,
+                        Parameters = c.GetParameterInfo(),
+                        AvailablePlatforms = c.GetAvailablePlatforms(),
+                    }),
+            ];
+        }
+
+        return Task.FromResult(result);
     }
 
     public Task<bool> IsAdminCommandAsync(
@@ -174,28 +238,44 @@ public class CommandExecutorService(CommandFactory commandFactory)
         CancellationToken cancellationToken = default
     )
     {
-        // Проверяем алиасы
-        if (_aliases.TryGetValue(commandName, out var actualCommandName))
+        var result = false;
+
+        if (!string.IsNullOrWhiteSpace(commandName))
         {
-            commandName = actualCommandName;
+            // Проверяем алиасы
+            if (_aliases.TryGetValue(commandName, out var actualCommandName))
+            {
+                commandName = actualCommandName;
+            }
+
+            if (_commands.TryGetValue(commandName, out var command))
+            {
+                result = command.IsAdminCommand;
+            }
         }
 
-        return !_commands.TryGetValue(commandName, out var command)
-            ? Task.FromResult(false)
-            : Task.FromResult(command.IsAdminCommand);
+        return Task.FromResult(result);
     }
 
     public Task<bool> IsCommandAvailableAsync(string commandName, Platform platform)
     {
-        // Проверяем алиасы
-        if (_aliases.TryGetValue(commandName, out var actualCommandName))
+        var result = false;
+
+        if (!string.IsNullOrWhiteSpace(commandName))
         {
-            commandName = actualCommandName;
+            // Проверяем алиасы
+            if (_aliases.TryGetValue(commandName, out var actualCommandName))
+            {
+                commandName = actualCommandName;
+            }
+
+            if (_commands.TryGetValue(commandName, out var command))
+            {
+                result = command.IsAvailableOnPlatform(platform);
+            }
         }
 
-        return !_commands.TryGetValue(commandName, out var command)
-            ? Task.FromResult(false)
-            : Task.FromResult(command.IsAvailableOnPlatform(platform));
+        return Task.FromResult(result);
     }
 
     public async Task<string> ExecuteCommandAsync(
@@ -205,33 +285,40 @@ public class CommandExecutorService(CommandFactory commandFactory)
         CancellationToken cancellationToken = default
     )
     {
-        // Проверяем алиасы
-        if (_aliases.TryGetValue(commandName, out var actualCommandName))
+        var result =
+            $"Команда '{commandName}' не найдена. Используйте /commands для списка доступных команд.";
+
+        if (!string.IsNullOrWhiteSpace(commandName))
         {
-            commandName = actualCommandName;
+            // Проверяем алиасы
+            if (_aliases.TryGetValue(commandName, out var actualCommandName))
+            {
+                commandName = actualCommandName;
+            }
+
+            if (_commands.TryGetValue(commandName, out var command))
+            {
+                // Проверяем количество обязательных параметров
+                var commandInfo = command.GetParameterInfo();
+                var requiredParams = commandInfo.Where(p => p.Required).ToArray();
+                var inputParts = string.IsNullOrWhiteSpace(input) ? [] : input.Split(' ');
+
+                if (inputParts.Length < requiredParams.Length)
+                {
+                    var missingParam = requiredParams[inputParts.Length];
+                    result =
+                        $"Не хватает параметра '{missingParam.Name}'. Использование: {commandName} {string.Join(" ", requiredParams.Select(p => $"<{p.Name}>"))}";
+                }
+                else
+                {
+                    // Разбираем параметры из входной строки
+                    var parameters = command.ParseParameters(input);
+
+                    // Выполняем команду
+                    result = await command.ExecuteAsync(parameters, platform, cancellationToken);
+                }
+            }
         }
-
-        if (!_commands.TryGetValue(commandName, out var command))
-        {
-            return $"Команда '{commandName}' не найдена. Используйте /commands для списка доступных команд.";
-        }
-
-        // Проверяем количество обязательных параметров
-        var commandInfo = command.GetParameterInfo();
-        var requiredParams = commandInfo.Where(p => p.Required).ToArray();
-        var inputParts = string.IsNullOrWhiteSpace(input) ? [] : input.Split(' ');
-
-        if (inputParts.Length < requiredParams.Length)
-        {
-            var missingParam = requiredParams[inputParts.Length];
-            return $"Не хватает параметра '{missingParam.Name}'. Использование: {commandName} {string.Join(" ", requiredParams.Select(p => $"<{p.Name}>"))}";
-        }
-
-        // Разбираем параметры из входной строки
-        var parameters = command.ParseParameters(input);
-
-        // Выполняем команду
-        var result = await command.ExecuteAsync(parameters, platform, cancellationToken);
 
         return result;
     }

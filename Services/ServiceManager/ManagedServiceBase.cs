@@ -66,28 +66,29 @@ public abstract class ManagedServiceBase(ILogger logger) : IHostedService
     /// </summary>
     public virtual async Task StartAsync(CancellationToken cancellationToken = default)
     {
-        var result = false;
-        
         if (!IsServiceActive)
         {
-            Logger.LogWarning("Service {ServiceName} is disabled and cannot be started", ServiceName);
+            Logger.LogWarning(
+                "Service {ServiceName} is disabled and cannot be started",
+                ServiceName
+            );
             return;
         }
-        
+
         if (Status == ServiceStatus.Running)
         {
             Logger.LogInformation("Service {ServiceName} is already running", ServiceName);
             return;
         }
-        
+
         Status = ServiceStatus.Starting;
         Logger.LogInformation("Starting service {ServiceName}", ServiceName);
 
         try
         {
             // Вызываем абстрактный метод, который должен быть реализован в наследнике
-            result = await OnStartAsync(cancellationToken);
-            
+            var result = await OnStartAsync(cancellationToken);
+
             if (result)
             {
                 Status = ServiceStatus.Running;
@@ -128,22 +129,20 @@ public abstract class ManagedServiceBase(ILogger logger) : IHostedService
     /// </summary>
     public virtual async Task StopAsync(CancellationToken cancellationToken = default)
     {
-        var result = false;
-        
         if (Status == ServiceStatus.Stopped)
         {
             Logger.LogInformation("Service {ServiceName} is already stopped", ServiceName);
             return;
         }
-        
+
         Status = ServiceStatus.Stopping;
         Logger.LogInformation("Stopping service {ServiceName}", ServiceName);
 
         try
         {
             // Вызываем абстрактный метод, который должен быть реализован в наследнике
-            result = await OnStopAsync(cancellationToken);
-            
+            var result = await OnStopAsync(cancellationToken);
+
             if (result)
             {
                 Status = ServiceStatus.Stopped;
@@ -187,7 +186,4 @@ public abstract class ManagedServiceBase(ILogger logger) : IHostedService
             IsEnabled = IsServiceActive,
         };
     }
-
-
 }
-

@@ -16,86 +16,113 @@ public class LogsService(LoggerDbContext dbContext) : ILogsService
         string? searchText = null
     )
     {
-        var query = dbContext.Logs.AsNoTracking();
-
-        // Фильтры
-        if (logLevel != null)
+        (IEnumerable<Log> Logs, int TotalCount) result = ([], 0);
+        
+        if (page > 0 && pageSize > 0)
         {
-            query = query.Where(l => l.LogLevel == logLevel);
+            var query = dbContext.Logs.AsNoTracking();
+
+            // Фильтры
+            if (logLevel != null)
+            {
+                query = query.Where(l => l.LogLevel == logLevel);
+            }
+
+            if (fromDate.HasValue)
+            {
+                query = query.Where(l => l.WhenLogged >= fromDate.Value);
+            }
+
+            if (toDate.HasValue)
+            {
+                query = query.Where(l => l.WhenLogged <= toDate.Value);
+            }
+
+            if (!string.IsNullOrEmpty(searchText))
+            {
+                query = query.Where(l =>
+                    l.Message.Contains(searchText)
+                    || (l.StackTrace != null && l.StackTrace.Contains(searchText))
+                );
+            }
+
+            // Получаем общее количество для пагинации
+            var totalCount = await query.CountAsync();
+
+            // Сортировка
+            query = sortBy?.ToLower() switch
+            {
+                "whenlogged" => sortDescending
+                    ? query.OrderByDescending(l => l.WhenLogged)
+                    : query.OrderBy(l => l.WhenLogged),
+                "loglevel" => sortDescending
+                    ? query.OrderByDescending(l => l.LogLevel)
+                    : query.OrderBy(l => l.LogLevel),
+                "message" => sortDescending
+                    ? query.OrderByDescending(l => l.Message)
+                    : query.OrderBy(l => l.Message),
+                _ => query.OrderByDescending(l => l.WhenLogged), // По умолчанию сортируем по дате
+            };
+
+            // Пагинация
+            var logs = await query.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
+
+            result = (logs, totalCount);
         }
-
-        if (fromDate.HasValue)
-        {
-            query = query.Where(l => l.WhenLogged >= fromDate.Value);
-        }
-
-        if (toDate.HasValue)
-        {
-            query = query.Where(l => l.WhenLogged <= toDate.Value);
-        }
-
-        if (!string.IsNullOrEmpty(searchText))
-        {
-            query = query.Where(l =>
-                l.Message.Contains(searchText)
-                || (l.StackTrace != null && l.StackTrace.Contains(searchText))
-            );
-        }
-
-        // Получаем общее количество для пагинации
-        var totalCount = await query.CountAsync();
-
-        // Сортировка
-        query = sortBy?.ToLower() switch
-        {
-            "whenlogged" => sortDescending
-                ? query.OrderByDescending(l => l.WhenLogged)
-                : query.OrderBy(l => l.WhenLogged),
-            "loglevel" => sortDescending
-                ? query.OrderByDescending(l => l.LogLevel)
-                : query.OrderBy(l => l.LogLevel),
-            "message" => sortDescending
-                ? query.OrderByDescending(l => l.Message)
-                : query.OrderBy(l => l.Message),
-            _ => query.OrderByDescending(l => l.WhenLogged), // По умолчанию сортируем по дате
-        };
-
-        // Пагинация
-        var logs = await query.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
-
-        return (logs, totalCount);
+        
+        return result;
     }
 
     public async Task<IEnumerable<Log>> GetLogsByLevelAsync(LogLevel logLevel)
     {
-        return await dbContext
+        IEnumerable<Log> result = [];
+        
+        result = await dbContext
             .Logs.AsNoTracking()
             .Where(l => l.LogLevel == logLevel)
             .OrderByDescending(l => l.WhenLogged)
             .ToListAsync();
+        
+        return result;
     }
 
     public async Task<IEnumerable<Log>> GetLogsByDateRangeAsync(DateTime fromDate, DateTime toDate)
     {
-        return await dbContext
-            .Logs.AsNoTracking()
-            .Where(l => l.WhenLogged >= fromDate && l.WhenLogged <= toDate)
-            .OrderByDescending(l => l.WhenLogged)
-            .ToListAsync();
+        IEnumerable<Log> result = [];
+        
+        if (fromDate <= toDate)
+        {
+            result = await dbContext
+                .Logs.AsNoTracking()
+                .Where(l => l.WhenLogged >= fromDate && l.WhenLogged <= toDate)
+                .OrderByDescending(l => l.WhenLogged)
+                .ToListAsync();
+        }
+        
+        return result;
     }
 
     public async Task<IEnumerable<Log>> GetRecentLogsAsync(int count = 100)
     {
-        return await dbContext
-            .Logs.AsNoTracking()
-            .OrderByDescending(l => l.WhenLogged)
-            .Take(count)
-            .ToListAsync();
+        IEnumerable<Log> result = [];
+        
+        if (count > 0)
+        {
+            result = await dbContext
+                .Logs.AsNoTracking()
+                .OrderByDescending(l => l.WhenLogged)
+                .Take(count)
+                .ToListAsync();
+        }
+        
+        return result;
     }
 
     public async Task<LogsStatistics> GetLogsStatisticsAsync()
     {
-        var stats = new LogsStatistics { TotalLogs = await dbContext.Logs.CountAsync() };
+        LogsStatistics result = new() { TotalLogs = 0 };
+        
+        result.TotalLogs = await dbContext.Logs.CountAsync();
 
         // Получаем статистику по уровням логирования
         var levelStats = await dbContext
@@ -109,13 +136,13 @@ public class LogsService(LoggerDbContext dbContext) : ILogsService
             switch (stat.LogLevel)
             {
                 case LogLevel.Warning:
-                    stats.WarningLogs = stat.Count;
+                    result.WarningLogs = stat.Count;
                     break;
                 case LogLevel.Error:
-                    stats.ErrorLogs = stat.Count;
+                    result.ErrorLogs = stat.Count;
                     break;
                 case LogLevel.Critical:
-                    stats.CriticalLogs = stat.Count;
+                    result.CriticalLogs = stat.Count;
                     break;
             }
         }
@@ -133,9 +160,9 @@ public class LogsService(LoggerDbContext dbContext) : ILogsService
             .Select(l => l.WhenLogged)
             .FirstOrDefaultAsync();
 
-        stats.OldestLogDate = oldestLog != default ? oldestLog : null;
-        stats.NewestLogDate = newestLog != default ? newestLog : null;
+        result.OldestLogDate = oldestLog != default ? oldestLog : null;
+        result.NewestLogDate = newestLog != default ? newestLog : null;
 
-        return stats;
+        return result;
     }
 }
