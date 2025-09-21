@@ -43,13 +43,12 @@ public class WaifuRollEnsurenceService(
                 && long.TryParse(waifu.ShikiId, out var characterId)
             )
             {
+                await using var dbContext = await appDbContextFactory.CreateDbContextAsync();
                 if (string.IsNullOrWhiteSpace(result.Anime))
                 {
                     var animeTitle = await shikiService.GetCharacterAnimeTitle(characterId);
                     if (!string.IsNullOrWhiteSpace(animeTitle))
                     {
-                        await using var dbContext =
-                            await appDbContextFactory.CreateDbContextAsync();
                         result.Anime = animeTitle;
                         await dbContext
                             .Waifus.Where(e => e.ShikiId == result.ShikiId)
@@ -62,8 +61,6 @@ public class WaifuRollEnsurenceService(
                     var mangaTitle = await shikiService.GetCharacterMangaTitle(characterId);
                     if (!string.IsNullOrWhiteSpace(mangaTitle))
                     {
-                        await using var dbContext =
-                            await appDbContextFactory.CreateDbContextAsync();
                         result.Manga = mangaTitle;
                         await dbContext
                             .Waifus.Where(e => e.ShikiId == result.ShikiId)
