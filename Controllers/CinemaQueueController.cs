@@ -21,16 +21,19 @@ public class CinemaQueueController(
         CancellationToken cancellationToken = default
     )
     {
+        ActionResult<IEnumerable<CinemaMediaItemDto>> result = StatusCode(500, "Internal server error");
+        
         try
         {
             var items = await cinemaQueueService.GetAllMediaItemsAsync(cancellationToken);
-            return Ok(items);
+            result = Ok(items);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error getting all media items");
-            return StatusCode(500, "Internal server error");
         }
+        
+        return result;
     }
 
     /// <summary>
@@ -42,16 +45,19 @@ public class CinemaQueueController(
         CancellationToken cancellationToken = default
     )
     {
+        ActionResult<CinemaMediaItemDto> result = StatusCode(500, "Internal server error");
+        
         try
         {
             var item = await cinemaQueueService.GetMediaItemByIdAsync(id, cancellationToken);
-            return item == null ? NotFound($"Media item with ID {id} not found") : Ok(item);
+            result = item == null ? NotFound($"Media item with ID {id} not found") : Ok(item);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error getting media item with ID: {Id}", id);
-            return StatusCode(500, "Internal server error");
         }
+        
+        return result;
     }
 
     /// <summary>
@@ -62,16 +68,19 @@ public class CinemaQueueController(
         CancellationToken cancellationToken = default
     )
     {
+        ActionResult<CinemaMediaItemDto> result = StatusCode(500, "Internal server error");
+        
         try
         {
             var item = await cinemaQueueService.GetNextMediaItemAsync(cancellationToken);
-            return item == null ? NotFound("No next media item found") : Ok(item);
+            result = item == null ? NotFound("No next media item found") : Ok(item);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error getting next media item");
-            return StatusCode(500, "Internal server error");
         }
+        
+        return result;
     }
 
     /// <summary>
@@ -83,19 +92,22 @@ public class CinemaQueueController(
         CancellationToken cancellationToken = default
     )
     {
+        ActionResult<IEnumerable<CinemaMediaItemDto>> result = StatusCode(500, "Internal server error");
+        
         try
         {
             var items = await cinemaQueueService.GetMediaItemsByStatusAsync(
                 status,
                 cancellationToken
             );
-            return Ok(items);
+            result = Ok(items);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error getting media items by status: {Status}", status);
-            return StatusCode(500, "Internal server error");
         }
+        
+        return result;
     }
 
     /// <summary>
@@ -107,51 +119,56 @@ public class CinemaQueueController(
         CancellationToken cancellationToken = default
     )
     {
+        ActionResult<CinemaMediaItemDto> result = StatusCode(500, "Internal server error");
+        
         try
         {
-            if (!ModelState.IsValid)
+            if (ModelState.IsValid)
             {
-                return BadRequest(ModelState);
-            }
-
-            // Если title или description не указаны, пытаемся получить их из URL
-            if (
-                request != null
-                && (
-                    string.IsNullOrWhiteSpace(request.Title)
-                    || string.IsNullOrWhiteSpace(request.Description)
+                // Если title или description не указаны, пытаемся получить их из URL
+                if (
+                    request != null
+                    && (
+                        string.IsNullOrWhiteSpace(request.Title)
+                        || string.IsNullOrWhiteSpace(request.Description)
+                    )
+                    && !string.IsNullOrWhiteSpace(request.MediaUrl)
                 )
-                && !string.IsNullOrWhiteSpace(request.MediaUrl)
-            )
-            {
-                var metadata = await metadataService.GetMetadataAsync(
-                    request.MediaUrl,
-                    cancellationToken
-                );
-                if (metadata != null)
                 {
-                    if (string.IsNullOrWhiteSpace(request.Title))
+                    var metadata = await metadataService.GetMetadataAsync(
+                        request.MediaUrl,
+                        cancellationToken
+                    );
+                    if (metadata != null)
                     {
-                        request.Title = metadata.Title;
-                    }
-                    if (string.IsNullOrWhiteSpace(request.Description))
-                    {
-                        request.Description = metadata.Description;
+                        if (string.IsNullOrWhiteSpace(request.Title))
+                        {
+                            request.Title = metadata.Title;
+                        }
+                        if (string.IsNullOrWhiteSpace(request.Description))
+                        {
+                            request.Description = metadata.Description;
+                        }
                     }
                 }
-            }
 
-            var mediaItem = await cinemaQueueService.CreateMediaItemAsync(
-                request,
-                cancellationToken
-            );
-            return CreatedAtAction(nameof(GetMediaItem), new { id = mediaItem.Id }, mediaItem);
+                var mediaItem = await cinemaQueueService.CreateMediaItemAsync(
+                    request,
+                    cancellationToken
+                );
+                result = CreatedAtAction(nameof(GetMediaItem), new { id = mediaItem.Id }, mediaItem);
+            }
+            else
+            {
+                result = BadRequest(ModelState);
+            }
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error creating media item: {Title}", request?.Title);
-            return StatusCode(500, "Internal server error");
         }
+        
+        return result;
     }
 
     /// <summary>
@@ -164,27 +181,32 @@ public class CinemaQueueController(
         CancellationToken cancellationToken = default
     )
     {
+        ActionResult<CinemaMediaItemDto> result = StatusCode(500, "Internal server error");
+        
         try
         {
-            if (!ModelState.IsValid)
+            if (ModelState.IsValid)
             {
-                return BadRequest(ModelState);
+                var mediaItem = await cinemaQueueService.UpdateMediaItemAsync(
+                    id,
+                    request,
+                    cancellationToken
+                );
+                result = mediaItem == null
+                    ? NotFound($"Media item with ID {id} not found")
+                    : Ok(mediaItem);
             }
-
-            var mediaItem = await cinemaQueueService.UpdateMediaItemAsync(
-                id,
-                request,
-                cancellationToken
-            );
-            return mediaItem == null
-                ? NotFound($"Media item with ID {id} not found")
-                : Ok(mediaItem);
+            else
+            {
+                result = BadRequest(ModelState);
+            }
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error updating media item with ID: {Id}", id);
-            return StatusCode(500, "Internal server error");
         }
+        
+        return result;
     }
 
     /// <summary>
@@ -196,16 +218,19 @@ public class CinemaQueueController(
         CancellationToken cancellationToken = default
     )
     {
+        ActionResult result = StatusCode(500, "Internal server error");
+        
         try
         {
-            var result = await cinemaQueueService.DeleteMediaItemAsync(id, cancellationToken);
-            return !result ? NotFound($"Media item with ID {id} not found") : NoContent();
+            var deleteResult = await cinemaQueueService.DeleteMediaItemAsync(id, cancellationToken);
+            result = !deleteResult ? NotFound($"Media item with ID {id} not found") : NoContent();
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error deleting media item with ID: {Id}", id);
-            return StatusCode(500, "Internal server error");
         }
+        
+        return result;
     }
 
     /// <summary>
@@ -217,18 +242,21 @@ public class CinemaQueueController(
         CancellationToken cancellationToken = default
     )
     {
+        ActionResult result = StatusCode(500, "Internal server error");
+        
         try
         {
-            var result = await cinemaQueueService.MarkAsNextAsync(id, cancellationToken);
-            return !result
+            var markResult = await cinemaQueueService.MarkAsNextAsync(id, cancellationToken);
+            result = !markResult
                 ? NotFound($"Media item with ID {id} not found")
                 : Ok(new { message = "Media item marked as next successfully" });
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error marking media item as next with ID: {Id}", id);
-            return StatusCode(500, "Internal server error");
         }
+        
+        return result;
     }
 
     /// <summary>
@@ -241,18 +269,21 @@ public class CinemaQueueController(
         CancellationToken cancellationToken = default
     )
     {
+        ActionResult result = StatusCode(500, "Internal server error");
+        
         try
         {
-            var result = await cinemaQueueService.ChangeStatusAsync(id, status, cancellationToken);
-            return !result
+            var statusResult = await cinemaQueueService.ChangeStatusAsync(id, status, cancellationToken);
+            result = !statusResult
                 ? NotFound($"Media item with ID {id} not found")
                 : Ok(new { message = $"Status changed to {status} successfully" });
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error changing status of media item with ID: {Id}", id);
-            return StatusCode(500, "Internal server error");
         }
+        
+        return result;
     }
 
     /// <summary>
@@ -265,22 +296,25 @@ public class CinemaQueueController(
         CancellationToken cancellationToken = default
     )
     {
+        ActionResult result = StatusCode(500, "Internal server error");
+        
         try
         {
-            var result = await cinemaQueueService.ChangePriorityAsync(
+            var priorityResult = await cinemaQueueService.ChangePriorityAsync(
                 id,
                 priority,
                 cancellationToken
             );
-            return !result
+            result = !priorityResult
                 ? NotFound($"Media item with ID {id} not found")
                 : Ok(new { message = $"Priority changed to {priority} successfully" });
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error changing priority of media item with ID: {Id}", id);
-            return StatusCode(500, "Internal server error");
         }
+        
+        return result;
     }
 
     /// <summary>
@@ -291,16 +325,19 @@ public class CinemaQueueController(
         CancellationToken cancellationToken = default
     )
     {
+        ActionResult<CinemaQueueStatistics> result = StatusCode(500, "Internal server error");
+        
         try
         {
             var stats = await cinemaQueueService.GetStatisticsAsync(cancellationToken);
-            return Ok(stats);
+            result = Ok(stats);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error getting cinema queue statistics");
-            return StatusCode(500, "Internal server error");
         }
+        
+        return result;
     }
 
     /// <summary>
@@ -312,22 +349,27 @@ public class CinemaQueueController(
         CancellationToken cancellationToken = default
     )
     {
+        ActionResult<MediaMetadata> result = StatusCode(500, "Internal server error");
+        
         try
         {
-            if (string.IsNullOrWhiteSpace(url))
+            if (!string.IsNullOrWhiteSpace(url))
             {
-                return BadRequest("URL parameter is required");
+                var metadata = await metadataService.GetMetadataAsync(url, cancellationToken);
+                result = metadata == null
+                    ? NotFound("Metadata not found for the provided URL")
+                    : Ok(metadata);
             }
-
-            var metadata = await metadataService.GetMetadataAsync(url, cancellationToken);
-            return metadata == null
-                ? NotFound("Metadata not found for the provided URL")
-                : Ok(metadata);
+            else
+            {
+                result = BadRequest("URL parameter is required");
+            }
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error getting metadata for URL: {Url}", url);
-            return StatusCode(500, "Internal server error");
         }
+        
+        return result;
     }
 }

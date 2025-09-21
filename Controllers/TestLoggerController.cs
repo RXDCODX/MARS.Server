@@ -9,13 +9,18 @@ public class TestLoggerController(ILogger<TestLoggerController> logger) : Contro
     [HttpPost("test-warning")]
     public IActionResult TestWarning()
     {
+        IActionResult result = Ok("Warning logged");
+        
         logger.LogWarning("Это тестовое предупреждение для проверки логгера в БД");
-        return Ok("Warning logged");
+        
+        return result;
     }
 
     [HttpPost("test-error")]
     public IActionResult TestError()
     {
+        IActionResult result = Ok("Error logged");
+        
         try
         {
             throw new InvalidOperationException("Тестовая ошибка для проверки логгера в БД");
@@ -24,13 +29,17 @@ public class TestLoggerController(ILogger<TestLoggerController> logger) : Contro
         {
             logger.LogError(ex, "Произошла тестовая ошибка");
         }
-        return Ok("Error logged");
+        
+        return result;
     }
 
     [HttpPost("test-critical")]
     public IActionResult TestCritical()
     {
+        IActionResult result = Ok("Critical logged");
+        
         logger.LogCritical("Это критическая ошибка для проверки логгера в БД");
-        return Ok("Critical logged");
+        
+        return result;
     }
 }

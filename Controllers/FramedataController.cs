@@ -23,6 +23,8 @@ public class FramedataController(
     [HttpGet("characters")]
     public async Task<ActionResult<IEnumerable<TekkenCharacter>>> GetCharacters()
     {
+        ActionResult<IEnumerable<TekkenCharacter>> result = StatusCode(500, "Внутренняя ошибка сервера");
+        
         try
         {
             await using var dbContext = await factory.CreateDbContextAsync();
@@ -32,13 +34,14 @@ public class FramedataController(
                 .OrderBy(c => c.Name)
                 .ToListAsync();
 
-            return Ok(characters);
+            result = Ok(characters);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при получении персонажей");
-            return StatusCode(500, "Внутренняя ошибка сервера");
         }
+        
+        return result;
     }
 
     /// <summary>
@@ -49,6 +52,8 @@ public class FramedataController(
     [HttpGet("characters/{name}")]
     public async Task<ActionResult<TekkenCharacter>> GetCharacter(string name)
     {
+        ActionResult<TekkenCharacter> result = StatusCode(500, "Внутренняя ошибка сервера");
+        
         try
         {
             await using var dbContext = await factory.CreateDbContextAsync();
@@ -57,13 +62,14 @@ public class FramedataController(
                 .TekkenCharacters.Include(c => c.Movelist)
                 .FirstOrDefaultAsync(c => c.Name == name);
 
-            return character == null ? NotFound($"Персонаж '{name}' не найден") : Ok(character);
+            result = character == null ? NotFound($"Персонаж '{name}' не найден") : Ok(character);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при получении персонажа {Name}", name);
-            return StatusCode(500, "Внутренняя ошибка сервера");
         }
+        
+        return result;
     }
 
     /// <summary>
@@ -76,26 +82,31 @@ public class FramedataController(
         [FromBody] TekkenCharacter character
     )
     {
+        ActionResult<TekkenCharacter> result = StatusCode(500, "Внутренняя ошибка сервера");
+        
         try
         {
             await using var dbContext = await factory.CreateDbContextAsync();
 
             if (await dbContext.TekkenCharacters.AnyAsync(c => c.Name == character.Name))
             {
-                return BadRequest($"Персонаж с именем '{character.Name}' уже существует");
+                result = BadRequest($"Персонаж с именем '{character.Name}' уже существует");
             }
+            else
+            {
+                character.LastUpdateTime = DateTimeOffset.Now;
+                dbContext.TekkenCharacters.Add(character);
+                await dbContext.SaveChangesAsync();
 
-            character.LastUpdateTime = DateTimeOffset.Now;
-            dbContext.TekkenCharacters.Add(character);
-            await dbContext.SaveChangesAsync();
-
-            return CreatedAtAction(nameof(GetCharacter), new { name = character.Name }, character);
+                result = CreatedAtAction(nameof(GetCharacter), new { name = character.Name }, character);
+            }
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при создании персонажа {Name}", character.Name);
-            return StatusCode(500, "Внутренняя ошибка сервера");
         }
+        
+        return result;
     }
 
     /// <summary>
@@ -110,6 +121,8 @@ public class FramedataController(
         [FromBody] TekkenCharacter character
     )
     {
+        ActionResult<TekkenCharacter> result = StatusCode(500, "Внутренняя ошибка сервера");
+        
         try
         {
             await using var dbContext = await factory.CreateDbContextAsync();
@@ -119,28 +132,31 @@ public class FramedataController(
 
             if (existingCharacter == null)
             {
-                return NotFound($"Персонаж '{name}' не найден");
+                result = NotFound($"Персонаж '{name}' не найден");
             }
+            else
+            {
+                // Обновляем свойства персонажа
+                existingCharacter.LinkToImage = character.LinkToImage;
+                existingCharacter.PageUrl = character.PageUrl;
+                existingCharacter.Image = character.Image;
+                existingCharacter.ImageExtension = character.ImageExtension;
+                existingCharacter.Description = character.Description;
+                existingCharacter.Strengths = character.Strengths;
+                existingCharacter.Weaknesess = character.Weaknesess;
+                existingCharacter.LastUpdateTime = DateTimeOffset.Now;
 
-            // Обновляем свойства персонажа
-            existingCharacter.LinkToImage = character.LinkToImage;
-            existingCharacter.PageUrl = character.PageUrl;
-            existingCharacter.Image = character.Image;
-            existingCharacter.ImageExtension = character.ImageExtension;
-            existingCharacter.Description = character.Description;
-            existingCharacter.Strengths = character.Strengths;
-            existingCharacter.Weaknesess = character.Weaknesess;
-            existingCharacter.LastUpdateTime = DateTimeOffset.Now;
+                await dbContext.SaveChangesAsync();
 
-            await dbContext.SaveChangesAsync();
-
-            return Ok(existingCharacter);
+                result = Ok(existingCharacter);
+            }
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при обновлении персонажа {Name}", name);
-            return StatusCode(500, "Внутренняя ошибка сервера");
         }
+        
+        return result;
     }
 
     /// <summary>

@@ -23,6 +23,8 @@ public class CommandsController(
     [HttpGet("user")]
     public ActionResult<string> GetUserCommands()
     {
+        ActionResult<string> result = StatusCode(500, "Внутренняя ошибка сервера");
+        
         try
         {
             var commands = commandService.GetCommandsList(
@@ -31,13 +33,14 @@ public class CommandsController(
                 commandService.AdminCommands,
                 false
             );
-            return Ok(commands);
+            result = Ok(commands);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при получении пользовательских команд");
-            return StatusCode(500, "Внутренняя ошибка сервера");
         }
+        
+        return result;
     }
 
     /// <summary>
@@ -47,6 +50,8 @@ public class CommandsController(
     [HttpGet("admin")]
     public ActionResult<string> GetAdminCommands()
     {
+        ActionResult<string> result = StatusCode(500, "Внутренняя ошибка сервера");
+        
         try
         {
             var commands = commandService.GetCommandsList(
@@ -55,13 +60,14 @@ public class CommandsController(
                 commandService.AdminCommands,
                 true
             );
-            return Ok(commands);
+            result = Ok(commands);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при получении админских команд");
-            return StatusCode(500, "Внутренняя ошибка сервера");
         }
+        
+        return result;
     }
 
     /// <summary>
@@ -72,10 +78,12 @@ public class CommandsController(
     [HttpGet("user/platform/{platform}")]
     public async Task<ActionResult<string[]>> GetUserCommandsForPlatform(Platform platform)
     {
+        ActionResult<string[]> result = StatusCode(500, "Внутренняя ошибка сервера");
+        
         try
         {
             var commands = await commandService.GetUserCommandsAsync(platform);
-            return Ok(commands);
+            result = Ok(commands);
         }
         catch (Exception ex)
         {
@@ -84,8 +92,9 @@ public class CommandsController(
                 "Ошибка при получении пользовательских команд для платформы {Platform}",
                 platform
             );
-            return StatusCode(500, "Внутренняя ошибка сервера");
         }
+        
+        return result;
     }
 
     /// <summary>
@@ -96,10 +105,12 @@ public class CommandsController(
     [HttpGet("admin/platform/{platform}")]
     public async Task<ActionResult<string[]>> GetAdminCommandsForPlatform(Platform platform)
     {
+        ActionResult<string[]> result = StatusCode(500, "Внутренняя ошибка сервера");
+        
         try
         {
             var commands = await commandService.GetAdminCommandsAsync(platform);
-            return Ok(commands);
+            result = Ok(commands);
         }
         catch (Exception ex)
         {
@@ -108,8 +119,9 @@ public class CommandsController(
                 "Ошибка при получении админских команд для платформы {Platform}",
                 platform
             );
-            return StatusCode(500, "Внутренняя ошибка сервера");
         }
+        
+        return result;
     }
 
     /// <summary>
@@ -120,10 +132,12 @@ public class CommandsController(
     [HttpGet("user/platform/{platform}/info")]
     public async Task<ActionResult<CommandInfo[]>> GetUserCommandsInfoForPlatform(Platform platform)
     {
+        ActionResult<CommandInfo[]> result = StatusCode(500, "Внутренняя ошибка сервера");
+        
         try
         {
             var commands = await commandService.GetUserCommandsInfoAsync(platform);
-            return Ok(commands);
+            result = Ok(commands);
         }
         catch (Exception ex)
         {
@@ -132,8 +146,9 @@ public class CommandsController(
                 "Ошибка при получении информации о пользовательских командах для платформы {Platform}",
                 platform
             );
-            return StatusCode(500, "Внутренняя ошибка сервера");
         }
+        
+        return result;
     }
 
     /// <summary>
@@ -146,10 +161,12 @@ public class CommandsController(
         Platform platform
     )
     {
+        ActionResult<CommandInfo[]> result = StatusCode(500, "Внутренняя ошибка сервера");
+        
         try
         {
             var commands = await commandService.GetAdminCommandsInfoAsync(platform);
-            return Ok(commands);
+            result = Ok(commands);
         }
         catch (Exception ex)
         {
@@ -158,8 +175,9 @@ public class CommandsController(
                 "Ошибка при получении информации об админских командах для платформы {Platform}",
                 platform
             );
-            return StatusCode(500, "Внутренняя ошибка сервера");
         }
+        
+        return result;
     }
 
     /// <summary>
@@ -170,10 +188,12 @@ public class CommandsController(
     [HttpGet("{commandName}/parameters")]
     public async Task<ActionResult<CommandParameterInfo[]>> GetCommandParameters(string commandName)
     {
+        ActionResult<CommandParameterInfo[]> result = StatusCode(500, "Внутренняя ошибка сервера");
+        
         try
         {
             var parameters = await commandService.GetCommandParametersAsync(commandName);
-            return Ok(parameters);
+            result = Ok(parameters);
         }
         catch (Exception ex)
         {
@@ -182,8 +202,9 @@ public class CommandsController(
                 "Ошибка при получении параметров команды {CommandName}",
                 commandName
             );
-            return StatusCode(500, "Внутренняя ошибка сервера");
         }
+        
+        return result;
     }
 
     /// <summary>
@@ -198,15 +219,18 @@ public class CommandsController(
         [FromBody] string input
     )
     {
+        ActionResult<string> result = StatusCode(500, "Внутренняя ошибка сервера");
+        
         try
         {
-            var result = await commandService.ExecuteCommandAsync(commandName, input);
-            return Ok(result);
+            var commandResult = await commandService.ExecuteCommandAsync(commandName, input);
+            result = Ok(commandResult);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при выполнении команды {CommandName}", commandName);
-            return StatusCode(500, "Внутренняя ошибка сервера");
         }
+        
+        return result;
     }
 }

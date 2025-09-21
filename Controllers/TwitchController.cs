@@ -11,19 +11,26 @@ public class TwitchController(TokenService tokenService, ITwitchAPI api, IServer
     [HttpGet("/" + nameof(TwitchUserAuth))]
     public async Task<IActionResult> TwitchUserAuth([FromQuery] string code)
     {
-        var adress = server.Features.Get<IServerAddressesFeature>();
-        var authToken = await api.Auth.GetAccessTokenFromCodeAsync(
-            code,
-            api.Settings.Secret,
-            adress!.Addresses.First() + "/" + nameof(TwitchUserAuth),
-            api.Settings.ClientId
-        );
+        IActionResult result = Ok();
+        
+        if (!string.IsNullOrWhiteSpace(code))
+        {
+            var adress = server.Features.Get<IServerAddressesFeature>();
+            var authToken = await api.Auth.GetAccessTokenFromCodeAsync(
+                code,
+                api.Settings.Secret,
+                adress!.Addresses.First() + "/" + nameof(TwitchUserAuth),
+                api.Settings.ClientId
+            );
 
-        await tokenService.ApplyNewTokenAsync(
-            authToken.AccessToken,
-            authToken.RefreshToken,
-            authToken.ExpiresIn
-        );
-        return Ok(authToken);
+            await tokenService.ApplyNewTokenAsync(
+                authToken.AccessToken,
+                authToken.RefreshToken,
+                authToken.ExpiresIn
+            );
+            result = Ok(authToken);
+        }
+        
+        return result;
     }
 }

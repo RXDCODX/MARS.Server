@@ -16,6 +16,8 @@ public class HonkaiController(
     [HttpGet("users")]
     public async Task<ActionResult<IEnumerable<DailyAutoMarkupUser>>> GetUsers()
     {
+        ActionResult<IEnumerable<DailyAutoMarkupUser>> result = StatusCode(500, "Внутренняя ошибка сервера");
+        
         try
         {
             await using var dbContext = await dbContextFactory.CreateDbContextAsync();
@@ -24,13 +26,14 @@ public class HonkaiController(
                 .OrderBy(u => u.CreatedAt)
                 .ToListAsync();
 
-            return Ok(users);
+            result = Ok(users);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при получении пользователей автоматических отметок");
-            return StatusCode(500, "Внутренняя ошибка сервера");
         }
+        
+        return result;
     }
 
     /// <summary>
@@ -39,6 +42,8 @@ public class HonkaiController(
     [HttpGet("users/{id:guid}")]
     public async Task<ActionResult<DailyAutoMarkupUser>> GetUser(Guid id)
     {
+        ActionResult<DailyAutoMarkupUser> result = StatusCode(500, "Внутренняя ошибка сервера");
+        
         try
         {
             await using var dbContext = await dbContextFactory.CreateDbContextAsync();
@@ -46,13 +51,14 @@ public class HonkaiController(
                 .HonkaiMarkupUser.AsNoTracking()
                 .FirstOrDefaultAsync(u => u.Id == id);
 
-            return user == null ? NotFound($"Пользователь с ID {id} не найден") : Ok(user);
+            result = user == null ? NotFound($"Пользователь с ID {id} не найден") : Ok(user);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при получении пользователя {UserId}", id);
-            return StatusCode(500, "Внутренняя ошибка сервера");
         }
+        
+        return result;
     }
 
     /// <summary>
@@ -63,59 +69,66 @@ public class HonkaiController(
         [FromBody] CreateUserRequest request
     )
     {
+        ActionResult<DailyAutoMarkupUser> result = StatusCode(500, "Внутренняя ошибка сервера");
+        
         try
         {
             if (
-                string.IsNullOrEmpty(request.LtmidV2)
-                || string.IsNullOrEmpty(request.LTokenV2)
-                || string.IsNullOrEmpty(request.LtuidV2)
+                !string.IsNullOrEmpty(request.LtmidV2)
+                && !string.IsNullOrEmpty(request.LTokenV2)
+                && !string.IsNullOrEmpty(request.LtuidV2)
             )
             {
-                return BadRequest("Все обязательные поля должны быть заполнены");
+                await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+
+                // Проверяем, не существует ли уже пользователь с такими данными
+                var existingUser = await dbContext
+                    .HonkaiMarkupUser.AsNoTracking()
+                    .FirstOrDefaultAsync(u =>
+                        u.LtmidV2 == request.LtmidV2
+                        && u.LTokenV2 == request.LTokenV2
+                        && u.LtuidV2 == request.LtuidV2
+                    );
+
+                if (existingUser == null)
+                {
+                    var user = new DailyAutoMarkupUser
+                    {
+                        TwitchId = request.TwitchId,
+                        TelegramId = request.TelegramId,
+                        LtmidV2 = request.LtmidV2,
+                        LTokenV2 = request.LTokenV2,
+                        LtuidV2 = request.LtuidV2,
+                        CreatedAt = DateTime.UtcNow,
+                        LastAutoMarkup = DateTime.UtcNow.AddDays(-1), // Позволяет получить отметки сразу
+                    };
+
+                    dbContext.HonkaiMarkupUser.Add(user);
+                    await dbContext.SaveChangesAsync();
+
+                    logger.LogInformation(
+                        "Создан новый пользователь автоматических отметок: {UserId}",
+                        user.Id
+                    );
+
+                    result = CreatedAtAction(nameof(GetUser), new { id = user.Id }, user);
+                }
+                else
+                {
+                    result = Conflict("Пользователь с такими учетными данными уже существует");
+                }
             }
-
-            await using var dbContext = await dbContextFactory.CreateDbContextAsync();
-
-            // Проверяем, не существует ли уже пользователь с такими данными
-            var existingUser = await dbContext
-                .HonkaiMarkupUser.AsNoTracking()
-                .FirstOrDefaultAsync(u =>
-                    u.LtmidV2 == request.LtmidV2
-                    && u.LTokenV2 == request.LTokenV2
-                    && u.LtuidV2 == request.LtuidV2
-                );
-
-            if (existingUser != null)
+            else
             {
-                return Conflict("Пользователь с такими учетными данными уже существует");
+                result = BadRequest("Все обязательные поля должны быть заполнены");
             }
-
-            var user = new DailyAutoMarkupUser
-            {
-                TwitchId = request.TwitchId,
-                TelegramId = request.TelegramId,
-                LtmidV2 = request.LtmidV2,
-                LTokenV2 = request.LTokenV2,
-                LtuidV2 = request.LtuidV2,
-                CreatedAt = DateTime.UtcNow,
-                LastAutoMarkup = DateTime.UtcNow.AddDays(-1), // Позволяет получить отметки сразу
-            };
-
-            dbContext.HonkaiMarkupUser.Add(user);
-            await dbContext.SaveChangesAsync();
-
-            logger.LogInformation(
-                "Создан новый пользователь автоматических отметок: {UserId}",
-                user.Id
-            );
-
-            return CreatedAtAction(nameof(GetUser), new { id = user.Id }, user);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при создании пользователя автоматических отметок");
-            return StatusCode(500, "Внутренняя ошибка сервера");
         }
+        
+        return result;
     }
 
     /// <summary>

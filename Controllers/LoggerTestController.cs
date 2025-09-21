@@ -12,14 +12,16 @@ public class LoggerTestController(ILogger<LoggerTestController> logger) : Contro
     [HttpPost("test-logging")]
     public IActionResult TestLogging()
     {
+        IActionResult result = Ok(new { message = "Тестовые логи отправлены через SignalR" });
+        
         logger.LogTrace("Это сообщение уровня Trace - детальная отладочная информация");
         logger.LogDebug("Это сообщение уровня Debug - отладочная информация");
         logger.LogInformation("Это сообщение уровня Information - общая информация");
         logger.LogWarning("Это сообщение уровня Warning - предупреждение");
         logger.LogError("Это сообщение уровня Error - ошибка");
         logger.LogCritical("Это сообщение уровня Critical - критическая ошибка");
-
-        return Ok(new { message = "Тестовые логи отправлены через SignalR" });
+        
+        return result;
     }
 
     /// <summary>
@@ -28,6 +30,8 @@ public class LoggerTestController(ILogger<LoggerTestController> logger) : Contro
     [HttpPost("test-exception")]
     public IActionResult TestException()
     {
+        IActionResult result = Ok(new { message = "Тестовое исключение залогировано через SignalR" });
+        
         try
         {
             throw new InvalidOperationException("Это тестовое исключение для демонстрации логирования");
@@ -36,8 +40,8 @@ public class LoggerTestController(ILogger<LoggerTestController> logger) : Contro
         {
             logger.LogError(ex, "Произошла ошибка при выполнении тестового метода");
         }
-
-        return Ok(new { message = "Тестовое исключение залогировано через SignalR" });
+        
+        return result;
     }
 
     /// <summary>
@@ -46,6 +50,8 @@ public class LoggerTestController(ILogger<LoggerTestController> logger) : Contro
     [HttpPost("test-structured")]
     public IActionResult TestStructuredLogging()
     {
+        IActionResult result = Ok(new { message = "Структурированные логи отправлены через SignalR" });
+        
         var userId = "user123";
         var action = "test_action";
         var duration = 150;
@@ -57,7 +63,7 @@ public class LoggerTestController(ILogger<LoggerTestController> logger) : Contro
         logger.LogWarning(
             "Попытка доступа пользователя {UserId} к ресурсу {Resource} была отклонена",
             userId, "protected_resource");
-
-        return Ok(new { message = "Структурированные логи отправлены через SignalR" });
+        
+        return result;
     }
 }
