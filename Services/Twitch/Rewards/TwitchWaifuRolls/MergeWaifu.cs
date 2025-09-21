@@ -22,7 +22,7 @@ public class MergeWaifu(
 {
     private readonly CancellationToken _cancellationToken = lifetime.ApplicationStopping;
 
-    public bool IsServiceActive { get; set; }
+    public bool IsServiceActive { get; set; } = true;
 
     public async Task MergeWaifuTwitchEvent(
         object sender,

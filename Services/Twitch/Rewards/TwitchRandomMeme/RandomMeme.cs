@@ -11,7 +11,7 @@ public class RandomMeme(
     EventSubWebsocketClient wsClient
 ) : BackgroundService
 {
-    public bool IsServiceActive { get; set; }
+    public bool IsServiceActive { get; set; } = true;
     private readonly CancellationToken _stoppingToken = applicationLifetime.ApplicationStopping;
 
     public async Task RandomMemeHandler(object sender, ChannelPointsCustomRewardRedemptionArgs args)

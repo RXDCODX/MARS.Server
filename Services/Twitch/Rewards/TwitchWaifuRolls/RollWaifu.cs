@@ -17,7 +17,7 @@ public class RollWaifu(
     WaifuRollEnsurenceService waifuDbHelper
 ) : BackgroundService
 {
-    public bool IsServiceActive { get; set; }
+    public bool IsServiceActive { get; set; } = true;
 
     public async Task RollWaifuTwitchEvent(
         object sender,
@@ -43,7 +43,7 @@ public class RollWaifu(
                 {
                     // Убеждаемся, что поля аниме и манги заполнены
                     waifu = await waifuDbHelper.EnsureMangaAndAnimeTitleExists(waifu);
-                    
+
                     var color = await api.Helix.Chat.GetUserChatColorAsync([twEvent.UserId]);
                     await using AppDbContext dbContext2 = await factory.CreateDbContextAsync();
                     var husband =

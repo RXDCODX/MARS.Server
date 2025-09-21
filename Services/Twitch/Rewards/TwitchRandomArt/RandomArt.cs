@@ -14,7 +14,7 @@ public class RandomArt(
     SharedOptions staticFilesOptions
 ) : BackgroundService
 {
-    public bool IsServiceActive { get; set; }
+    public bool IsServiceActive { get; set; } = true;
 
     private async Task WsClientOnChannelPointsCustomRewardRedemptionAdd(
         object sender,

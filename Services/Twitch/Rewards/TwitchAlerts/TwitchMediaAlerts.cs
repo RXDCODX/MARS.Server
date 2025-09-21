@@ -14,7 +14,7 @@ public class TwitchMediaAlerts(
 {
     private readonly CancellationToken _token = applicationLifetime.ApplicationStopping;
 
-    public bool IsServiceActive { get; set; }
+    public bool IsServiceActive { get; set; } = true;
 
     internal async void TwitchClientOnNormalMessage(object? sender, OnMessageReceivedArgs args)
     {

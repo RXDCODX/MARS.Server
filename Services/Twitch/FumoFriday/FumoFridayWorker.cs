@@ -14,7 +14,7 @@ public class FumoFridayWorker(
     EventSubWebsocketClient wsClient
 ) : BackgroundService
 {
-    public bool IsServiceActive { get; set; }
+    public bool IsServiceActive { get; set; } = true;
 
     private readonly CancellationToken _cancellationToken =
         hostApplicationLifetime.ApplicationStopping;

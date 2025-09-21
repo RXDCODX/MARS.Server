@@ -11,7 +11,7 @@ public class SyntheziaQueueManager(
 ) : BackgroundService
 {
     private readonly ConcurrentQueue<MessageToSynthezid?> _queue = new();
-    public bool IsServiceActive { get; set; }
+    public bool IsServiceActive { get; set; } = true;
 
     private string _lastMessage = string.Empty;
     private bool _isRepeatMessageSad = false;

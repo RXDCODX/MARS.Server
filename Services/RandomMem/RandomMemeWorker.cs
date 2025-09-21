@@ -7,7 +7,7 @@ public class RandomMemeWorker(
     IWebHostEnvironment webHostEnvironment
 ) : BackgroundService
 {
-    public bool IsServiceActive { get; set; }
+    public bool IsServiceActive { get; set; } = true;
     private readonly string _folderPath = Path.Combine(webHostEnvironment.WebRootPath, "Alerts");
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)

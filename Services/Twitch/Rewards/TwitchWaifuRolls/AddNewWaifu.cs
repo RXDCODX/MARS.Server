@@ -28,7 +28,7 @@ public class AddNewWaifu(
     private static Guid RewardGuid => Guid.Parse("a0c9d421-cf76-4f76-9bc6-3cf28da1ffaf");
     private const int GuaranteeRolls = 200; // Количество роллов для гаранта
 
-    public bool IsServiceActive { get; set; }
+    public bool IsServiceActive { get; set; } = true;
 
     private async void AddNewWaifuTwitchEvent(
         object? sender,

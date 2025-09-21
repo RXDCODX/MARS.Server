@@ -12,7 +12,7 @@ public class HelloVideoWorker(
 {
     private readonly CancellationToken _token = hostApplicationLifetime.ApplicationStopping;
     private readonly List<string> _users = [];
-    public bool IsServiceActive { get; set; }
+    public bool IsServiceActive { get; set; } = true;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {

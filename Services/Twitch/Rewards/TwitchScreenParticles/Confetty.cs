@@ -4,7 +4,7 @@ namespace MARS.Server.Services.Twitch.Rewards.TwitchScreenParticles;
 
 public class Confetty : BackgroundService
 {
-    public bool IsServiceActive { get; set; }
+    public bool IsServiceActive { get; set; } = true;
     private readonly IHubContext<TelegramusHub, ITelegramusHub> _hub;
     private readonly ITwitchClient _client;
     private readonly EventSubWebsocketClient _wsClient;

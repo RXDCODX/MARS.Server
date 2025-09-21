@@ -8,7 +8,7 @@ public class TwitchCloseTekkenService(
     EventSubWebsocketClient wsClient
 ) : BackgroundService
 {
-    public bool IsServiceActive { get; set; }
+    public bool IsServiceActive { get; set; } = true;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {

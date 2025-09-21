@@ -8,7 +8,7 @@ public class Emojis(
     ITwitchClient client
 ) : BackgroundService
 {
-    public bool IsServiceActive { get; set; }
+    public bool IsServiceActive { get; set; } = true;
 
     private readonly CancellationToken _token = lifetime.ApplicationStopping;
 
