@@ -17,7 +17,7 @@
         <!-- Change the timeout of the proxy (defaults to 120 seconds) -->
         <SpaProxyTimeoutInSeconds>1200</SpaProxyTimeoutInSeconds>
         <!-- Optionally forward only request starting with the specified path -->
-        <SpaPublicPath>/dist</SpaPublicPath>
+        <!--<SpaPublicPath>/dist</SpaPublicPath>-->
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'" />

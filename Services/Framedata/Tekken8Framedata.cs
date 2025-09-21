@@ -12,7 +12,8 @@ public partial class Tekken8FrameData(
     IHostApplicationLifetime lifetime,
     ITelegramBotClient client,
     FramedataStagingService stagingService,
-    IOptions<FramedataConfiguration> framedataOptions
+    IOptions<FramedataConfiguration> framedataOptions,
+    IWebHostEnvironment environment
 ) : BackgroundService, ITelegramusService
 {
     private readonly FramedataStagingService _stagingService = stagingService;
@@ -25,7 +26,8 @@ public partial class Tekken8FrameData(
         var character = list.FirstOrDefault();
 
         if (
-            IsMonday()
+            environment.IsProduction()
+            && IsMonday()
             && (
                 character == null
                 || !IsDateInCurrentWeek(character.LastUpdateTime).GetAwaiter().GetResult()

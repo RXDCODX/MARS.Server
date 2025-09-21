@@ -1,52 +1,34 @@
 ﻿using MARS.Server.Services.Shikimori;
+using Microsoft.EntityFrameworkCore;
 
 namespace MARS.Server.Services.WaifuRoll.helpers;
 
 public class WaifuRollEnsurenceService(
     ILogger<WaifuRollEnsurenceService> logger,
-    ShikimoriService shikiService
+    ShikimoriService shikiService,
+    IDbContextFactory<AppDbContext> appDbContextFactory
 ) : ITelegramusService
 {
     private readonly ILogger _logger = logger;
 
     public async Task<Waifu> EnsureWaifuHaveImageIrl(Waifu waifu)
     {
-        var result = waifu;
-
-        if (!string.IsNullOrWhiteSpace(waifu.ImageUrl))
+        if (string.IsNullOrWhiteSpace(waifu.ImageUrl))
         {
-            return result;
-        }
-
-        var character = await shikiService.GetShikiCharacterById(long.Parse(waifu.ShikiId)); // FullCharacter
-        if (character != null)
-        {
-            result.ImageUrl = character.Image.Original;
-
-            // Заполняем поля аниме и манги, если они пустые
-            if (string.IsNullOrWhiteSpace(result.Anime) || string.IsNullOrWhiteSpace(result.Manga))
+            var character = await shikiService.GetShikiCharacterById(long.Parse(waifu.ShikiId)); // FullCharacter
+            if (character != null)
             {
-                if (string.IsNullOrWhiteSpace(result.Anime))
-                {
-                    var animeTitle = await shikiService.GetCharacterAnimeTitle(character.Id);
-                    if (!string.IsNullOrWhiteSpace(animeTitle))
-                    {
-                        result.Anime = animeTitle;
-                    }
-                }
-
-                if (string.IsNullOrWhiteSpace(result.Manga))
-                {
-                    var mangaTitle = await shikiService.GetCharacterMangaTitle(character.Id);
-                    if (!string.IsNullOrWhiteSpace(mangaTitle))
-                    {
-                        result.Manga = mangaTitle;
-                    }
-                }
+                await using var dbContext = await appDbContextFactory.CreateDbContextAsync();
+                waifu.ImageUrl = character.Image.Original;
+                await dbContext
+                    .Waifus.Where(e => e.ShikiId == waifu.ShikiId)
+                    .ExecuteUpdateAsync(e =>
+                        e.SetProperty(t => t.ImageUrl, character.Image.Original)
+                    );
             }
         }
 
-        return result;
+        return waifu;
     }
 
     public async Task<Waifu> EnsureMangaAndAnimeTitleExists(Waifu waifu)
@@ -55,14 +37,23 @@ public class WaifuRollEnsurenceService(
 
         try
         {
-            if (long.TryParse(waifu.ShikiId, out var characterId))
+            if (
+                string.IsNullOrWhiteSpace(waifu.Manga)
+                && string.IsNullOrWhiteSpace(waifu.Anime)
+                && long.TryParse(waifu.ShikiId, out var characterId)
+            )
             {
                 if (string.IsNullOrWhiteSpace(result.Anime))
                 {
                     var animeTitle = await shikiService.GetCharacterAnimeTitle(characterId);
                     if (!string.IsNullOrWhiteSpace(animeTitle))
                     {
+                        await using var dbContext =
+                            await appDbContextFactory.CreateDbContextAsync();
                         result.Anime = animeTitle;
+                        await dbContext
+                            .Waifus.Where(e => e.ShikiId == result.ShikiId)
+                            .ExecuteUpdateAsync(e => e.SetProperty(t => t.Anime, animeTitle));
                     }
                 }
 
@@ -71,7 +62,12 @@ public class WaifuRollEnsurenceService(
                     var mangaTitle = await shikiService.GetCharacterMangaTitle(characterId);
                     if (!string.IsNullOrWhiteSpace(mangaTitle))
                     {
+                        await using var dbContext =
+                            await appDbContextFactory.CreateDbContextAsync();
                         result.Manga = mangaTitle;
+                        await dbContext
+                            .Waifus.Where(e => e.ShikiId == result.ShikiId)
+                            .ExecuteUpdateAsync(e => e.SetProperty(t => t.Manga, mangaTitle));
                     }
                 }
             }

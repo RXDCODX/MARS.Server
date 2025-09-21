@@ -6,7 +6,8 @@ namespace MARS.Server.Services.WaifuRoll;
 public class WaifuPrizesService(
     IDbContextFactory<AppDbContext> factory,
     IOptions<ShikimoriClientOptions> shikiOptions,
-    WaifuRollEnsurenceService waifuDbHelper
+    WaifuRollEnsurenceService waifuDbHelper,
+    IHostApplicationLifetime lifetime
 ) : ITelegramusService, IWaifuPrizesService
 {
     private string ShikimoriSite => shikiOptions.Value.ShikimoriSite;
@@ -20,13 +21,13 @@ public class WaifuPrizesService(
         try
         {
             await using var dbContext = await factory.CreateDbContextAsync();
-            var waifus = await dbContext.Waifus.AsNoTracking().Where(e => true).ToListAsync();
+            var waifus = dbContext.Waifus.AsNoTracking().AsAsyncEnumerable();
 
-            if (waifus.Count > 0)
+            var prizes = new List<PrizeType>();
+
+            await foreach (var waifu in waifus.WithCancellation(lifetime.ApplicationStopping))
             {
-                var prizes = new List<PrizeType>();
-
-                foreach (var waifu in waifus)
+                if (!waifu.IsMerged)
                 {
                     // Убеждаемся, что поля аниме и манги заполнены
                     var waifuWithTitles = await waifuDbHelper.EnsureMangaAndAnimeTitleExists(waifu);
@@ -40,19 +41,12 @@ public class WaifuPrizesService(
                         }
                     );
                 }
+            }
 
-                result = OperationResult<ICollection<PrizeType>>.Ok(
-                    "Призы вайфу успешно получены",
-                    prizes
-                );
-            }
-            else
-            {
-                result = OperationResult<ICollection<PrizeType>>.Ok(
-                    "Призы вайфу успешно получены",
-                    []
-                );
-            }
+            result = OperationResult<ICollection<PrizeType>>.Ok(
+                "Призы вайфу успешно получены",
+                prizes
+            );
         }
         catch (Exception ex)
         {
