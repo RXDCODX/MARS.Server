@@ -24,7 +24,7 @@ public class TwitchEventsCommand(TokenService tokenService, EventSubService even
             return "Не удалось провести запрос";
         }
 
-        var response = await eventSubService.GetEventSubsAsync(tokenService.Token);
+        var response = await eventSubService.GetEventSubsAsync();
 
         if (response == null)
         {

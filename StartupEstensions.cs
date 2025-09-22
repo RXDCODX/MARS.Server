@@ -42,6 +42,8 @@ using MARS.Server.Services.Twitch.TwitchFollowers;
 using MARS.Server.Services.WaifuRoll;
 using MARS.Server.Services.WaifuRoll.Entitys.Interfaces;
 using MARS.Server.Services.WaifuRoll.helpers;
+using MARS.Server.Services.Honkai;
+using MARS.Server.Services.Twitch.StreamManagement;
 using Microsoft.OpenApi.Models;
 using TwitchLib.Api;
 using TwitchLib.Api.Core;
@@ -563,6 +565,60 @@ public static class StartupEstensions
             };
         });
 
+        return services;
+    }
+
+    /// <summary>
+    /// Добавляет все Twitch-связанные сервисы
+    /// </summary>
+    internal static IServiceCollection AddTwitchServices(
+        this IServiceCollection services,
+        IConfigurationManager configuration
+    )
+    {
+        services
+            .AddTwitchEvents(configuration)
+            .AddTwitchStreamManagementServiceOnly();
+        
+        return services;
+    }
+
+    /// <summary>
+    /// Добавляет все игровые сервисы
+    /// </summary>
+    internal static IServiceCollection AddGameServices(this IServiceCollection services)
+    {
+        services
+            .AddHonkaiServices()
+            .AddWaifuRollServices()
+            .AddRandomMemServices()
+            .AddScoreboardServiceSingleton();
+        
+        return services;
+    }
+
+    /// <summary>
+    /// Добавляет все внешние API сервисы
+    /// </summary>
+    internal static IServiceCollection AddExternalApiServices(this IServiceCollection services)
+    {
+        services
+            .AddShikimoriServices()
+            .AddPyroAlertsServices()
+            .AddBooruServices();
+        
+        return services;
+    }
+
+    /// <summary>
+    /// Добавляет все специализированные сервисы
+    /// </summary>
+    internal static IServiceCollection AddSpecializedServices(this IServiceCollection services)
+    {
+        services
+            .AddSyntheziaServices()
+            .Add365Services();
+        
         return services;
     }
 }

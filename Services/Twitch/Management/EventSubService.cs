@@ -20,13 +20,14 @@ public class EventSubService(
     private bool _firstActivation = true;
     private bool _isWsConnected;
 
-    public async Task UpdateEventSubbAsync(TokenInfo? token = null)
+    public async Task UpdateEventSubAsync()
     {
         if (!_firstActivation)
         {
+            var token = tokenService.Token;
             if (token != null)
             {
-                var result = await GetEventSubsAsync(token);
+                var result = await GetEventSubsAsync();
 
                 // Проверяем, есть ли активные подписки
                 var hasActiveSubscriptions =
@@ -67,7 +68,7 @@ public class EventSubService(
             wsClient.WebsocketReconnected += async (sender, args) =>
             {
                 _isWsConnected = true;
-                if (token != null)
+                if (tokenService.Token != null)
                 {
                     await ResubscribeToEventSub();
                 }
@@ -82,12 +83,12 @@ public class EventSubService(
 
             _firstActivation = false;
 
-            if (token != null)
+            if (tokenService.Token != null)
             {
-                var subs = await GetEventSubsAsync(token);
+                var subs = await GetEventSubsAsync();
                 if (subs?.Subscriptions is { Length: > 0 })
                 {
-                    await DeleteAllSubs(token);
+                    await DeleteAllSubs();
                 }
             }
 
@@ -127,9 +128,15 @@ public class EventSubService(
         }
     }
 
-    private async Task DeleteAllSubs(TokenInfo token)
+    private async Task DeleteAllSubs()
     {
-        var response = await GetEventSubsAsync(token);
+        var token = tokenService.Token;
+        if (token == null)
+        {
+            return;
+        }
+
+        var response = await GetEventSubsAsync();
 
         if (response != null)
         {
@@ -146,9 +153,7 @@ public class EventSubService(
                 catch (HttpRequestException httpEx)
                     when (httpEx.Message.Contains("401") || httpEx.Message.Contains("Unauthorized"))
                 {
-                    if (
-                        await HandleUnauthorizedError(token, $"удаление подписки {subscription.Id}")
-                    )
+                    if (await HandleUnauthorizedError($"удаление подписки {subscription.Id}"))
                     {
                         token = tokenService.Token ?? token;
                         await api.Helix.EventSub.DeleteEventSubSubscriptionAsync(
@@ -195,10 +200,17 @@ public class EventSubService(
         return true;
     }
 
-    private async Task<bool> HandleUnauthorizedError(TokenInfo token, string operation)
+    private async Task<bool> HandleUnauthorizedError(string operation)
     {
         logger.LogWarning("Получена ошибка 401 при {Operation}. Обновляем токен...", operation);
-        var refreshResult = await tokenService.RefreshTokenAsync(token);
+        var currentToken = tokenService.Token;
+        if (currentToken == null)
+        {
+            logger.LogError("Отсутствует токен в TokenService для {Operation}", operation);
+            return false;
+        }
+
+        var refreshResult = await tokenService.RefreshTokenAsync(currentToken);
         if (refreshResult)
         {
             logger.LogInformation("Токен успешно обновлен для {Operation}", operation);
@@ -211,7 +223,7 @@ public class EventSubService(
         }
     }
 
-    public async Task<string> ResubscribeToEventSub(TokenInfo? token = default)
+    public async Task<string> ResubscribeToEventSub()
     {
         if (SemaphoreSlim.CurrentCount == 0)
         {
@@ -220,17 +232,14 @@ public class EventSubService(
 
         await SemaphoreSlim.WaitAsync(_cancellationToken);
 
-        if (token == null)
-        {
-            await tokenService.EnsureActualTokenAsync(_cancellationToken);
-            token = tokenService.Token;
-        }
+        await tokenService.EnsureActualTokenAsync(_cancellationToken);
+        var token = tokenService.Token;
         ArgumentException.ThrowIfNullOrWhiteSpace(token?.AccessToken);
         ArgumentException.ThrowIfNullOrWhiteSpace(token?.RefreshToken);
 
         try
         {
-            await DeleteAllSubs(token);
+            await DeleteAllSubs();
 
             // Проверяем подключение WebSocket перед созданием подписок
             if (!await EnsureWebSocketConnected())
@@ -266,7 +275,7 @@ public class EventSubService(
             catch (HttpRequestException httpEx)
                 when (httpEx.Message.Contains("401") || httpEx.Message.Contains("Unauthorized"))
             {
-                if (await HandleUnauthorizedError(token, "создание подписки на channel.raid"))
+                if (await HandleUnauthorizedError("создание подписки на channel.raid"))
                 {
                     token = tokenService.Token ?? token;
                     await api.Helix.EventSub.CreateEventSubSubscriptionAsync(
@@ -312,7 +321,7 @@ public class EventSubService(
             catch (HttpRequestException httpEx)
                 when (httpEx.Message.Contains("401") || httpEx.Message.Contains("Unauthorized"))
             {
-                if (await HandleUnauthorizedError(token, "создание подписки на stream.online"))
+                if (await HandleUnauthorizedError("создание подписки на stream.online"))
                 {
                     token = tokenService.Token ?? token;
                     await api.Helix.EventSub.CreateEventSubSubscriptionAsync(
@@ -355,7 +364,7 @@ public class EventSubService(
             catch (HttpRequestException httpEx)
                 when (httpEx.Message.Contains("401") || httpEx.Message.Contains("Unauthorized"))
             {
-                if (await HandleUnauthorizedError(token, "создание подписки на stream.offline"))
+                if (await HandleUnauthorizedError("создание подписки на stream.offline"))
                 {
                     token = tokenService.Token ?? token;
                     await api.Helix.EventSub.CreateEventSubSubscriptionAsync(
@@ -400,7 +409,6 @@ public class EventSubService(
             {
                 if (
                     await HandleUnauthorizedError(
-                        token,
                         "создание подписки на channel.channel_points_custom_reward_redemption.add"
                     )
                 )
@@ -446,12 +454,7 @@ public class EventSubService(
             catch (HttpRequestException httpEx)
                 when (httpEx.Message.Contains("401") || httpEx.Message.Contains("Unauthorized"))
             {
-                if (
-                    await HandleUnauthorizedError(
-                        token,
-                        "создание подписки на channel.moderator.add"
-                    )
-                )
+                if (await HandleUnauthorizedError("создание подписки на channel.moderator.add"))
                 {
                     token = tokenService.Token ?? token;
                     await api.Helix.EventSub.CreateEventSubSubscriptionAsync(
@@ -494,7 +497,7 @@ public class EventSubService(
             catch (HttpRequestException httpEx)
                 when (httpEx.Message.Contains("401") || httpEx.Message.Contains("Unauthorized"))
             {
-                if (await HandleUnauthorizedError(token, "создание подписки на channel.vip.add"))
+                if (await HandleUnauthorizedError("создание подписки на channel.vip.add"))
                 {
                     token = tokenService.Token ?? token;
                     await api.Helix.EventSub.CreateEventSubSubscriptionAsync(
@@ -539,7 +542,7 @@ public class EventSubService(
             catch (HttpRequestException httpEx)
                 when (httpEx.Message.Contains("401") || httpEx.Message.Contains("Unauthorized"))
             {
-                if (await HandleUnauthorizedError(token, "создание подписки на channel.follow"))
+                if (await HandleUnauthorizedError("создание подписки на channel.follow"))
                 {
                     token = tokenService.Token ?? token;
                     await api.Helix.EventSub.CreateEventSubSubscriptionAsync(
@@ -575,7 +578,7 @@ public class EventSubService(
             catch (HttpRequestException httpEx)
                 when (httpEx.Message.Contains("401") || httpEx.Message.Contains("Unauthorized"))
             {
-                if (await HandleUnauthorizedError(token, "получение списка подписок EventSub"))
+                if (await HandleUnauthorizedError("получение списка подписок EventSub"))
                 {
                     token = tokenService.Token ?? token;
                     response = await api
@@ -621,10 +624,15 @@ public class EventSubService(
         }
     }
 
-    public async Task<GetEventSubSubscriptionsResponse?> GetEventSubsAsync(TokenInfo token)
+    public async Task<GetEventSubSubscriptionsResponse?> GetEventSubsAsync()
     {
         try
         {
+            var token = tokenService.Token;
+            if (token == null)
+            {
+                return null;
+            }
             return await api.Helix.EventSub.GetEventSubSubscriptionsAsync(
                 clientId: api.Settings.ClientId,
                 accessToken: token.AccessToken
@@ -638,14 +646,21 @@ public class EventSubService(
             );
 
             // Пытаемся обновить токен
-            var refreshResult = await tokenService.RefreshTokenAsync(token);
+            var currentToken = tokenService.Token;
+            if (currentToken == null)
+            {
+                logger.LogError("Не удалось обновить токен: токен отсутствует");
+                return null;
+            }
+
+            var refreshResult = await tokenService.RefreshTokenAsync(currentToken);
             if (refreshResult)
             {
                 logger.LogInformation("Токен успешно обновлен, повторяем запрос...");
                 // Повторяем запрос с обновленным токеном
                 return await api.Helix.EventSub.GetEventSubSubscriptionsAsync(
                     clientId: api.Settings.ClientId,
-                    accessToken: tokenService.Token?.AccessToken ?? token.AccessToken
+                    accessToken: tokenService.Token?.AccessToken ?? currentToken.AccessToken
                 );
             }
             else
@@ -668,7 +683,7 @@ public class EventSubService(
             Task.Factory.StartNew(
                 async () =>
                 {
-                    await UpdateEventSubbAsync(tokenService.Token);
+                    await UpdateEventSubAsync();
                 },
                 stoppingToken
             );

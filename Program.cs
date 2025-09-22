@@ -167,16 +167,17 @@ public static class Program
 
         /////////////////////////////////////////////////////////////////////////////////////////
 
-        services.AddTwitchEvents(configuration);
-        services.AddCommandExecutorServices();
-        services.AddTelegramThings(loggerFactory);
-        services.AddConfiguration(configuration);
-        services.AddBaseAspNetMiddlewares();
-        services.AddSwaggerServices();
-        services.AddHonkaiServices();
-        services.AddCinemaQueueServicesAsSingleton();
-        services.AddTwitchStreamManagementServiceOnly();
-        services.AddMarsDomainServices();
+        services
+            .AddTwitchServices(configuration)
+            .AddCommandExecutorServices()
+            .AddTelegramThings(loggerFactory)
+            .AddConfiguration(configuration)
+            .AddBaseAspNetMiddlewares()
+            .AddSwaggerServices()
+            .AddCinemaQueueServicesAsSingleton()
+            .AddGameServices()
+            .AddExternalApiServices()
+            .AddSpecializedServices();
 
         services.AddSingleton<IDbContextFactory<AppDbContext>>(contextFactory);
 

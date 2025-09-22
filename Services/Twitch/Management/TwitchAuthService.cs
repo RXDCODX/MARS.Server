@@ -65,21 +65,21 @@ public class TwitchAuthService(
     {
         if (DateTime.Now < token.WhenExpires)
         {
-            await eventSubService.UpdateEventSubbAsync(token);
+            await eventSubService.ResubscribeToEventSub();
             return true;
         }
 
         var validated = await api.ValidateToken(logger, token.AccessToken);
         if (validated)
         {
-            await eventSubService.UpdateEventSubbAsync(token);
+            await eventSubService.ResubscribeToEventSub();
             return true;
         }
 
         var isRefreshed = await tokenService.RefreshTokenAsync(token);
         if (isRefreshed)
         {
-            await eventSubService.UpdateEventSubbAsync(token);
+            await eventSubService.ResubscribeToEventSub();
             return true;
         }
 

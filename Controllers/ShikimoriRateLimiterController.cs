@@ -21,8 +21,7 @@ public class ShikimoriRateLimiterController(
     [HttpGet("info")]
     public ActionResult<RateLimiterInfo> GetRateLimiterInfo()
     {
-        var result = new RateLimiterInfo();
-
+        RateLimiterInfo? result;
         try
         {
             result = shikimoriService.GetRateLimiterInfo();
