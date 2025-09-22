@@ -16,6 +16,8 @@ public class FramedataCommand(Tekken8FrameData frameData, IDbContextFactory<AppD
 
     public override string[] Aliases => ["fd"];
 
+    public override CommandVisibility Visibility => CommandVisibility.All; // Видна везде
+
     public override CommandParameterInfo[] Parameters =>
         [
             new CommandParameterInfo

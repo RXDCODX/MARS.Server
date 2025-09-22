@@ -12,6 +12,8 @@ public class HelpCommand : BaseCommand
 
     public override Platform[] AvailablePlatforms => [Platform.Telegram];
 
+    public override CommandVisibility Visibility => CommandVisibility.All; // Видна везде
+
     public override Task<string> ExecuteAsync(
         Dictionary<string, object> parameters,
         Platform platform = Platform.None,

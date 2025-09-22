@@ -136,6 +136,16 @@ public class TwitchCommandService : PlatformCommandServiceBase<string>, IHostedS
                         return;
                     }
 
+                    // Обработка специальной команды c (краткий список)
+                    if (commandName.Equals("c", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var includeAdminCommands = IsAdmin.Invoke(userId);
+
+                        var shortCommandsList = GetShortCommandsList(userId, includeAdminCommands);
+                        await SendMessage(shortCommandsList);
+                        return;
+                    }
+
                     // Проверяем, существует ли команда
                     if (!_commands.TryGetValue(commandName, out var command))
                     {
@@ -216,6 +226,64 @@ public class TwitchCommandService : PlatformCommandServiceBase<string>, IHostedS
                 }
             });
         }
+    }
+
+    /// <summary>
+    /// Получить краткий список команд для пользователя
+    /// </summary>
+    /// <param name="userId">ID пользователя</param>
+    /// <param name="includeAdminCommands">Включить админские команды</param>
+    /// <returns>Краткий список команд</returns>
+    private string GetShortCommandsList(string userId, bool includeAdminCommands = false)
+    {
+        var isAdmin = IsUserAdmin(userId);
+
+        if (includeAdminCommands && !isAdmin)
+        {
+            return "У вас нет прав для просмотра админских команд.";
+        }
+
+        var commands = new List<string>();
+
+        // Фильтруем команды по видимости и добавляем только названия
+        foreach (
+            var command in _commands.Values.Where(c =>
+                !c.IsAdminCommand && c.IsAvailableOnPlatform(Platform.Twitch)
+            )
+        )
+        {
+            if (command.IsVisibleIn(CommandVisibility.ShortList))
+            {
+                commands.Add($"!{command.CommandName}");
+            }
+        }
+
+        // Добавляем админские команды если запрошено и пользователь админ
+        if (includeAdminCommands && isAdmin)
+        {
+            foreach (
+                var command in _commands.Values.Where(c =>
+                    c.IsAdminCommand && c.IsAvailableOnPlatform(Platform.Twitch)
+                )
+            )
+            {
+                if (command.IsVisibleIn(CommandVisibility.ShortList))
+                {
+                    commands.Add($"!{command.CommandName}");
+                }
+            }
+        }
+
+        if (commands.Count == 0)
+        {
+            return "Нет доступных команд для вашей роли.";
+        }
+
+        var result = "Команды: ";
+
+        result += string.Join(" | ", commands);
+
+        return result;
     }
 
     private async Task SendMessage(string message)

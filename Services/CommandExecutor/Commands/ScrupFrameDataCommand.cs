@@ -84,6 +84,8 @@ public class ScrupFrameDataCommand(Tekken8FrameData frameData) : BaseCommand
     public override Platform[] AvailablePlatforms =>
         [Platform.Telegram, Platform.Api, Platform.Twitch];
 
+    public override CommandVisibility Visibility => CommandVisibility.FullList; // Скрываем из краткого списка
+
     public override async Task<string> ExecuteAsync(
         Dictionary<string, object> parameters,
         Platform platform = Platform.None,

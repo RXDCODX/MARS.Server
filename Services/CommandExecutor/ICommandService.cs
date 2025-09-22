@@ -119,4 +119,15 @@ public class CommandInfo
     public bool IsAdminCommand { get; set; }
     public CommandParameterInfo[] Parameters { get; set; } = [];
     public Platform[] AvailablePlatforms { get; set; } = [];
+    public CommandVisibility Visibility { get; set; } = CommandVisibility.All;
+
+    /// <summary>
+    /// Проверяет, должна ли команда отображаться в указанном контексте
+    /// </summary>
+    /// <param name="visibility">Контекст видимости</param>
+    /// <returns>True, если команда должна отображаться</returns>
+    public bool IsVisibleIn(CommandVisibility visibility)
+    {
+        return (Visibility & visibility) != 0;
+    }
 }

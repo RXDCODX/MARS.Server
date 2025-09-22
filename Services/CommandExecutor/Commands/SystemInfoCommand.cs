@@ -17,6 +17,8 @@ public class SystemInfoCommand(
 
     public override string[] Aliases => ["sysinfo"];
 
+    public override CommandVisibility Visibility => CommandVisibility.FullList; // Скрываем из краткого списка
+
     public override async Task<string> ExecuteAsync(
         Dictionary<string, object> parameters,
         Platform platform = Platform.None,

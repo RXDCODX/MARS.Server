@@ -23,6 +23,11 @@ public abstract class BaseCommand
     public virtual CommandParameterInfo[] Parameters => [];
 
     /// <summary>
+    /// Флаги видимости команды в различных контекстах
+    /// </summary>
+    public virtual CommandVisibility Visibility => CommandVisibility.All;
+
+    /// <summary>
     /// Выполняет команду с разобранными параметрами
     /// </summary>
     /// <param name="parameters">Разобранные параметры</param>
@@ -119,6 +124,16 @@ public abstract class BaseCommand
     {
         var availablePlatforms = GetAvailablePlatforms();
         return availablePlatforms.Contains(platform);
+    }
+
+    /// <summary>
+    /// Проверяет, должна ли команда отображаться в указанном контексте
+    /// </summary>
+    /// <param name="visibility">Контекст видимости</param>
+    /// <returns>True, если команда должна отображаться</returns>
+    public virtual bool IsVisibleIn(CommandVisibility visibility)
+    {
+        return (Visibility & visibility) != 0;
     }
 
     private static object ConvertValue(string value, string type)

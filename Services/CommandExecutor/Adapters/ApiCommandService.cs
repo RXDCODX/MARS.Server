@@ -386,6 +386,7 @@ public class ApiCommandService : PlatformCommandServiceBase<string>
                     IsAdminCommand = c.IsAdminCommand,
                     Parameters = c.GetParameterInfo(),
                     AvailablePlatforms = c.GetAvailablePlatforms(),
+                    Visibility = c.Visibility,
                 })
                 .ToArray()
         );
@@ -407,6 +408,7 @@ public class ApiCommandService : PlatformCommandServiceBase<string>
                     IsAdminCommand = c.IsAdminCommand,
                     Parameters = c.GetParameterInfo(),
                     AvailablePlatforms = c.GetAvailablePlatforms(),
+                    Visibility = c.Visibility,
                 })
                 .ToArray()
         );
@@ -429,6 +431,7 @@ public class ApiCommandService : PlatformCommandServiceBase<string>
                     IsAdminCommand = c.IsAdminCommand,
                     Parameters = c.GetParameterInfo(),
                     AvailablePlatforms = c.GetAvailablePlatforms(),
+                    Visibility = c.Visibility,
                 })
                 .ToArray()
         );
@@ -451,6 +454,7 @@ public class ApiCommandService : PlatformCommandServiceBase<string>
                     IsAdminCommand = c.IsAdminCommand,
                     Parameters = c.GetParameterInfo(),
                     AvailablePlatforms = c.GetAvailablePlatforms(),
+                    Visibility = c.Visibility,
                 })
                 .ToArray()
         );

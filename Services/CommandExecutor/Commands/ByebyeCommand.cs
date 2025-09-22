@@ -12,6 +12,8 @@ public class ByebyeCommand : BaseCommand
     public override Platform[] AvailablePlatforms =>
         [Platform.Telegram, Platform.Api, Platform.Discord, Platform.Vk, Platform.Twitch];
 
+    public override CommandVisibility Visibility => CommandVisibility.All; // Видна везде
+
     public override Task<string> ExecuteAsync(
         Dictionary<string, object> parameters,
         Platform platform = Platform.None,

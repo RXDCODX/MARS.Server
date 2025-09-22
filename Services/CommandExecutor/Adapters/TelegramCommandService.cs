@@ -113,6 +113,17 @@ public class TelegramCommandService(
                                 );
                                 await SendMessage(message.Chat.Id, commandsList);
                             }
+                            // Обработка специальной команды c (краткий список)
+                            else if (commandName.Equals("c", StringComparison.OrdinalIgnoreCase))
+                            {
+                                var includeAdminCommands = IsUserAdmin(message.Chat.Id);
+
+                                var shortCommandsList = GetShortCommandsList(
+                                    message.From?.Id ?? 0,
+                                    includeAdminCommands
+                                );
+                                await SendMessage(message.Chat.Id, shortCommandsList);
+                            }
                             else
                             {
                                 // Проверяем, существует ли команда
@@ -210,6 +221,62 @@ public class TelegramCommandService(
                 });
             }
         }
+    }
+
+    /// <summary>
+    /// Получить краткий список команд для пользователя
+    /// </summary>
+    /// <param name="userId">ID пользователя</param>
+    /// <param name="includeAdminCommands">Включить админские команды</param>
+    /// <returns>Краткий список команд</returns>
+    private string GetShortCommandsList(long userId, bool includeAdminCommands = false)
+    {
+        var isAdmin = IsUserAdmin(userId);
+
+        if (includeAdminCommands && !isAdmin)
+        {
+            return "У вас нет прав для просмотра админских команд.";
+        }
+
+        var commands = new List<string>();
+
+        // Получаем команды через CommandExecutorService и фильтруем по видимости
+        var allCommands = executor.GetUserCommandsInfoAsync(Platform.Telegram).GetAwaiter().GetResult();
+        var adminCommands = executor.GetAdminCommandsInfoAsync(Platform.Telegram).GetAwaiter().GetResult();
+
+        // Фильтруем пользовательские команды по видимости
+        foreach (var command in allCommands)
+        {
+            if (command.IsVisibleIn(CommandVisibility.ShortList))
+            {
+                commands.Add($"/{command.Name}");
+            }
+        }
+
+        // Добавляем админские команды если запрошено и пользователь админ
+        if (includeAdminCommands && isAdmin)
+        {
+            foreach (var command in adminCommands)
+            {
+                if (command.IsVisibleIn(CommandVisibility.ShortList))
+                {
+                    commands.Add($"/{command.Name}");
+                }
+            }
+        }
+
+        if (commands.Count == 0)
+        {
+            return "Нет доступных команд для вашей роли.";
+        }
+
+        var result = includeAdminCommands && isAdmin
+            ? "Команды: "
+            : "Команды: ";
+
+        result += string.Join(" | ", commands);
+
+        return result;
     }
 
     private async Task SendMessage(long chatId, string message)

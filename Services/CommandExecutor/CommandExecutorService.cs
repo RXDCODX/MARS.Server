@@ -21,12 +21,6 @@ public class CommandExecutorService(CommandFactory commandFactory)
         {
             _aliases[alias] = command.CommandName;
         }
-
-        // Добавляем специальные алиасы
-        if (command.CommandName == "framedata")
-        {
-            _aliases["fd"] = command.CommandName;
-        }
     }
 
     public Task<string[]> GetUserCommandsAsync(CancellationToken cancellationToken = default)
@@ -38,7 +32,9 @@ public class CommandExecutorService(CommandFactory commandFactory)
             result =
             [
                 .. _commands
-                    .Values.Where(c => !c.IsAdminCommand)
+                    .Values.Where(c =>
+                        !c.IsAdminCommand && c.IsVisibleIn(CommandVisibility.FullList)
+                    )
                     .Select(c => $"/{c.CommandName} - {c.Description}"),
             ];
         }
@@ -55,7 +51,9 @@ public class CommandExecutorService(CommandFactory commandFactory)
             result =
             [
                 .. _commands
-                    .Values.Where(c => c.IsAdminCommand)
+                    .Values.Where(c =>
+                        c.IsAdminCommand && c.IsVisibleIn(CommandVisibility.FullList)
+                    )
                     .Select(c => $"/{c.CommandName} - {c.Description}"),
             ];
         }
@@ -75,7 +73,11 @@ public class CommandExecutorService(CommandFactory commandFactory)
             result =
             [
                 .. _commands
-                    .Values.Where(c => !c.IsAdminCommand && c.IsAvailableOnPlatform(platforms))
+                    .Values.Where(c =>
+                        !c.IsAdminCommand
+                        && c.IsAvailableOnPlatform(platforms)
+                        && c.IsVisibleIn(CommandVisibility.FullList)
+                    )
                     .Select(c => $"/{c.CommandName} - {c.Description}"),
             ];
         }
@@ -95,7 +97,11 @@ public class CommandExecutorService(CommandFactory commandFactory)
             result =
             [
                 .. _commands
-                    .Values.Where(c => c.IsAdminCommand && c.IsAvailableOnPlatform(platforms))
+                    .Values.Where(c =>
+                        c.IsAdminCommand
+                        && c.IsAvailableOnPlatform(platforms)
+                        && c.IsVisibleIn(CommandVisibility.FullList)
+                    )
                     .Select(c => $"/{c.CommandName} - {c.Description}"),
             ];
         }
@@ -146,6 +152,7 @@ public class CommandExecutorService(CommandFactory commandFactory)
                         IsAdminCommand = c.IsAdminCommand,
                         Parameters = c.GetParameterInfo(),
                         AvailablePlatforms = c.GetAvailablePlatforms(),
+                        Visibility = c.Visibility,
                     }),
             ];
         }
@@ -172,6 +179,7 @@ public class CommandExecutorService(CommandFactory commandFactory)
                         IsAdminCommand = c.IsAdminCommand,
                         Parameters = c.GetParameterInfo(),
                         AvailablePlatforms = c.GetAvailablePlatforms(),
+                        Visibility = c.Visibility,
                     }),
             ];
         }
@@ -199,6 +207,7 @@ public class CommandExecutorService(CommandFactory commandFactory)
                         IsAdminCommand = c.IsAdminCommand,
                         Parameters = c.GetParameterInfo(),
                         AvailablePlatforms = c.GetAvailablePlatforms(),
+                        Visibility = c.Visibility,
                     }),
             ];
         }
@@ -226,6 +235,7 @@ public class CommandExecutorService(CommandFactory commandFactory)
                         IsAdminCommand = c.IsAdminCommand,
                         Parameters = c.GetParameterInfo(),
                         AvailablePlatforms = c.GetAvailablePlatforms(),
+                        Visibility = c.Visibility,
                     }),
             ];
         }
@@ -286,7 +296,7 @@ public class CommandExecutorService(CommandFactory commandFactory)
     )
     {
         var result =
-            $"Команда '{commandName}' не найдена. Используйте /commands для списка доступных команд.";
+            $"Команда '{commandName}' не найдена. Используйте /commands или /c для списка доступных команд.";
 
         if (!string.IsNullOrWhiteSpace(commandName))
         {
