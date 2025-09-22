@@ -1,6 +1,4 @@
-﻿using Microsoft.AspNetCore.Http.HttpResults;
-
-namespace MARS.Server.Services;
+﻿namespace MARS.Server.Services;
 
 /// <summary>
 /// Результат некой операции

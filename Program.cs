@@ -1,9 +1,7 @@
 ﻿using System.Diagnostics;
-using BooruSharp.Booru;
 using MARS.Server.CustomLoggers.DatabaseLogger;
 using MARS.Server.CustomLoggers.SignalRLogger;
 using MARS.Server.CustomLoggers.TelegramLogger;
-using MARS.Server.Services._365Genius;
 using MARS.Server.Services.CinemaQueue;
 using MARS.Server.Services.CommandExecutor;
 using MARS.Server.Services.Honkai;
@@ -11,17 +9,8 @@ using MARS.Server.Services.KeyboardHook;
 using MARS.Server.Services.Logs.Interfaces;
 using MARS.Server.Services.Logs.Services;
 using MARS.Server.Services.MemoryStorageService;
-using MARS.Server.Services.PyroAlerts;
-using MARS.Server.Services.RandomMem;
-using MARS.Server.Services.Scoreboard;
-using MARS.Server.Services.Shikimori;
 using MARS.Server.Services.Twitch.Rewards;
 using MARS.Server.Services.Twitch.StreamManagement;
-using MARS.Server.Services.Twitch.Synthesizer;
-using MARS.Server.Services.Twitch.Synthesizer.Enitity;
-using MARS.Server.Services.WaifuRoll;
-using MARS.Server.Services.WaifuRoll.Entitys.Interfaces;
-using MARS.Server.Services.WaifuRoll.helpers;
 using WTelegram;
 
 namespace MARS.Server;
@@ -182,13 +171,12 @@ public static class Program
         services.AddCommandExecutorServices();
         services.AddTelegramThings(loggerFactory);
         services.AddConfiguration(configuration);
-        //services.AddYandexMusic();
-        //services.AddSoundRequest();
         services.AddBaseAspNetMiddlewares();
         services.AddSwaggerServices();
         services.AddHonkaiServices();
         services.AddCinemaQueueServicesAsSingleton();
         services.AddTwitchStreamManagementServiceOnly();
+        services.AddMarsDomainServices();
 
         services.AddSingleton<IDbContextFactory<AppDbContext>>(contextFactory);
 
@@ -197,54 +185,7 @@ public static class Program
             options.ServiceName = "!Zyz";
         });
 
-        services.AddSingleton<PyroAlertsHelper>();
-        services.AddSingleton<PyroAlertsHandler>();
-
         services.AddSingleton<AnswersForTwitchRewards>();
-
-        services.AddSingleton<ShikimoriService>();
-
-        services.AddSingleton<ScoreboardService>();
-
-        services.AddSingleton<WaifuRollService>();
-        services.AddSingleton<WaifuRollEnsurenceService>();
-        services.AddSingleton<WaifuPrizesService>();
-        services.AddSingleton<IWaifuRollGuaranteeService, WaifuRollGuaranteeService>();
-
-        services.AddSingleton<RandomMemHandler>();
-        services.AddSingleton<RandomMemeWorker>();
-        services.AddHostedService(sp => sp.GetRequiredService<RandomMemeWorker>());
-        services.AddSingleton<RandomMemOnline>();
-        services.AddHostedService(sp => sp.GetRequiredService<RandomMemOnline>());
-
-        // Register RandomMeme CRUD service
-        services.AddScoped<IRandomMemeService, RandomMemeService>();
-
-        services.AddSingleton(
-            (sp) => VoicerFactory.CreateVoicer(sp.GetRequiredService<ILogger<IVoicer>>())
-        );
-        services.AddSingleton<SyntheziaQueueManager>();
-        services.AddHostedService(sp => sp.GetRequiredService<SyntheziaQueueManager>());
-
-        services.AddSingleton<Worker365>();
-        services.AddHostedService(sp => sp.GetRequiredService<Worker365>());
-
-        services.AddSingleton<Gelbooru>(sp =>
-        {
-            var booruConfiguration =
-                sp.GetService<IOptions<BooruConfiguration>>() ?? throw new NullReferenceException();
-
-            return new Gelbooru
-            {
-                Auth = new BooruAuth(
-                    booruConfiguration.Value.UserId,
-                    booruConfiguration.Value.PwdHash
-                ),
-            };
-        });
-
-        services.AddSingleton<WaifuRollService>();
-        services.AddHostedService(sp => sp.GetRequiredService<WaifuRollService>());
 
         // Добавляем сервис архивирования потоков
         //services.AddSingleton<IFFmpegService, FFmpegService>();

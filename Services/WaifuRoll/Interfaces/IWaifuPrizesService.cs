@@ -1,6 +1,4 @@
-using MARS.Server.Services.WaifuRoll.Entitys;
-
-namespace MARS.Server.Services.WaifuRoll.Interfaces;
+﻿namespace MARS.Server.Services.WaifuRoll.Interfaces;
 
 public interface IWaifuPrizesService
 {

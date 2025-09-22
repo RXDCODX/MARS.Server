@@ -1,4 +1,5 @@
-﻿using ShikimoriSharp;
+﻿using MARS.Server.Services.Shikimori.Entitys;
+using ShikimoriSharp;
 using ShikimoriSharp.Bases;
 using ShikimoriSharp.Classes;
 using ShikimoriSharp.Settings;
@@ -8,21 +9,24 @@ namespace MARS.Server.Services.Shikimori;
 public class ShikimoriService : ITelegramusService
 {
     private readonly ILogger _logger;
-    private readonly ShikimoriClientOptions _options;
     private readonly ShikimoriClient _client;
+    private readonly IShikimoriRateLimiter _shikimoriRateLimiter;
 
     public ShikimoriService(
         ILogger<ShikimoriService> logger,
-        IOptions<ShikimoriClientOptions> configuration
+        IOptions<ShikimoriClientOptions> configuration,
+        IShikimoriRateLimiter shikimoriRateLimiter
     )
     {
         _logger = logger;
-        _options = configuration.Value ?? throw new NullReferenceException();
+        _shikimoriRateLimiter = shikimoriRateLimiter;
+        var options = configuration.Value ?? throw new NullReferenceException();
         var settings = new ClientSettings(
-            _options.ClientName,
-            _options.ClientId,
-            _options.ClientSecret
+            options.ClientName,
+            options.ClientId,
+            options.ClientSecret
         );
+        //_client = new ShikimoriClient(logger, settings);
         _client = new ShikimoriClient(logger, settings);
     }
 
@@ -32,6 +36,8 @@ public class ShikimoriService : ITelegramusService
 
         try
         {
+            await _shikimoriRateLimiter.WaitForSlotAsync();
+
             var animes = await _client.Animes.GetAnime(
                 new AnimeRequestSettings
                 {
@@ -58,6 +64,7 @@ public class ShikimoriService : ITelegramusService
         {
             try
             {
+                await _shikimoriRateLimiter.WaitForSlotAsync();
                 result = await _client.Animes.GetAnime(id);
             }
             catch (Exception ex)
@@ -75,6 +82,8 @@ public class ShikimoriService : ITelegramusService
 
         try
         {
+            await _shikimoriRateLimiter.WaitForSlotAsync();
+
             var mangas = await _client.Mangas.GetBySearch(
                 new MangaRequestSettings
                 {
@@ -101,6 +110,7 @@ public class ShikimoriService : ITelegramusService
         {
             try
             {
+                await _shikimoriRateLimiter.WaitForSlotAsync();
                 result = await _client.Mangas.GetById(id);
             }
             catch (Exception ex)
@@ -120,6 +130,7 @@ public class ShikimoriService : ITelegramusService
         {
             try
             {
+                await _shikimoriRateLimiter.WaitForSlotAsync();
                 result = await _client.Characters.GetCharacterById(id);
             }
             catch (Exception ex)
@@ -207,5 +218,14 @@ public class ShikimoriService : ITelegramusService
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Получает информацию о состоянии рейт лимитера
+    /// </summary>
+    /// <returns>Информация о доступных слотах</returns>
+    public RateLimiterInfo GetRateLimiterInfo()
+    {
+        return _shikimoriRateLimiter.GetInfo();
     }
 }

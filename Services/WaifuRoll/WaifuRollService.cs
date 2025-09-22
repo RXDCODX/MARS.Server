@@ -1,5 +1,4 @@
-﻿using MARS.Server.Services.Shikimori;
-using MARS.Server.Services.Twitch.Rewards;
+﻿using MARS.Server.Services.Twitch.Rewards;
 using MARS.Server.Services.WaifuRoll.helpers;
 using MARS.Server.Services.WaifuRoll.Interfaces;
 using MARS.Server.Services.WaifuRoll.Models;

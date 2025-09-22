@@ -1,5 +1,4 @@
 ﻿using MARS.Server.Services.Shikimori;
-using Microsoft.EntityFrameworkCore;
 
 namespace MARS.Server.Services.WaifuRoll.helpers;
 

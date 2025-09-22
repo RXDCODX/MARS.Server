@@ -1,9 +1,15 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
+using BooruSharp.Booru;
 using MARS.Server.CustomLoggers.SignalRLogger;
+using MARS.Server.Services._365Genius;
 using MARS.Server.Services.Framedata;
+using MARS.Server.Services.PyroAlerts;
+using MARS.Server.Services.RandomMem;
 using MARS.Server.Services.Scoreboard;
 using MARS.Server.Services.ServiceManager;
+using MARS.Server.Services.Shikimori;
+using MARS.Server.Services.Shikimori.Entitys;
 using MARS.Server.Services.SoundRequest;
 using MARS.Server.Services.SoundRequest.Platforms.YouTube;
 using MARS.Server.Services.TelegramBotService;
@@ -30,7 +36,12 @@ using MARS.Server.Services.Twitch.Rewards.TwitchScreenParticles;
 using MARS.Server.Services.Twitch.Rewards.TwitchWaifuRolls;
 using MARS.Server.Services.Twitch.SoundBarService;
 using MARS.Server.Services.Twitch.StreamBotNotifications;
+using MARS.Server.Services.Twitch.Synthesizer;
+using MARS.Server.Services.Twitch.Synthesizer.Enitity;
 using MARS.Server.Services.Twitch.TwitchFollowers;
+using MARS.Server.Services.WaifuRoll;
+using MARS.Server.Services.WaifuRoll.Entitys.Interfaces;
+using MARS.Server.Services.WaifuRoll.helpers;
 using Microsoft.OpenApi.Models;
 using TwitchLib.Api;
 using TwitchLib.Api.Core;
@@ -452,5 +463,106 @@ public static class StartupEstensions
         });
 
         return app;
+    }
+
+    /// <summary>
+    /// Групповая регистрация доменных сервисов MARS (Shikimori, WaifuRoll, RandomMem, Synthezia, 365, PyroAlerts, Gelbooru, Scoreboard)
+    /// </summary>
+    internal static IServiceCollection AddMarsDomainServices(this IServiceCollection services)
+    {
+        services
+            .AddPyroAlertsServices()
+            .AddShikimoriServices()
+            .AddScoreboardServiceSingleton()
+            .AddWaifuRollServices()
+            .AddRandomMemServices()
+            .AddSyntheziaServices()
+            .Add365Services()
+            .AddBooruServices();
+
+        return services;
+    }
+
+    internal static IServiceCollection AddPyroAlertsServices(this IServiceCollection services)
+    {
+        services.AddSingleton<PyroAlertsHelper>();
+        services.AddSingleton<PyroAlertsHandler>();
+        return services;
+    }
+
+    internal static IServiceCollection AddShikimoriServices(this IServiceCollection services)
+    {
+        services.AddSingleton<IShikimoriRateLimiter, ShikimoriShikimoriRateLimiter>();
+        services.AddSingleton<ShikimoriService>();
+        return services;
+    }
+
+    internal static IServiceCollection AddScoreboardServiceSingleton(
+        this IServiceCollection services
+    )
+    {
+        services.AddSingleton<ScoreboardService>();
+        return services;
+    }
+
+    internal static IServiceCollection AddWaifuRollServices(this IServiceCollection services)
+    {
+        services.AddSingleton<WaifuRollService>();
+        services.AddSingleton<WaifuRollEnsurenceService>();
+        services.AddSingleton<WaifuPrizesService>();
+        services.AddSingleton<IWaifuRollGuaranteeService, WaifuRollGuaranteeService>();
+
+        // Фоновый запуск WaifuRollService
+        services.AddHostedService(sp => sp.GetRequiredService<WaifuRollService>());
+
+        return services;
+    }
+
+    internal static IServiceCollection AddRandomMemServices(this IServiceCollection services)
+    {
+        services.AddSingleton<RandomMemHandler>();
+        services.AddSingleton<RandomMemeWorker>();
+        services.AddHostedService(sp => sp.GetRequiredService<RandomMemeWorker>());
+        services.AddSingleton<RandomMemOnline>();
+        services.AddHostedService(sp => sp.GetRequiredService<RandomMemOnline>());
+
+        services.AddScoped<IRandomMemeService, RandomMemeService>();
+        return services;
+    }
+
+    internal static IServiceCollection AddSyntheziaServices(this IServiceCollection services)
+    {
+        services.AddSingleton(
+            (sp) => VoicerFactory.CreateVoicer(sp.GetRequiredService<ILogger<IVoicer>>())
+        );
+        services.AddSingleton<SyntheziaQueueManager>();
+        services.AddHostedService(sp => sp.GetRequiredService<SyntheziaQueueManager>());
+        return services;
+    }
+
+    internal static IServiceCollection Add365Services(this IServiceCollection services)
+    {
+        services.AddSingleton<Worker365>();
+        services.AddHostedService(sp => sp.GetRequiredService<Worker365>());
+        return services;
+    }
+
+    internal static IServiceCollection AddBooruServices(this IServiceCollection services)
+    {
+        services.AddSingleton<Gelbooru>(sp =>
+        {
+            var booruConfiguration =
+                sp.GetService<IOptions<BooruConfiguration>>() ?? throw new NullReferenceException();
+
+            return new Gelbooru
+            {
+                Auth = new BooruAuth(
+                    booruConfiguration.Value.UserId,
+                    booruConfiguration.Value.PwdHash
+                ),
+            };
+        });
+
+        return services;
     }
 }
