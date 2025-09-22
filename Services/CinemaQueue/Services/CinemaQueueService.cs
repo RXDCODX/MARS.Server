@@ -104,9 +104,9 @@ public class CinemaQueueService(
         CancellationToken cancellationToken = default
     )
     {
-        CinemaMediaItemDto result = new() { Title = string.Empty, MediaUrl = string.Empty };
+        CinemaMediaItemDto result = new() { MediaUrl = string.Empty };
 
-        if (request != null && !string.IsNullOrWhiteSpace(request.Title))
+        if (request != null && !string.IsNullOrWhiteSpace(request.MediaUrl))
         {
             try
             {
@@ -130,7 +130,7 @@ public class CinemaQueueService(
                 var createdItem = await repository.CreateAsync(mediaItem, cancellationToken);
                 logger.LogInformation(
                     "Created media item: {Title} with ID: {Id}",
-                    createdItem.Title,
+                    createdItem.Title ?? "Untitled",
                     createdItem.Id
                 );
 
@@ -138,7 +138,7 @@ public class CinemaQueueService(
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Error creating media item: {Title}", request.Title);
+                logger.LogError(ex, "Error creating media item: {Title}", request.Title ?? "Untitled");
                 throw;
             }
         }

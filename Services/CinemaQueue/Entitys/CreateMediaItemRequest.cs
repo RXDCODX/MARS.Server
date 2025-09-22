@@ -2,7 +2,7 @@ namespace MARS.Server.Services.CinemaQueue.Entitys;
 
 public class CreateMediaItemRequest
 {
-    public required string Title { get; set; }
+    public string? Title { get; set; }
     public string? Description { get; set; }
     public required string MediaUrl { get; set; }
     public int Priority { get; set; } = 0;

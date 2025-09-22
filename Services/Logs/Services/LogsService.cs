@@ -18,6 +18,18 @@ public class LogsService(LoggerDbContext dbContext) : ILogsService
     {
         (IEnumerable<Log> Logs, int TotalCount) result = ([], 0);
         
+        try
+        {
+            // Проверяем подключение к базе данных
+            var totalLogsCount = await dbContext.Logs.CountAsync();
+            Console.WriteLine($"Всего логов в базе данных: {totalLogsCount}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Ошибка при проверке базы данных: {ex.Message}");
+            return result;
+        }
+        
         if (page > 0 && pageSize > 0)
         {
             var query = dbContext.Logs.AsNoTracking();

@@ -1,5 +1,6 @@
 ﻿using MARS.Server.Services.Twitch.Management.Entitys;
 using TwitchLib.Api.Core.Enums;
+using TwitchLib.Api.Core.Exceptions;
 using TwitchLib.Api.Helix.Models.EventSub;
 using TwitchLib.EventSub.Websockets;
 
@@ -169,6 +170,30 @@ public class EventSubService(
                             subscription.Id
                         );
                     }
+                }
+                catch (HttpRequestException httpEx)
+                    when (httpEx.Message.Contains("404") || httpEx.Message.Contains("Not Found"))
+                {
+                    logger.LogWarning(
+                        "Подписка {SubscriptionId} уже удалена или не существует (404)",
+                        subscription.Id
+                    );
+                }
+                catch (TwitchLib.Api.Core.Exceptions.BadResourceException)
+                {
+                    logger.LogWarning(
+                        "Подписка {SubscriptionId} недоступна для удаления (BadResourceException)",
+                        subscription.Id
+                    );
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(
+                        ex,
+                        "Ошибка при удалении подписки {SubscriptionId}: {ErrorMessage}",
+                        subscription.Id,
+                        ex.Message
+                    );
                 }
             }
         }
@@ -629,14 +654,12 @@ public class EventSubService(
         try
         {
             var token = tokenService.Token;
-            if (token == null)
-            {
-                return null;
-            }
-            return await api.Helix.EventSub.GetEventSubSubscriptionsAsync(
-                clientId: api.Settings.ClientId,
-                accessToken: token.AccessToken
-            );
+            return token == null
+                ? null
+                : await api.Helix.EventSub.GetEventSubSubscriptionsAsync(
+                    clientId: api.Settings.ClientId,
+                    accessToken: token.AccessToken
+                );
         }
         catch (HttpRequestException httpEx)
             when (httpEx.Message.Contains("401") || httpEx.Message.Contains("Unauthorized"))
@@ -668,6 +691,17 @@ public class EventSubService(
                 logger.LogError("Не удалось обновить токен после получения ошибки 401");
                 return null;
             }
+        }
+        catch (HttpRequestException httpEx)
+            when (httpEx.Message.Contains("404") || httpEx.Message.Contains("Not Found"))
+        {
+            logger.LogWarning("EventSub подписки не найдены (404) - возможно, подписок еще нет");
+            return null;
+        }
+        catch (BadResourceException)
+        {
+            logger.LogWarning("Ресурс EventSub недоступен (BadResourceException)");
+            return null;
         }
         catch (Exception e)
         {

@@ -30,6 +30,8 @@ public class LogsController(ILogsService logsService, ILogger<LogsController> lo
     {
         try
         {
+            logger.LogInformation("Получен запрос логов: page={Page}, pageSize={PageSize}, logLevel={LogLevel}, fromDate={FromDate}, toDate={ToDate}, searchText={SearchText}", 
+                page, pageSize, logLevel, fromDate, toDate, searchText);
             if (page < 1)
             {
                 return BadRequest("Номер страницы должен быть больше 0");
@@ -59,6 +61,8 @@ public class LogsController(ILogsService logsService, ILogger<LogsController> lo
                 PageSize = pageSize,
                 TotalPages = (int)Math.Ceiling((double)totalCount / pageSize),
             };
+
+            logger.LogInformation("Возвращаем {LogCount} логов из {TotalCount} общих", logs.Count(), totalCount);
 
             return Ok(response);
         }
@@ -159,6 +163,30 @@ public class LogsController(ILogsService logsService, ILogger<LogsController> lo
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при получении статистики логов");
+            return StatusCode(500, "Внутренняя ошибка сервера");
+        }
+    }
+
+    /// <summary>
+    /// Создать тестовый лог для проверки работы системы
+    /// </summary>
+    [HttpPost("test")]
+    public IActionResult CreateTestLog()
+    {
+        try
+        {
+            logger.LogTrace("Тестовый лог уровня Trace");
+            logger.LogDebug("Тестовый лог уровня Debug");
+            logger.LogInformation("Тестовый лог уровня Information");
+            logger.LogWarning("Тестовый лог уровня Warning");
+            logger.LogError("Тестовый лог уровня Error");
+            logger.LogCritical("Тестовый лог уровня Critical");
+            
+            return Ok(new { message = "Тестовые логи созданы", timestamp = DateTime.UtcNow });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при создании тестовых логов");
             return StatusCode(500, "Внутренняя ошибка сервера");
         }
     }

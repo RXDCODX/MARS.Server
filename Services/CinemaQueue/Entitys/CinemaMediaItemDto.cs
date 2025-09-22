@@ -3,7 +3,7 @@
 public class CinemaMediaItemDto
 {
     public Guid Id { get; set; }
-    public required string Title { get; set; }
+    public string? Title { get; set; }
     public string? Description { get; set; }
     public required string MediaUrl { get; set; }
     public MediaStatus Status { get; set; }

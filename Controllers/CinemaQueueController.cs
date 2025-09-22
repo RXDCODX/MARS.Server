@@ -123,16 +123,12 @@ public class CinemaQueueController(
         
         try
         {
-            if (ModelState.IsValid)
+            if (request != null && !string.IsNullOrWhiteSpace(request.MediaUrl))
             {
                 // Если title или description не указаны, пытаемся получить их из URL
                 if (
-                    request != null
-                    && (
-                        string.IsNullOrWhiteSpace(request.Title)
-                        || string.IsNullOrWhiteSpace(request.Description)
-                    )
-                    && !string.IsNullOrWhiteSpace(request.MediaUrl)
+                    string.IsNullOrWhiteSpace(request.Title)
+                    || string.IsNullOrWhiteSpace(request.Description)
                 )
                 {
                     var metadata = await metadataService.GetMetadataAsync(
@@ -160,7 +156,7 @@ public class CinemaQueueController(
             }
             else
             {
-                result = BadRequest(ModelState);
+                result = BadRequest("MediaUrl is required");
             }
         }
         catch (Exception ex)

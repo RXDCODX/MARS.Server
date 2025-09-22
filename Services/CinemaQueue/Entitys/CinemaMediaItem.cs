@@ -7,8 +7,7 @@ public class CinemaMediaItem
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     public Guid Id { get; set; }
 
-    [Required]
-    public required string Title { get; set; } = string.Empty;
+    public string? Title { get; set; }
 
     public string? Description { get; set; }
 
@@ -16,13 +15,10 @@ public class CinemaMediaItem
     [MaxLength(1000)]
     public required string MediaUrl { get; set; }
 
-    [Required]
     public MediaStatus Status { get; set; } = MediaStatus.Pending;
 
-    [Required]
     public int Priority { get; set; } = 0;
 
-    [Required]
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.Now;
 
     public DateTimeOffset? ScheduledFor { get; set; }
