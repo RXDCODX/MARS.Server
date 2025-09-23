@@ -1,8 +1,8 @@
-﻿using MARS.Server.Services.Twitch.Management.Entitys;
-using TwitchLib.Api.Core.Enums;
+﻿using TwitchLib.Api.Core.Enums;
 using TwitchLib.Api.Core.Exceptions;
 using TwitchLib.Api.Helix.Models.EventSub;
 using TwitchLib.EventSub.Websockets;
+using TwitchLib.EventSub.Websockets.Core.EventArgs;
 
 namespace MARS.Server.Services.Twitch.Management;
 
@@ -42,45 +42,15 @@ public class EventSubService(
                     // Только если нет активных подписок, делаем переподписку
                     await ResubscribeToEventSub();
                 }
-                else if (!_isWsConnected)
-                {
-                    // Если подписки есть, но WebSocket отключен - пробуем переподключить
-                    await TryReconnect();
-                }
-                // Если подписки активны и WebSocket подключен - ничего не делаем
             }
         }
 
         if (_firstActivation)
         {
-            wsClient.WebsocketConnected += async (_, _) =>
-            {
-                _isWsConnected = true;
-                await ResubscribeToEventSub();
-            };
-
-            wsClient.ErrorOccurred += async (_, args) =>
-            {
-                logger.LogException(args.Exception);
-
-                await TryReconnect();
-            };
-
-            wsClient.WebsocketReconnected += async (sender, args) =>
-            {
-                _isWsConnected = true;
-                if (tokenService.Token != null)
-                {
-                    await ResubscribeToEventSub();
-                }
-
-                await Task.Delay(1000, _cancellationToken);
-            };
-
-            wsClient.WebsocketDisconnected += async (sender, args) =>
-            {
-                await TryReconnect();
-            };
+            wsClient.WebsocketConnected += WsClientOnWebsocketConnected;
+            wsClient.ErrorOccurred += WsClientOnErrorOccurred;
+            wsClient.WebsocketReconnected += WsClientOnWebsocketReconnected;
+            wsClient.WebsocketDisconnected += WsClientOnWebsocketDisconnected;
 
             _firstActivation = false;
 
@@ -95,6 +65,34 @@ public class EventSubService(
 
             await wsClient.ConnectAsync();
         }
+    }
+
+    private async Task WsClientOnWebsocketDisconnected(object sender, EventArgs args)
+    {
+        await TryReconnect();
+    }
+
+    private async Task WsClientOnWebsocketReconnected(object sender, EventArgs args)
+    {
+        _isWsConnected = true;
+        if (tokenService.Token != null)
+        {
+            await ResubscribeToEventSub();
+        }
+
+        await Task.Delay(1000, _cancellationToken);
+    }
+
+    private async Task WsClientOnErrorOccurred(object sender, ErrorOccuredArgs args)
+    {
+        logger.LogException(args.Exception);
+        await TryReconnect();
+    }
+
+    private async Task WsClientOnWebsocketConnected(object sender, WebsocketConnectedArgs args)
+    {
+        _isWsConnected = true;
+        await ResubscribeToEventSub();
     }
 
     private async Task TryReconnect()
@@ -120,7 +118,6 @@ public class EventSubService(
         }
         catch
         {
-            WsReconnectSlim.Release();
             await TryReconnect();
         }
         finally
@@ -628,14 +625,14 @@ public class EventSubService(
             }
             else
             {
-                var aa = response.Subscriptions.Select(e => e.Type).Distinct();
-                var message = string.Join(Environment.NewLine, aa);
+                var subscriptions = response.Subscriptions.Select(e => e.Type).Distinct().ToArray();
+                var message = string.Join(Environment.NewLine, subscriptions);
                 await client.SendMessage(
                     TelegramExstension.Rxdcodx,
                     "Подключенные ивенты для твича: " + Environment.NewLine + message,
                     cancellationToken: _cancellationToken
                 );
-                return $"Реконект EventSub выполнен успешно. Подписки: {string.Join(", ", aa)}";
+                return $"Реконект EventSub выполнен успешно. Подписки: {string.Join(", ", subscriptions)}";
             }
         }
         catch (Exception ex)

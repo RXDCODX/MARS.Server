@@ -8,46 +8,63 @@ public class TwitchAuthService(
     ILogger<TwitchAuthService> logger,
     TokenService tokenService,
     EventSubService eventSubService,
-    TelegramTokenNotification telegramNotificationService
+    TelegramTokenNotification telegramNotificationService,
+    IHostApplicationLifetime lifetime
 ) : BackgroundService
 {
     private const int CheckIntervalMinutes = 5;
     private static Timer? _timer;
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        try
+        lifetime.ApplicationStarted.Register(() =>
         {
-            // Initial token check
-            var tokenInfo = await tokenService.GetTokenAsync(stoppingToken);
+            Task.Factory.StartNew(
+                async () =>
+                {
+                    try
+                    {
+                        // Initial token check
+                        var tokenInfo = await tokenService.GetTokenAsync(stoppingToken);
 
-            if (string.IsNullOrWhiteSpace(tokenInfo?.AccessToken))
-            {
-                await telegramNotificationService.NotifyStreamerAboutAuthAsync(api);
-            }
-            else if (!await ValidateAndRefreshToken(tokenInfo))
-            {
-                await telegramNotificationService.NotifyStreamerAboutAuthAsync(api);
-            }
-            else
-            {
-                tokenService.Token = tokenInfo;
-            }
+                        if (string.IsNullOrWhiteSpace(tokenInfo?.AccessToken))
+                        {
+                            await telegramNotificationService.NotifyStreamerAboutAuthAsync(api);
+                        }
+                        else
+                        {
+                            tokenService.Token = tokenInfo;
+                        }
 
-            _timer = new Timer(TimeSpan.FromMinutes(CheckIntervalMinutes)) { AutoReset = true };
+                        _timer = new Timer(TimeSpan.FromMinutes(CheckIntervalMinutes))
+                        {
+                            AutoReset = true,
+                        };
 
-            _timer.Elapsed += TimerOnElapsed;
+                        _timer.Elapsed += TimerOnElapsed;
 
-            _timer.Start();
-        }
-        catch (OperationCanceledException)
+                        _timer.Start();
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        // Service is stopping
+                    }
+                    catch (Exception e)
+                    {
+                        logger.LogException(e);
+                    }
+                },
+                stoppingToken
+            );
+        });
+
+        lifetime.ApplicationStopping.Register(() =>
         {
-            // Service is stopping
-        }
-        catch (Exception e)
-        {
-            logger.LogException(e);
-        }
+            _timer?.Stop();
+            _timer?.Dispose();
+        });
+
+        return Task.CompletedTask;
     }
 
     private async void TimerOnElapsed(object? sender, ElapsedEventArgs e)
@@ -65,21 +82,21 @@ public class TwitchAuthService(
     {
         if (DateTime.Now < token.WhenExpires)
         {
-            await eventSubService.ResubscribeToEventSub();
+            await eventSubService.UpdateEventSubAsync();
             return true;
         }
 
         var validated = await api.ValidateToken(logger, token.AccessToken);
         if (validated)
         {
-            await eventSubService.ResubscribeToEventSub();
+            await eventSubService.UpdateEventSubAsync();
             return true;
         }
 
         var isRefreshed = await tokenService.RefreshTokenAsync(token);
         if (isRefreshed)
         {
-            await eventSubService.ResubscribeToEventSub();
+            await eventSubService.UpdateEventSubAsync();
             return true;
         }
 

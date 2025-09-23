@@ -71,7 +71,7 @@ public class SignalRLogger(
         };
 
         // Отправляем через SignalR асинхронно
-        _ = Task.Run(async () =>
+        Task.Factory.StartNew(async () =>
         {
             try
             {

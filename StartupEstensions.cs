@@ -4,6 +4,7 @@ using BooruSharp.Booru;
 using MARS.Server.CustomLoggers.SignalRLogger;
 using MARS.Server.Services._365Genius;
 using MARS.Server.Services.Framedata;
+using MARS.Server.Services.Honkai;
 using MARS.Server.Services.PyroAlerts;
 using MARS.Server.Services.RandomMem;
 using MARS.Server.Services.Scoreboard;
@@ -36,14 +37,13 @@ using MARS.Server.Services.Twitch.Rewards.TwitchScreenParticles;
 using MARS.Server.Services.Twitch.Rewards.TwitchWaifuRolls;
 using MARS.Server.Services.Twitch.SoundBarService;
 using MARS.Server.Services.Twitch.StreamBotNotifications;
+using MARS.Server.Services.Twitch.StreamManagement;
 using MARS.Server.Services.Twitch.Synthesizer;
 using MARS.Server.Services.Twitch.Synthesizer.Enitity;
 using MARS.Server.Services.Twitch.TwitchFollowers;
 using MARS.Server.Services.WaifuRoll;
 using MARS.Server.Services.WaifuRoll.Entitys.Interfaces;
 using MARS.Server.Services.WaifuRoll.helpers;
-using MARS.Server.Services.Honkai;
-using MARS.Server.Services.Twitch.StreamManagement;
 using Microsoft.OpenApi.Models;
 using TwitchLib.Api;
 using TwitchLib.Api.Core;
@@ -228,11 +228,13 @@ public static class StartupEstensions
         // Регистрируем сервис для работы с шаблонами сообщений Twitch
         // services.AddSingleton<TwitchMessageBuilderService>();
         // services.AddHostedService(sp => sp.GetRequiredService<TwitchMessageBuilderService>());
-        services.AddSingleton<TwitchAuthService>();
-        services.AddHostedService(sp => sp.GetRequiredService<TwitchAuthService>());
-        services.AddSingleton<EventSubService>();
+
         services.AddSingleton<TelegramTokenNotification>();
         services.AddSingleton<TokenService>();
+        services.AddSingleton<EventSubService>();
+        services.AddHostedService(sp => sp.GetRequiredService<EventSubService>());
+        services.AddSingleton<TwitchAuthService>();
+        services.AddHostedService(sp => sp.GetRequiredService<TwitchAuthService>());
 
         services.AddSingleton<AutoHello>();
         services.AddHostedService(sp => sp.GetRequiredService<AutoHello>());
@@ -576,10 +578,8 @@ public static class StartupEstensions
         IConfigurationManager configuration
     )
     {
-        services
-            .AddTwitchEvents(configuration)
-            .AddTwitchStreamManagementServiceOnly();
-        
+        services.AddTwitchEvents(configuration).AddTwitchStreamManagementServiceOnly();
+
         return services;
     }
 
@@ -593,7 +593,7 @@ public static class StartupEstensions
             .AddWaifuRollServices()
             .AddRandomMemServices()
             .AddScoreboardServiceSingleton();
-        
+
         return services;
     }
 
@@ -602,11 +602,8 @@ public static class StartupEstensions
     /// </summary>
     internal static IServiceCollection AddExternalApiServices(this IServiceCollection services)
     {
-        services
-            .AddShikimoriServices()
-            .AddPyroAlertsServices()
-            .AddBooruServices();
-        
+        services.AddShikimoriServices().AddPyroAlertsServices().AddBooruServices();
+
         return services;
     }
 
@@ -615,10 +612,8 @@ public static class StartupEstensions
     /// </summary>
     internal static IServiceCollection AddSpecializedServices(this IServiceCollection services)
     {
-        services
-            .AddSyntheziaServices()
-            .Add365Services();
-        
+        services.AddSyntheziaServices().Add365Services();
+
         return services;
     }
 }
