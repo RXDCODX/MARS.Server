@@ -1,4 +1,5 @@
-﻿using TwitchLib.EventSub.Websockets;
+﻿using TwitchLib.EventSub.Core.EventArgs.Channel;
+using TwitchLib.EventSub.Websockets;
 
 namespace MARS.Server.Services.Twitch.Rewards.TwitchScreenParticles;
 
@@ -39,11 +40,11 @@ public class Fireworks : BackgroundService
     }
 
     private Task WsClientOnChannelPointsCustomRewardRedemptionAdd(
-        object sender,
+        object? sender,
         ChannelPointsCustomRewardRedemptionArgs args
     )
     {
-        var twEvent = args.Notification.Payload.Event;
+        var twEvent = args.Payload.Event;
         return
             twEvent.Reward.Cost == 1701
             && twEvent.BroadcasterUserLogin.Equals(

@@ -1,5 +1,6 @@
 ﻿using MARS.Server.Services.CinemaQueue.Entitys;
 using MARS.Server.Services.CinemaQueue.Interfaces;
+using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Websockets;
 
 namespace MARS.Server.Services.CinemaQueue.Services;
@@ -33,7 +34,7 @@ public class TwitchCinemaQueueService(
     }
 
     private async Task OnChannelPointsRedemption(
-        object sender,
+        object? sender,
         ChannelPointsCustomRewardRedemptionArgs e
     )
     {
@@ -74,13 +75,16 @@ public class TwitchCinemaQueueService(
 
             if (string.IsNullOrWhiteSpace(userInput))
             {
-                logger.LogWarning("User input is empty for reward redemption by {UserName}", userName);
+                logger.LogWarning(
+                    "User input is empty for reward redemption by {UserName}",
+                    userName
+                );
                 return;
             }
 
             // Получаем метаданные из ссылки
             var metadata = await metadataService.GetMetadataAsync(userInput);
-            
+
             string title;
             string? description;
 

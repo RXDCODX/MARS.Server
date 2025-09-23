@@ -1,4 +1,5 @@
 ﻿using MARS.Server.Services.Twitch.Rewards.TwitchGaoAlert.Entitys;
+using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Websockets;
 
 namespace MARS.Server.Services.Twitch.Rewards.TwitchGaoAlert;
@@ -30,14 +31,14 @@ public class TwitchGaoAlert(
     }
 
     private async Task WsClientOnChannelPointsCustomRewardRedemptionAdd(
-        object sender,
+        object? sender,
         ChannelPointsCustomRewardRedemptionArgs args
     )
     {
-        var twEvent = args.Notification.Payload.Event;
+        var twEvent = args.Payload.Event;
 
         var cost = twEvent.Reward.Cost;
-        var text = args.Notification.Payload.Event.UserInput;
+        var text = args.Payload.Event.UserInput;
         var channel = twEvent.BroadcasterUserId;
 
         if (

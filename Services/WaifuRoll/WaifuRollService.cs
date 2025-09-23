@@ -192,7 +192,7 @@ public class WaifuRollService(
         return result;
     }
 
-    public async Task<OperationResult<AddNewWaifuResponse>> AddNewWaifu(FullCharacter character)
+    public async Task<OperationResult<AddNewWaifuResponse>> AddNewWaifu(FullCharacter? character)
     {
         var result = OperationResult<AddNewWaifuResponse>.Bad("Ошибка при добавлении новой вайфу");
 
@@ -255,7 +255,7 @@ public class WaifuRollService(
         return result;
     }
 
-    public async Task<bool> MergeTheWaifu(Host host, Waifu waifu, bool makeprivate = true)
+    public async Task<bool> MergeTheWaifu(Host? host, Waifu? waifu, bool makeprivate = true)
     {
         var result = false;
 

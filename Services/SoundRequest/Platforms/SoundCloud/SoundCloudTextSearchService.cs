@@ -16,7 +16,7 @@ public class SoundCloudTextSearchService
         }
 
         // Получаем результаты поиска (только треки)
-        await foreach (var track in _client.Search.GetTracksAsync(query, ct))
+        await foreach (var track in _client.Search.GetTracksAsync(query, cancellationToken: ct))
         {
             if (string.IsNullOrWhiteSpace(track.Url))
             {

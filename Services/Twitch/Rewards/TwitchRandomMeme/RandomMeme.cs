@@ -1,4 +1,5 @@
 ﻿using MARS.Server.Services.RandomMem.Entity;
+using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Websockets;
 
 namespace MARS.Server.Services.Twitch.Rewards.TwitchRandomMeme;
@@ -14,9 +15,12 @@ public class RandomMeme(
     public bool IsServiceActive { get; set; } = true;
     private readonly CancellationToken _stoppingToken = applicationLifetime.ApplicationStopping;
 
-    public async Task RandomMemeHandler(object sender, ChannelPointsCustomRewardRedemptionArgs args)
+    public async Task RandomMemeHandler(
+        object? sender,
+        ChannelPointsCustomRewardRedemptionArgs args
+    )
     {
-        var twEvent = args.Notification.Payload.Event;
+        var twEvent = args.Payload.Event;
         if (
             twEvent.BroadcasterUserId.Equals(
                 TwitchExstension.ChannelId,

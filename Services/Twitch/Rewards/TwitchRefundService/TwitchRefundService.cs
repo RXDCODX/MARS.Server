@@ -1,6 +1,7 @@
 ﻿using MARS.Server.Services.Twitch.Management;
 using TwitchLib.Api.Core.Enums;
 using TwitchLib.Api.Helix.Models.ChannelPoints.UpdateCustomRewardRedemptionStatus;
+using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Websockets;
 
 namespace MARS.Server.Services.Twitch.Rewards.TwitchRefundService;
@@ -41,7 +42,7 @@ public class TwitchRefundService(
     }
 
     private async Task OnChannelPointsCustomRewardRedemption(
-        object sender,
+        object? sender,
         ChannelPointsCustomRewardRedemptionArgs args
     )
     {
@@ -52,7 +53,7 @@ public class TwitchRefundService(
 
         ArgumentException.ThrowIfNullOrWhiteSpace(tokenService.Token?.AccessToken);
 
-        var twEvent = args.Notification.Payload.Event;
+        var twEvent = args.Payload.Event;
 
         // Проверяем, что это награда за 160 баллов и от нужного канала
         if (
@@ -84,7 +85,7 @@ public class TwitchRefundService(
                     await api.Helix.ChannelPoints.UpdateRedemptionStatusAsync(
                         TwitchExstension.ChannelId,
                         RefundRewardId,
-                        [args.Notification.Metadata.MessageId],
+                        [args.Payload.Event.Id],
                         new UpdateCustomRewardRedemptionStatusRequest
                         {
                             Status = CustomRewardRedemptionStatus.CANCELED,

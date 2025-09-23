@@ -1,4 +1,5 @@
-﻿using TwitchLib.EventSub.Websockets;
+﻿using TwitchLib.EventSub.Core.EventArgs.Channel;
+using TwitchLib.EventSub.Websockets;
 
 namespace MARS.Server.Services.Twitch.Rewards.TwitchAdhdReward;
 
@@ -35,7 +36,7 @@ public class TwitchAdhdService(
     }
 
     private async Task OnChannelPointsCustomRewardRedemption(
-        object sender,
+        object? sender,
         ChannelPointsCustomRewardRedemptionArgs args
     )
     {
@@ -44,7 +45,7 @@ public class TwitchAdhdService(
             return;
         }
 
-        var twEvent = args.Notification.Payload.Event;
+        var twEvent = args.Payload.Event;
 
         // Проверяем, что это награда за 2002 поинта и от нужного канала
         if (

@@ -21,16 +21,34 @@ public class WaifuPrizesService(
         try
         {
             await using var dbContext = await factory.CreateDbContextAsync();
-            var waifus = dbContext.Waifus.AsNoTracking().AsAsyncEnumerable();
-
             var prizes = new List<PrizeType>();
 
-            await foreach (var waifu in waifus.WithCancellation(lifetime.ApplicationStopping))
+            var cancellationToken = lifetime.ApplicationStopping;
+            const int batchSize = 50;
+            var offset = 0;
+
+            while (!cancellationToken.IsCancellationRequested)
             {
-                if (!waifu.IsMerged)
+                var waifusBatch = await dbContext
+                    .Waifus.Where(e => !e.IsPrivated)
+                    .AsNoTracking()
+                    .OrderBy(e => e.ShikiId)
+                    .Skip(offset)
+                    .Take(batchSize)
+                    .ToListAsync(cancellationToken);
+
+                if (waifusBatch.Count == 0)
+                {
+                    break;
+                }
+
+                foreach (var waifu in waifusBatch)
                 {
                     // Убеждаемся, что поля аниме и манги заполнены
-                    var waifuWithTitles = await waifuDbHelper.EnsureMangaAndAnimeTitleExists(waifu);
+                    var waifuWithTitles = await waifuDbHelper.EnsureMangaAndAnimeTitleExists(
+                        waifu,
+                        dbContext
+                    );
 
                     prizes.Add(
                         new PrizeType()
@@ -41,6 +59,9 @@ public class WaifuPrizesService(
                         }
                     );
                 }
+
+                await dbContext.SaveChangesAsync(cancellationToken);
+                offset += batchSize;
             }
 
             result = OperationResult<ICollection<PrizeType>>.Ok(

@@ -83,11 +83,6 @@ public class ScoreboardHub(ScoreboardService scoreboardService, ILogger<Scoreboa
         }
     }
 
-    public async Task<List<ScoreboardDto>> GetHistory(int count = 10)
-    {
-        return await scoreboardService.GetHistoryAsync(count);
-    }
-
     public async Task ForceProcessPendingUpdates()
     {
         await scoreboardService.ForceProcessPendingUpdates();

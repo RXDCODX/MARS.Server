@@ -1,6 +1,7 @@
 ﻿using System.Globalization;
 using MARS.Server.Services.WaifuRoll;
 using MARS.Server.Services.WaifuRoll.helpers;
+using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Core.SubscriptionTypes.Channel;
 using TwitchLib.EventSub.Websockets;
 
@@ -20,11 +21,11 @@ public class RollWaifu(
     public bool IsServiceActive { get; set; } = true;
 
     public async Task RollWaifuTwitchEvent(
-        object sender,
+        object? sender,
         ChannelPointsCustomRewardRedemptionArgs args
     )
     {
-        ChannelPointsCustomRewardRedemption? twEvent = args.Notification.Payload.Event;
+        ChannelPointsCustomRewardRedemption? twEvent = args.Payload.Event;
         if (
             twEvent.BroadcasterUserId.Equals(
                 TwitchExstension.ChannelId,

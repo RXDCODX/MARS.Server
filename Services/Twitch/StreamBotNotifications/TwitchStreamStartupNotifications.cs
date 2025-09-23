@@ -1,5 +1,5 @@
-﻿using TwitchLib.EventSub.Websockets;
-using TwitchLib.EventSub.Websockets.Core.EventArgs.Stream;
+﻿using TwitchLib.EventSub.Core.EventArgs.Stream;
+using TwitchLib.EventSub.Websockets;
 
 namespace MARS.Server.Services.Twitch.StreamBotNotifications;
 
@@ -27,12 +27,12 @@ public class TwitchStreamStartupNotifications
         });
     }
 
-    internal Task PubSubOnlineOnStreamUp(object sender, StreamOnlineArgs streamOnlineArgs)
+    internal Task PubSubOnlineOnStreamUp(object? sender, StreamOnlineArgs streamOnlineArgs)
     {
         return _twitchClient.SendMessageToMainTwitchAsync("Online", _logger);
     }
 
-    internal Task PubSibOfflineStream(object sender, StreamOfflineArgs args)
+    internal Task PubSibOfflineStream(object? sender, StreamOfflineArgs args)
     {
         return _twitchClient.SendMessageToMainTwitchAsync(
             "Та куда стрим вырубил Stressed",

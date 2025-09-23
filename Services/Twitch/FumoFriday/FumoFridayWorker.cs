@@ -1,5 +1,6 @@
 ﻿using MARS.Server.Services.Twitch.FumoFriday.Entitys;
 using TwitchLib.Client.Events;
+using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Websockets;
 
 namespace MARS.Server.Services.Twitch.FumoFriday;
@@ -70,7 +71,7 @@ public class FumoFridayWorker(
     }
 
     public async Task OnRewardRedemption(
-        object sender,
+        object? sender,
         ChannelPointsCustomRewardRedemptionArgs args
     )
     {
@@ -79,7 +80,7 @@ public class FumoFridayWorker(
             return;
         }
 
-        if (args.Notification.Payload.Event.BroadcasterUserLogin != TwitchExstension.Channel)
+        if (args.Payload.Event.BroadcasterUserLogin != TwitchExstension.Channel)
         {
             return;
         }
@@ -87,10 +88,10 @@ public class FumoFridayWorker(
         await Task.Factory.StartNew(
             async () =>
             {
-                if (args.Notification.Payload.Event.Reward.Cost == 13)
+                if (args.Payload.Event.Reward.Cost == 13)
                 {
-                    var name = args.Notification.Payload.Event.UserName;
-                    var id = args.Notification.Payload.Event.UserId;
+                    var name = args.Payload.Event.UserName;
+                    var id = args.Payload.Event.UserId;
 
                     if (_users.Contains(name))
                     {

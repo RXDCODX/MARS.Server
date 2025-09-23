@@ -30,9 +30,13 @@ public class WaifuRollEnsurenceService(
         return waifu;
     }
 
-    public async Task<Waifu> EnsureMangaAndAnimeTitleExists(Waifu waifu)
+    public async Task<Waifu> EnsureMangaAndAnimeTitleExists(
+        Waifu waifu,
+        AppDbContext? dbContext = null
+    )
     {
         var result = waifu;
+        var isContextNull = dbContext == null;
 
         try
         {
@@ -42,16 +46,14 @@ public class WaifuRollEnsurenceService(
                 && long.TryParse(waifu.ShikiId, out var characterId)
             )
             {
-                await using var dbContext = await appDbContextFactory.CreateDbContextAsync();
+                dbContext ??= await appDbContextFactory.CreateDbContextAsync();
                 if (string.IsNullOrWhiteSpace(result.Anime))
                 {
                     var animeTitle = await shikiService.GetCharacterAnimeTitle(characterId);
                     if (!string.IsNullOrWhiteSpace(animeTitle))
                     {
                         result.Anime = animeTitle;
-                        await dbContext
-                            .Waifus.Where(e => e.ShikiId == result.ShikiId)
-                            .ExecuteUpdateAsync(e => e.SetProperty(t => t.Anime, animeTitle));
+                        dbContext.Waifus.Update(result);
                     }
                 }
 
@@ -61,10 +63,13 @@ public class WaifuRollEnsurenceService(
                     if (!string.IsNullOrWhiteSpace(mangaTitle))
                     {
                         result.Manga = mangaTitle;
-                        await dbContext
-                            .Waifus.Where(e => e.ShikiId == result.ShikiId)
-                            .ExecuteUpdateAsync(e => e.SetProperty(t => t.Manga, mangaTitle));
+                        dbContext.Waifus.Update(result);
                     }
+                }
+
+                if (!isContextNull)
+                {
+                    await dbContext.SaveChangesAsync();
                 }
             }
         }

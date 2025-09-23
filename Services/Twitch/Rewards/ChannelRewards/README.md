@@ -1,4 +1,4 @@
-# Channel Rewards Management and Refunds
+﻿# Channel Rewards Management and Refunds
 
 ## Создание/Удаление наград канала
 
@@ -50,9 +50,9 @@ lifetime.ApplicationStarted.Register(() =>
 2. В обработчике проверьте условия и верните баллы:
 
 ```csharp
-private async Task OnRedemption(object sender, ChannelPointsCustomRewardRedemptionArgs args)
+private async Task OnRedemption(object? sender, ChannelPointsCustomRewardRedemptionArgs args)
 {
-    var ev = args.Notification.Payload.Event;
+    var ev = args.Payload.Event;
 
     // Пример условия: возврат, если пользователь ввёл ключевое слово
     if (ev.BroadcasterUserLogin.Equals(TwitchExstension.Channel, StringComparison.OrdinalIgnoreCase)

@@ -1,4 +1,5 @@
 ﻿using TwitchLib.Client.Events;
+using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Core.SubscriptionTypes.Channel;
 using TwitchLib.EventSub.Websockets;
 
@@ -84,18 +85,18 @@ public class TwitchMediaAlerts(
     }
 
     internal async Task TwitchClientOnOnMessageSend(
-        object sender,
+        object? sender,
         ChannelPointsCustomRewardRedemptionArgs args
     )
     {
         if (
-            args.Notification.Payload.Event.BroadcasterUserId.Equals(
+            args.Payload.Event.BroadcasterUserId.Equals(
                 TwitchExstension.ChannelId,
                 StringComparison.OrdinalIgnoreCase
             ) && IsServiceActive
         )
         {
-            var value = args.Notification.Payload.Event;
+            var value = args.Payload.Event;
 
             if (string.IsNullOrWhiteSpace(value.UserInput))
             {

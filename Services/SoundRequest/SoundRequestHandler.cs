@@ -2,6 +2,7 @@
 using MARS.Server.Services.SoundRequest.Entitys.Exceptions;
 using MARS.Server.Services.SoundRequest.Platforms.SoundCloud;
 using MARS.Server.Services.SoundRequest.Platforms.YouTube;
+using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Websockets;
 
 namespace MARS.Server.Services.SoundRequest;
@@ -35,11 +36,11 @@ public class SoundRequestHandler(
     }
 
     private async Task WsClientOnChannelPointsCustomRewardRedemptionAdd(
-        object sender,
+        object? sender,
         ChannelPointsCustomRewardRedemptionArgs args
     )
     {
-        var twEvent = args.Notification.Payload.Event;
+        var twEvent = args.Payload.Event;
         var channel = twEvent.BroadcasterUserLogin;
         var userInput = twEvent.UserInput;
 

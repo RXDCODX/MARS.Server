@@ -2,6 +2,7 @@
 using MARS.Server.Services.WaifuRoll;
 using MARS.Server.Services.WaifuRoll.helpers;
 using TwitchLib.Api.Helix.Models.Chat;
+using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Websockets;
 
 namespace MARS.Server.Services.Twitch.Rewards.TwitchWaifuRolls;
@@ -25,11 +26,11 @@ public class MergeWaifu(
     public bool IsServiceActive { get; set; } = true;
 
     public async Task MergeWaifuTwitchEvent(
-        object sender,
+        object? sender,
         ChannelPointsCustomRewardRedemptionArgs args
     )
     {
-        var twEvent = args.Notification.Payload.Event;
+        var twEvent = args.Payload.Event;
         if (
             twEvent.BroadcasterUserId.Equals(
                 TwitchExstension.ChannelId,

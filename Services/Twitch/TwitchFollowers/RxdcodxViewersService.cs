@@ -271,12 +271,12 @@ public class RxdcodxViewersService(
         return Task.CompletedTask;
     }
 
-    private async Task WsClientOnChannelFollow(object sender, ChannelFollowArgs args)
+    private async Task WsClientOnChannelFollow(object? sender, ChannelFollowArgs args)
     {
         try
         {
             // Проверяем, что это событие для нашего канала
-            var twEvent = args.Notification.Payload.Event;
+            var twEvent = args.Payload.Event;
 
             if (twEvent.BroadcasterUserId == ChannelId)
             {
@@ -322,9 +322,9 @@ public class RxdcodxViewersService(
         }
     }
 
-    private async Task WsClientOnChannelVipAdd(object sender, ChannelVipArgs args)
+    private async Task WsClientOnChannelVipAdd(object? sender, ChannelVipArgs args)
     {
-        var twEvent = args.Notification.Payload.Event;
+        var twEvent = args.Payload.Event;
         if (twEvent.BroadcasterUserId.Equals(TwitchExstension.ChannelId))
         {
             var newVip = new FollowerInfo()
@@ -355,9 +355,9 @@ public class RxdcodxViewersService(
         }
     }
 
-    private async Task WsClientOnChannelModeratorAdd(object sender, ChannelModeratorArgs args)
+    private async Task WsClientOnChannelModeratorAdd(object? sender, ChannelModeratorArgs args)
     {
-        var twEvent = args.Notification.Payload.Event;
+        var twEvent = args.Payload.Event;
         if (twEvent.BroadcasterUserId.Equals(TwitchExstension.ChannelId))
         {
             var newModerator = new FollowerInfo()

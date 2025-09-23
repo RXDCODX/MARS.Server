@@ -1,5 +1,6 @@
 ﻿using MARS.Server.Services.Twitch.Rewards.MiniGames.Entitys.Interfaces;
 using TwitchLib.Client.Events;
+using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Websockets;
 
 namespace MARS.Server.Services.Twitch.Rewards.MiniGames;
@@ -39,7 +40,7 @@ public class MiniGamesManager(
     }
 
     private async Task WsClientOnChannelPointsCustomRewardRedemptionAdd(
-        object sender,
+        object? sender,
         ChannelPointsCustomRewardRedemptionArgs args
     )
     {
@@ -48,10 +49,10 @@ public class MiniGamesManager(
             return;
         }
 
-        var cost = args.Notification.Payload.Event.Reward.Cost;
+        var cost = args.Payload.Event.Reward.Cost;
         var miniGames = MiniGames.Values;
-        var name = args.Notification.Payload.Event.UserName;
-        var userId = args.Notification.Payload.Event.UserId;
+        var name = args.Payload.Event.UserName;
+        var userId = args.Payload.Event.UserId;
 
         if (miniGames.Any(e => e.IsGameRunning))
         {

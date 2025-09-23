@@ -12,14 +12,13 @@ public class EventSubService(
     ITelegramBotClient client,
     TokenService tokenService,
     IHostApplicationLifetime lifetime,
-    EventSubWebsocketClient wsClient
+    EventSubWebsocketClient wsClient,
+    EventSubWebsocketManager wsManager
 ) : BackgroundService
 {
     private static readonly SemaphoreSlim SemaphoreSlim = new(1);
-    private static readonly SemaphoreSlim WsReconnectSlim = new(1);
     private readonly CancellationToken _cancellationToken = lifetime.ApplicationStopping;
-    private bool _firstActivation = true;
-    private bool _isWsConnected;
+    private volatile bool _firstActivation = true;
 
     public async Task UpdateEventSubAsync()
     {
@@ -52,8 +51,6 @@ public class EventSubService(
             wsClient.WebsocketReconnected += WsClientOnWebsocketReconnected;
             wsClient.WebsocketDisconnected += WsClientOnWebsocketDisconnected;
 
-            _firstActivation = false;
-
             if (tokenService.Token != null)
             {
                 var subs = await GetEventSubsAsync();
@@ -63,18 +60,29 @@ public class EventSubService(
                 }
             }
 
-            await wsClient.ConnectAsync();
+            _firstActivation = false;
+            await Task.Factory.StartNew(
+                async () =>
+                {
+                    if (string.IsNullOrWhiteSpace(wsClient.SessionId))
+                    {
+                        await wsManager.ReconnectAsync();
+                    }
+
+                    await ResubscribeToEventSub();
+                },
+                _cancellationToken
+            );
         }
     }
 
-    private async Task WsClientOnWebsocketDisconnected(object sender, EventArgs args)
+    private async Task WsClientOnWebsocketDisconnected(object? sender, EventArgs args)
     {
-        await TryReconnect();
+        await wsManager.ReconnectAsync();
     }
 
-    private async Task WsClientOnWebsocketReconnected(object sender, EventArgs args)
+    private async Task WsClientOnWebsocketReconnected(object? sender, EventArgs args)
     {
-        _isWsConnected = true;
         if (tokenService.Token != null)
         {
             await ResubscribeToEventSub();
@@ -83,47 +91,15 @@ public class EventSubService(
         await Task.Delay(1000, _cancellationToken);
     }
 
-    private async Task WsClientOnErrorOccurred(object sender, ErrorOccuredArgs args)
+    private async Task WsClientOnErrorOccurred(object? sender, ErrorOccuredArgs args)
     {
         logger.LogException(args.Exception);
-        await TryReconnect();
+        await wsManager.ReconnectAsync();
     }
 
-    private async Task WsClientOnWebsocketConnected(object sender, WebsocketConnectedArgs args)
+    private async Task WsClientOnWebsocketConnected(object? sender, WebsocketConnectedArgs args)
     {
-        _isWsConnected = true;
         await ResubscribeToEventSub();
-    }
-
-    private async Task TryReconnect()
-    {
-        if (WsReconnectSlim.CurrentCount < 1)
-        {
-            return;
-        }
-
-        await WsReconnectSlim.WaitAsync(_cancellationToken);
-
-        try
-        {
-            _isWsConnected = false;
-            await wsClient.DisconnectAsync();
-            await wsClient.ConnectAsync();
-            _isWsConnected = true;
-
-            if (!_isWsConnected)
-            {
-                logger.LogWarning("Не удалось переподключить EventSub WebSocket");
-            }
-        }
-        catch
-        {
-            await TryReconnect();
-        }
-        finally
-        {
-            WsReconnectSlim.Release();
-        }
     }
 
     private async Task DeleteAllSubs()
@@ -169,6 +145,15 @@ public class EventSubService(
                     }
                 }
                 catch (HttpRequestException httpEx)
+                    when (httpEx.Message.Contains("403") || httpEx.Message.Contains("Forbidden"))
+                {
+                    logger.LogError(
+                        "Отказано в доступе (403) при удалении подписки {SubscriptionId}: {Error}",
+                        subscription.Id,
+                        httpEx.Message
+                    );
+                }
+                catch (HttpRequestException httpEx)
                     when (httpEx.Message.Contains("404") || httpEx.Message.Contains("Not Found"))
                 {
                     logger.LogWarning(
@@ -198,28 +183,13 @@ public class EventSubService(
 
     private async Task<bool> EnsureWebSocketConnected()
     {
-        if (_isWsConnected)
-        {
-            return true;
-        }
-
-        logger.LogWarning("WebSocket не подключен, пытаемся переподключить...");
-
-        if (WsReconnectSlim.CurrentCount > 0)
-        {
-            await Task.Factory.StartNew(TryReconnect, _cancellationToken);
-        }
-
-        // Ждем короткое время, чтобы дать шанс на подключение
-        await Task.Delay(5 * 1000, _cancellationToken);
-
-        if (!_isWsConnected)
+        var result = await wsManager.EnsureConnectedAsync();
+        if (!result)
         {
             logger.LogError("Не удалось подключить WebSocket для создания подписок");
-            return false;
         }
 
-        return true;
+        return result;
     }
 
     private async Task<bool> HandleUnauthorizedError(string operation)
@@ -317,6 +287,11 @@ public class EventSubService(
                     return "Ошибка: не удалось обновить токен для создания подписки на channel.raid";
                 }
             }
+            catch (HttpRequestException httpEx)
+                when (httpEx.Message.Contains("403") || httpEx.Message.Contains("Forbidden"))
+            {
+                return "Ошибка: нет доступа (403) при создании подписки на channel.raid";
+            }
 
             condition.Clear();
             condition.Add("broadcaster_user_id", TwitchExstension.ChannelId);
@@ -363,6 +338,11 @@ public class EventSubService(
                     return "Ошибка: не удалось обновить токен для создания подписки на stream.online";
                 }
             }
+            catch (HttpRequestException httpEx)
+                when (httpEx.Message.Contains("403") || httpEx.Message.Contains("Forbidden"))
+            {
+                return "Ошибка: нет доступа (403) при создании подписки на stream.online";
+            }
 
             if (!await EnsureWebSocketConnected())
             {
@@ -405,6 +385,11 @@ public class EventSubService(
                 {
                     return "Ошибка: не удалось обновить токен для создания подписки на stream.offline";
                 }
+            }
+            catch (HttpRequestException httpEx)
+                when (httpEx.Message.Contains("403") || httpEx.Message.Contains("Forbidden"))
+            {
+                return "Ошибка: нет доступа (403) при создании подписки на stream.offline";
             }
 
             if (!await EnsureWebSocketConnected())
@@ -453,6 +438,11 @@ public class EventSubService(
                     return "Ошибка: не удалось обновить токен для создания подписки на channel.channel_points_custom_reward_redemption.add";
                 }
             }
+            catch (HttpRequestException httpEx)
+                when (httpEx.Message.Contains("403") || httpEx.Message.Contains("Forbidden"))
+            {
+                return "Ошибка: нет доступа (403) при создании подписки на channel.channel_points_custom_reward_redemption.add";
+            }
 
             if (!await EnsureWebSocketConnected())
             {
@@ -496,6 +486,11 @@ public class EventSubService(
                     return "Ошибка: не удалось обновить токен для создания подписки на channel.moderator.add";
                 }
             }
+            catch (HttpRequestException httpEx)
+                when (httpEx.Message.Contains("403") || httpEx.Message.Contains("Forbidden"))
+            {
+                return "Ошибка: нет доступа (403) при создании подписки на channel.moderator.add";
+            }
 
             if (!await EnsureWebSocketConnected())
             {
@@ -538,6 +533,11 @@ public class EventSubService(
                 {
                     return "Ошибка: не удалось обновить токен для создания подписки на channel.vip.add";
                 }
+            }
+            catch (HttpRequestException httpEx)
+                when (httpEx.Message.Contains("403") || httpEx.Message.Contains("Forbidden"))
+            {
+                return "Ошибка: нет доступа (403) при создании подписки на channel.vip.add";
             }
 
             condition.Add("moderator_user_id", TwitchExstension.ChannelId);
@@ -584,6 +584,11 @@ public class EventSubService(
                     return "Ошибка: не удалось обновить токен для создания подписки на channel.follow";
                 }
             }
+            catch (HttpRequestException httpEx)
+                when (httpEx.Message.Contains("403") || httpEx.Message.Contains("Forbidden"))
+            {
+                return "Ошибка: нет доступа (403) при создании подписки на channel.follow";
+            }
 
             condition.Clear();
 
@@ -614,6 +619,11 @@ public class EventSubService(
                 {
                     return "Ошибка: не удалось обновить токен для получения списка подписок EventSub";
                 }
+            }
+            catch (HttpRequestException httpEx)
+                when (httpEx.Message.Contains("403") || httpEx.Message.Contains("Forbidden"))
+            {
+                return "Ошибка: нет доступа (403) при получении списка подписок EventSub";
             }
 
             SemaphoreSlim.Release(1);

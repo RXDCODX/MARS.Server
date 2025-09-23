@@ -1,6 +1,7 @@
 ﻿using BooruSharp.Booru;
 using BooruSharp.Search.Post;
 using Microsoft.AspNetCore.StaticFiles.Infrastructure;
+using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Websockets;
 
 namespace MARS.Server.Services.Twitch.Rewards.TwitchRandomArt;
@@ -17,11 +18,11 @@ public class RandomArt(
     public bool IsServiceActive { get; set; } = true;
 
     private async Task WsClientOnChannelPointsCustomRewardRedemptionAdd(
-        object sender,
+        object? sender,
         ChannelPointsCustomRewardRedemptionArgs args
     )
     {
-        var twEvent = args.Notification.Payload.Event;
+        var twEvent = args.Payload.Event;
         if (
             twEvent.Reward.Cost == 27
             && twEvent.BroadcasterUserLogin.Equals(
