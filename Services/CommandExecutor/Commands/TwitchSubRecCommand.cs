@@ -20,7 +20,7 @@ public class TwitchSubRecCommand(EventSubService eventSubService) : BaseCommand
     {
         try
         {
-            var result = await eventSubService.ResubscribeToEventSub();
+            var result = await eventSubService.ResubscribeToEventSubAsync();
             return result;
         }
         catch (Exception ex)

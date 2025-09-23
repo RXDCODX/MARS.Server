@@ -50,9 +50,6 @@ using TwitchLib.Api.Core;
 using TwitchLib.Api.Core.Enums;
 using TwitchLib.Api.Core.HttpCallHandlers;
 using TwitchLib.Api.Core.Interfaces;
-using TwitchLib.EventSub.Websockets;
-using TwitchLib.EventSub.Websockets.Client;
-using TwitchLib.EventSub.Websockets.Core.Handler;
 using TwitchLib.EventSub.Websockets.Extensions;
 using YandexMusicResolver;
 using YandexMusicResolver.Config;
@@ -221,21 +218,7 @@ public static class StartupEstensions
         );
 
         services.AddTwitchLibEventSubWebsockets();
-
-        // Переопределяем внедрение WebSocket клиента для EventSub и управляем им самостоятельно
-        services.AddSingleton<WebsocketClient>(_ => new WebsocketClient());
-        services.AddSingleton<EventSubWebsocketClient>(sp =>
-        {
-            var ws = sp.GetRequiredService<WebsocketClient>();
-            return new EventSubWebsocketClient(
-                sp.GetRequiredService<ILogger<EventSubWebsocketClient>>(),
-                new INotificationHandler[1],
-                sp,
-                ws
-            );
-        });
-        services.AddSingleton<EventSubWebsocketManager>();
-        services.AddHostedService(sp => sp.GetRequiredService<EventSubWebsocketManager>());
+        services.AddHostedService<EventSubService>();
 
         services.AddSingleton<TwitchStreamStartupNotifications>();
         services.AddSingleton<TwitchMediaAlerts>();

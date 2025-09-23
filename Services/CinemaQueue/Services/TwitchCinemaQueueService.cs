@@ -42,12 +42,12 @@ public class TwitchCinemaQueueService(
         {
             logger.LogInformation(
                 "Channel points redemption: {RewardTitle} by {UserName}",
-                e.Notification.Payload.Event.Reward.Title,
-                e.Notification.Payload.Event.UserName
+                e.Payload.Event.Reward.Title,
+                e.Payload.Event.UserName
             );
 
             // Проверяем, является ли это наградой для добавления в очередь
-            if (IsCinemaQueueReward(e.Notification.Payload.Event.Reward.Cost))
+            if (IsCinemaQueueReward(e.Payload.Event.Reward.Cost))
             {
                 await HandleCinemaQueueRedemption(e);
             }
@@ -68,10 +68,10 @@ public class TwitchCinemaQueueService(
     {
         try
         {
-            var rewardTitle = e.Notification.Payload.Event.Reward.Title;
-            var userName = e.Notification.Payload.Event.UserName;
-            var userId = e.Notification.Payload.Event.UserId;
-            var userInput = e.Notification.Payload.Event.UserInput;
+            var rewardTitle = e.Payload.Event.Reward.Title;
+            var userName = e.Payload.Event.UserName;
+            var userId = e.Payload.Event.UserId;
+            var userInput = e.Payload.Event.UserInput;
 
             if (string.IsNullOrWhiteSpace(userInput))
             {

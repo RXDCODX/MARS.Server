@@ -108,52 +108,57 @@ public class TokenService(
 
     public async Task<bool> EnsureActualTokenAsync(CancellationToken cancellationToken = default)
     {
+        bool result;
+
         try
         {
-            // Получаем токен из базы данных
             var token = await GetTokenAsync(cancellationToken);
 
             if (token == null)
             {
                 logger.LogWarning("Токен не найден в базе данных");
-                return false;
-            }
-
-            // Проверяем, не истек ли токен (с запасом в 5 минут)
-            var timeUntilExpiry = token.WhenExpires - DateTime.Now;
-            if (timeUntilExpiry > TimeSpan.FromMinutes(5))
-            {
-                // Токен еще актуален
-                Token = token;
-                logger.LogInformation(
-                    "Токен актуален, истекает через {TimeUntilExpiry}",
-                    timeUntilExpiry
-                );
-                return true;
-            }
-
-            // Токен истекает или уже истек, обновляем его
-            logger.LogInformation(
-                "Токен истекает через {TimeUntilExpiry}, обновляем...",
-                timeUntilExpiry
-            );
-            var refreshResult = await RefreshTokenAsync(token);
-
-            if (refreshResult)
-            {
-                logger.LogInformation("Токен успешно обновлен");
-                return true;
+                result = false;
             }
             else
             {
-                logger.LogError("Не удалось обновить токен");
-                return false;
+                var timeUntilExpiry = token.WhenExpires - DateTime.Now;
+
+                if (timeUntilExpiry > TimeSpan.FromMinutes(5))
+                {
+                    Token = token;
+                    logger.LogInformation(
+                        "Токен актуален, истекает через {TimeUntilExpiry}",
+                        timeUntilExpiry
+                    );
+                    result = true;
+                }
+                else
+                {
+                    logger.LogInformation(
+                        "Токен истекает через {TimeUntilExpiry}, обновляем...",
+                        timeUntilExpiry.Negate()
+                    );
+                    var refreshResult = await RefreshTokenAsync(token);
+
+                    if (refreshResult)
+                    {
+                        logger.LogInformation("Токен успешно обновлен");
+                        result = true;
+                    }
+                    else
+                    {
+                        logger.LogError("Не удалось обновить токен");
+                        result = false;
+                    }
+                }
             }
         }
         catch (Exception e)
         {
             logger.LogException(e);
-            return false;
+            result = false;
         }
+
+        return result;
     }
 }
