@@ -282,10 +282,8 @@ public class EventSubService(
         await SemaphoreSlim.WaitAsync(_cancellationToken);
         try
         {
-            await tokenService.EnsureActualTokenAsync(_cancellationToken);
-            var token = tokenService.Token;
-            ArgumentException.ThrowIfNullOrWhiteSpace(token?.AccessToken);
-            ArgumentException.ThrowIfNullOrWhiteSpace(token?.RefreshToken);
+            ArgumentException.ThrowIfNullOrWhiteSpace(tokenService.Token?.AccessToken);
+            ArgumentException.ThrowIfNullOrWhiteSpace(tokenService.Token?.RefreshToken);
 
             await DeleteAllSubsAsync();
 
@@ -309,7 +307,7 @@ public class EventSubService(
                         null,
                         null,
                         api.Settings.ClientId,
-                        token!.AccessToken
+                        tokenService.Token!.AccessToken
                     );
                 }
                 catch (HttpRequestException httpEx)
@@ -320,7 +318,6 @@ public class EventSubService(
                     );
                     if (refreshed)
                     {
-                        token = tokenService.Token ?? token;
                         await api.Helix.EventSub.CreateEventSubSubscriptionAsync(
                             "channel.raid",
                             "1",
@@ -330,7 +327,7 @@ public class EventSubService(
                             null,
                             null,
                             api.Settings.ClientId,
-                            token!.AccessToken
+                            tokenService.Token!.AccessToken
                         );
                     }
                     else
@@ -359,7 +356,7 @@ public class EventSubService(
                         null,
                         null,
                         api.Settings.ClientId,
-                        token!.AccessToken
+                        tokenService.Token!.AccessToken
                     );
                 }
                 catch (HttpRequestException httpEx)
@@ -370,7 +367,6 @@ public class EventSubService(
                     );
                     if (refreshed)
                     {
-                        token = tokenService.Token ?? token;
                         await api.Helix.EventSub.CreateEventSubSubscriptionAsync(
                             "stream.online",
                             "1",
@@ -380,7 +376,7 @@ public class EventSubService(
                             null,
                             null,
                             api.Settings.ClientId,
-                            token!.AccessToken
+                            tokenService.Token!.AccessToken
                         );
                     }
                     else
@@ -407,7 +403,7 @@ public class EventSubService(
                         null,
                         null,
                         api.Settings.ClientId,
-                        token!.AccessToken
+                        tokenService.Token!.AccessToken
                     );
                 }
                 catch (HttpRequestException httpEx)
@@ -418,7 +414,6 @@ public class EventSubService(
                     );
                     if (refreshed)
                     {
-                        token = tokenService.Token ?? token;
                         await api.Helix.EventSub.CreateEventSubSubscriptionAsync(
                             "stream.offline",
                             "1",
@@ -428,7 +423,7 @@ public class EventSubService(
                             null,
                             null,
                             api.Settings.ClientId,
-                            token!.AccessToken
+                            tokenService.Token!.AccessToken
                         );
                     }
                     else
@@ -455,7 +450,7 @@ public class EventSubService(
                         null,
                         null,
                         api.Settings.ClientId,
-                        token!.AccessToken
+                        tokenService.Token!.AccessToken
                     );
                 }
                 catch (HttpRequestException httpEx)
@@ -466,7 +461,6 @@ public class EventSubService(
                     );
                     if (refreshed)
                     {
-                        token = tokenService.Token ?? token;
                         await api.Helix.EventSub.CreateEventSubSubscriptionAsync(
                             "channel.channel_points_custom_reward_redemption.add",
                             "1",
@@ -476,7 +470,7 @@ public class EventSubService(
                             null,
                             null,
                             api.Settings.ClientId,
-                            token!.AccessToken
+                            tokenService.Token!.AccessToken
                         );
                     }
                     else
@@ -504,7 +498,7 @@ public class EventSubService(
                         null,
                         null,
                         api.Settings.ClientId,
-                        token!.AccessToken
+                        tokenService.Token!.AccessToken
                     );
                 }
                 catch (HttpRequestException httpEx)
@@ -515,7 +509,6 @@ public class EventSubService(
                     );
                     if (refreshed)
                     {
-                        token = tokenService.Token ?? token;
                         await api.Helix.EventSub.CreateEventSubSubscriptionAsync(
                             "channel.moderator.add",
                             "1",
@@ -525,7 +518,7 @@ public class EventSubService(
                             null,
                             null,
                             api.Settings.ClientId,
-                            token!.AccessToken
+                            tokenService.Token!.AccessToken
                         );
                     }
                     else
@@ -553,7 +546,7 @@ public class EventSubService(
                         null,
                         null,
                         api.Settings.ClientId,
-                        token!.AccessToken
+                        tokenService.Token!.AccessToken
                     );
                 }
                 catch (HttpRequestException httpEx)
@@ -564,7 +557,6 @@ public class EventSubService(
                     );
                     if (refreshed)
                     {
-                        token = tokenService.Token ?? token;
                         await api.Helix.EventSub.CreateEventSubSubscriptionAsync(
                             "channel.vip.add",
                             "1",
@@ -574,7 +566,7 @@ public class EventSubService(
                             null,
                             null,
                             api.Settings.ClientId,
-                            token!.AccessToken
+                            tokenService.Token!.AccessToken
                         );
                     }
                     else
@@ -602,7 +594,7 @@ public class EventSubService(
                         null,
                         null,
                         api.Settings.ClientId,
-                        token!.AccessToken
+                        tokenService.Token!.AccessToken
                     );
                 }
                 catch (HttpRequestException httpEx)
@@ -613,7 +605,6 @@ public class EventSubService(
                     );
                     if (refreshed)
                     {
-                        token = tokenService.Token ?? token;
                         await api.Helix.EventSub.CreateEventSubSubscriptionAsync(
                             "channel.follow",
                             "2",
@@ -623,7 +614,7 @@ public class EventSubService(
                             null,
                             null,
                             api.Settings.ClientId,
-                            token!.AccessToken
+                            tokenService.Token!.AccessToken
                         );
                     }
                     else
@@ -645,7 +636,7 @@ public class EventSubService(
                     response = await api
                         .Helix.EventSub.GetEventSubSubscriptionsAsync(
                             clientId: api.Settings.ClientId,
-                            accessToken: token!.AccessToken
+                            accessToken: tokenService.Token!.AccessToken
                         )
                         .ConfigureAwait(false);
                 }
@@ -657,11 +648,10 @@ public class EventSubService(
                     );
                     if (refreshed)
                     {
-                        token = tokenService.Token ?? token;
                         response = await api
                             .Helix.EventSub.GetEventSubSubscriptionsAsync(
                                 clientId: api.Settings.ClientId,
-                                accessToken: token!.AccessToken
+                                accessToken: tokenService.Token!.AccessToken
                             )
                             .ConfigureAwait(false);
                     }

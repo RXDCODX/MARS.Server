@@ -1,4 +1,6 @@
-﻿using TwitchLib.Api.Core.Interfaces;
+﻿using System.Threading;
+using MARS.Server.Services.Twitch.Management;
+using TwitchLib.Api.Core.Interfaces;
 
 namespace MARS.Server.Services.Twitch.Client;
 
@@ -7,8 +9,11 @@ namespace MARS.Server.Services.Twitch.Client;
 /// - 800 запросов в минуту
 /// - 1 запрос в 2 секунды
 /// </summary>
-public class TwitchApiRateLimiter(ILogger<TwitchApiRateLimiter> logger) : IRateLimiter, IDisposable
+public class TwitchApiRateLimiter(ILogger<TwitchApiRateLimiter> logger, IServiceProvider provider)
+    : IRateLimiter,
+        IDisposable
 {
+    private TokenService TokenService => provider.GetRequiredService<TokenService>();
     private readonly SemaphoreSlim _semaphore = new(1, 1);
     private readonly SemaphoreSlim _queueSemaphore = new(1, 1);
     private readonly Queue<DateTime> _requestTimes = new();
@@ -26,6 +31,7 @@ public class TwitchApiRateLimiter(ILogger<TwitchApiRateLimiter> logger) : IRateL
 
             try
             {
+                await TokenService.EnsureActualTokenAsync(cancellationToken);
                 await perform();
                 await RecordRequest(startTime);
             }
@@ -56,6 +62,7 @@ public class TwitchApiRateLimiter(ILogger<TwitchApiRateLimiter> logger) : IRateL
 
             try
             {
+                await TokenService.EnsureActualTokenAsync(cancellationToken);
                 var result = await perform();
                 await RecordRequest(startTime);
                 return result;
@@ -87,6 +94,7 @@ public class TwitchApiRateLimiter(ILogger<TwitchApiRateLimiter> logger) : IRateL
 
             try
             {
+                await TokenService.EnsureActualTokenAsync(cancellationToken);
                 perform();
                 await RecordRequest(startTime);
             }
@@ -104,6 +112,7 @@ public class TwitchApiRateLimiter(ILogger<TwitchApiRateLimiter> logger) : IRateL
 
     public async Task Perform(Action perform)
     {
+        await TokenService.EnsureActualTokenAsync();
         await Perform(perform, CancellationToken.None);
     }
 
@@ -117,6 +126,7 @@ public class TwitchApiRateLimiter(ILogger<TwitchApiRateLimiter> logger) : IRateL
 
             try
             {
+                await TokenService.EnsureActualTokenAsync(cancellationToken);
                 var result = perform();
                 await RecordRequest(startTime);
                 return result;
@@ -135,6 +145,7 @@ public class TwitchApiRateLimiter(ILogger<TwitchApiRateLimiter> logger) : IRateL
 
     public async Task<T> Perform<T>(Func<T> perform)
     {
+        await TokenService.EnsureActualTokenAsync();
         return await Perform(perform, CancellationToken.None);
     }
 

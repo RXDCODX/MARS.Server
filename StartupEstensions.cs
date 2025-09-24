@@ -234,8 +234,6 @@ public static class StartupEstensions
         services.AddSingleton<TokenService>();
         services.AddSingleton<EventSubService>();
         services.AddHostedService(sp => sp.GetRequiredService<EventSubService>());
-        services.AddSingleton<TwitchAuthService>();
-        services.AddHostedService(sp => sp.GetRequiredService<TwitchAuthService>());
 
         services.AddSingleton<AutoHello>();
         services.AddHostedService(sp => sp.GetRequiredService<AutoHello>());

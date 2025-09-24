@@ -8,6 +8,7 @@ using MARS.Server.Services.KeyboardHook;
 using MARS.Server.Services.Logs.Interfaces;
 using MARS.Server.Services.Logs.Services;
 using MARS.Server.Services.MemoryStorageService;
+using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.Twitch.Rewards;
 using WTelegram;
 

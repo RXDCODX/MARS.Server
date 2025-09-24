@@ -67,7 +67,7 @@ private async Task OnRedemption(object? sender, ChannelPointsCustomRewardRedempt
             {
                 Status = CustomRewardRedemptionStatus.CANCELED
             },
-            tokenService.Token!.AccessToken
+            tokenService.tokenService.Token!.AccessToken
         );
 
         await client.SendMessageToMainTwitchAsync(

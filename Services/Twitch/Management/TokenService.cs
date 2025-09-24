@@ -1,18 +1,21 @@
 ﻿using MARS.Server.Services.Twitch.Management.Entitys;
+using TwitchLib.Api;
 
 namespace MARS.Server.Services.Twitch.Management;
 
 public class TokenService(
     ITwitchAPI api,
     ILogger<TokenService> logger,
-    IDbContextFactory<AppDbContext> factory
+    IDbContextFactory<AppDbContext> factory,
+    TelegramTokenNotification notification
 )
 {
+    private static readonly SemaphoreSlim SemaphoreSlim = new(1, 1);
     private TokenInfo? _tokenInfo;
 
     public TokenInfo? Token
     {
-        get => _tokenInfo;
+        get => _tokenInfo ??= GetFirstTokenAsync().GetAwaiter().GetResult();
         internal set
         {
             if (value != null)
@@ -39,7 +42,8 @@ public class TokenService(
         {
             await using AppDbContext dbContext = await factory.CreateDbContextAsync();
 
-            var result = await api.Auth.RefreshAuthTokenAsync(
+            var fakeTwitchApi = new TwitchAPI();
+            var result = await fakeTwitchApi.Auth.RefreshAuthTokenAsync(
                 refreshToken.RefreshToken,
                 api.Settings.Secret,
                 api.Settings.ClientId
@@ -59,6 +63,7 @@ public class TokenService(
             refreshToken.WhenCreated = DateTime.Now.AddSeconds(-30);
 
             Token = refreshToken;
+            api.Settings.AccessToken = result.AccessToken;
 
             await dbContext.SaveChangesAsync();
 
@@ -77,7 +82,7 @@ public class TokenService(
 
         if (await dbContext.TwitchToken.AsNoTracking().AnyAsync())
         {
-            TokenInfo token = await dbContext.TwitchToken.AsNoTracking().SingleAsync();
+            var token = await dbContext.TwitchToken.AsNoTracking().SingleAsync();
 
             token.AccessToken = accessToken;
             token.RefreshToken = refreshToken;
@@ -160,5 +165,28 @@ public class TokenService(
         }
 
         return result;
+    }
+
+    private async Task<TokenInfo> GetFirstTokenAsync()
+    {
+        await SemaphoreSlim.WaitAsync();
+        var token = _tokenInfo;
+        if (token == null)
+        {
+            token = await GetTokenAsync(CancellationToken.None);
+
+            if (token == null)
+            {
+                await notification.NotifyStreamerAboutAuthAsync(api).ConfigureAwait(false);
+                SemaphoreSlim.Release();
+                throw new NullReferenceException(nameof(TokenInfo) + " was null");
+            }
+
+            await RefreshTokenAsync(token);
+        }
+
+        SemaphoreSlim.Release();
+
+        return token;
     }
 }
