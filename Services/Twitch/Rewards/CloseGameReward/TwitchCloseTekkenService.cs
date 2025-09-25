@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using MARS.Server.Services.Twitch.Management.Entitys;
 using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Websockets;
 
@@ -7,9 +8,10 @@ namespace MARS.Server.Services.Twitch.Rewards.CloseGameReward;
 public class TwitchCloseTekkenService(
     ILogger<TwitchCloseTekkenService> logger,
     EventSubWebsocketClient wsClient
-) : BackgroundService
+) : BackgroundService, ITwitchReward
 {
     public bool IsServiceActive { get; set; } = true;
+    public int RewardCost { get; set; } = 6666;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -34,7 +36,7 @@ public class TwitchCloseTekkenService(
     {
         var twEvent = args.Payload.Event;
         var cost = twEvent.Reward.Cost;
-        if (cost == 6666 && IsServiceActive)
+        if (cost == RewardCost && IsServiceActive)
         {
             await Task.Factory.StartNew(() =>
             {

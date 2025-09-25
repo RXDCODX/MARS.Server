@@ -1,4 +1,5 @@
-﻿using TwitchLib.EventSub.Core.EventArgs.Channel;
+﻿using MARS.Server.Services.Twitch.Management.Entitys;
+using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Websockets;
 
 namespace MARS.Server.Services.Twitch.Rewards.TwitchAdhdReward;
@@ -10,11 +11,12 @@ public class TwitchAdhdService(
     IHubContext<TelegramusHub, ITelegramusHub> hubContext,
     ILogger<TwitchAdhdService> logger,
     EventSubWebsocketClient wsClient
-) : BackgroundService
+) : BackgroundService, ITwitchReward
 {
     public bool IsServiceActive { get; set; } = true;
+    public int RewardCost { get; set; } = 2002;
 
-    private const int AdhdRewardCost = 2002;
+    
     private const int AdhdDurationSeconds = 60;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -49,7 +51,7 @@ public class TwitchAdhdService(
 
         // Проверяем, что это награда за 2002 поинта и от нужного канала
         if (
-            twEvent.Reward.Cost == AdhdRewardCost
+            twEvent.Reward.Cost == RewardCost
             && twEvent.BroadcasterUserLogin.Equals(
                 TwitchExstension.Channel,
                 StringComparison.OrdinalIgnoreCase

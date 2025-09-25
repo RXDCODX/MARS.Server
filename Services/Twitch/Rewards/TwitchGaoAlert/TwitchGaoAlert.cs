@@ -1,4 +1,5 @@
 ﻿using MARS.Server.Services.Twitch.Rewards.TwitchGaoAlert.Entitys;
+using MARS.Server.Services.Twitch.Management.Entitys;
 using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Websockets;
 
@@ -11,8 +12,10 @@ public class TwitchGaoAlert(
     IHostApplicationLifetime lifetime,
     IHubContext<TelegramusHub, ITelegramusHub> hubContext,
     ILogger<TwitchGaoAlert> logger
-) : BackgroundService
+) : BackgroundService, ITwitchReward
 {
+    public int RewardCost { get; set; } = 18;
+
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
         lifetime.ApplicationStarted.Register(
@@ -43,7 +46,7 @@ public class TwitchGaoAlert(
 
         if (
             channel.Equals(TwitchExstension.ChannelId, StringComparison.OrdinalIgnoreCase)
-            && cost == 18
+            && cost == RewardCost
         )
         {
             await Task.Factory.StartNew(async () =>

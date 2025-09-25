@@ -1,4 +1,5 @@
 ﻿using MARS.Server.Services.Twitch.FumoFriday.Entitys;
+using MARS.Server.Services.Twitch.Management.Entitys;
 using TwitchLib.Client.Events;
 using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Websockets;
@@ -13,9 +14,10 @@ public class FumoFridayWorker(
     ITwitchClient twitchClient,
     ITwitchAPI twitchApi,
     EventSubWebsocketClient wsClient
-) : BackgroundService
+) : BackgroundService, ITwitchReward
 {
     public bool IsServiceActive { get; set; } = true;
+    public int RewardCost { get; set; } = 13;
 
     private readonly CancellationToken _cancellationToken =
         hostApplicationLifetime.ApplicationStopping;
@@ -88,7 +90,7 @@ public class FumoFridayWorker(
         await Task.Factory.StartNew(
             async () =>
             {
-                if (args.Payload.Event.Reward.Cost == 13)
+                if (args.Payload.Event.Reward.Cost == RewardCost)
                 {
                     var name = args.Payload.Event.UserName;
                     var id = args.Payload.Event.UserId;

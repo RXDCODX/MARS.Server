@@ -1,4 +1,5 @@
 ﻿using MARS.Server.Services.Twitch.Management;
+using MARS.Server.Services.Twitch.Management.Entitys;
 using MARS.Server.Services.Twitch.Rewards.MiniGames.Entitys.Interfaces;
 using MARS.Server.Services.Twitch.Rewards.MiniGames.Entitys.Subs;
 using TwitchLib.Api.Helix.Models.Chat;
@@ -11,15 +12,16 @@ public class TwitchRussianRoulete(
     ITwitchAPI api,
     IDbContextFactory<AppDbContext> dbContextFactory,
     TokenService tokenService
-) : ITwitchMiniGame
+) : ITwitchMiniGame, ITwitchReward
 {
     public string Name => "russianroulete";
     public bool IsReuseRewardForAddMechanic { get; set; } = true;
     public bool IsGameRunning { get; set; }
+    public int RewardCost { get; set; } = 6;
 
     private const int MaxPlayers = 50;
     private const double AwaitingTimeForNewPlayersInMilliseconds = 1000 * 60;
-    private const int CostOfRoulette = 6;
+    
     private CancellationTokenSource _cancellationTokenSource = new();
     private DateTimeOffset _gameStartDateTime;
     private bool _gameStillActive;
@@ -64,7 +66,7 @@ public class TwitchRussianRoulete(
 
     public int GetGameCost()
     {
-        return CostOfRoulette;
+        return RewardCost;
     }
 
     public async Task GameStart(
@@ -81,7 +83,7 @@ public class TwitchRussianRoulete(
             var seconds = TimeSpan.FromMilliseconds(AwaitingTimeForNewPlayersInMilliseconds);
 
             var text =
-                $"@{name} запускает русскую рулетку, у вас есть {seconds.TotalSeconds} секунд! Чтобы принять участие нажмите на награду за баллы канала стоимостью {CostOfRoulette}!";
+                $"@{name} запускает русскую рулетку, у вас есть {seconds.TotalSeconds} секунд! Чтобы принять участие нажмите на награду за баллы канала стоимостью {RewardCost}!";
             await api.SendAnnouncementToMainTwitch(
                 text,
                 tokenService.Token,
@@ -156,7 +158,7 @@ public class TwitchRussianRoulete(
 
     public Task<bool> OnRewardRedemption(string userName, string userId, int cost)
     {
-        if (cost == CostOfRoulette && _isAwaitingNewPlayers && !_gameStillActive)
+        if (cost == RewardCost && _isAwaitingNewPlayers && !_gameStillActive)
         {
             if (
                 _listOfPlayers.Any(e =>

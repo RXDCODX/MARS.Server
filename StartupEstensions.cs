@@ -17,6 +17,7 @@ using MARS.Server.Services.TelegramBotService;
 using MARS.Server.Services.Twitch.AutoInfoFetch;
 using MARS.Server.Services.Twitch.Client;
 using MARS.Server.Services.Twitch.ClientMessages.AutoMessages;
+using MARS.Server.Services.Twitch.ClientMessages.AutoMessages.Extensions;
 using MARS.Server.Services.Twitch.ClientMessages.SignalRAlerts;
 using MARS.Server.Services.Twitch.ClientMessages.TwitchAutoHello;
 using MARS.Server.Services.Twitch.FumoFriday;
@@ -223,8 +224,8 @@ public static class StartupEstensions
         services.AddSingleton<TwitchStreamStartupNotifications>();
         services.AddSingleton<TwitchMediaAlerts>();
         services.AddHostedService(sp => sp.GetRequiredService<TwitchMediaAlerts>());
-        services.AddSingleton<AutoMessagesController>();
-        services.AddHostedService(sp => sp.GetRequiredService<AutoMessagesController>());
+        services.AddSingleton<AutoMessagesHandler>();
+        services.AddHostedService(sp => sp.GetRequiredService<AutoMessagesHandler>());
 
         // Регистрируем сервис для работы с шаблонами сообщений Twitch
         // services.AddSingleton<TwitchMessageBuilderService>();
@@ -318,6 +319,9 @@ public static class StartupEstensions
 
         // Регистрируем сервис для работы с зрителями канала rxdcodx
         services.AddRxdcodxViewersServiceAsSingleton();
+
+        // Регистрируем сервис для работы с автоматическими сообщениями
+        services.AddAutoMessagesService();
 
         return services;
     }

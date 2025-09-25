@@ -1,4 +1,5 @@
 ﻿using MARS.Server.Services.Twitch.Management;
+using MARS.Server.Services.Twitch.Management.Entitys;
 using TwitchLib.Api.Core.Enums;
 using TwitchLib.Api.Helix.Models.ChannelPoints.UpdateCustomRewardRedemptionStatus;
 using TwitchLib.EventSub.Core.EventArgs.Channel;
@@ -15,11 +16,11 @@ public class TwitchRefundService(
     ILogger<TwitchRefundService> logger,
     EventSubWebsocketClient wsClient,
     TokenService tokenService
-) : BackgroundService
+) : BackgroundService, ITwitchReward
 {
     public bool IsServiceActive { get; set; } = true;
+    public int RewardCost { get; set; } = 160;
 
-    private const int RefundRewardCost = 160;
     private const string RefundRewardId = "e0af123a-3987-4924-a86b-393a702d2857\r\n";
     private static readonly string[] AspVariations = ["asp", "ASP", "Asp", "асп", "Асп", "АСП"];
 
@@ -57,7 +58,7 @@ public class TwitchRefundService(
 
         // Проверяем, что это награда за 160 баллов и от нужного канала
         if (
-            twEvent.Reward.Cost == RefundRewardCost
+            twEvent.Reward.Cost == RewardCost
             && twEvent.BroadcasterUserLogin.Equals(
                 TwitchExstension.Channel,
                 StringComparison.OrdinalIgnoreCase

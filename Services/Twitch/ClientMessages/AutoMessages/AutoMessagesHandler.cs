@@ -3,9 +3,9 @@ using TwitchLib.Client.Events;
 
 namespace MARS.Server.Services.Twitch.ClientMessages.AutoMessages;
 
-public class AutoMessagesController(
+public class AutoMessagesHandler(
     ITwitchClient client,
-    ILogger<AutoMessagesController> logger,
+    ILogger<AutoMessagesHandler> logger,
     IDbContextFactory<AppDbContext> dbContextFactory,
     IHostApplicationLifetime applicationLifetime,
     IHubContext<TelegramusHub, ITelegramusHub> hubContext
@@ -79,7 +79,7 @@ public class AutoMessagesController(
                 else
                 {
                     throw new NullReferenceException(
-                        $"нету сообщений почему то в {nameof(AutoMessagesController)}"
+                        $"нету сообщений почему то в {nameof(AutoMessagesHandler)}"
                     );
                 }
             }

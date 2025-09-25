@@ -4,7 +4,7 @@ using MARS.Server.Services.Twitch.ClientMessages.AutoMessages;
 
 namespace MARS.Server.Services.CommandExecutor.Commands;
 
-public class SendAutoMessageCommand(AutoMessagesController controller) : BaseCommand
+public class SendAutoMessageCommand(AutoMessagesHandler handler) : BaseCommand
 {
     public override string CommandName => "automessage";
     public override string Description => "Отправить AutoMessage принудительно";
@@ -18,7 +18,7 @@ public class SendAutoMessageCommand(AutoMessagesController controller) : BaseCom
         CancellationToken cancellationToken = default
     )
     {
-        await controller.ExecuteAutoMessage();
+        await handler.ExecuteAutoMessage();
 
         return "Автомессага выполнена!";
     }

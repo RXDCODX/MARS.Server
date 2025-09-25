@@ -1,4 +1,5 @@
 ﻿using MARS.Server.Services.Twitch.Management;
+using MARS.Server.Services.Twitch.Management.Entitys;
 using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Websockets;
 
@@ -12,13 +13,14 @@ public class TwitchClipCreatorService(
     TokenService tokenService,
     ILogger<TwitchClipCreatorService> logger,
     EventSubWebsocketClient wsClient
-) : BackgroundService
+) : BackgroundService, ITwitchReward
 {
     public bool IsServiceActive { get; set; } = true;
+    public int RewardCost { get; set; } = 1;
 
     private readonly CancellationToken _cancellationToken = lifetime.ApplicationStopping;
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
         if (IsServiceActive)
         {
@@ -26,8 +28,7 @@ public class TwitchClipCreatorService(
                 WsClientOnChannelPointsCustomRewardRedemptionAdd;
         }
 
-        // Ждем остановки сервиса
-        await Task.Delay(Timeout.Infinite, stoppingToken);
+        return Task.CompletedTask;
     }
 
     public override async Task StopAsync(CancellationToken cancellationToken)
@@ -46,7 +47,7 @@ public class TwitchClipCreatorService(
         var userName = twEvent.UserName;
         var cost = twEvent.Reward.Cost;
 
-        if (cost == 1 && IsServiceActive)
+        if (cost == RewardCost && IsServiceActive)
         {
             await Task.Factory.StartNew(
                 async () =>

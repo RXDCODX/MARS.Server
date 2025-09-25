@@ -1,4 +1,5 @@
 ﻿using MARS.Server.Services.Twitch.Management;
+using MARS.Server.Services.Twitch.Management.Entitys;
 using MARS.Server.Services.WaifuRoll;
 using MARS.Server.Services.WaifuRoll.helpers;
 using TwitchLib.Api.Helix.Models.Chat;
@@ -19,11 +20,12 @@ public class MergeWaifu(
     WaifuRollEnsurenceService waifuDbHelper,
     IOptions<ShikimoriClientOptions> options,
     EventSubWebsocketClient wsClient
-) : BackgroundService
+) : BackgroundService, ITwitchReward
 {
     private readonly CancellationToken _cancellationToken = lifetime.ApplicationStopping;
 
     public bool IsServiceActive { get; set; } = true;
+    public int RewardCost { get; set; } = 2;
 
     public async Task MergeWaifuTwitchEvent(
         object? sender,
@@ -38,7 +40,7 @@ public class MergeWaifu(
             ) && IsServiceActive
         )
         {
-            if (twEvent.Reward.Cost == 2)
+            if (twEvent.Reward.Cost == RewardCost)
             {
                 await using AppDbContext dbContext = await factory.CreateDbContextAsync(
                     _cancellationToken

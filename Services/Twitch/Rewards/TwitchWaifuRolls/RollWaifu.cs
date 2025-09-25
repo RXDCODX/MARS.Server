@@ -1,4 +1,5 @@
 ﻿using System.Globalization;
+using MARS.Server.Services.Twitch.Management.Entitys;
 using MARS.Server.Services.WaifuRoll;
 using MARS.Server.Services.WaifuRoll.helpers;
 using TwitchLib.EventSub.Core.EventArgs.Channel;
@@ -16,9 +17,10 @@ public class RollWaifu(
     ITwitchAPI api,
     EventSubWebsocketClient wsClient,
     WaifuRollEnsurenceService waifuDbHelper
-) : BackgroundService
+) : BackgroundService, ITwitchReward
 {
     public bool IsServiceActive { get; set; } = true;
+    public int RewardCost { get; set; } = 4;
 
     public async Task RollWaifuTwitchEvent(
         object? sender,
@@ -33,7 +35,7 @@ public class RollWaifu(
             ) && IsServiceActive
         )
         {
-            if (twEvent.Reward.Cost == 4)
+            if (twEvent.Reward.Cost == RewardCost)
             {
                 Waifu? waifu = await waifuRollService.RollTheWaifu(
                     twEvent.UserId,

@@ -1,4 +1,5 @@
-﻿using MARS.Server.Services.Twitch.Rewards.MiniGames.Entitys.Interfaces;
+﻿using MARS.Server.Services.Twitch.Management.Entitys;
+using MARS.Server.Services.Twitch.Rewards.MiniGames.Entitys.Interfaces;
 using MARS.Server.Services.Twitch.Rewards.MiniGames.Entitys.Subs;
 
 namespace MARS.Server.Services.Twitch.Rewards.MiniGames;
@@ -8,13 +9,13 @@ public class TwitchTrivia(
     IWebHostEnvironment environment,
     ILogger<TwitchTrivia> logger,
     IDbContextFactory<AppDbContext> dbContextFactory
-) : ITwitchMiniGame
+) : ITwitchMiniGame, ITwitchReward
 {
     public string Name => "trivia";
     public bool IsReuseRewardForAddMechanic { get; set; } = false;
     public bool IsGameRunning { get; set; }
+    public int RewardCost { get; set; } = 7;
 
-    private const int CostOfAlert = 7;
     private const int ChanceToBeSaved = 30;
     internal int CountQuestions;
     internal readonly SemaphoreSlim SemaphoreSlim = new(1);
@@ -100,7 +101,7 @@ public class TwitchTrivia(
 
     public int GetGameCost()
     {
-        return CostOfAlert;
+        return RewardCost;
     }
 
     public async Task GameStart(
