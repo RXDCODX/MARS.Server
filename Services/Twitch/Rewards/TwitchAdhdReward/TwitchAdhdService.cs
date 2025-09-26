@@ -14,9 +14,8 @@ public class TwitchAdhdService(
 ) : BackgroundService, ITwitchReward
 {
     public bool IsServiceActive { get; set; } = true;
-    public int RewardCost { get; set; } = 2002;
+    public int Cost { get; init; } = 2002;
 
-    
     private const int AdhdDurationSeconds = 60;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -51,7 +50,7 @@ public class TwitchAdhdService(
 
         // Проверяем, что это награда за 2002 поинта и от нужного канала
         if (
-            twEvent.Reward.Cost == RewardCost
+            twEvent.Reward.Cost == Cost
             && twEvent.BroadcasterUserLogin.Equals(
                 TwitchExstension.Channel,
                 StringComparison.OrdinalIgnoreCase

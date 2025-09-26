@@ -17,7 +17,7 @@ public class RandomArt(
 ) : BackgroundService, ITwitchReward
 {
     public bool IsServiceActive { get; set; } = true;
-    public int RewardCost { get; set; } = 27;
+    public int Cost { get; init; } = 27;
 
     private async Task WsClientOnChannelPointsCustomRewardRedemptionAdd(
         object? sender,
@@ -26,7 +26,7 @@ public class RandomArt(
     {
         var twEvent = args.Payload.Event;
         if (
-            twEvent.Reward.Cost == RewardCost
+            twEvent.Reward.Cost == Cost
             && twEvent.BroadcasterUserLogin.Equals(
                 TwitchExstension.Channel,
                 StringComparison.OrdinalIgnoreCase

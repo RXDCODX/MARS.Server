@@ -28,6 +28,7 @@ using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
 using MARS.Server.Services.Twitch.Rewards.CloseGameReward;
 using MARS.Server.Services.Twitch.Rewards.MiniGames;
 using MARS.Server.Services.Twitch.Rewards.TwitchAdhdReward;
+using MARS.Server.Services.Twitch.Rewards.TestReward;
 using MARS.Server.Services.Twitch.Rewards.TwitchAlerts;
 using MARS.Server.Services.Twitch.Rewards.TwitchClipCreator;
 using MARS.Server.Services.Twitch.Rewards.TwitchGaoAlert;
@@ -303,6 +304,9 @@ public static class StartupEstensions
 
         //services.AddSingleton<TwitchRefundService>();
         //services.AddHostedService(sp => sp.GetRequiredService<TwitchRefundService>());
+
+        services.AddSingleton<TestRewardService>();
+        services.AddHostedService(sp => sp.GetRequiredService<TestRewardService>());
 
         services.AddSingleton<TwitchGaoAlert>();
         services.AddHostedService(sp => sp.GetRequiredService<TwitchGaoAlert>());

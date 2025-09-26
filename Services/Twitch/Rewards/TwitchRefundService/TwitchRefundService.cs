@@ -19,12 +19,12 @@ public class TwitchRefundService(
 ) : BackgroundService, ITwitchReward
 {
     public bool IsServiceActive { get; set; } = true;
-    public int RewardCost { get; set; } = 160;
+    public int Cost { get; init; } = 160;
 
     private const string RefundRewardId = "e0af123a-3987-4924-a86b-393a702d2857\r\n";
     private static readonly string[] AspVariations = ["asp", "ASP", "Asp", "асп", "Асп", "АСП"];
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
         if (IsServiceActive)
         {
@@ -32,8 +32,7 @@ public class TwitchRefundService(
                 OnChannelPointsCustomRewardRedemption;
         }
 
-        // Ждем остановки сервиса
-        await Task.Delay(Timeout.Infinite, stoppingToken);
+        return Task.CompletedTask;
     }
 
     public override async Task StopAsync(CancellationToken cancellationToken)
@@ -58,7 +57,7 @@ public class TwitchRefundService(
 
         // Проверяем, что это награда за 160 баллов и от нужного канала
         if (
-            twEvent.Reward.Cost == RewardCost
+            twEvent.Reward.Cost == Cost
             && twEvent.BroadcasterUserLogin.Equals(
                 TwitchExstension.Channel,
                 StringComparison.OrdinalIgnoreCase
@@ -96,7 +95,7 @@ public class TwitchRefundService(
 
                     // Отправляем сообщение пользователю о возврате баллов
                     await client.SendMessageToMainTwitchAsync(
-                        $"@{twEvent.UserName}, твои {RefundRewardCost} баллов были возвращены!",
+                        $"@{twEvent.UserName}, твои {Cost} баллов были возвращены!",
                         logger
                     );
 

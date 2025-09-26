@@ -14,7 +14,7 @@ public class TwitchTrivia(
     public string Name => "trivia";
     public bool IsReuseRewardForAddMechanic { get; set; } = false;
     public bool IsGameRunning { get; set; }
-    public int RewardCost { get; set; } = 7;
+    public int Cost { get; init; } = 7;
 
     private const int ChanceToBeSaved = 30;
     internal int CountQuestions;
@@ -101,7 +101,7 @@ public class TwitchTrivia(
 
     public int GetGameCost()
     {
-        return RewardCost;
+        return Cost;
     }
 
     public async Task GameStart(

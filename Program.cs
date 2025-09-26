@@ -10,6 +10,7 @@ using MARS.Server.Services.Logs.Services;
 using MARS.Server.Services.MemoryStorageService;
 using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.Twitch.Rewards;
+using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
 using WTelegram;
 
 namespace MARS.Server;
@@ -176,7 +177,8 @@ public static class Program
             .AddCinemaQueueServicesAsSingleton()
             .AddGameServices()
             .AddExternalApiServices()
-            .AddSpecializedServices();
+            .AddSpecializedServices()
+            .AddChannelRewardsManager();
 
         services.AddSingleton<IDbContextFactory<AppDbContext>>(contextFactory);
 

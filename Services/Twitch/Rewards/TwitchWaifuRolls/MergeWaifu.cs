@@ -25,7 +25,7 @@ public class MergeWaifu(
     private readonly CancellationToken _cancellationToken = lifetime.ApplicationStopping;
 
     public bool IsServiceActive { get; set; } = true;
-    public int RewardCost { get; set; } = 2;
+    public int Cost { get; init; } = 2;
 
     public async Task MergeWaifuTwitchEvent(
         object? sender,
@@ -40,7 +40,7 @@ public class MergeWaifu(
             ) && IsServiceActive
         )
         {
-            if (twEvent.Reward.Cost == RewardCost)
+            if (twEvent.Reward.Cost == Cost)
             {
                 await using AppDbContext dbContext = await factory.CreateDbContextAsync(
                     _cancellationToken

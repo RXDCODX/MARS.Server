@@ -7,7 +7,7 @@ namespace MARS.Server.Services.Twitch.Rewards.TwitchScreenParticles;
 public class Confetty : BackgroundService, ITwitchReward
 {
     public bool IsServiceActive { get; set; } = true;
-    public int RewardCost { get; set; } = 1700;
+    public int Cost { get; init; } = 1700;
     private readonly IHubContext<TelegramusHub, ITelegramusHub> _hub;
     private readonly ITwitchClient _client;
     private readonly EventSubWebsocketClient _wsClient;
@@ -48,7 +48,7 @@ public class Confetty : BackgroundService, ITwitchReward
     {
         var twEvent = args.Payload.Event;
         return
-            twEvent.Reward.Cost == RewardCost
+            twEvent.Reward.Cost == Cost
             && twEvent.BroadcasterUserLogin.Equals(
                 TwitchExstension.Channel,
                 StringComparison.OrdinalIgnoreCase

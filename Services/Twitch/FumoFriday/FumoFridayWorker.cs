@@ -17,7 +17,7 @@ public class FumoFridayWorker(
 ) : BackgroundService, ITwitchReward
 {
     public bool IsServiceActive { get; set; } = true;
-    public int RewardCost { get; set; } = 13;
+    public int Cost { get; init; } = 13;
 
     private readonly CancellationToken _cancellationToken =
         hostApplicationLifetime.ApplicationStopping;
@@ -90,7 +90,7 @@ public class FumoFridayWorker(
         await Task.Factory.StartNew(
             async () =>
             {
-                if (args.Payload.Event.Reward.Cost == RewardCost)
+                if (args.Payload.Event.Reward.Cost == Cost)
                 {
                     var name = args.Payload.Event.UserName;
                     var id = args.Payload.Event.UserId;

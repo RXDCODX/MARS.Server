@@ -14,6 +14,7 @@ using MARS.Server.Services.Twitch.HelloVideos.Entitys;
 using MARS.Server.Services.Twitch.Management.Entitys;
 using MARS.Server.Services.Twitch.MiniGamesStats.Entitys;
 using MARS.Server.Services.Twitch.TwitchFollowers.Entitys;
+using MARS.Server.Services.Twitch.Rewards.ChannelRewards.Entities;
 using MARS.Server.Services.StreamAcrhive.Entitys;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using WaifuRollGuarantee = MARS.Server.Services.WaifuRoll.Entitys.WaifuRollGuarantee;
@@ -83,6 +84,7 @@ public sealed class AppDbContext : DbContext
     public DbSet<StreamArchiveConfig> StreamArchiveConfigs { get; set; } = null!;
     public DbSet<StreamArchiveFile> StreamArchiveFiles { get; set; } = null!;
     public DbSet<StreamArchiveFileChunk> StreamArchiveFileChunks { get; set; } = null!;
+    public DbSet<ChannelRewardRecord> ChannelRewards { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

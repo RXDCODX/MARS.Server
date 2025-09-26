@@ -7,7 +7,7 @@ namespace MARS.Server.Services.Twitch.Rewards.TwitchScreenParticles;
 public class Fireworks : BackgroundService, ITwitchReward
 {
     public bool IsServiceActive { get; set; } = true;
-    public int RewardCost { get; set; } = 1701;
+    public int Cost { get; init; } = 1701;
     private readonly IHubContext<TelegramusHub, ITelegramusHub> _hub;
     private readonly ITwitchClient _client;
     private readonly EventSubWebsocketClient _wsClient;
@@ -48,7 +48,7 @@ public class Fireworks : BackgroundService, ITwitchReward
     {
         var twEvent = args.Payload.Event;
         return
-            twEvent.Reward.Cost == RewardCost
+            twEvent.Reward.Cost == Cost
             && twEvent.BroadcasterUserLogin.Equals(
                 TwitchExstension.Channel,
                 StringComparison.OrdinalIgnoreCase

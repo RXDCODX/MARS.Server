@@ -11,7 +11,7 @@ public class TwitchCloseTekkenService(
 ) : BackgroundService, ITwitchReward
 {
     public bool IsServiceActive { get; set; } = true;
-    public int RewardCost { get; set; } = 6666;
+    public int Cost { get; init; } = 6666;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -36,7 +36,7 @@ public class TwitchCloseTekkenService(
     {
         var twEvent = args.Payload.Event;
         var cost = twEvent.Reward.Cost;
-        if (cost == RewardCost && IsServiceActive)
+        if (cost == Cost && IsServiceActive)
         {
             await Task.Factory.StartNew(() =>
             {

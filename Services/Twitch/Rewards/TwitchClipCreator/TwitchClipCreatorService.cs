@@ -16,7 +16,7 @@ public class TwitchClipCreatorService(
 ) : BackgroundService, ITwitchReward
 {
     public bool IsServiceActive { get; set; } = true;
-    public int RewardCost { get; set; } = 1;
+    public int Cost { get; init; } = 1;
 
     private readonly CancellationToken _cancellationToken = lifetime.ApplicationStopping;
 
@@ -47,7 +47,7 @@ public class TwitchClipCreatorService(
         var userName = twEvent.UserName;
         var cost = twEvent.Reward.Cost;
 
-        if (cost == RewardCost && IsServiceActive)
+        if (cost == Cost && IsServiceActive)
         {
             await Task.Factory.StartNew(
                 async () =>

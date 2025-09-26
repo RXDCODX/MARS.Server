@@ -1,6 +1,7 @@
 ﻿using MARS.Server.Services.Twitch.Management;
 using TwitchLib.Api.Helix.Models.ChannelPoints;
 using TwitchLib.Api.Helix.Models.ChannelPoints.CreateCustomReward;
+using TwitchLib.Api.Helix.Models.ChannelPoints.UpdateCustomReward;
 
 namespace MARS.Server.Services.Twitch.Rewards.ChannelRewards;
 
@@ -121,6 +122,75 @@ public class ChannelRewardsService(
             );
 
             logger.LogInformation("Удалена награда канала: {RewardId}", rewardId);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            logger.LogException(ex);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Получить награду по идентификатору
+    /// </summary>
+    public async Task<CustomReward?> GetRewardByIdAsync(string rewardId)
+    {
+        if (!IsServiceActive)
+        {
+            logger.LogWarning("ChannelRewardsService выключен");
+            return null;
+        }
+
+        ArgumentException.ThrowIfNullOrWhiteSpace(rewardId);
+
+        var accessToken = tokenService.Token?.AccessToken;
+        ArgumentException.ThrowIfNullOrWhiteSpace(accessToken);
+
+        try
+        {
+            var response = await api.Helix.ChannelPoints.GetCustomRewardAsync(
+                TwitchExstension.ChannelId,
+                [rewardId],
+                true,
+                accessToken
+            );
+
+            return response.Data.FirstOrDefault();
+        }
+        catch (Exception ex)
+        {
+            logger.LogException(ex);
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Обновить награду канала
+    /// </summary>
+    public async Task<bool> UpdateRewardAsync(string rewardId, UpdateCustomRewardRequest request)
+    {
+        if (!IsServiceActive)
+        {
+            logger.LogWarning("ChannelRewardsService выключен");
+            return false;
+        }
+
+        ArgumentException.ThrowIfNullOrWhiteSpace(rewardId);
+
+        var accessToken = tokenService.Token?.AccessToken;
+        ArgumentException.ThrowIfNullOrWhiteSpace(accessToken);
+
+        try
+        {
+            await api.Helix.ChannelPoints.UpdateCustomRewardAsync(
+                TwitchExstension.ChannelId,
+                rewardId,
+                request,
+                accessToken
+            );
+
+            logger.LogInformation("Обновлена награда канала: {RewardId}", rewardId);
             return true;
         }
         catch (Exception ex)

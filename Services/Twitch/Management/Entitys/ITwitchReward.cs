@@ -2,5 +2,5 @@
 
 public interface ITwitchReward
 {
-    public int RewardCost { get; set; }
+    public int Cost { get; init; }
 }

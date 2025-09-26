@@ -20,7 +20,7 @@ public class RollWaifu(
 ) : BackgroundService, ITwitchReward
 {
     public bool IsServiceActive { get; set; } = true;
-    public int RewardCost { get; set; } = 4;
+    public int Cost { get; init; } = 4;
 
     public async Task RollWaifuTwitchEvent(
         object? sender,
@@ -35,7 +35,7 @@ public class RollWaifu(
             ) && IsServiceActive
         )
         {
-            if (twEvent.Reward.Cost == RewardCost)
+            if (twEvent.Reward.Cost == Cost)
             {
                 Waifu? waifu = await waifuRollService.RollTheWaifu(
                     twEvent.UserId,
