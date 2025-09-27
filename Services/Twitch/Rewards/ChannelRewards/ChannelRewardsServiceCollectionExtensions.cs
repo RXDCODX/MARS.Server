@@ -1,5 +1,4 @@
-﻿using MARS.Server.Services.Twitch.Rewards.ChannelRewards.Models;
-using MARS.Server.Services.Twitch.Rewards.TestReward;
+﻿using MARS.Server.Services.Twitch.Rewards.TwitchRefundService;
 
 namespace MARS.Server.Services.Twitch.Rewards.ChannelRewards;
 
@@ -10,8 +9,7 @@ public static class ChannelRewardsServiceCollectionExtensions
         services.AddSingleton<ChannelRewardsService>();
         services.AddHostedService(sp => sp.GetRequiredService<ChannelRewardsService>());
 
-        services.AddSingleton<ChannelRewardDefinition, TestRewardDefinition>();
-        services.AddHostedService<TwitchRefundService.TwitchRefundService>();
+        services.AddHostedService<RefundService>();
 
         services.AddSingleton<ChannelRewardsManager>();
         services.AddSingleton<ChannelRewardsSyncService>();

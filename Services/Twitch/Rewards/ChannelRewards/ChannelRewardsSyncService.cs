@@ -1,5 +1,6 @@
 ﻿using MARS.Server.Services.Twitch.Rewards.ChannelRewards.Entities;
 using MARS.Server.Services.Twitch.Rewards.ChannelRewards.Models;
+using SixLabors.ImageSharp.PixelFormats.Utils;
 using TwitchLib.Api.Helix.Models.ChannelPoints.CreateCustomReward;
 
 namespace MARS.Server.Services.Twitch.Rewards.ChannelRewards;
@@ -39,7 +40,7 @@ public class ChannelRewardsSyncService(
     {
         await using var db = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var local = await db.ChannelRewards.AsNoTracking().ToListAsync(cancellationToken);
-        var remote = await channelRewardsService.GetRewardsAsync() ?? [];
+        var remote = (await channelRewardsService.GetRewardsAsync())?.ToArray() ?? [];
 
         // Создание/обновление
         foreach (var record in local.Where(r => !r.IsDeleted))
@@ -156,34 +157,59 @@ public class ChannelRewardsSyncService(
         CancellationToken ct
     )
     {
+        var result = false;
+
         try
         {
+            // Сначала очищаем старые привязки к этой награде
+            var oldLinkedMedia = await db
+                .Alerts.Where(a => a.MetaInfo.TwitchGuid == Guid.Parse(rewardId))
+                .ToListAsync(ct);
+
+            foreach (var oldMedia in oldLinkedMedia)
+            {
+                oldMedia.MetaInfo.TwitchGuid = null;
+                db.Alerts.Update(oldMedia);
+            }
+
+            // Приоритет 1: привязка по MediaInfoId (если указан)
             if (record.MediaInfoId.HasValue)
             {
-                var media = await db.Alerts.FirstOrDefaultAsync(
+                var specificMedia = await db.Alerts.FirstOrDefaultAsync(
                     e => e.Id == record.MediaInfoId.Value,
                     ct
                 );
-                if (media != null)
+                if (specificMedia != null)
+                {
+                    specificMedia.MetaInfo.TwitchGuid = Guid.Parse(rewardId);
+                    db.Alerts.Update(specificMedia);
+                    result = true;
+                }
+            }
+            else
+            {
+                // Приоритет 2: привязка всех MediaInfo с такой же стоимостью
+                var mediaByCost = await db
+                    .Alerts.Where(a => a.MetaInfo.TwitchPointsCost == record.Cost)
+                    .ToListAsync(ct);
+
+                foreach (var media in mediaByCost)
                 {
                     media.MetaInfo.TwitchGuid = Guid.Parse(rewardId);
                     db.Alerts.Update(media);
-                    await db.SaveChangesAsync(ct);
+                    result = true;
                 }
-                return;
             }
 
-            var byCost = await db
-                .Alerts.AsNoTracking()
-                .Where(a => a.MetaInfo.TwitchPointsCost == record.Cost)
-                .ToListAsync(ct);
-
-            if (byCost.Count == 1)
+            if (result)
             {
-                var media = byCost[0];
-                media.MetaInfo.TwitchGuid = Guid.Parse(rewardId);
-                db.Alerts.Update(media);
                 await db.SaveChangesAsync(ct);
+                logger.LogInformation(
+                    "Привязана награда {RewardId} к MediaInfo с Cost={Cost}, MediaInfoId={MediaInfoId}",
+                    rewardId,
+                    record.Cost,
+                    record.MediaInfoId
+                );
             }
         }
         catch (Exception ex)

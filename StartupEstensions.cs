@@ -273,8 +273,6 @@ public static class StartupEstensions
 
         services.AddSingleton<SoundBarFactory>();
 
-        services.AddSingleton<AutoRewardInfoFetcher>();
-        services.AddHostedService(sp => sp.GetRequiredService<AutoRewardInfoFetcher>());
 
         services.AddSingleton<FramedataStagingService>();
         services.Configure<FramedataConfiguration>(

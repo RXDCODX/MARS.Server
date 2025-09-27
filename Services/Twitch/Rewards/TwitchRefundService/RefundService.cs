@@ -10,10 +10,10 @@ namespace MARS.Server.Services.Twitch.Rewards.TwitchRefundService;
 /// <summary>
 /// Сервис для возврата баллов канала при активации алерта за 160 баллов с текстом "asp"
 /// </summary>
-public class TwitchRefundService(
+public class RefundService(
     ITwitchAPI api,
     ITwitchClient client,
-    ILogger<TwitchRefundService> logger,
+    ILogger<RefundService> logger,
     EventSubWebsocketClient wsClient,
     TokenService tokenService
 ) : BackgroundService, ITwitchReward

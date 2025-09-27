@@ -47,7 +47,7 @@ lifetime.ApplicationStarted.Register(() =>
 });
 ```
 
-2. В обработчике проверьте условия и верните баллы:
+1. В обработчике проверьте условия и верните баллы:
 
 ```csharp
 private async Task OnRedemption(object? sender, ChannelPointsCustomRewardRedemptionArgs args)

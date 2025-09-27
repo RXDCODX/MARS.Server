@@ -42,12 +42,12 @@ public class ChannelRewardsManagerController(
     }
 
     [HttpPost("local")] // локальный upsert
-    public async Task<IActionResult> UpsertLocal([FromBody] ChannelRewardDefinition definition)
+    public async Task<IActionResult> UpsertLocal([FromBody] ChannelRewardRecord record)
     {
-        ChannelRewardRecord? record;
+        ChannelRewardRecord? result;
         try
         {
-            record = await manager.UpsertLocalAsync(definition);
+            result = await manager.UpsertLocalAsync(record);
         }
         catch (Exception ex)
         {
@@ -55,7 +55,7 @@ public class ChannelRewardsManagerController(
             return Problem(ex.Message);
         }
 
-        return record == null ? Problem("Не удалось сохранить локальную награду") : Ok(record);
+        return result == null ? Problem("Не удалось сохранить локальную награду") : Ok(result);
     }
 
     [HttpPut("local/{localId}")]
@@ -90,18 +90,4 @@ public class ChannelRewardsManagerController(
         }
     }
 
-    [HttpPost("sync-services")]
-    public async Task<IActionResult> SyncServicesToLocal()
-    {
-        try
-        {
-            var count = await manager.SyncRewardServicesToLocalAsync();
-            return Ok($"Синхронизировано {count} сервисов наград в локальную БД");
-        }
-        catch (Exception ex)
-        {
-            logger.LogException(ex);
-            return Problem(ex.Message);
-        }
-    }
 }

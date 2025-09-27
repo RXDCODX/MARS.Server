@@ -177,8 +177,12 @@ public static class Program
             .AddCinemaQueueServicesAsSingleton()
             .AddGameServices()
             .AddExternalApiServices()
-            .AddSpecializedServices()
-            .AddChannelRewardsManager();
+            .AddSpecializedServices();
+
+        if (builder.Environment.IsProduction())
+        {
+            services.AddChannelRewardsManager();
+        }
 
         services.AddSingleton<IDbContextFactory<AppDbContext>>(contextFactory);
 

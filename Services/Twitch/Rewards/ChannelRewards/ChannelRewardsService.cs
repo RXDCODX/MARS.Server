@@ -13,10 +13,9 @@ public class ChannelRewardsService(
 {
     public bool IsServiceActive { get; set; } = true;
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        // Ждем остановки сервиса
-        await Task.Delay(Timeout.Infinite, stoppingToken);
+        return Task.CompletedTask;
     }
 
     /// <summary>
