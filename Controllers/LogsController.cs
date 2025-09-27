@@ -30,14 +30,21 @@ public class LogsController(ILogsService logsService, ILogger<LogsController> lo
     {
         try
         {
-            logger.LogInformation("Получен запрос логов: page={Page}, pageSize={PageSize}, logLevel={LogLevel}, fromDate={FromDate}, toDate={ToDate}, searchText={SearchText}", 
-                page, pageSize, logLevel, fromDate, toDate, searchText);
+            logger.LogInformation(
+                "Получен запрос логов: page={Page}, pageSize={PageSize}, logLevel={LogLevel}, fromDate={FromDate}, toDate={ToDate}, searchText={SearchText}",
+                page,
+                pageSize,
+                logLevel,
+                fromDate,
+                toDate,
+                searchText
+            );
             if (page < 1)
             {
                 return BadRequest("Номер страницы должен быть больше 0");
             }
 
-            if (pageSize < 1 || pageSize > 1000)
+            if (pageSize is < 1 or > 1000)
             {
                 return BadRequest("Размер страницы должен быть от 1 до 1000");
             }
@@ -62,7 +69,11 @@ public class LogsController(ILogsService logsService, ILogger<LogsController> lo
                 TotalPages = (int)Math.Ceiling((double)totalCount / pageSize),
             };
 
-            logger.LogInformation("Возвращаем {LogCount} логов из {TotalCount} общих", logs.Count(), totalCount);
+            logger.LogInformation(
+                "Возвращаем {LogCount} логов из {TotalCount} общих",
+                logs.Count(),
+                totalCount
+            );
 
             return Ok(response);
         }
@@ -78,7 +89,7 @@ public class LogsController(ILogsService logsService, ILogger<LogsController> lo
     /// </summary>
     [HttpGet("by-level/{logLevel}")]
     [ProducesResponseType(typeof(IEnumerable<Log>), 200)]
-    public async Task<IActionResult> GetLogsByLevel(LogLevel logLevel)
+    public async Task<ActionResult<Log>> GetLogsByLevel(LogLevel logLevel)
     {
         try
         {
@@ -97,7 +108,7 @@ public class LogsController(ILogsService logsService, ILogger<LogsController> lo
     /// </summary>
     [HttpGet("by-date-range")]
     [ProducesResponseType(typeof(IEnumerable<Log>), 200)]
-    public async Task<IActionResult> GetLogsByDateRange(
+    public async Task<ActionResult<Log>> GetLogsByDateRange(
         [FromQuery] DateTime fromDate,
         [FromQuery] DateTime toDate
     )
@@ -129,7 +140,7 @@ public class LogsController(ILogsService logsService, ILogger<LogsController> lo
     /// </summary>
     [HttpGet("recent")]
     [ProducesResponseType(typeof(IEnumerable<Log>), 200)]
-    public async Task<IActionResult> GetRecentLogs([FromQuery] int count = 100)
+    public async Task<ActionResult<Log>> GetRecentLogs([FromQuery] int count = 100)
     {
         try
         {
@@ -153,7 +164,7 @@ public class LogsController(ILogsService logsService, ILogger<LogsController> lo
     /// </summary>
     [HttpGet("statistics")]
     [ProducesResponseType(typeof(LogsStatistics), 200)]
-    public async Task<IActionResult> GetLogsStatistics()
+    public async Task<ActionResult<Log>> GetLogsStatistics()
     {
         try
         {
@@ -181,7 +192,7 @@ public class LogsController(ILogsService logsService, ILogger<LogsController> lo
             logger.LogWarning("Тестовый лог уровня Warning");
             logger.LogError("Тестовый лог уровня Error");
             logger.LogCritical("Тестовый лог уровня Critical");
-            
+
             return Ok(new { message = "Тестовые логи созданы", timestamp = DateTime.UtcNow });
         }
         catch (Exception ex)

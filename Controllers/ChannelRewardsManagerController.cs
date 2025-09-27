@@ -89,4 +89,19 @@ public class ChannelRewardsManagerController(
             return Problem(ex.Message);
         }
     }
+
+    [HttpPost("sync-services")]
+    public async Task<ActionResult<string>> SyncServicesToLocal()
+    {
+        try
+        {
+            var count = await manager.SyncRewardServicesToLocalAsync();
+            return Ok($"Синхронизировано {count} сервисов наград в локальную БД");
+        }
+        catch (Exception ex)
+        {
+            logger.LogException(ex);
+            return Problem(ex.Message);
+        }
+    }
 }

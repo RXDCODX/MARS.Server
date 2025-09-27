@@ -176,7 +176,7 @@ public class StreamArchiveController(
     /// Проверить доступность папки
     /// </summary>
     [HttpPost("validate-folder")]
-    public IActionResult ValidateFolder([FromBody] ValidateFolderRequest request)
+    public ActionResult<ValidateFolderResponse> ValidateFolder([FromBody] ValidateFolderRequest request)
     {
         try
         {

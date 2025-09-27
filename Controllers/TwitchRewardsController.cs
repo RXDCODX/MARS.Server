@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using TwitchLib.Api.Helix.Models.ChannelPoints;
 using TwitchLib.Api.Helix.Models.ChannelPoints.CreateCustomReward;
+using TwitchLib.Api.Helix.Models.ChannelPoints.GetCustomReward;
 using TwitchLib.Api.Helix.Models.ChannelPoints.GetCustomRewardRedemption;
 using TwitchLib.Api.Helix.Models.ChannelPoints.UpdateCustomReward;
 using TwitchLib.Api.Helix.Models.ChannelPoints.UpdateCustomRewardRedemptionStatus;
@@ -25,7 +26,9 @@ public class TwitchRewardsController(
     /// Получить список наград канала
     /// </summary>
     [HttpGet]
-    public async Task<IActionResult> GetRewards([FromQuery] bool onlyManageable = true)
+    public async Task<ActionResult<GetCustomRewardsResponse>> GetRewards(
+        [FromQuery] bool onlyManageable = true
+    )
     {
         try
         {
@@ -156,7 +159,7 @@ public class TwitchRewardsController(
     /// Обновить статус редемпшенов (FULFILLED/CANCELED)
     /// </summary>
     [HttpPost("{rewardId}/redemptions/status")]
-    public async Task<ActionResult> UpdateRedemptionStatus(
+    public async Task<IActionResult> UpdateRedemptionStatus(
         string rewardId,
         [FromBody] UpdateCustomRewardRedemptionStatusRequest request,
         [FromQuery] List<string> ids

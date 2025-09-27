@@ -528,7 +528,7 @@ public class RandomMemeController(
     [HttpPost("orders/reorder/{typeId:int}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<ActionResult> ReorderMemeOrders(
+    public async Task<ActionResult<string>> ReorderMemeOrders(
         int typeId,
         CancellationToken cancellationToken = default
     )

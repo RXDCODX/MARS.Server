@@ -33,7 +33,7 @@ public class ServiceManagerController(
     /// Получить информацию о конкретном сервисе
     /// </summary>
     [HttpGet("service/{serviceName}")]
-    public async Task<ActionResult<ServiceInfo>> GetServiceInfo(string serviceName)
+    public async Task<ActionResult<ServiceInfo?>> GetServiceInfo(string serviceName)
     {
         try
         {

@@ -226,7 +226,7 @@ public class HonkaiController(
     /// Принудительно активировать ежедневные отметки для пользователя
     /// </summary>
     [HttpPost("users/{id:guid}/redeem-now")]
-    public async Task<ActionResult> RedeemNow(Guid id)
+    public async Task<ActionResult<object>> RedeemNow(Guid id)
     {
         try
         {

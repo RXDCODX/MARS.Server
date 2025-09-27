@@ -65,7 +65,7 @@ public class MediaInfoApiController(
     /// <param name="id">ID алерта</param>
     /// <returns>Файл алерта</returns>
     [HttpGet("{id:guid}/file")]
-    public async Task<IActionResult> GetAlertFile(Guid id)
+    public async Task<ActionResult> GetAlertFile(Guid id)
     {
         try
         {
