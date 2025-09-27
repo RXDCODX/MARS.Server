@@ -42,7 +42,9 @@ public class ChannelRewardsManagerController(
     }
 
     [HttpPost("local")] // локальный upsert
-    public async Task<ActionResult<ChannelRewardRecord?>> UpsertLocal([FromBody] ChannelRewardRecord record)
+    public async Task<ActionResult<ChannelRewardRecord?>> UpsertLocal(
+        [FromBody] ChannelRewardRecord record
+    )
     {
         ChannelRewardRecord? result;
         try
@@ -82,21 +84,6 @@ public class ChannelRewardsManagerController(
         {
             await syncService.SyncNow(cancellationToken);
             return Ok("Синхронизация выполнена");
-        }
-        catch (Exception ex)
-        {
-            logger.LogException(ex);
-            return Problem(ex.Message);
-        }
-    }
-
-    [HttpPost("sync-services")]
-    public async Task<ActionResult<string>> SyncServicesToLocal()
-    {
-        try
-        {
-            var count = await manager.SyncRewardServicesToLocalAsync();
-            return Ok($"Синхронизировано {count} сервисов наград в локальную БД");
         }
         catch (Exception ex)
         {
