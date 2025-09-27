@@ -145,3 +145,4 @@ public class MyController(IAutoMessagesService autoMessagesService)
 - Позитивный сценарий с ранним возвращением для негативных случаев
 - Логирование всех операций
 - Обработка исключений
+

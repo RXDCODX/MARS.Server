@@ -178,3 +178,4 @@ public class AutoMessagesController(
         return result;
     }
 }
+

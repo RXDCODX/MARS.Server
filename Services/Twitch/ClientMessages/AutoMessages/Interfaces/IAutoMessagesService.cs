@@ -44,3 +44,4 @@ public interface IAutoMessagesService
         CancellationToken cancellationToken = default
     );
 }
+
