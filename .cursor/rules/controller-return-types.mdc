@@ -1,0 +1,118 @@
+---
+globs: *Controller.cs
+description: Правило для обязательной типизации возвращаемых значений в контроллерах ASP.NET Core
+---
+
+# Типизация возвращаемых значений в контроллерах
+
+## Основные принципы
+
+1. **Обязательная типизация**: Всегда указывайте конкретный тип в `ActionResult<T>` вместо использования `IActionResult`
+2. **Явная типизация**: Даже для простых типов (bool, int, string) указывайте конкретный тип
+3. **Nullable типы**: Используйте nullable типы когда результат может быть null
+4. **Консистентность**: Все методы контроллера должны следовать одному стилю типизации
+
+## Структура метода контроллера
+
+```csharp
+[HttpGet("endpoint")]
+public async Task<ActionResult<ReturnType?>> MethodName([FromRoute] ParameterType parameter)
+{
+    var result = default(ReturnType?);
+    
+    if (!string.IsNullOrWhiteSpace(parameter))
+    {
+        // Основная логика
+        result = await service.GetDataAsync(parameter);
+    }
+    else
+    {
+        // Обработка ошибки
+    }
+    
+    return result != null ? Ok(result) : NotFound();
+}
+```
+
+## Примеры
+
+### ✅ Правильно - с типизацией
+
+```csharp
+[HttpGet("local/{localId}")]
+public async Task<ActionResult<ChannelRewardRecord?>> GetLocalById([FromRoute] Guid localId)
+{
+    var reward = await manager.GetLocalByIdAsync(localId);
+    return reward != null ? Ok(reward) : NotFound();
+}
+
+[HttpPost("create")]
+public async Task<ActionResult<bool>> CreateReward([FromBody] CreateRewardRequest request)
+{
+    var success = await manager.CreateAsync(request);
+    return success ? Ok(true) : BadRequest();
+}
+
+[HttpGet("exists/{id}")]
+public async Task<ActionResult<bool>> CheckExists([FromRoute] string id)
+{
+    var exists = await manager.ExistsAsync(id);
+    return Ok(exists);
+}
+```
+
+### ❌ Неправильно - без типизации
+
+```csharp
+[HttpGet("{rewardId}")]
+public async Task<IActionResult> GetById([FromRoute] string rewardId)
+{
+    var reward = await manager.GetByIdAsync(rewardId);
+    return reward != null ? Ok(reward) : NotFound();
+}
+
+[HttpPost("create")]
+public async Task<IActionResult> CreateReward([FromBody] CreateRewardRequest request)
+{
+    var success = await manager.CreateAsync(request);
+    return success ? Ok() : BadRequest();
+}
+```
+
+## Правила типизации
+
+### Для методов с данными
+
+- Используйте `ActionResult<DataType?>` когда данные могут отсутствовать
+- Используйте `ActionResult<DataType>` когда данные всегда возвращаются
+- Для коллекций: `ActionResult<IEnumerable<DataType>>` или `ActionResult<List<DataType>>`
+
+### Для методов без данных
+
+- `ActionResult<bool>` для операций успех/неудача
+- `ActionResult<int>` для операций возвращающих количество
+- `ActionResult<string>` для операций возвращающих сообщения
+
+### Для ошибок
+
+- `NotFound()` возвращает 404
+- `BadRequest()` возвращает 400
+- `Unauthorized()` возвращает 401
+- `Forbid()` возвращает 403
+
+## Исключения
+
+- Методы с `void` возвращаемым типом (редко используются в контроллерах)
+- Методы с `Task` без возвращаемого значения (только для операций без ответа)
+
+## Преимущества
+
+1. **Автодокументация**: Swagger/OpenAPI автоматически генерирует правильную документацию
+2. **Типобезопасность**: Компилятор проверяет соответствие типов
+3. **IntelliSense**: Лучшая поддержка в IDE
+4. **Тестирование**: Проще писать unit-тесты с известными типами
+5. **Клиентская генерация**: Автоматическая генерация клиентского кода
+
+## Связь с другими правилами
+
+Это правило дополняет правило "один вход - один выход" для контроллеров, обеспечивая полную типизацию методов.
