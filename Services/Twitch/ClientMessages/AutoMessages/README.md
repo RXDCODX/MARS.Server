@@ -13,7 +13,7 @@
 
 ### Структура файлов
 
-```
+```text
 Services/Twitch/ClientMessages/AutoMessages/
 ├── DTOs/
 │   ├── AutoMessageDto.cs
@@ -145,4 +145,3 @@ public class MyController(IAutoMessagesService autoMessagesService)
 - Позитивный сценарий с ранним возвращением для негативных случаев
 - Логирование всех операций
 - Обработка исключений
-
