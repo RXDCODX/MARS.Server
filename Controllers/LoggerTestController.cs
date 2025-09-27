@@ -10,9 +10,9 @@ public class LoggerTestController(ILogger<LoggerTestController> logger) : Contro
     /// Тестирует различные уровни логирования через SignalR
     /// </summary>
     [HttpPost("test-logging")]
-    public IActionResult TestLogging()
+    public ActionResult<object> TestLogging()
     {
-        IActionResult result = Ok(new { message = "Тестовые логи отправлены через SignalR" });
+        ActionResult<object> result = Ok(new { message = "Тестовые логи отправлены через SignalR" });
         
         logger.LogTrace("Это сообщение уровня Trace - детальная отладочная информация");
         logger.LogDebug("Это сообщение уровня Debug - отладочная информация");
@@ -28,9 +28,9 @@ public class LoggerTestController(ILogger<LoggerTestController> logger) : Contro
     /// Тестирует логирование с исключением
     /// </summary>
     [HttpPost("test-exception")]
-    public IActionResult TestException()
+    public ActionResult<object> TestException()
     {
-        IActionResult result = Ok(new { message = "Тестовое исключение залогировано через SignalR" });
+        ActionResult<object> result = Ok(new { message = "Тестовое исключение залогировано через SignalR" });
         
         try
         {
@@ -48,9 +48,9 @@ public class LoggerTestController(ILogger<LoggerTestController> logger) : Contro
     /// Тестирует структурированное логирование
     /// </summary>
     [HttpPost("test-structured")]
-    public IActionResult TestStructuredLogging()
+    public ActionResult<object> TestStructuredLogging()
     {
-        IActionResult result = Ok(new { message = "Структурированные логи отправлены через SignalR" });
+        ActionResult<object> result = Ok(new { message = "Структурированные логи отправлены через SignalR" });
         
         var userId = "user123";
         var action = "test_action";

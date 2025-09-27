@@ -7,9 +7,9 @@ namespace MARS.Server.Controllers;
 public class TestLoggerController(ILogger<TestLoggerController> logger) : ControllerBase
 {
     [HttpPost("test-warning")]
-    public IActionResult TestWarning()
+    public ActionResult<string> TestWarning()
     {
-        IActionResult result = Ok("Warning logged");
+        ActionResult<string> result = Ok("Warning logged");
         
         logger.LogWarning("Это тестовое предупреждение для проверки логгера в БД");
         
@@ -17,9 +17,9 @@ public class TestLoggerController(ILogger<TestLoggerController> logger) : Contro
     }
 
     [HttpPost("test-error")]
-    public IActionResult TestError()
+    public ActionResult<string> TestError()
     {
-        IActionResult result = Ok("Error logged");
+        ActionResult<string> result = Ok("Error logged");
         
         try
         {
@@ -34,9 +34,9 @@ public class TestLoggerController(ILogger<TestLoggerController> logger) : Contro
     }
 
     [HttpPost("test-critical")]
-    public IActionResult TestCritical()
+    public ActionResult<string> TestCritical()
     {
-        IActionResult result = Ok("Critical logged");
+        ActionResult<string> result = Ok("Critical logged");
         
         logger.LogCritical("Это критическая ошибка для проверки логгера в БД");
         

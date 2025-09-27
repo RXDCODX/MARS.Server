@@ -51,7 +51,7 @@ public class RxdcodxViewersController(
     /// Получить количество пользователей без аватарок
     /// </summary>
     [HttpGet("without-avatars/count")]
-    public async Task<ActionResult<int>> GetUsersWithoutAvatarsCount()
+    public async Task<ActionResult<object>> GetUsersWithoutAvatarsCount()
     {
         try
         {
@@ -69,7 +69,7 @@ public class RxdcodxViewersController(
     /// Обновить аватарки для пользователей без них
     /// </summary>
     [HttpPost("update-avatars")]
-    public async Task<ActionResult<int>> UpdateMissingAvatars()
+    public async Task<ActionResult<object>> UpdateMissingAvatars()
     {
         try
         {
@@ -90,7 +90,7 @@ public class RxdcodxViewersController(
     /// Тестовый endpoint для проверки обновления аватарок
     /// </summary>
     [HttpGet("debug/avatars")]
-    public async Task<ActionResult> DebugAvatars()
+    public async Task<ActionResult<object>> DebugAvatars()
     {
         try
         {

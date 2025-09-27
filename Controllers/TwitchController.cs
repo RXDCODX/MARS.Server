@@ -9,9 +9,9 @@ public class TwitchController(TokenService tokenService, ITwitchAPI api, IServer
     : Controller
 {
     [HttpGet("/" + nameof(TwitchUserAuth))]
-    public async Task<IActionResult> TwitchUserAuth([FromQuery] string code)
+    public async Task<ActionResult<object>> TwitchUserAuth([FromQuery] string code)
     {
-        IActionResult result = Ok();
+        ActionResult<object> result = Ok(new { message = "No code provided" });
         
         if (!string.IsNullOrWhiteSpace(code))
         {

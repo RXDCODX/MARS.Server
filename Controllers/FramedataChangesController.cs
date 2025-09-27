@@ -22,28 +22,28 @@ public class FramedataChangesController(FramedataStagingService stagingService) 
 
     // Approve/Reject single entities
     [HttpPost("approve/character/{name}")]
-    public async Task<ActionResult> ApproveCharacter(string name)
+    public async Task<ActionResult<object>> ApproveCharacter(string name)
     {
         await stagingService.ApproveCharacter(name);
         return Ok(new { message = "Персонаж применён" });
     }
 
     [HttpPost("reject/character/{name}")]
-    public async Task<ActionResult> RejectCharacter(string name)
+    public async Task<ActionResult<object>> RejectCharacter(string name)
     {
         await stagingService.RejectCharacter(name);
         return Ok(new { message = "Персонаж отклонён" });
     }
 
     [HttpPost("approve/move/{characterName}/{command}")]
-    public async Task<ActionResult> ApproveMove(string characterName, string command)
+    public async Task<ActionResult<object>> ApproveMove(string characterName, string command)
     {
         await stagingService.ApproveMove(characterName, command);
         return Ok(new { message = "Ход применён" });
     }
 
     [HttpPost("reject/move/{characterName}/{command}")]
-    public async Task<ActionResult> RejectMove(string characterName, string command)
+    public async Task<ActionResult<object>> RejectMove(string characterName, string command)
     {
         await stagingService.RejectMove(characterName, command);
         return Ok(new { message = "Ход отклонён" });
@@ -51,14 +51,14 @@ public class FramedataChangesController(FramedataStagingService stagingService) 
 
     // Approve/Reject all
     [HttpPost("approve/all")]
-    public async Task<ActionResult> ApproveAll()
+    public async Task<ActionResult<object>> ApproveAll()
     {
         await stagingService.ApproveAll();
         return Ok(new { message = "Все изменения применены" });
     }
 
     [HttpPost("reject/all")]
-    public async Task<ActionResult> RejectAll()
+    public async Task<ActionResult<object>> RejectAll()
     {
         await stagingService.RejectAll();
         return Ok(new { message = "Все изменения отклонены" });
@@ -66,7 +66,7 @@ public class FramedataChangesController(FramedataStagingService stagingService) 
 
     // Триггер обычного парсинга -> складывает в staging
     [HttpPost("scrape")]
-    public async Task<ActionResult> Scrape([FromServices] Tekken8FrameData frameData)
+    public async Task<ActionResult<object>> Scrape([FromServices] Tekken8FrameData frameData)
     {
         await frameData.StartScrupFrameData();
         return Ok(new { message = "Парсинг запущен, изменения отправлены в staging" });

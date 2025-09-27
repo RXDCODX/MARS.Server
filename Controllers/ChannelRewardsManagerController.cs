@@ -14,35 +14,35 @@ public class ChannelRewardsManagerController(
 ) : ControllerBase
 {
     [HttpGet]
-    public async Task<IActionResult> GetAll()
+    public async Task<ActionResult<IEnumerable<ChannelRewardRecord>>> GetAll()
     {
         var rewards = await manager.GetAllAsync();
         return Ok(rewards ?? []);
     }
 
     [HttpGet("local")]
-    public async Task<IActionResult> GetAllLocal()
+    public async Task<ActionResult<IEnumerable<ChannelRewardRecord>>> GetAllLocal()
     {
         var rewards = await manager.GetLocalAsync();
         return Ok(rewards);
     }
 
     [HttpGet("local/{localId}")]
-    public async Task<IActionResult> GetLocalById([FromRoute] Guid localId)
+    public async Task<ActionResult<ChannelRewardRecord?>> GetLocalById([FromRoute] Guid localId)
     {
         var reward = await manager.GetLocalByIdAsync(localId);
         return reward != null ? Ok(reward) : NotFound();
     }
 
     [HttpGet("{rewardId}")]
-    public async Task<IActionResult> GetById([FromRoute] string rewardId)
+    public async Task<ActionResult<ChannelRewardRecord?>> GetById([FromRoute] string rewardId)
     {
         var reward = await manager.GetByIdAsync(rewardId);
         return reward != null ? Ok(reward) : NotFound();
     }
 
     [HttpPost("local")] // локальный upsert
-    public async Task<IActionResult> UpsertLocal([FromBody] ChannelRewardDefinition definition)
+    public async Task<ActionResult<ChannelRewardRecord>> UpsertLocal([FromBody] ChannelRewardDefinition definition)
     {
         ChannelRewardRecord? record;
         try
@@ -76,7 +76,7 @@ public class ChannelRewardsManagerController(
     }
 
     [HttpPost("sync")]
-    public async Task<IActionResult> SyncNow(CancellationToken cancellationToken)
+    public async Task<ActionResult<string>> SyncNow(CancellationToken cancellationToken)
     {
         try
         {
@@ -91,7 +91,7 @@ public class ChannelRewardsManagerController(
     }
 
     [HttpPost("sync-services")]
-    public async Task<IActionResult> SyncServicesToLocal()
+    public async Task<ActionResult<string>> SyncServicesToLocal()
     {
         try
         {
