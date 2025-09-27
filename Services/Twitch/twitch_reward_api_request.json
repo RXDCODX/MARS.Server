@@ -1,0 +1,1566 @@
+{
+	"data": [
+		{
+			"broadcaster_name": "RXDCODX",
+			"broadcaster_login": "rxdcodx",
+			"broadcaster_id": "785975641",
+			"id": "0168eb96-fc6a-4af7-ac21-94e6a9dcdde8",
+			"image": null,
+			"background_color": "#22B1E3",
+			"is_enabled": true,
+			"cost": 3,
+			"title": "SOUND REQUEST",
+			"prompt": "Прикрепите ссылку на YouTube. Баллы вернутся, если заказ не пройдет по фильтрам",
+			"is_user_input_required": true,
+			"max_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_stream": 0
+			},
+			"max_per_user_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_user_per_stream": 0
+			},
+			"global_cooldown_setting": {
+				"is_enabled": false,
+				"global_cooldown_seconds": 0
+			},
+			"is_paused": false,
+			"is_in_stock": true,
+			"default_image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/default-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/default-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/default-4.png"
+			},
+			"should_redemptions_skip_request_queue": false,
+			"redemptions_redeemed_current_stream": null,
+			"cooldown_expires_at": null
+		},
+		{
+			"broadcaster_name": "RXDCODX",
+			"broadcaster_login": "rxdcodx",
+			"broadcaster_id": "785975641",
+			"id": "142c453b-ca12-41b9-8f6c-8aa6ff0b2518",
+			"image": null,
+			"background_color": "#000000",
+			"is_enabled": false,
+			"cost": 2000,
+			"title": "Ставка 2000",
+			"prompt": "",
+			"is_user_input_required": true,
+			"max_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_stream": 0
+			},
+			"max_per_user_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_user_per_stream": 0
+			},
+			"global_cooldown_setting": {
+				"is_enabled": false,
+				"global_cooldown_seconds": 0
+			},
+			"is_paused": false,
+			"is_in_stock": true,
+			"default_image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/default-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/default-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/default-4.png"
+			},
+			"should_redemptions_skip_request_queue": false,
+			"redemptions_redeemed_current_stream": null,
+			"cooldown_expires_at": null
+		},
+		{
+			"broadcaster_name": "RXDCODX",
+			"broadcaster_login": "rxdcodx",
+			"broadcaster_id": "785975641",
+			"id": "14d5e108-15c6-4444-b92a-4acd434875d4",
+			"image": null,
+			"background_color": "#F3FF00",
+			"is_enabled": true,
+			"cost": 9,
+			"title": "Random Mem",
+			"prompt": "Рандомный мем на экране",
+			"is_user_input_required": false,
+			"max_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_stream": 0
+			},
+			"max_per_user_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_user_per_stream": 0
+			},
+			"global_cooldown_setting": {
+				"is_enabled": false,
+				"global_cooldown_seconds": 0
+			},
+			"is_paused": false,
+			"is_in_stock": true,
+			"default_image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/default-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/default-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/default-4.png"
+			},
+			"should_redemptions_skip_request_queue": false,
+			"redemptions_redeemed_current_stream": null,
+			"cooldown_expires_at": null
+		},
+		{
+			"broadcaster_name": "RXDCODX",
+			"broadcaster_login": "rxdcodx",
+			"broadcaster_id": "785975641",
+			"id": "1b13ecb1-973d-46b5-bdab-48e4c11e487f",
+			"image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/1b13ecb1-973d-46b5-bdab-48e4c11e487f/f2730499-390e-4985-9cc0-07c86b69ff53/custom-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/1b13ecb1-973d-46b5-bdab-48e4c11e487f/f2730499-390e-4985-9cc0-07c86b69ff53/custom-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/1b13ecb1-973d-46b5-bdab-48e4c11e487f/f2730499-390e-4985-9cc0-07c86b69ff53/custom-4.png"
+			},
+			"background_color": "#FF0000",
+			"is_enabled": true,
+			"cost": 150,
+			"title": "Тяжело...",
+			"prompt": "",
+			"is_user_input_required": false,
+			"max_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_stream": 0
+			},
+			"max_per_user_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_user_per_stream": 0
+			},
+			"global_cooldown_setting": {
+				"is_enabled": false,
+				"global_cooldown_seconds": 0
+			},
+			"is_paused": false,
+			"is_in_stock": true,
+			"default_image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/default-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/default-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/default-4.png"
+			},
+			"should_redemptions_skip_request_queue": true,
+			"redemptions_redeemed_current_stream": null,
+			"cooldown_expires_at": null
+		},
+		{
+			"broadcaster_name": "RXDCODX",
+			"broadcaster_login": "rxdcodx",
+			"broadcaster_id": "785975641",
+			"id": "22db3d35-1b76-4674-beb7-cc7546356a84",
+			"image": null,
+			"background_color": "#1FFF48",
+			"is_enabled": true,
+			"cost": 1702,
+			"title": "Эмодзи!",
+			"prompt": "Выстрелить в экран указанными тобой смайликами! Есть поддержка Twitch BTTV 7TV FFZ смайликов! В РФ банят некоторые смайлы, возможно не будет работать 7тв bttv ffz.",
+			"is_user_input_required": true,
+			"max_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_stream": 0
+			},
+			"max_per_user_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_user_per_stream": 0
+			},
+			"global_cooldown_setting": {
+				"is_enabled": false,
+				"global_cooldown_seconds": 0
+			},
+			"is_paused": false,
+			"is_in_stock": true,
+			"default_image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/default-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/default-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/default-4.png"
+			},
+			"should_redemptions_skip_request_queue": false,
+			"redemptions_redeemed_current_stream": null,
+			"cooldown_expires_at": null
+		},
+		{
+			"broadcaster_name": "RXDCODX",
+			"broadcaster_login": "rxdcodx",
+			"broadcaster_id": "785975641",
+			"id": "2a6beeb8-ed92-4593-8bf0-1c9618ca603f",
+			"image": null,
+			"background_color": "#10D890",
+			"is_enabled": true,
+			"cost": 2002,
+			"title": "ADHD SUPERPOWER",
+			"prompt": "Открывает на минуту ADHD макет, если уже есть на экране - добавляет минуту",
+			"is_user_input_required": false,
+			"max_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_stream": 0
+			},
+			"max_per_user_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_user_per_stream": 0
+			},
+			"global_cooldown_setting": {
+				"is_enabled": false,
+				"global_cooldown_seconds": 0
+			},
+			"is_paused": false,
+			"is_in_stock": true,
+			"default_image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/default-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/default-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/default-4.png"
+			},
+			"should_redemptions_skip_request_queue": false,
+			"redemptions_redeemed_current_stream": null,
+			"cooldown_expires_at": null
+		},
+		{
+			"broadcaster_name": "RXDCODX",
+			"broadcaster_login": "rxdcodx",
+			"broadcaster_id": "785975641",
+			"id": "2cc02dd8-29e7-4c75-9c9f-e6921403d92b",
+			"image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/2cc02dd8-29e7-4c75-9c9f-e6921403d92b/ccc640e6-ec29-4829-9889-a51639ca4d34/custom-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/2cc02dd8-29e7-4c75-9c9f-e6921403d92b/ccc640e6-ec29-4829-9889-a51639ca4d34/custom-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/2cc02dd8-29e7-4c75-9c9f-e6921403d92b/ccc640e6-ec29-4829-9889-a51639ca4d34/custom-4.png"
+			},
+			"background_color": "#0080FF",
+			"is_enabled": true,
+			"cost": 6666,
+			"title": "Выключить теккен",
+			"prompt": "Закрывает игрульку",
+			"is_user_input_required": false,
+			"max_per_stream_setting": {
+				"is_enabled": true,
+				"max_per_stream": 1
+			},
+			"max_per_user_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_user_per_stream": 0
+			},
+			"global_cooldown_setting": {
+				"is_enabled": true,
+				"global_cooldown_seconds": 3600
+			},
+			"is_paused": false,
+			"is_in_stock": false,
+			"default_image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/default-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/default-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/default-4.png"
+			},
+			"should_redemptions_skip_request_queue": false,
+			"redemptions_redeemed_current_stream": null,
+			"cooldown_expires_at": null
+		},
+		{
+			"broadcaster_name": "RXDCODX",
+			"broadcaster_login": "rxdcodx",
+			"broadcaster_id": "785975641",
+			"id": "2d5949d1-50fd-45de-9ada-314c55d97b81",
+			"image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/2d5949d1-50fd-45de-9ada-314c55d97b81/dfa23e8e-e566-49b8-9a34-e956fd5eb52d/custom-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/2d5949d1-50fd-45de-9ada-314c55d97b81/dfa23e8e-e566-49b8-9a34-e956fd5eb52d/custom-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/2d5949d1-50fd-45de-9ada-314c55d97b81/dfa23e8e-e566-49b8-9a34-e956fd5eb52d/custom-4.png"
+			},
+			"background_color": "#FF0000",
+			"is_enabled": true,
+			"cost": 333,
+			"title": "ШКИБИДИБОП",
+			"prompt": "",
+			"is_user_input_required": false,
+			"max_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_stream": 0
+			},
+			"max_per_user_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_user_per_stream": 0
+			},
+			"global_cooldown_setting": {
+				"is_enabled": true,
+				"global_cooldown_seconds": 60
+			},
+			"is_paused": false,
+			"is_in_stock": true,
+			"default_image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/default-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/default-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/default-4.png"
+			},
+			"should_redemptions_skip_request_queue": true,
+			"redemptions_redeemed_current_stream": null,
+			"cooldown_expires_at": null
+		},
+		{
+			"broadcaster_name": "RXDCODX",
+			"broadcaster_login": "rxdcodx",
+			"broadcaster_id": "785975641",
+			"id": "2f21462d-6424-4227-afd8-f5242ef6bbf6",
+			"image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/2f21462d-6424-4227-afd8-f5242ef6bbf6/0efffefb-dd2a-4e76-88c6-835ff119c695/custom-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/2f21462d-6424-4227-afd8-f5242ef6bbf6/0efffefb-dd2a-4e76-88c6-835ff119c695/custom-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/2f21462d-6424-4227-afd8-f5242ef6bbf6/0efffefb-dd2a-4e76-88c6-835ff119c695/custom-4.png"
+			},
+			"background_color": "#FF0000",
+			"is_enabled": true,
+			"cost": 134,
+			"title": "PEDRO PEDRO PEDRO",
+			"prompt": "",
+			"is_user_input_required": false,
+			"max_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_stream": 0
+			},
+			"max_per_user_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_user_per_stream": 0
+			},
+			"global_cooldown_setting": {
+				"is_enabled": false,
+				"global_cooldown_seconds": 0
+			},
+			"is_paused": false,
+			"is_in_stock": true,
+			"default_image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/default-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/default-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/default-4.png"
+			},
+			"should_redemptions_skip_request_queue": true,
+			"redemptions_redeemed_current_stream": null,
+			"cooldown_expires_at": null
+		},
+		{
+			"broadcaster_name": "RXDCODX",
+			"broadcaster_login": "rxdcodx",
+			"broadcaster_id": "785975641",
+			"id": "3dcd76a0-9675-4695-b768-32c876228d18",
+			"image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/3dcd76a0-9675-4695-b768-32c876228d18/3f5a6873-0470-40ec-88bb-b34f42172b98/custom-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/3dcd76a0-9675-4695-b768-32c876228d18/3f5a6873-0470-40ec-88bb-b34f42172b98/custom-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/3dcd76a0-9675-4695-b768-32c876228d18/3f5a6873-0470-40ec-88bb-b34f42172b98/custom-4.png"
+			},
+			"background_color": "#7AA7FF",
+			"is_enabled": true,
+			"cost": 10,
+			"title": "Random sound",
+			"prompt": "",
+			"is_user_input_required": false,
+			"max_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_stream": 0
+			},
+			"max_per_user_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_user_per_stream": 0
+			},
+			"global_cooldown_setting": {
+				"is_enabled": false,
+				"global_cooldown_seconds": 0
+			},
+			"is_paused": false,
+			"is_in_stock": true,
+			"default_image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/default-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/default-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/default-4.png"
+			},
+			"should_redemptions_skip_request_queue": false,
+			"redemptions_redeemed_current_stream": null,
+			"cooldown_expires_at": null
+		},
+		{
+			"broadcaster_name": "RXDCODX",
+			"broadcaster_login": "rxdcodx",
+			"broadcaster_id": "785975641",
+			"id": "3f1cb48a-2886-49af-aec5-db6deb334505",
+			"image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/3f1cb48a-2886-49af-aec5-db6deb334505/abf9398a-5f56-42ac-a6d6-87ffef6d045e/custom-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/3f1cb48a-2886-49af-aec5-db6deb334505/abf9398a-5f56-42ac-a6d6-87ffef6d045e/custom-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/3f1cb48a-2886-49af-aec5-db6deb334505/abf9398a-5f56-42ac-a6d6-87ffef6d045e/custom-4.png"
+			},
+			"background_color": "#F700FF",
+			"is_enabled": true,
+			"cost": 6,
+			"title": "Русская рулетка",
+			"prompt": "Есть вариант игр на 1 игрока, на 2 игроков и на множество до 8",
+			"is_user_input_required": false,
+			"max_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_stream": 0
+			},
+			"max_per_user_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_user_per_stream": 0
+			},
+			"global_cooldown_setting": {
+				"is_enabled": false,
+				"global_cooldown_seconds": 60
+			},
+			"is_paused": false,
+			"is_in_stock": true,
+			"default_image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/default-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/default-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/default-4.png"
+			},
+			"should_redemptions_skip_request_queue": false,
+			"redemptions_redeemed_current_stream": null,
+			"cooldown_expires_at": null
+		},
+		{
+			"broadcaster_name": "RXDCODX",
+			"broadcaster_login": "rxdcodx",
+			"broadcaster_id": "785975641",
+			"id": "3f396b54-280f-46a2-82c0-35900d55818f",
+			"image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/3f396b54-280f-46a2-82c0-35900d55818f/d4d7c4b2-57cc-47b8-b482-985689f196ed/custom-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/3f396b54-280f-46a2-82c0-35900d55818f/d4d7c4b2-57cc-47b8-b482-985689f196ed/custom-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/3f396b54-280f-46a2-82c0-35900d55818f/d4d7c4b2-57cc-47b8-b482-985689f196ed/custom-4.png"
+			},
+			"background_color": "#E69900",
+			"is_enabled": true,
+			"cost": 13,
+			"title": "FUMO FRIDAY SUBSCRIBE",
+			"prompt": "подписка на пятничные поздравления FUMO FRIDAY",
+			"is_user_input_required": false,
+			"max_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_stream": 0
+			},
+			"max_per_user_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_user_per_stream": 0
+			},
+			"global_cooldown_setting": {
+				"is_enabled": false,
+				"global_cooldown_seconds": 0
+			},
+			"is_paused": false,
+			"is_in_stock": true,
+			"default_image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/default-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/default-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/default-4.png"
+			},
+			"should_redemptions_skip_request_queue": false,
+			"redemptions_redeemed_current_stream": null,
+			"cooldown_expires_at": null
+		},
+		{
+			"broadcaster_name": "RXDCODX",
+			"broadcaster_login": "rxdcodx",
+			"broadcaster_id": "785975641",
+			"id": "48aa92da-2cff-49bb-b586-cdb17b8c90c8",
+			"image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/48aa92da-2cff-49bb-b586-cdb17b8c90c8/043a6bc7-78ca-4a68-8c15-0d1c78ac0184/custom-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/48aa92da-2cff-49bb-b586-cdb17b8c90c8/043a6bc7-78ca-4a68-8c15-0d1c78ac0184/custom-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/48aa92da-2cff-49bb-b586-cdb17b8c90c8/043a6bc7-78ca-4a68-8c15-0d1c78ac0184/custom-4.png"
+			},
+			"background_color": "#FF0000",
+			"is_enabled": true,
+			"cost": 182,
+			"title": "Камень",
+			"prompt": "",
+			"is_user_input_required": false,
+			"max_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_stream": 0
+			},
+			"max_per_user_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_user_per_stream": 0
+			},
+			"global_cooldown_setting": {
+				"is_enabled": false,
+				"global_cooldown_seconds": 0
+			},
+			"is_paused": false,
+			"is_in_stock": true,
+			"default_image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/default-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/default-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/default-4.png"
+			},
+			"should_redemptions_skip_request_queue": true,
+			"redemptions_redeemed_current_stream": null,
+			"cooldown_expires_at": null
+		},
+		{
+			"broadcaster_name": "RXDCODX",
+			"broadcaster_login": "rxdcodx",
+			"broadcaster_id": "785975641",
+			"id": "4c4ea87e-0a8a-4b83-adff-e6e068e94b16",
+			"image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/4c4ea87e-0a8a-4b83-adff-e6e068e94b16/f3851496-e4d1-4627-8537-92cfc9937c3f/custom-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/4c4ea87e-0a8a-4b83-adff-e6e068e94b16/f3851496-e4d1-4627-8537-92cfc9937c3f/custom-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/4c4ea87e-0a8a-4b83-adff-e6e068e94b16/f3851496-e4d1-4627-8537-92cfc9937c3f/custom-4.png"
+			},
+			"background_color": "#9147FF",
+			"is_enabled": true,
+			"cost": 27,
+			"title": "Random Art",
+			"prompt": "введи любое число для рандомного арта. Если нужен по теме, Example: black_hair asuna_(sao) https://gelbooru.com/index.php?page=tags&s=list",
+			"is_user_input_required": true,
+			"max_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_stream": 0
+			},
+			"max_per_user_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_user_per_stream": 0
+			},
+			"global_cooldown_setting": {
+				"is_enabled": false,
+				"global_cooldown_seconds": 0
+			},
+			"is_paused": false,
+			"is_in_stock": true,
+			"default_image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/default-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/default-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/default-4.png"
+			},
+			"should_redemptions_skip_request_queue": false,
+			"redemptions_redeemed_current_stream": null,
+			"cooldown_expires_at": null
+		},
+		{
+			"broadcaster_name": "RXDCODX",
+			"broadcaster_login": "rxdcodx",
+			"broadcaster_id": "785975641",
+			"id": "56ad68aa-4598-49a5-a993-1dbeadb38874",
+			"image": null,
+			"background_color": "#00FF2F",
+			"is_enabled": false,
+			"cost": 1700,
+			"title": "Конфетти!",
+			"prompt": "",
+			"is_user_input_required": false,
+			"max_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_stream": 0
+			},
+			"max_per_user_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_user_per_stream": 0
+			},
+			"global_cooldown_setting": {
+				"is_enabled": false,
+				"global_cooldown_seconds": 0
+			},
+			"is_paused": false,
+			"is_in_stock": true,
+			"default_image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/default-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/default-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/default-4.png"
+			},
+			"should_redemptions_skip_request_queue": false,
+			"redemptions_redeemed_current_stream": null,
+			"cooldown_expires_at": null
+		},
+		{
+			"broadcaster_name": "RXDCODX",
+			"broadcaster_login": "rxdcodx",
+			"broadcaster_id": "785975641",
+			"id": "5f75a393-bea0-4091-bef6-b4808c51b09d",
+			"image": null,
+			"background_color": "#0021FF",
+			"is_enabled": true,
+			"cost": 210,
+			"title": "Привет",
+			"prompt": "",
+			"is_user_input_required": false,
+			"max_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_stream": 0
+			},
+			"max_per_user_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_user_per_stream": 2
+			},
+			"global_cooldown_setting": {
+				"is_enabled": false,
+				"global_cooldown_seconds": 0
+			},
+			"is_paused": false,
+			"is_in_stock": true,
+			"default_image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/default-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/default-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/default-4.png"
+			},
+			"should_redemptions_skip_request_queue": true,
+			"redemptions_redeemed_current_stream": null,
+			"cooldown_expires_at": null
+		},
+		{
+			"broadcaster_name": "RXDCODX",
+			"broadcaster_login": "rxdcodx",
+			"broadcaster_id": "785975641",
+			"id": "709af578-f769-443c-9da0-355e9298ae79",
+			"image": null,
+			"background_color": "#000000",
+			"is_enabled": false,
+			"cost": 500,
+			"title": "Ставка 500",
+			"prompt": "",
+			"is_user_input_required": true,
+			"max_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_stream": 0
+			},
+			"max_per_user_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_user_per_stream": 0
+			},
+			"global_cooldown_setting": {
+				"is_enabled": false,
+				"global_cooldown_seconds": 0
+			},
+			"is_paused": false,
+			"is_in_stock": true,
+			"default_image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/default-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/default-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/default-4.png"
+			},
+			"should_redemptions_skip_request_queue": false,
+			"redemptions_redeemed_current_stream": null,
+			"cooldown_expires_at": null
+		},
+		{
+			"broadcaster_name": "RXDCODX",
+			"broadcaster_login": "rxdcodx",
+			"broadcaster_id": "785975641",
+			"id": "75eaa862-6b75-4494-ba5c-638833fca8b6",
+			"image": null,
+			"background_color": "#F50000",
+			"is_enabled": false,
+			"cost": 1333,
+			"title": "SKIBIDIBOP LONG",
+			"prompt": "",
+			"is_user_input_required": false,
+			"max_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_stream": 0
+			},
+			"max_per_user_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_user_per_stream": 0
+			},
+			"global_cooldown_setting": {
+				"is_enabled": true,
+				"global_cooldown_seconds": 300
+			},
+			"is_paused": false,
+			"is_in_stock": true,
+			"default_image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/default-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/default-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/default-4.png"
+			},
+			"should_redemptions_skip_request_queue": true,
+			"redemptions_redeemed_current_stream": null,
+			"cooldown_expires_at": null
+		},
+		{
+			"broadcaster_name": "RXDCODX",
+			"broadcaster_login": "rxdcodx",
+			"broadcaster_id": "785975641",
+			"id": "79a11ba3-c280-447c-82c4-49063a367f57",
+			"image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/79a11ba3-c280-447c-82c4-49063a367f57/0b0b80b5-b42b-48af-aa8f-99e54100b366/custom-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/79a11ba3-c280-447c-82c4-49063a367f57/0b0b80b5-b42b-48af-aa8f-99e54100b366/custom-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/79a11ba3-c280-447c-82c4-49063a367f57/0b0b80b5-b42b-48af-aa8f-99e54100b366/custom-4.png"
+			},
+			"background_color": "#FF0000",
+			"is_enabled": true,
+			"cost": 342,
+			"title": "BAD TO THE BONE",
+			"prompt": "текст наверху и внизу можно разделить символом `=`",
+			"is_user_input_required": true,
+			"max_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_stream": 0
+			},
+			"max_per_user_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_user_per_stream": 0
+			},
+			"global_cooldown_setting": {
+				"is_enabled": false,
+				"global_cooldown_seconds": 0
+			},
+			"is_paused": false,
+			"is_in_stock": true,
+			"default_image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/default-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/default-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/default-4.png"
+			},
+			"should_redemptions_skip_request_queue": true,
+			"redemptions_redeemed_current_stream": null,
+			"cooldown_expires_at": null
+		},
+		{
+			"broadcaster_name": "RXDCODX",
+			"broadcaster_login": "rxdcodx",
+			"broadcaster_id": "785975641",
+			"id": "8a5289e3-3c03-4837-9d7d-0faf2fac3ff3",
+			"image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/8a5289e3-3c03-4837-9d7d-0faf2fac3ff3/d233002c-9303-4388-8750-039a56aee66b/custom-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/8a5289e3-3c03-4837-9d7d-0faf2fac3ff3/d233002c-9303-4388-8750-039a56aee66b/custom-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/8a5289e3-3c03-4837-9d7d-0faf2fac3ff3/d233002c-9303-4388-8750-039a56aee66b/custom-4.png"
+			},
+			"background_color": "#EB0400",
+			"is_enabled": true,
+			"cost": 341,
+			"title": "AGA",
+			"prompt": "текст наверху и внизу можно разделить символом `=`",
+			"is_user_input_required": true,
+			"max_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_stream": 0
+			},
+			"max_per_user_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_user_per_stream": 0
+			},
+			"global_cooldown_setting": {
+				"is_enabled": false,
+				"global_cooldown_seconds": 60
+			},
+			"is_paused": false,
+			"is_in_stock": true,
+			"default_image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/default-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/default-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/default-4.png"
+			},
+			"should_redemptions_skip_request_queue": true,
+			"redemptions_redeemed_current_stream": null,
+			"cooldown_expires_at": null
+		},
+		{
+			"broadcaster_name": "RXDCODX",
+			"broadcaster_login": "rxdcodx",
+			"broadcaster_id": "785975641",
+			"id": "96ac1d34-90f1-4a85-9abc-ce400c8b77f8",
+			"image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/96ac1d34-90f1-4a85-9abc-ce400c8b77f8/da60cef7-c9f9-4097-8f9d-597d28d36572/custom-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/96ac1d34-90f1-4a85-9abc-ce400c8b77f8/da60cef7-c9f9-4097-8f9d-597d28d36572/custom-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/96ac1d34-90f1-4a85-9abc-ce400c8b77f8/da60cef7-c9f9-4097-8f9d-597d28d36572/custom-4.png"
+			},
+			"background_color": "#0012FF",
+			"is_enabled": true,
+			"cost": 2,
+			"title": "Свадьба",
+			"prompt": "Свадьба с твоим будущим супругом раз и навсегда! Чтобы работало надо сначала попробовать поискать супруга за алерт за 4 балла канала! Развод с супругом только за 500р! Подумай дважды!",
+			"is_user_input_required": false,
+			"max_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_stream": 0
+			},
+			"max_per_user_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_user_per_stream": 0
+			},
+			"global_cooldown_setting": {
+				"is_enabled": false,
+				"global_cooldown_seconds": 0
+			},
+			"is_paused": false,
+			"is_in_stock": true,
+			"default_image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/default-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/default-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/default-4.png"
+			},
+			"should_redemptions_skip_request_queue": true,
+			"redemptions_redeemed_current_stream": null,
+			"cooldown_expires_at": null
+		},
+		{
+			"broadcaster_name": "RXDCODX",
+			"broadcaster_login": "rxdcodx",
+			"broadcaster_id": "785975641",
+			"id": "9e1e125a-fb1a-4363-92ef-14d68cfd077a",
+			"image": null,
+			"background_color": "#000000",
+			"is_enabled": false,
+			"cost": 1000,
+			"title": "Ставка 1000",
+			"prompt": "",
+			"is_user_input_required": true,
+			"max_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_stream": 0
+			},
+			"max_per_user_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_user_per_stream": 0
+			},
+			"global_cooldown_setting": {
+				"is_enabled": false,
+				"global_cooldown_seconds": 0
+			},
+			"is_paused": false,
+			"is_in_stock": true,
+			"default_image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/default-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/default-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/default-4.png"
+			},
+			"should_redemptions_skip_request_queue": false,
+			"redemptions_redeemed_current_stream": null,
+			"cooldown_expires_at": null
+		},
+		{
+			"broadcaster_name": "RXDCODX",
+			"broadcaster_login": "rxdcodx",
+			"broadcaster_id": "785975641",
+			"id": "a0c9d421-cf76-4f76-9bc6-3cf28da1ffaf",
+			"image": null,
+			"background_color": "#001EFF",
+			"is_enabled": true,
+			"cost": 5,
+			"title": "Добавить супруга",
+			"prompt": "Есть шанс получить VIP если выбить число >= 95!\nДобавляет супруга в рулетку, ссылка на персонажа должна быть с https://shikimori.one/characters. Пример: https://shikimori.one/characters/723-nami",
+			"is_user_input_required": true,
+			"max_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_stream": 0
+			},
+			"max_per_user_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_user_per_stream": 0
+			},
+			"global_cooldown_setting": {
+				"is_enabled": false,
+				"global_cooldown_seconds": 0
+			},
+			"is_paused": false,
+			"is_in_stock": true,
+			"default_image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/default-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/default-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/default-4.png"
+			},
+			"should_redemptions_skip_request_queue": false,
+			"redemptions_redeemed_current_stream": null,
+			"cooldown_expires_at": null
+		},
+		{
+			"broadcaster_name": "RXDCODX",
+			"broadcaster_login": "rxdcodx",
+			"broadcaster_id": "785975641",
+			"id": "a12dcdfc-1eb3-45a9-b193-1cda18636d99",
+			"image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/a12dcdfc-1eb3-45a9-b193-1cda18636d99/4c93c891-5a94-4e52-b07a-05382d343d7f/custom-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/a12dcdfc-1eb3-45a9-b193-1cda18636d99/4c93c891-5a94-4e52-b07a-05382d343d7f/custom-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/a12dcdfc-1eb3-45a9-b193-1cda18636d99/4c93c891-5a94-4e52-b07a-05382d343d7f/custom-4.png"
+			},
+			"background_color": "#FF0000",
+			"is_enabled": true,
+			"cost": 1510,
+			"title": "STATUS?",
+			"prompt": "",
+			"is_user_input_required": false,
+			"max_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_stream": 0
+			},
+			"max_per_user_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_user_per_stream": 0
+			},
+			"global_cooldown_setting": {
+				"is_enabled": true,
+				"global_cooldown_seconds": 300
+			},
+			"is_paused": false,
+			"is_in_stock": true,
+			"default_image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/default-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/default-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/default-4.png"
+			},
+			"should_redemptions_skip_request_queue": true,
+			"redemptions_redeemed_current_stream": null,
+			"cooldown_expires_at": null
+		},
+		{
+			"broadcaster_name": "RXDCODX",
+			"broadcaster_login": "rxdcodx",
+			"broadcaster_id": "785975641",
+			"id": "a68d00ec-e8bc-4da9-9470-501274ac5213",
+			"image": null,
+			"background_color": "#FF0000",
+			"is_enabled": true,
+			"cost": 61,
+			"title": "WHAT",
+			"prompt": "",
+			"is_user_input_required": false,
+			"max_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_stream": 0
+			},
+			"max_per_user_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_user_per_stream": 0
+			},
+			"global_cooldown_setting": {
+				"is_enabled": false,
+				"global_cooldown_seconds": 0
+			},
+			"is_paused": false,
+			"is_in_stock": true,
+			"default_image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/default-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/default-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/default-4.png"
+			},
+			"should_redemptions_skip_request_queue": true,
+			"redemptions_redeemed_current_stream": null,
+			"cooldown_expires_at": null
+		},
+		{
+			"broadcaster_name": "RXDCODX",
+			"broadcaster_login": "rxdcodx",
+			"broadcaster_id": "785975641",
+			"id": "a921afc6-a1e1-4eca-8211-ef3719f5c0ec",
+			"image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/a921afc6-a1e1-4eca-8211-ef3719f5c0ec/8f962b19-997b-40dc-bcc6-344772669d90/custom-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/a921afc6-a1e1-4eca-8211-ef3719f5c0ec/8f962b19-997b-40dc-bcc6-344772669d90/custom-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/a921afc6-a1e1-4eca-8211-ef3719f5c0ec/8f962b19-997b-40dc-bcc6-344772669d90/custom-4.png"
+			},
+			"background_color": "#1800FF",
+			"is_enabled": true,
+			"cost": 4,
+			"title": "Поиск супруга",
+			"prompt": "Цена - 50 кредитов. Узнать кредиты - !rank/!myrank.",
+			"is_user_input_required": false,
+			"max_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_stream": 0
+			},
+			"max_per_user_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_user_per_stream": 0
+			},
+			"global_cooldown_setting": {
+				"is_enabled": false,
+				"global_cooldown_seconds": 1800
+			},
+			"is_paused": false,
+			"is_in_stock": true,
+			"default_image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/default-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/default-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/default-4.png"
+			},
+			"should_redemptions_skip_request_queue": false,
+			"redemptions_redeemed_current_stream": null,
+			"cooldown_expires_at": null
+		},
+		{
+			"broadcaster_name": "RXDCODX",
+			"broadcaster_login": "rxdcodx",
+			"broadcaster_id": "785975641",
+			"id": "b6315793-5c14-4cc0-88ab-3f43f4344694",
+			"image": null,
+			"background_color": "#9146FF",
+			"is_enabled": true,
+			"cost": 88888,
+			"title": "TestDefinition",
+			"prompt": "",
+			"is_user_input_required": false,
+			"max_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_stream": 0
+			},
+			"max_per_user_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_user_per_stream": 0
+			},
+			"global_cooldown_setting": {
+				"is_enabled": false,
+				"global_cooldown_seconds": 0
+			},
+			"is_paused": false,
+			"is_in_stock": true,
+			"default_image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/default-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/default-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/default-4.png"
+			},
+			"should_redemptions_skip_request_queue": false,
+			"redemptions_redeemed_current_stream": null,
+			"cooldown_expires_at": null
+		},
+		{
+			"broadcaster_name": "RXDCODX",
+			"broadcaster_login": "rxdcodx",
+			"broadcaster_id": "785975641",
+			"id": "bf064931-ce66-4a6c-be95-88a553d26332",
+			"image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/bf064931-ce66-4a6c-be95-88a553d26332/d818e87b-0b2b-47f7-b15b-8f092c8b8f66/custom-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/bf064931-ce66-4a6c-be95-88a553d26332/d818e87b-0b2b-47f7-b15b-8f092c8b8f66/custom-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/bf064931-ce66-4a6c-be95-88a553d26332/d818e87b-0b2b-47f7-b15b-8f092c8b8f66/custom-4.png"
+			},
+			"background_color": "#EB0400",
+			"is_enabled": true,
+			"cost": 666,
+			"title": "Специальный алерт для Edge0100",
+			"prompt": "",
+			"is_user_input_required": false,
+			"max_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_stream": 0
+			},
+			"max_per_user_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_user_per_stream": 0
+			},
+			"global_cooldown_setting": {
+				"is_enabled": false,
+				"global_cooldown_seconds": 0
+			},
+			"is_paused": false,
+			"is_in_stock": true,
+			"default_image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/default-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/default-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/default-4.png"
+			},
+			"should_redemptions_skip_request_queue": false,
+			"redemptions_redeemed_current_stream": null,
+			"cooldown_expires_at": null
+		},
+		{
+			"broadcaster_name": "RXDCODX",
+			"broadcaster_login": "rxdcodx",
+			"broadcaster_id": "785975641",
+			"id": "cbf251aa-a79a-4cbb-b9a2-4c89643cc325",
+			"image": null,
+			"background_color": "#000000",
+			"is_enabled": false,
+			"cost": 10000,
+			"title": "Ставка 10000",
+			"prompt": "",
+			"is_user_input_required": true,
+			"max_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_stream": 0
+			},
+			"max_per_user_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_user_per_stream": 0
+			},
+			"global_cooldown_setting": {
+				"is_enabled": false,
+				"global_cooldown_seconds": 0
+			},
+			"is_paused": false,
+			"is_in_stock": true,
+			"default_image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/default-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/default-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/default-4.png"
+			},
+			"should_redemptions_skip_request_queue": false,
+			"redemptions_redeemed_current_stream": null,
+			"cooldown_expires_at": null
+		},
+		{
+			"broadcaster_name": "RXDCODX",
+			"broadcaster_login": "rxdcodx",
+			"broadcaster_id": "785975641",
+			"id": "d2f1bae8-09b2-423b-bc23-fa39fc8576ff",
+			"image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/d2f1bae8-09b2-423b-bc23-fa39fc8576ff/2a7a600c-97d2-46c4-9607-f81266c0d642/custom-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/d2f1bae8-09b2-423b-bc23-fa39fc8576ff/2a7a600c-97d2-46c4-9607-f81266c0d642/custom-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/d2f1bae8-09b2-423b-bc23-fa39fc8576ff/2a7a600c-97d2-46c4-9607-f81266c0d642/custom-4.png"
+			},
+			"background_color": "#F700FF",
+			"is_enabled": true,
+			"cost": 8,
+			"title": "Теккен Викторина",
+			"prompt": "Leaderboard: !tekken_leaders YourStat: !tekken_me",
+			"is_user_input_required": false,
+			"max_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_stream": 0
+			},
+			"max_per_user_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_user_per_stream": 0
+			},
+			"global_cooldown_setting": {
+				"is_enabled": true,
+				"global_cooldown_seconds": 60
+			},
+			"is_paused": false,
+			"is_in_stock": true,
+			"default_image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/default-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/default-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/default-4.png"
+			},
+			"should_redemptions_skip_request_queue": false,
+			"redemptions_redeemed_current_stream": null,
+			"cooldown_expires_at": null
+		},
+		{
+			"broadcaster_name": "RXDCODX",
+			"broadcaster_login": "rxdcodx",
+			"broadcaster_id": "785975641",
+			"id": "d4ccaf00-9aa4-41f5-84ea-75ce9c850ee0",
+			"image": null,
+			"background_color": "#1F69FF",
+			"is_enabled": false,
+			"cost": 1,
+			"title": "Клипануть!",
+			"prompt": "Замена кнопке \"клип\"",
+			"is_user_input_required": false,
+			"max_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_stream": 0
+			},
+			"max_per_user_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_user_per_stream": 0
+			},
+			"global_cooldown_setting": {
+				"is_enabled": false,
+				"global_cooldown_seconds": 0
+			},
+			"is_paused": false,
+			"is_in_stock": true,
+			"default_image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/default-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/default-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/default-4.png"
+			},
+			"should_redemptions_skip_request_queue": false,
+			"redemptions_redeemed_current_stream": null,
+			"cooldown_expires_at": null
+		},
+		{
+			"broadcaster_name": "RXDCODX",
+			"broadcaster_login": "rxdcodx",
+			"broadcaster_id": "785975641",
+			"id": "d79cd7d0-2a4d-4c90-b8c8-f24577a51f96",
+			"image": null,
+			"background_color": "#0021FF",
+			"is_enabled": true,
+			"cost": 215,
+			"title": "Пока",
+			"prompt": "",
+			"is_user_input_required": false,
+			"max_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_stream": 0
+			},
+			"max_per_user_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_user_per_stream": 2
+			},
+			"global_cooldown_setting": {
+				"is_enabled": false,
+				"global_cooldown_seconds": 0
+			},
+			"is_paused": false,
+			"is_in_stock": true,
+			"default_image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/default-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/default-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/default-4.png"
+			},
+			"should_redemptions_skip_request_queue": true,
+			"redemptions_redeemed_current_stream": null,
+			"cooldown_expires_at": null
+		},
+		{
+			"broadcaster_name": "RXDCODX",
+			"broadcaster_login": "rxdcodx",
+			"broadcaster_id": "785975641",
+			"id": "dcd90c96-843b-4fd1-b758-e27676ab6dc7",
+			"image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/dcd90c96-843b-4fd1-b758-e27676ab6dc7/1126a75b-0437-4380-9272-89b4699e7c22/custom-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/dcd90c96-843b-4fd1-b758-e27676ab6dc7/1126a75b-0437-4380-9272-89b4699e7c22/custom-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/dcd90c96-843b-4fd1-b758-e27676ab6dc7/1126a75b-0437-4380-9272-89b4699e7c22/custom-4.png"
+			},
+			"background_color": "#F700FF",
+			"is_enabled": true,
+			"cost": 7,
+			"title": "Викторина",
+			"prompt": "Задает 1 вопрос в чат с подсказками",
+			"is_user_input_required": false,
+			"max_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_stream": 0
+			},
+			"max_per_user_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_user_per_stream": 0
+			},
+			"global_cooldown_setting": {
+				"is_enabled": false,
+				"global_cooldown_seconds": 60
+			},
+			"is_paused": false,
+			"is_in_stock": true,
+			"default_image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/default-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/default-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/default-4.png"
+			},
+			"should_redemptions_skip_request_queue": false,
+			"redemptions_redeemed_current_stream": null,
+			"cooldown_expires_at": null
+		},
+		{
+			"broadcaster_name": "RXDCODX",
+			"broadcaster_login": "rxdcodx",
+			"broadcaster_id": "785975641",
+			"id": "e0af123a-3987-4924-a86b-393a702d2857",
+			"image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/e0af123a-3987-4924-a86b-393a702d2857/1df529f8-e840-45e6-9884-40605206ad31/custom-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/e0af123a-3987-4924-a86b-393a702d2857/1df529f8-e840-45e6-9884-40605206ad31/custom-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/e0af123a-3987-4924-a86b-393a702d2857/1df529f8-e840-45e6-9884-40605206ad31/custom-4.png"
+			},
+			"background_color": "#FF0000",
+			"is_enabled": true,
+			"cost": 160,
+			"title": "НОГОЙ БОМЖА",
+			"prompt": "Возращает баллы за использование если топтать asp/асп'a (аспиранта)",
+			"is_user_input_required": true,
+			"max_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_stream": 0
+			},
+			"max_per_user_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_user_per_stream": 0
+			},
+			"global_cooldown_setting": {
+				"is_enabled": false,
+				"global_cooldown_seconds": 0
+			},
+			"is_paused": false,
+			"is_in_stock": true,
+			"default_image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/default-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/default-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/default-4.png"
+			},
+			"should_redemptions_skip_request_queue": false,
+			"redemptions_redeemed_current_stream": null,
+			"cooldown_expires_at": null
+		},
+		{
+			"broadcaster_name": "RXDCODX",
+			"broadcaster_login": "rxdcodx",
+			"broadcaster_id": "785975641",
+			"id": "e0fd5c9a-6098-4701-9dad-bc0257193890",
+			"image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/e0fd5c9a-6098-4701-9dad-bc0257193890/10a9170b-2376-4bae-b27b-9b37353b5473/custom-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/e0fd5c9a-6098-4701-9dad-bc0257193890/10a9170b-2376-4bae-b27b-9b37353b5473/custom-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/e0fd5c9a-6098-4701-9dad-bc0257193890/10a9170b-2376-4bae-b27b-9b37353b5473/custom-4.png"
+			},
+			"background_color": "#FF0000",
+			"is_enabled": true,
+			"cost": 1520,
+			"title": "STATUS???",
+			"prompt": "",
+			"is_user_input_required": false,
+			"max_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_stream": 0
+			},
+			"max_per_user_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_user_per_stream": 0
+			},
+			"global_cooldown_setting": {
+				"is_enabled": true,
+				"global_cooldown_seconds": 300
+			},
+			"is_paused": false,
+			"is_in_stock": true,
+			"default_image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/default-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/default-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/default-4.png"
+			},
+			"should_redemptions_skip_request_queue": true,
+			"redemptions_redeemed_current_stream": null,
+			"cooldown_expires_at": null
+		},
+		{
+			"broadcaster_name": "RXDCODX",
+			"broadcaster_login": "rxdcodx",
+			"broadcaster_id": "785975641",
+			"id": "e3746af8-97d3-45ab-9c7e-fb00fac48984",
+			"image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/e3746af8-97d3-45ab-9c7e-fb00fac48984/67b21a81-6975-4c4a-af98-edafd7d1f48d/custom-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/e3746af8-97d3-45ab-9c7e-fb00fac48984/67b21a81-6975-4c4a-af98-edafd7d1f48d/custom-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/e3746af8-97d3-45ab-9c7e-fb00fac48984/67b21a81-6975-4c4a-af98-edafd7d1f48d/custom-4.png"
+			},
+			"background_color": "#000000",
+			"is_enabled": true,
+			"cost": 18,
+			"title": "GAO/NOT GAO",
+			"prompt": "",
+			"is_user_input_required": true,
+			"max_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_stream": 0
+			},
+			"max_per_user_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_user_per_stream": 0
+			},
+			"global_cooldown_setting": {
+				"is_enabled": false,
+				"global_cooldown_seconds": 0
+			},
+			"is_paused": false,
+			"is_in_stock": true,
+			"default_image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/default-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/default-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/default-4.png"
+			},
+			"should_redemptions_skip_request_queue": false,
+			"redemptions_redeemed_current_stream": null,
+			"cooldown_expires_at": null
+		},
+		{
+			"broadcaster_name": "RXDCODX",
+			"broadcaster_login": "rxdcodx",
+			"broadcaster_id": "785975641",
+			"id": "e9a9dc53-6b9d-45d4-8004-44d66e67d5ae",
+			"image": null,
+			"background_color": "#00FF2F",
+			"is_enabled": true,
+			"cost": 1701,
+			"title": "Феерверк!",
+			"prompt": "",
+			"is_user_input_required": false,
+			"max_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_stream": 0
+			},
+			"max_per_user_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_user_per_stream": 0
+			},
+			"global_cooldown_setting": {
+				"is_enabled": false,
+				"global_cooldown_seconds": 0
+			},
+			"is_paused": false,
+			"is_in_stock": true,
+			"default_image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/default-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/default-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/default-4.png"
+			},
+			"should_redemptions_skip_request_queue": false,
+			"redemptions_redeemed_current_stream": null,
+			"cooldown_expires_at": null
+		},
+		{
+			"broadcaster_name": "RXDCODX",
+			"broadcaster_login": "rxdcodx",
+			"broadcaster_id": "785975641",
+			"id": "eeb52cde-9bde-4354-ba98-34ee3c4a1eff",
+			"image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/eeb52cde-9bde-4354-ba98-34ee3c4a1eff/a48a6c98-a0ac-403d-abfc-e98e9ee0b6a4/custom-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/eeb52cde-9bde-4354-ba98-34ee3c4a1eff/a48a6c98-a0ac-403d-abfc-e98e9ee0b6a4/custom-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/eeb52cde-9bde-4354-ba98-34ee3c4a1eff/a48a6c98-a0ac-403d-abfc-e98e9ee0b6a4/custom-4.png"
+			},
+			"background_color": "#FF0000",
+			"is_enabled": true,
+			"cost": 317,
+			"title": "Интеллект ",
+			"prompt": "",
+			"is_user_input_required": false,
+			"max_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_stream": 0
+			},
+			"max_per_user_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_user_per_stream": 0
+			},
+			"global_cooldown_setting": {
+				"is_enabled": false,
+				"global_cooldown_seconds": 0
+			},
+			"is_paused": false,
+			"is_in_stock": true,
+			"default_image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/default-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/default-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/default-4.png"
+			},
+			"should_redemptions_skip_request_queue": true,
+			"redemptions_redeemed_current_stream": null,
+			"cooldown_expires_at": null
+		},
+		{
+			"broadcaster_name": "RXDCODX",
+			"broadcaster_login": "rxdcodx",
+			"broadcaster_id": "785975641",
+			"id": "f11f6157-43c2-4532-a4e2-c499065e0fd2",
+			"image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/f11f6157-43c2-4532-a4e2-c499065e0fd2/71549792-fccf-48b5-afce-731a1d778532/custom-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/f11f6157-43c2-4532-a4e2-c499065e0fd2/71549792-fccf-48b5-afce-731a1d778532/custom-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/f11f6157-43c2-4532-a4e2-c499065e0fd2/71549792-fccf-48b5-afce-731a1d778532/custom-4.png"
+			},
+			"background_color": "#FF8280",
+			"is_enabled": true,
+			"cost": 1602,
+			"title": "CINEMA/ANIME REQUEST",
+			"prompt": "Ссылку на кинопоиск/шикимори",
+			"is_user_input_required": true,
+			"max_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_stream": 0
+			},
+			"max_per_user_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_user_per_stream": 0
+			},
+			"global_cooldown_setting": {
+				"is_enabled": false,
+				"global_cooldown_seconds": 0
+			},
+			"is_paused": false,
+			"is_in_stock": true,
+			"default_image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/default-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/default-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/default-4.png"
+			},
+			"should_redemptions_skip_request_queue": false,
+			"redemptions_redeemed_current_stream": null,
+			"cooldown_expires_at": null
+		},
+		{
+			"broadcaster_name": "RXDCODX",
+			"broadcaster_login": "rxdcodx",
+			"broadcaster_id": "785975641",
+			"id": "f27b2911-d19d-4838-86ad-c919209bf44b",
+			"image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/f27b2911-d19d-4838-86ad-c919209bf44b/2267c844-ba78-429b-a460-ed0c176e6813/custom-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/f27b2911-d19d-4838-86ad-c919209bf44b/2267c844-ba78-429b-a460-ed0c176e6813/custom-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/785975641/f27b2911-d19d-4838-86ad-c919209bf44b/2267c844-ba78-429b-a460-ed0c176e6813/custom-4.png"
+			},
+			"background_color": "#FF0000",
+			"is_enabled": true,
+			"cost": 195,
+			"title": "CRINGE",
+			"prompt": "",
+			"is_user_input_required": false,
+			"max_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_stream": 0
+			},
+			"max_per_user_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_user_per_stream": 0
+			},
+			"global_cooldown_setting": {
+				"is_enabled": false,
+				"global_cooldown_seconds": 0
+			},
+			"is_paused": false,
+			"is_in_stock": true,
+			"default_image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/default-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/default-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/default-4.png"
+			},
+			"should_redemptions_skip_request_queue": true,
+			"redemptions_redeemed_current_stream": null,
+			"cooldown_expires_at": null
+		},
+		{
+			"broadcaster_name": "RXDCODX",
+			"broadcaster_login": "rxdcodx",
+			"broadcaster_id": "785975641",
+			"id": "f8b2a477-4e75-4197-8708-9b46e0e1ade8",
+			"image": null,
+			"background_color": "#000000",
+			"is_enabled": false,
+			"cost": 5000,
+			"title": "Ставка 5000",
+			"prompt": "",
+			"is_user_input_required": true,
+			"max_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_stream": 0
+			},
+			"max_per_user_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_user_per_stream": 0
+			},
+			"global_cooldown_setting": {
+				"is_enabled": false,
+				"global_cooldown_seconds": 0
+			},
+			"is_paused": false,
+			"is_in_stock": true,
+			"default_image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/default-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/default-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/default-4.png"
+			},
+			"should_redemptions_skip_request_queue": false,
+			"redemptions_redeemed_current_stream": null,
+			"cooldown_expires_at": null
+		},
+		{
+			"broadcaster_name": "RXDCODX",
+			"broadcaster_login": "rxdcodx",
+			"broadcaster_id": "785975641",
+			"id": "fbf9c161-f787-47b8-a42a-bcfc90c448da",
+			"image": null,
+			"background_color": "#FF0000",
+			"is_enabled": true,
+			"cost": 375,
+			"title": "DANCE DANCE DANCE",
+			"prompt": "",
+			"is_user_input_required": false,
+			"max_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_stream": 0
+			},
+			"max_per_user_per_stream_setting": {
+				"is_enabled": false,
+				"max_per_user_per_stream": 0
+			},
+			"global_cooldown_setting": {
+				"is_enabled": false,
+				"global_cooldown_seconds": 0
+			},
+			"is_paused": false,
+			"is_in_stock": true,
+			"default_image": {
+				"url_1x": "https://static-cdn.jtvnw.net/custom-reward-images/default-1.png",
+				"url_2x": "https://static-cdn.jtvnw.net/custom-reward-images/default-2.png",
+				"url_4x": "https://static-cdn.jtvnw.net/custom-reward-images/default-4.png"
+			},
+			"should_redemptions_skip_request_queue": true,
+			"redemptions_redeemed_current_stream": null,
+			"cooldown_expires_at": null
+		}
+	]
+}
