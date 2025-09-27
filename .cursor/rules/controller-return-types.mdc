@@ -1,0 +1,105 @@
+---
+globs: Controllers/*.cs
+description: Правило для обязательного указания конкретного типа возвращаемого значения в контроллерах
+---
+
+# Правило типизации возвращаемых значений в контроллерах
+
+## Основные принципы
+
+1. **Используйте конкретные типы**: Вместо `IActionResult` используйте `ActionResult<T>` или `Task<ActionResult<T>>` для методов, которые возвращают конкретные данные
+2. **Анализ локальных переменных**: Если результат метода сервиса записывается в локальную переменную, то возвращаемый тип должен быть типизирован
+3. **Исключения для IActionResult**: Используйте `IActionResult` только когда метод не возвращает конкретные данные (например, только статусные коды)
+
+## Структура правильного метода
+
+```csharp
+[HttpGet("local/{localId}")]
+public async Task<ActionResult<ChannelRewardRecord?>> GetLocalById([FromRoute] Guid localId)
+{
+    var reward = await manager.GetLocalByIdAsync(localId);
+    return reward != null ? Ok(reward) : NotFound();
+}
+```
+
+## Примеры правильного использования
+
+### ✅ Правильно - с конкретным типом
+
+```csharp
+[HttpGet("{id}")]
+public async Task<ActionResult<UserDto?>> GetUser([FromRoute] int id)
+{
+    var user = await _userService.GetByIdAsync(id);
+    return user != null ? Ok(user) : NotFound();
+}
+
+[HttpPost]
+public async Task<ActionResult<CreateUserResponse>> CreateUser([FromBody] CreateUserRequest request)
+{
+    var result = await _userService.CreateAsync(request);
+    return Ok(result);
+}
+```
+
+### ✅ Правильно - только статусные коды
+
+```csharp
+[HttpDelete("{id}")]
+public async Task<IActionResult> DeleteUser([FromRoute] int id)
+{
+    var success = await _userService.DeleteAsync(id);
+    return success ? NoContent() : NotFound();
+}
+
+[HttpPost("login")]
+public async Task<IActionResult> Login([FromBody] LoginRequest request)
+{
+    var success = await _authService.LoginAsync(request);
+    return success ? Ok() : Unauthorized();
+}
+```
+
+## Примеры неправильного использования
+
+### ❌ Неправильно - отсутствие типизации
+
+```csharp
+[HttpGet("{rewardId}")]
+public async Task<IActionResult> GetById([FromRoute] string rewardId)
+{
+    var reward = await manager.GetByIdAsync(rewardId);
+    return reward != null ? Ok(reward) : NotFound();
+}
+```
+
+### ❌ Неправильно - использование IActionResult для данных
+
+```csharp
+[HttpGet("users")]
+public async Task<IActionResult> GetUsers()
+{
+    var users = await _userService.GetAllAsync();
+    return Ok(users);
+}
+```
+
+## Правила определения типа
+
+1. **Если есть локальная переменная с данными**: Используйте `ActionResult<T>` где `T` - тип данных
+2. **Если возвращаются только статусные коды**: Используйте `IActionResult`
+3. **Если метод может вернуть null**: Используйте `ActionResult<T?>` или `ActionResult<T>?`
+4. **Для коллекций**: Используйте `ActionResult<IEnumerable<T>>` или `ActionResult<List<T>>`
+
+## Исключения
+
+- Методы, которые только возвращают статусные коды без данных
+- Методы загрузки файлов (если не возвращают метаданные)
+- Методы аутентификации, которые возвращают только токены в заголовках
+
+## Преимущества
+
+1. **Типобезопасность**: Компилятор проверяет соответствие типов
+2. **Документация**: Swagger/OpenAPI автоматически генерирует правильную документацию
+3. **IntelliSense**: Лучшая поддержка автодополнения в IDE
+4. **Рефакторинг**: Безопасные изменения типов данных
