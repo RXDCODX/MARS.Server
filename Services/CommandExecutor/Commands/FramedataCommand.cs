@@ -14,7 +14,7 @@ public class FramedataCommand(Tekken8FrameData frameData, IDbContextFactory<AppD
     public override Platform[] AvailablePlatforms =>
         [Platform.Telegram, Platform.Api, Platform.Twitch];
 
-    public override string[] Aliases => ["fd"];
+    public override string[] Aliases => ["fd", "frame", "frames"];
 
     public override CommandVisibility Visibility => CommandVisibility.All; // Видна везде
 
@@ -202,8 +202,8 @@ public class FramedataCommand(Tekken8FrameData frameData, IDbContextFactory<AppD
                     💥 Damage 💥
                     {move.Damage}
 
-                    📝 Notes 📝
-                    {move.Notes}
+                    {(move.Notes is { Length: > 0 } ? "\ud83d\udcdd Notes \ud83d\udcdd" : null)} 
+                    {string.Join(Environment.NewLine, move.Notes ?? [])}
                     """,
             };
     }
