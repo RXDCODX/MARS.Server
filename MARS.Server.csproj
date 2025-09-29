@@ -25,6 +25,13 @@
     <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'" />
 
     <ItemGroup>
+      <Compile Remove="Services\TabletopGames\**" />
+      <Content Remove="Services\TabletopGames\**" />
+      <EmbeddedResource Remove="Services\TabletopGames\**" />
+      <None Remove="Services\TabletopGames\**" />
+    </ItemGroup>
+
+    <ItemGroup>
         <Content Include="Trivia\bot_trivia_questions.txt">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </Content>
@@ -144,18 +151,17 @@
     <ItemGroup>
       <Folder Include="Migrations\LoggerMigrations\" />
       <Folder Include="WTelegram\" />
-      <Folder Include="Services\TabletopGames\Entitys\Enums\" />
       <Folder Include="Services\Twitch\Rewards\TestReward\" />
       <Folder Include="Services\Twitch\TwitchFollowers\Entitys\" />
     </ItemGroup>
 
-    <Target Name="BuildClientApp" BeforeTargets="Build">
+    <Target Name="BuildClientApp" BeforeTargets="Publish">
         <Message Importance="high" Text="Сборка фронта через yarn build..." />
         <Exec WorkingDirectory="..\mars.client" Command="yarn install" />
         <Exec WorkingDirectory="..\mars.client" Command="yarn build" />
     </Target>
 
-    <Target Name="CopyClientDistToWwwroot" AfterTargets="Build">
+    <Target Name="CopyClientDistToWwwroot" AfterTargets="Publish">
         <Message Importance="high" Text="Копирование dist в wwwroot..." />
         <RemoveDir Directories="wwwroot\assets" />
 

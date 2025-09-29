@@ -50,10 +50,13 @@ public class MiniGamesManager(
         }
 
         var cost = args.Payload.Event.Reward.Cost;
-        var miniGames = MiniGames.Values;
         var name = args.Payload.Event.UserName;
         var userId = args.Payload.Event.UserId;
 
+        // Очищаем завершенные игры перед проверкой
+        RemoveCompletedGames();
+        
+        var miniGames = MiniGames.Values;
         if (miniGames.Any(e => e.IsGameRunning))
         {
             var gameCost = MiniGames.Keys.FirstOrDefault(e => e == cost, 0);
@@ -95,7 +98,7 @@ public class MiniGamesManager(
                     break;
                 case 6:
                     var russianRoulette =
-                        asyncServiceScope.ServiceProvider.GetRequiredService<TwitchTrivia>();
+                        asyncServiceScope.ServiceProvider.GetRequiredService<TwitchRussianRoulete>();
                     russianRoulette.IsGameRunning = true;
                     MiniGames.Add(6, russianRoulette);
                     await russianRoulette.GameStart(name, userId, _cancellationToken);
@@ -115,6 +118,15 @@ public class MiniGamesManager(
         }
     }
 
+    public void RemoveCompletedGames()
+    {
+        var completedGames = MiniGames.Where(kvp => !kvp.Value.IsGameRunning).ToList();
+        foreach (var (key, _) in completedGames)
+        {
+            MiniGames.Remove(key);
+        }
+    }
+
     private async void ClientOnMessageReceived(object? sender, OnMessageReceivedArgs e)
     {
         if (
@@ -126,6 +138,9 @@ public class MiniGamesManager(
         {
             return;
         }
+
+        // Очищаем завершенные игры перед обработкой сообщений
+        RemoveCompletedGames();
 
         var userName = e.ChatMessage.Username;
         var message = e.ChatMessage.Message;

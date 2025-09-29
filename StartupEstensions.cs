@@ -126,7 +126,15 @@ public static class StartupEstensions
             (sp) =>
             {
                 var options = sp.GetRequiredService<IOptions<WTelegramClientConfiguration>>().Value;
-                if (File.Exists("./WTelegram/WTelegram.session"))
+                if (
+                    !File.Exists(
+                        Path.Combine(
+                            Directory.GetCurrentDirectory(),
+                            "WTelegram",
+                            "WTelegram.session"
+                        )
+                    )
+                )
                 {
                     throw new FileNotFoundException("WTelegram session not found");
                 }

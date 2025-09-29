@@ -48,6 +48,9 @@ public class TunaHub : Hub
 
 public class TunaMusicData
 {
+    [JsonPropertyName("id")]
+    public Guid Id { get; set; }
+
     [JsonPropertyName("cover")]
     public required string Cover { get; set; }
 
