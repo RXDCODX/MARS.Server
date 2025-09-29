@@ -4,7 +4,7 @@ using MARS.Server.CustomLoggers.SignalRLogger;
 using MARS.Server.CustomLoggers.TelegramLogger;
 using MARS.Server.Services.CinemaQueue;
 using MARS.Server.Services.CommandExecutor;
-using MARS.Server.Services.KeyboardHook;
+using MARS.Server.Services.KeyboardHook_UNUSED;
 using MARS.Server.Services.Logs.Interfaces;
 using MARS.Server.Services.Logs.Services;
 using MARS.Server.Services.MemoryStorageService;
@@ -177,8 +177,12 @@ public static class Program
             .AddCinemaQueueServicesAsSingleton()
             .AddGameServices()
             .AddExternalApiServices()
-            .AddSpecializedServices()
-            .AddChannelRewardsManager();
+            .AddSpecializedServices();
+
+        if (builder.Environment.IsProduction())
+        {
+            //services.AddChannelRewardsManager();
+        }
 
         services.AddSingleton<IDbContextFactory<AppDbContext>>(contextFactory);
 

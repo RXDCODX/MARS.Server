@@ -1,4 +1,4 @@
-﻿using MARS.Server.Services.SoundRequest.Entitys;
+﻿using MARS.Server.Services.SoundRequest_OBSOLETE.Entitys;
 
 namespace MARS.Server.Hubs.Interfaces;
 

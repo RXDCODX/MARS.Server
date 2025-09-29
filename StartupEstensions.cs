@@ -11,8 +11,8 @@ using MARS.Server.Services.Scoreboard;
 using MARS.Server.Services.ServiceManager;
 using MARS.Server.Services.Shikimori;
 using MARS.Server.Services.Shikimori.Entitys;
-using MARS.Server.Services.SoundRequest;
-using MARS.Server.Services.SoundRequest.Platforms.YouTube;
+using MARS.Server.Services.SoundRequest_OBSOLETE;
+using MARS.Server.Services.SoundRequest_OBSOLETE.Platforms.YouTube;
 using MARS.Server.Services.TelegramBotService;
 using MARS.Server.Services.Twitch.AutoInfoFetch;
 using MARS.Server.Services.Twitch.Client;
@@ -27,8 +27,8 @@ using MARS.Server.Services.Twitch.MiniGamesStats;
 using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
 using MARS.Server.Services.Twitch.Rewards.CloseGameReward;
 using MARS.Server.Services.Twitch.Rewards.MiniGames;
-using MARS.Server.Services.Twitch.Rewards.TwitchAdhdReward;
 using MARS.Server.Services.Twitch.Rewards.TestReward;
+using MARS.Server.Services.Twitch.Rewards.TwitchAdhdReward;
 using MARS.Server.Services.Twitch.Rewards.TwitchAlerts;
 using MARS.Server.Services.Twitch.Rewards.TwitchClipCreator;
 using MARS.Server.Services.Twitch.Rewards.TwitchGaoAlert;
@@ -46,6 +46,7 @@ using MARS.Server.Services.Twitch.TwitchFollowers;
 using MARS.Server.Services.WaifuRoll;
 using MARS.Server.Services.WaifuRoll.Entitys.Interfaces;
 using MARS.Server.Services.WaifuRoll.helpers;
+using MARS.Server.Swagger;
 using Microsoft.OpenApi.Models;
 using TwitchLib.Api;
 using TwitchLib.Api.Core;
@@ -125,10 +126,14 @@ public static class StartupEstensions
             (sp) =>
             {
                 var options = sp.GetRequiredService<IOptions<WTelegramClientConfiguration>>().Value;
+                if (File.Exists("./WTelegram/WTelegram.session"))
+                {
+                    throw new FileNotFoundException("WTelegram session not found");
+                }
                 var client = new WTelegramClient(
                     options.AppId,
                     options.ApiHash,
-                    "bin/WTelegram.session"
+                    "WTelegram/WTelegram.session"
                 );
                 var logger = factory.CreateLogger("WTelegram");
                 WTelegram.Helpers.Log = (i, v) => logger.Log((LogLevel)i, "{Message}", [v]);
@@ -422,8 +427,8 @@ public static class StartupEstensions
             options.UseInlineDefinitionsForEnums();
 
             // Filters
-            options.DocumentFilter<Mars.Server.Swagger.DotNetTypesDocumentFilter>();
-            options.DocumentFilter<Mars.Server.Swagger.PathPartitionDocumentFilter>();
+            options.DocumentFilter<DotNetTypesDocumentFilter>();
+            options.DocumentFilter<PathPartitionDocumentFilter>();
 
             // Two separate documents served by Swashbuckle
             options.SwaggerDoc("api", new OpenApiInfo { Title = "Telegramus API" });

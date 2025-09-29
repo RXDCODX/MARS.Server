@@ -1,6 +1,6 @@
-using MARS.Server.Services.StreamAcrhive.Models;
+﻿using MARS.Server.Services.StreamAcrhive_UNUSED.Models;
 
-namespace MARS.Server.Services.StreamAcrhive.Interfaces;
+namespace MARS.Server.Services.StreamAcrhive_UNUSED.Interfaces;
 
 public interface IFFmpegService
 {
@@ -13,10 +13,11 @@ public interface IFFmpegService
     /// <param name="cancellationToken">Токен отмены</param>
     /// <returns>Список путей к созданным частям</returns>
     Task<List<string>> SplitVideoFileAsync(
-        string inputPath, 
-        string outputDirectory, 
+        string inputPath,
+        string outputDirectory,
         long maxChunkSizeBytes,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default
+    );
 
     /// <summary>
     /// Получает информацию о видеофайле
@@ -24,7 +25,10 @@ public interface IFFmpegService
     /// <param name="filePath">Путь к файлу</param>
     /// <param name="cancellationToken">Токен отмены</param>
     /// <returns>Информация о видеофайле</returns>
-    Task<VideoInfo?> GetVideoInfoAsync(string filePath, CancellationToken cancellationToken = default);
+    Task<VideoInfo?> GetVideoInfoAsync(
+        string filePath,
+        CancellationToken cancellationToken = default
+    );
 
     /// <summary>
     /// Проверяет доступность FFmpeg
@@ -33,4 +37,3 @@ public interface IFFmpegService
     /// <returns>True если FFmpeg доступен</returns>
     Task<bool> IsFFmpegAvailableAsync(CancellationToken cancellationToken = default);
 }
-

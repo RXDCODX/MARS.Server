@@ -1,4 +1,4 @@
-﻿namespace MARS.Server.Services.TabletopGames.Checkers;
+﻿namespace MARS.Server.Services.TabletopGames_OBSOLETE.Checkers;
 
 /// <summary>
 /// Manages the queue of players waiting to join a checkers game.

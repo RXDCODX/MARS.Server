@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 
-namespace MARS.Server.Services.KeyboardHook.Controllers;
+namespace MARS.Server.Services.KeyboardHook_UNUSED.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]

@@ -1,9 +1,9 @@
 ﻿using System.Text.RegularExpressions;
 using MARS.Server.Services.MemoryStorageService;
-using MARS.Server.Services.SoundRequest.Entitys;
+using MARS.Server.Services.SoundRequest_OBSOLETE.Entitys;
 using YandexMusicResolver;
 
-namespace MARS.Server.Services.SoundRequest.Platforms.YandexMusic;
+namespace MARS.Server.Services.SoundRequest_OBSOLETE.Platforms.YandexMusic;
 
 public class YandexMusicApiService(IYandexMusicMainResolver resolver, IHttpClientFactory factory)
 {

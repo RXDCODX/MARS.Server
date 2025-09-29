@@ -1,7 +1,7 @@
 ﻿using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
-namespace Mars.Server.Swagger;
+namespace MARS.Server.Swagger;
 
 // Splits paths into two Swagger documents: "api" (only /api/*) and "hubs" (SignalR-like paths)
 public sealed class PathPartitionDocumentFilter : IDocumentFilter

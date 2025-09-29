@@ -1,6 +1,6 @@
-﻿using MARS.Server.Services.StreamAcrhive.Interfaces;
+﻿using MARS.Server.Services.StreamAcrhive_UNUSED.Interfaces;
 
-namespace MARS.Server.Services.StreamAcrhive;
+namespace MARS.Server.Services.StreamAcrhive_UNUSED;
 
 public class StreamArchiveWorker(
     IStreamArchiveService streamArchiveService,

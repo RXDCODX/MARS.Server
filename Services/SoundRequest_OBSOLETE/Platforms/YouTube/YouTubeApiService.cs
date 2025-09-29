@@ -1,7 +1,7 @@
 ﻿using System.Text.Json;
-using MARS.Server.Services.SoundRequest.Entitys;
+using MARS.Server.Services.SoundRequest_OBSOLETE.Entitys;
 
-namespace MARS.Server.Services.SoundRequest.Platforms.YouTube;
+namespace MARS.Server.Services.SoundRequest_OBSOLETE.Platforms.YouTube;
 
 public class YouTubeApiService(IHttpClientFactory httpClientFactory)
 {

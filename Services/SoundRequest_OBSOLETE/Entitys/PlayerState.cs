@@ -1,4 +1,4 @@
-﻿namespace MARS.Server.Services.SoundRequest.Entitys;
+﻿namespace MARS.Server.Services.SoundRequest_OBSOLETE.Entitys;
 
 /// <summary>
 /// Represents the state of the sound request player, including playback status and current track.

@@ -1,4 +1,4 @@
-using MARS.Server.Services.Twitch.ClientMessages.AutoMessages.DTOs;
+﻿using MARS.Server.Services.Twitch.ClientMessages.AutoMessages.DTOs;
 using MARS.Server.Services.Twitch.ClientMessages.AutoMessages.Entitys;
 using MARS.Server.Services.Twitch.ClientMessages.AutoMessages.Interfaces;
 
@@ -17,13 +17,15 @@ public class AutoMessagesService(
 
         try
         {
-            await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+            await using var dbContext = await dbContextFactory.CreateDbContextAsync(
+                cancellationToken
+            );
             var messages = await dbContext
                 .AutoMessages.AsNoTracking()
                 .OrderBy(m => m.Message)
                 .ToListAsync(cancellationToken);
 
-            result = messages.Select(MapToDto).ToList();
+            result = [.. messages.Select(MapToDto)];
         }
         catch (Exception ex)
         {
@@ -44,7 +46,9 @@ public class AutoMessagesService(
         {
             try
             {
-                await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+                await using var dbContext = await dbContextFactory.CreateDbContextAsync(
+                    cancellationToken
+                );
                 var message = await dbContext
                     .AutoMessages.AsNoTracking()
                     .FirstOrDefaultAsync(m => m.Id == id, cancellationToken);
@@ -53,7 +57,11 @@ public class AutoMessagesService(
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Ошибка при получении автоматического сообщения по ID: {Id}", id);
+                logger.LogError(
+                    ex,
+                    "Ошибка при получении автоматического сообщения по ID: {Id}",
+                    id
+                );
             }
         }
 
@@ -65,22 +73,17 @@ public class AutoMessagesService(
         CancellationToken cancellationToken = default
     )
     {
-        var result = new AutoMessageDto
-        {
-            Id = Guid.Empty,
-            Message = string.Empty
-        };
+        var result = new AutoMessageDto { Id = Guid.Empty, Message = string.Empty };
 
         if (!string.IsNullOrWhiteSpace(request.Message))
         {
             try
             {
-                await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+                await using var dbContext = await dbContextFactory.CreateDbContextAsync(
+                    cancellationToken
+                );
 
-                var autoMessage = new AutoMessage
-                {
-                    Message = request.Message.Trim()
-                };
+                var autoMessage = new AutoMessage { Message = request.Message.Trim() };
 
                 dbContext.AutoMessages.Add(autoMessage);
                 await dbContext.SaveChangesAsync(cancellationToken);
@@ -117,10 +120,13 @@ public class AutoMessagesService(
         {
             try
             {
-                await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-                var autoMessage = await dbContext
-                    .AutoMessages
-                    .FirstOrDefaultAsync(m => m.Id == id, cancellationToken);
+                await using var dbContext = await dbContextFactory.CreateDbContextAsync(
+                    cancellationToken
+                );
+                var autoMessage = await dbContext.AutoMessages.FirstOrDefaultAsync(
+                    m => m.Id == id,
+                    cancellationToken
+                );
 
                 if (autoMessage != null)
                 {
@@ -141,7 +147,11 @@ public class AutoMessagesService(
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Ошибка при обновлении автоматического сообщения с ID: {Id}", id);
+                logger.LogError(
+                    ex,
+                    "Ошибка при обновлении автоматического сообщения с ID: {Id}",
+                    id
+                );
             }
         }
         else
@@ -167,10 +177,13 @@ public class AutoMessagesService(
         {
             try
             {
-                await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-                var autoMessage = await dbContext
-                    .AutoMessages
-                    .FirstOrDefaultAsync(m => m.Id == id, cancellationToken);
+                await using var dbContext = await dbContextFactory.CreateDbContextAsync(
+                    cancellationToken
+                );
+                var autoMessage = await dbContext.AutoMessages.FirstOrDefaultAsync(
+                    m => m.Id == id,
+                    cancellationToken
+                );
 
                 if (autoMessage != null)
                 {
@@ -204,10 +217,6 @@ public class AutoMessagesService(
 
     private static AutoMessageDto MapToDto(AutoMessage autoMessage)
     {
-        return new AutoMessageDto
-        {
-            Id = autoMessage.Id,
-            Message = autoMessage.Message
-        };
+        return new AutoMessageDto { Id = autoMessage.Id, Message = autoMessage.Message };
     }
 }

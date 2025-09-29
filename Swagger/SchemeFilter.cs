@@ -1,7 +1,7 @@
 ﻿using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
-namespace Mars.Server.Swagger;
+namespace MARS.Server.Swagger;
 
 public class SchemaFilter : ISchemaFilter
 {

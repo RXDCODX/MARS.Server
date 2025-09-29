@@ -1,4 +1,4 @@
-namespace MARS.Server.Services.StreamAcrhive.Interfaces;
+﻿namespace MARS.Server.Services.StreamAcrhive_UNUSED.Interfaces;
 
 public interface IStreamArchiveService
 {

@@ -1,6 +1,6 @@
-﻿using MARS.Server.Services.SoundRequest.Entitys;
+﻿using MARS.Server.Services.SoundRequest_OBSOLETE.Entitys;
 
-namespace MARS.Server.Services.SoundRequest;
+namespace MARS.Server.Services.SoundRequest_OBSOLETE;
 
 /// <summary>
 /// Manages the history of sound requests, including logging and retrieval.

@@ -1,4 +1,4 @@
-﻿namespace MARS.Server.Services.StreamAcrhive.Entitys;
+﻿namespace MARS.Server.Services.StreamAcrhive_UNUSED.Entitys;
 
 public enum StreamArchiveVideoFormats
 {

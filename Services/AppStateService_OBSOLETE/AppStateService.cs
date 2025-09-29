@@ -1,4 +1,4 @@
-﻿namespace MARS.Server.Services.AppStateService;
+﻿namespace MARS.Server.Services.AppStateService_OBSOLETE;
 
 public class AppStateService
 {
@@ -8,11 +8,11 @@ public class AppStateService
     // 4) Количество чаттерсов в чате твича
     // 5) Пингуется ли Google, Yandex
     // 6) Сколько до новых отметов в хср
-    // 7) Количество энергии в HSR 
+    // 7) Количество энергии в HSR
     // 8) Количество фоловеров на твиче
     // 9) Количество и список VIP пользователей на твиче
     // 10) Количество и список Модераторов на твиче
-    // 12) Количество изминений ожидающих в фреймдате 
+    // 12) Количество изминений ожидающих в фреймдате
     // 13) Количество Random мемов
     // 14) Сколько файлов и какой их общий размер в MemoryStorageService
 }

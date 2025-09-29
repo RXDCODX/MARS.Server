@@ -1,4 +1,4 @@
-﻿using MARS.Server.Services.AutoArts.Entitys;
+﻿using MARS.Server.Services.AutoArts_OBSOLETE.Entitys;
 using TwitchLib.Client.Events;
 
 namespace MARS.Server.Services.Twitch.Rewards.TwitchHighlitedMessage;

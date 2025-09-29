@@ -1,6 +1,6 @@
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 
-namespace MARS.Server.Services.StreamAcrhive.Models;
+namespace MARS.Server.Services.StreamAcrhive_UNUSED.Models;
 
 public class FFprobeStream
 {

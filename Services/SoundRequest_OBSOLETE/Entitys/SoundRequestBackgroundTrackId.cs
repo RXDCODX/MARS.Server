@@ -1,4 +1,4 @@
-﻿namespace MARS.Server.Services.SoundRequest.Entitys;
+﻿namespace MARS.Server.Services.SoundRequest_OBSOLETE.Entitys;
 
 /// <summary>
 /// Represents the identifier for a background track in the sound request system.

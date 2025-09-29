@@ -1,7 +1,7 @@
 ﻿using System.Runtime.Versioning;
 using H.Hooks;
 
-namespace MARS.Server.Services.KeyboardHook;
+namespace MARS.Server.Services.KeyboardHook_UNUSED;
 
 [SupportedOSPlatform("windows")]
 #pragma warning disable IDE0079 // Remove unnecessary suppression

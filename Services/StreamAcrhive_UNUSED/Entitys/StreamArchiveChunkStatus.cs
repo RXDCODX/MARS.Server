@@ -1,4 +1,4 @@
-namespace MARS.Server.Services.StreamAcrhive.Entitys;
+﻿namespace MARS.Server.Services.StreamAcrhive_UNUSED.Entitys;
 
 /// <summary>
 /// Статус загрузки части файла
@@ -23,5 +23,5 @@ public enum StreamArchiveChunkStatus
     /// <summary>
     /// Ошибка при загрузке части
     /// </summary>
-    Failed = 3
+    Failed = 3,
 }

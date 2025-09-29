@@ -1,4 +1,4 @@
-﻿namespace MARS.Server.Services.TabletopGames.Entitys;
+﻿namespace MARS.Server.Services.TabletopGames_OBSOLETE.Entitys;
 
 /// <summary>
 /// Represents a single cell on the game board.

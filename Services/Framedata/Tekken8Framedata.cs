@@ -12,8 +12,7 @@ public partial class Tekken8FrameData(
     IHostApplicationLifetime lifetime,
     ITelegramBotClient client,
     FramedataStagingService stagingService,
-    IOptions<FramedataConfiguration> framedataOptions,
-    IWebHostEnvironment environment
+    IOptions<FramedataConfiguration> framedataOptions
 ) : BackgroundService, ITelegramusService
 {
     private readonly FramedataStagingService _stagingService = stagingService;
@@ -21,25 +20,7 @@ public partial class Tekken8FrameData(
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(stoppingToken);
-        var list = dbContext.TekkenCharacters.AsNoTracking().ToList();
-        var character = list.FirstOrDefault();
-
-        if (
-            environment.IsProduction()
-            && IsMonday()
-            && (
-                character == null
-                || !IsDateInCurrentWeek(character.LastUpdateTime).GetAwaiter().GetResult()
-            )
-        )
-        {
-            await Task.Factory.StartNew(() => StartScrupFrameData(), stoppingToken);
-        }
-        else
-        {
-            await UpdateMovesForVictorina();
-        }
+        await UpdateMovesForVictorina();
     }
 
     public async Task StartScrupFrameData(

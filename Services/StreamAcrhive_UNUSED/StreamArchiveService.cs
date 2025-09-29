@@ -1,9 +1,9 @@
-﻿using MARS.Server.Services.StreamAcrhive.Entitys;
-using MARS.Server.Services.StreamAcrhive.Interfaces;
+﻿using MARS.Server.Services.StreamAcrhive_UNUSED.Entitys;
+using MARS.Server.Services.StreamAcrhive_UNUSED.Interfaces;
 using TL;
 using InputFile = TL.InputFile;
 
-namespace MARS.Server.Services.StreamAcrhive;
+namespace MARS.Server.Services.StreamAcrhive_UNUSED;
 
 public class StreamArchiveService(
     WTelegramClient telegramClient,

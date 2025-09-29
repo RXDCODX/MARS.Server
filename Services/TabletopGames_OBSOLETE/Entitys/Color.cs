@@ -1,4 +1,4 @@
-namespace MARS.Server.Services.TabletopGames.Entitys;
+﻿namespace MARS.Server.Services.TabletopGames_OBSOLETE.Entitys;
 
 /// <summary>
 /// Represents the color of a checker piece or cell.
@@ -6,7 +6,7 @@ namespace MARS.Server.Services.TabletopGames.Entitys;
 public enum Color
 {
     White,
-    Black
+    Black,
 }
 
 /// <summary>

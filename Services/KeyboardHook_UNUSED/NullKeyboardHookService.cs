@@ -1,4 +1,4 @@
-﻿namespace MARS.Server.Services.KeyboardHook;
+﻿namespace MARS.Server.Services.KeyboardHook_UNUSED;
 
 /// <summary>
 /// Заглушка для сервиса перехвата клавиатуры на не-Windows платформах

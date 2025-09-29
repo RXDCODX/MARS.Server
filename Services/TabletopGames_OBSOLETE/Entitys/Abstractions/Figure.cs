@@ -1,4 +1,4 @@
-﻿namespace MARS.Server.Services.TabletopGames.Entitys.Abstractions;
+﻿namespace MARS.Server.Services.TabletopGames_OBSOLETE.Entitys.Abstractions;
 
 public abstract class Figure
 {

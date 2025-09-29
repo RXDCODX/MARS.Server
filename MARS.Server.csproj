@@ -128,6 +128,9 @@
         <None Update="AutoHelloMessages.txt">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
+        <None Update="WTelegram\WTelegram.session">
+          <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
     </ItemGroup>
 
     <ItemGroup>
@@ -140,18 +143,19 @@
 
     <ItemGroup>
       <Folder Include="Migrations\LoggerMigrations\" />
+      <Folder Include="WTelegram\" />
       <Folder Include="Services\TabletopGames\Entitys\Enums\" />
       <Folder Include="Services\Twitch\Rewards\TestReward\" />
       <Folder Include="Services\Twitch\TwitchFollowers\Entitys\" />
     </ItemGroup>
 
-    <Target Name="BuildClientApp" BeforeTargets="Publish">
+    <Target Name="BuildClientApp" BeforeTargets="Build">
         <Message Importance="high" Text="Сборка фронта через yarn build..." />
         <Exec WorkingDirectory="..\mars.client" Command="yarn install" />
         <Exec WorkingDirectory="..\mars.client" Command="yarn build" />
     </Target>
 
-    <!--<Target Name="CopyClientDistToWwwroot" AfterTargets="Build">
+    <Target Name="CopyClientDistToWwwroot" AfterTargets="Build">
         <Message Importance="high" Text="Копирование dist в wwwroot..." />
         <RemoveDir Directories="wwwroot\assets" />
 
@@ -160,9 +164,9 @@
         </ItemGroup>
 
         <Copy SourceFiles="@(DistFiles)" DestinationFolder="wwwroot\%(RecursiveDir)" SkipUnchangedFiles="true" />
-    </Target>-->
-    
-    <Target Name="CopyClientDistToPublishWwwroot" AfterTargets="Publish">
+    </Target>
+
+    <!--<Target Name="CopyClientDistToPublishWwwroot" AfterTargets="Publish">
         <Message Importance="high" Text="Копирование dist в опубликованный wwwroot..." />
         <RemoveDir Directories="$(PublishDir)wwwroot\assets" />
 
@@ -171,6 +175,6 @@
         </ItemGroup>
 
         <Copy SourceFiles="@(DistFiles)" DestinationFolder="$(PublishDir)wwwroot\%(RecursiveDir)" SkipUnchangedFiles="true" />
-    </Target>
+    </Target>-->
 
 </Project>

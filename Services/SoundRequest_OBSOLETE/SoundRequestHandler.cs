@@ -1,11 +1,11 @@
-﻿using MARS.Server.Services.SoundRequest.Entitys;
-using MARS.Server.Services.SoundRequest.Entitys.Exceptions;
-using MARS.Server.Services.SoundRequest.Platforms.SoundCloud;
-using MARS.Server.Services.SoundRequest.Platforms.YouTube;
+﻿using MARS.Server.Services.SoundRequest_OBSOLETE.Entitys;
+using MARS.Server.Services.SoundRequest_OBSOLETE.Entitys.Exceptions;
+using MARS.Server.Services.SoundRequest_OBSOLETE.Platforms.SoundCloud;
+using MARS.Server.Services.SoundRequest_OBSOLETE.Platforms.YouTube;
 using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Websockets;
 
-namespace MARS.Server.Services.SoundRequest;
+namespace MARS.Server.Services.SoundRequest_OBSOLETE;
 
 /// <summary>
 /// Handles the logic for processing and managing sound requests.

@@ -1,5 +1,5 @@
-﻿using MARS.Server.Services.SoundRequest;
-using MARS.Server.Services.SoundRequest.Entitys;
+﻿using MARS.Server.Services.SoundRequest_OBSOLETE;
+using MARS.Server.Services.SoundRequest_OBSOLETE.Entitys;
 using SignalRSwaggerGen.Attributes;
 using SignalRSwaggerGen.Enums;
 

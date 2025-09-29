@@ -1,7 +1,7 @@
 ﻿using System.Collections.Concurrent;
-using MARS.Server.Services.SoundRequest.Entitys;
+using MARS.Server.Services.SoundRequest_OBSOLETE.Entitys;
 
-namespace MARS.Server.Services.SoundRequest;
+namespace MARS.Server.Services.SoundRequest_OBSOLETE;
 
 /// <summary>
 /// Represents a playlist for background sound requests, managing the queue and playback of tracks.

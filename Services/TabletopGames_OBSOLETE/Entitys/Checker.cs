@@ -1,6 +1,6 @@
-﻿using MARS.Server.Services.TabletopGames.Entitys.Abstractions;
+﻿using MARS.Server.Services.TabletopGames_OBSOLETE.Entitys.Abstractions;
 
-namespace MARS.Server.Services.TabletopGames.Entitys;
+namespace MARS.Server.Services.TabletopGames_OBSOLETE.Entitys;
 
 /// <summary>
 /// Represents a checker piece in a tabletop checkers game.

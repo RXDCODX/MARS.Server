@@ -1,8 +1,8 @@
-﻿using MARS.Server.Services.SoundRequest.Entitys;
-using MARS.Server.Services.SoundRequest.Entitys.Exceptions;
+﻿using MARS.Server.Services.SoundRequest_OBSOLETE.Entitys;
+using MARS.Server.Services.SoundRequest_OBSOLETE.Entitys.Exceptions;
 using SoundCloudExplode;
 
-namespace MARS.Server.Services.SoundRequest.Platforms.SoundCloud;
+namespace MARS.Server.Services.SoundRequest_OBSOLETE.Platforms.SoundCloud;
 
 public class SoundCloudTextSearchService
 {

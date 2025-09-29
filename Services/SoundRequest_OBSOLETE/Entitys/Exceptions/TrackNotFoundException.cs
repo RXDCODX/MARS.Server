@@ -1,4 +1,4 @@
-﻿namespace MARS.Server.Services.SoundRequest.Entitys.Exceptions;
+﻿namespace MARS.Server.Services.SoundRequest_OBSOLETE.Entitys.Exceptions;
 
 public class TrackNotFoundException(string? message = default) : Exception
 {

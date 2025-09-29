@@ -1,7 +1,7 @@
-﻿using MARS.Server.Services.SoundRequest.Entitys;
+﻿using MARS.Server.Services.SoundRequest_OBSOLETE.Entitys;
 using SoundCloudExplode;
 
-namespace MARS.Server.Services.SoundRequest.Platforms.SoundCloud;
+namespace MARS.Server.Services.SoundRequest_OBSOLETE.Platforms.SoundCloud;
 
 public class SoundCloudApiService
 {

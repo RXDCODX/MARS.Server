@@ -1,4 +1,4 @@
-namespace MARS.Server.Services.StreamAcrhive.Entitys;
+﻿namespace MARS.Server.Services.StreamAcrhive_UNUSED.Entitys;
 
 /// <summary>
 /// Статус обработки файла
@@ -28,5 +28,5 @@ public enum StreamArchiveFileStatus
     /// <summary>
     /// Файл пропущен (например, уже существует в базе)
     /// </summary>
-    Skipped = 4
+    Skipped = 4,
 }

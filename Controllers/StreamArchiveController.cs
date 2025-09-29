@@ -1,4 +1,4 @@
-﻿using MARS.Server.Services.StreamAcrhive.Entitys;
+﻿using MARS.Server.Services.StreamAcrhive_UNUSED.Entitys;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MARS.Server.Controllers;
@@ -176,7 +176,9 @@ public class StreamArchiveController(
     /// Проверить доступность папки
     /// </summary>
     [HttpPost("validate-folder")]
-    public ActionResult<ValidateFolderResponse> ValidateFolder([FromBody] ValidateFolderRequest request)
+    public ActionResult<ValidateFolderResponse> ValidateFolder(
+        [FromBody] ValidateFolderRequest request
+    )
     {
         try
         {
