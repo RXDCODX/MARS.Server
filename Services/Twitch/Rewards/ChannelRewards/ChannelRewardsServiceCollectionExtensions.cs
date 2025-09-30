@@ -11,7 +11,6 @@ public static class ChannelRewardsServiceCollectionExtensions
         services.AddHostedService(sp => sp.GetRequiredService<ChannelRewardsService>());
 
         services.AddSingleton<ChannelRewardDefinition, TestRewardDefinition>();
-        services.AddHostedService<TwitchRefundService.TwitchRefundService>();
 
         services.AddSingleton<ChannelRewardsManager>();
         services.AddSingleton<ChannelRewardsSyncService>();

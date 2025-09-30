@@ -21,7 +21,7 @@ public class TwitchRefundService(
     public bool IsServiceActive { get; set; } = true;
     public int Cost { get; init; } = 160;
 
-    private const string RefundRewardId = "e0af123a-3987-4924-a86b-393a702d2857\r\n";
+    private const string RefundRewardId = "c6b5343c-023e-4ff1-acc4-05195a1b8872";
     private static readonly string[] AspVariations = ["asp", "ASP", "Asp", "асп", "Асп", "АСП"];
 
     protected override Task ExecuteAsync(CancellationToken stoppingToken)

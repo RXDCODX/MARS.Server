@@ -4,14 +4,16 @@ namespace MARS.Server.Services.Twitch.Rewards.ChannelRewards;
 
 public class AlertInitializationService(
     ChannelRewardsService channelRewardsService,
-    ILogger<AlertInitializationService> logger
+    ILogger<AlertInitializationService> logger,
+    IDbContextFactory<AppDbContext> factory
 ) : BackgroundService
 {
     public bool IsServiceActive { get; set; } = true;
 
-    private const int AlertCost = 16;
-    private const string AlertTitle = "Алерт";
-    private const string AlertPrompt = "Введите текст для алерта";
+    private const int AlertCost = 160;
+    private const string AlertTitle = "НОГОЙ БОМЖА";
+    private const string AlertPrompt =
+        "Возращает баллы за использование если топтать asp/асп'a (аспиранта)";
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -21,7 +23,7 @@ public class AlertInitializationService(
         }
 
         // Ждем остановки сервиса
-        await Task.Delay(Timeout.Infinite, stoppingToken);
+        await Task.CompletedTask;
     }
 
     /// <summary>
@@ -63,7 +65,7 @@ public class AlertInitializationService(
                 Cost = AlertCost,
                 IsEnabled = true,
                 Prompt = AlertPrompt,
-                BackgroundColor = "#9146FF",
+                BackgroundColor = "#FF0000",
                 IsUserInputRequired = true,
                 IsMaxPerStreamEnabled = false,
                 IsMaxPerUserPerStreamEnabled = false,
@@ -78,6 +80,12 @@ public class AlertInitializationService(
                     AlertCost,
                     rewardId
                 );
+                await using var dbContext = await factory.CreateDbContextAsync();
+                var record = await dbContext.Alerts.SingleAsync(e =>
+                    e.MetaInfo.TwitchPointsCost == AlertCost
+                );
+                record.MetaInfo.TwitchGuid = Guid.Parse(rewardId);
+                await dbContext.SaveChangesAsync();
             }
             else
             {

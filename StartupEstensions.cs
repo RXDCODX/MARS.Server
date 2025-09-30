@@ -31,10 +31,12 @@ using MARS.Server.Services.Twitch.Rewards.TestReward;
 using MARS.Server.Services.Twitch.Rewards.TwitchAdhdReward;
 using MARS.Server.Services.Twitch.Rewards.TwitchAlerts;
 using MARS.Server.Services.Twitch.Rewards.TwitchClipCreator;
+using MARS.Server.Services.Twitch.Rewards.TwitchCredits;
 using MARS.Server.Services.Twitch.Rewards.TwitchGaoAlert;
 using MARS.Server.Services.Twitch.Rewards.TwitchHighlitedMessage;
 using MARS.Server.Services.Twitch.Rewards.TwitchRandomArt;
 using MARS.Server.Services.Twitch.Rewards.TwitchRandomMeme;
+using MARS.Server.Services.Twitch.Rewards.TwitchRefundService;
 using MARS.Server.Services.Twitch.Rewards.TwitchScreenParticles;
 using MARS.Server.Services.Twitch.Rewards.TwitchWaifuRolls;
 using MARS.Server.Services.Twitch.SoundBarService;
@@ -315,8 +317,10 @@ public static class StartupEstensions
         services.AddSingleton<TwitchAdhdService>();
         services.AddHostedService(sp => sp.GetRequiredService<TwitchAdhdService>());
 
-        //services.AddSingleton<TwitchRefundService>();
-        //services.AddHostedService(sp => sp.GetRequiredService<TwitchRefundService>());
+        services.AddSingleton<TwitchCreditsRewardService>();
+        services.AddHostedService(sp => sp.GetRequiredService<TwitchCreditsRewardService>());
+
+        services.AddHostedService<TwitchRefundService>();
 
         services.AddSingleton<TestRewardService>();
         services.AddHostedService(sp => sp.GetRequiredService<TestRewardService>());
@@ -328,8 +332,7 @@ public static class StartupEstensions
         services.AddHostedService(sp => sp.GetRequiredService<TwitchNameActualizer>());
 
         services.AddSingleton<ChannelRewardsService>();
-        //services.AddSingleton<AlertInitializationService>();
-        //services.AddHostedService(sp => sp.GetRequiredService<AlertInitializationService>());
+        //services.AddHostedService<AlertInitializationService>();
 
         services.AddSingleton<ServiceManager>();
         services.AddSingleton<IServiceManager>(sp => sp.GetRequiredService<ServiceManager>());

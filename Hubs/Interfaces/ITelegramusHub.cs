@@ -68,4 +68,7 @@ public interface ITelegramusHub
 
     [SignalRMethod]
     Task GaoAlert(GaoAlertDto gaoAlert);
+
+    [SignalRMethod]
+    Task Credits();
 }
