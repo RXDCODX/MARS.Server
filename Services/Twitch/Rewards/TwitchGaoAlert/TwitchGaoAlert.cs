@@ -1,4 +1,5 @@
-﻿using MARS.Server.Services.Twitch.Management.Entitys;
+﻿using System.Text.RegularExpressions;
+using MARS.Server.Services.Twitch.Management.Entitys;
 using MARS.Server.Services.Twitch.Rewards.TwitchGaoAlert.Entitys;
 using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Websockets;
@@ -60,28 +61,36 @@ public class TwitchGaoAlert(
                     if (!isJustText)
                     {
                         text = text.StartsWith('@') ? text.Substring(1) : text;
-                        try
+
+                        // Проверка на соответствие правилам Twitch: только латиница, цифры, не больше 25 символов
+                        var isValidTwitchUsername =
+                            text.Length <= 25 && Regex.IsMatch(text, @"^[a-zA-Z0-9_]+$");
+
+                        if (isValidTwitchUsername)
                         {
-                            var twitchUser = await api.Helix.Users.GetUsersAsync(null, [text]);
-                            if (twitchUser is { Users.Length: > 0 })
+                            try
                             {
-                                var user = twitchUser.Users.First();
-                                gaoAlert = new GaoAlertDto()
+                                var twitchUser = await api.Helix.Users.GetUsersAsync(null, [text]);
+                                if (twitchUser is { Users.Length: > 0 })
                                 {
-                                    TwitchUser = user,
-                                    IsJustText = false,
-                                };
-                                await hubContext.Clients.All.GaoAlert(gaoAlert);
-                                logger.LogInformation(
-                                    "Gao alert with user {userName}",
-                                    user.DisplayName
-                                );
-                                return;
+                                    var user = twitchUser.Users.First();
+                                    gaoAlert = new GaoAlertDto()
+                                    {
+                                        TwitchUser = user,
+                                        IsJustText = false,
+                                    };
+                                    await hubContext.Clients.All.GaoAlert(gaoAlert);
+                                    logger.LogInformation(
+                                        "Gao alert with user {userName}",
+                                        user.DisplayName
+                                    );
+                                    return;
+                                }
                             }
-                        }
-                        catch
-                        {
-                            //ignored
+                            catch
+                            {
+                                //ignored
+                            }
                         }
                     }
 
