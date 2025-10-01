@@ -16,6 +16,7 @@ public class EventSubService(
 ) : BackgroundService
 {
     private static readonly SemaphoreSlim SemaphoreSlim = new(1);
+    private static readonly SemaphoreSlim WebsocketSemaphoreSlim = new(1);
     private readonly CancellationToken _cancellationToken = lifetime.ApplicationStopping;
     private volatile bool _firstActivation = true;
 
@@ -110,6 +111,13 @@ public class EventSubService(
 
     private async Task TryReconnectWithBackoffAsync()
     {
+        if (WebsocketSemaphoreSlim.CurrentCount == 0)
+        {
+            return;
+        }
+
+        await WebsocketSemaphoreSlim.WaitAsync(_cancellationToken);
+
         var delayMs = 500;
         for (var attempt = 0; attempt < 5 && !_cancellationToken.IsCancellationRequested; attempt++)
         {
@@ -133,6 +141,8 @@ public class EventSubService(
             await Task.Delay(delayMs, _cancellationToken);
             delayMs = Math.Min(delayMs * 2, 8000);
         }
+
+        WebsocketSemaphoreSlim.Release();
     }
 
     private async Task DeleteAllSubsAsync()
@@ -223,11 +233,7 @@ public class EventSubService(
         bool result;
         try
         {
-            if (string.IsNullOrWhiteSpace(wsClient.SessionId))
-            {
-                await wsClient.ConnectAsync();
-            }
-            result = !string.IsNullOrWhiteSpace(wsClient.SessionId);
+            result = await wsClient.ReconnectAsync();
             if (!result)
             {
                 logger.LogError("Не удалось подключить WebSocket для создания подписок");

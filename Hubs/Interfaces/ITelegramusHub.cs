@@ -71,4 +71,7 @@ public interface ITelegramusHub
 
     [SignalRMethod]
     Task Credits();
+
+    [SignalRMethod]
+    Task MichaelJackson();
 }
