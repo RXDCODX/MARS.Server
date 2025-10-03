@@ -111,9 +111,11 @@ public class TokenService(
         await dbContext.SaveChangesAsync();
     }
 
-    public async Task<bool> EnsureActualTokenAsync(CancellationToken cancellationToken = default)
+    public async Task<TokenInfo?> EnsureActualTokenAsync(
+        CancellationToken cancellationToken = default
+    )
     {
-        bool result;
+        TokenInfo? result;
 
         try
         {
@@ -122,7 +124,7 @@ public class TokenService(
             if (token == null)
             {
                 logger.LogWarning("Токен не найден в базе данных");
-                result = false;
+                result = null;
             }
             else
             {
@@ -135,7 +137,7 @@ public class TokenService(
                         "Токен актуален, истекает через {TimeUntilExpiry}",
                         timeUntilExpiry
                     );
-                    result = true;
+                    result = token;
                 }
                 else
                 {
@@ -148,12 +150,12 @@ public class TokenService(
                     if (refreshResult)
                     {
                         logger.LogInformation("Токен успешно обновлен");
-                        result = true;
+                        result = token;
                     }
                     else
                     {
                         logger.LogError("Не удалось обновить токен");
-                        result = false;
+                        result = token;
                     }
                 }
             }
@@ -161,7 +163,7 @@ public class TokenService(
         catch (Exception e)
         {
             logger.LogException(e);
-            result = false;
+            result = Token;
         }
 
         return result;

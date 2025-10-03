@@ -30,15 +30,14 @@ public class ChannelRewardsService(
             return null;
         }
 
-        var accessToken = tokenService.Token?.AccessToken;
-        ArgumentException.ThrowIfNullOrWhiteSpace(accessToken);
+        ArgumentException.ThrowIfNullOrWhiteSpace(tokenService.Token?.AccessToken);
 
         try
         {
             var response = await api.Helix.ChannelPoints.CreateCustomRewardsAsync(
                 TwitchExstension.ChannelId,
                 request,
-                accessToken
+                tokenService.Token.AccessToken
             );
 
             var created = response.Data.FirstOrDefault();
@@ -75,8 +74,7 @@ public class ChannelRewardsService(
             return null;
         }
 
-        var accessToken = tokenService.Token?.AccessToken;
-        ArgumentException.ThrowIfNullOrWhiteSpace(accessToken);
+        ArgumentException.ThrowIfNullOrWhiteSpace(tokenService.Token?.AccessToken);
 
         try
         {
@@ -84,7 +82,7 @@ public class ChannelRewardsService(
                 TwitchExstension.ChannelId,
                 null,
                 false,
-                accessToken
+                tokenService.Token.AccessToken
             );
 
             logger.LogInformation("Получено {Count} наград канала", response.Data.Length);
@@ -109,16 +107,14 @@ public class ChannelRewardsService(
         }
 
         ArgumentException.ThrowIfNullOrWhiteSpace(rewardId);
-
-        var accessToken = tokenService.Token?.AccessToken;
-        ArgumentException.ThrowIfNullOrWhiteSpace(accessToken);
+        ArgumentException.ThrowIfNullOrWhiteSpace(tokenService.Token?.AccessToken);
 
         try
         {
             await api.Helix.ChannelPoints.DeleteCustomRewardAsync(
                 TwitchExstension.ChannelId,
                 rewardId,
-                accessToken
+                tokenService.Token.AccessToken
             );
 
             logger.LogInformation("Удалена награда канала: {RewardId}", rewardId);
@@ -144,8 +140,7 @@ public class ChannelRewardsService(
 
         ArgumentException.ThrowIfNullOrWhiteSpace(rewardId);
 
-        var accessToken = tokenService.Token?.AccessToken;
-        ArgumentException.ThrowIfNullOrWhiteSpace(accessToken);
+        ArgumentException.ThrowIfNullOrWhiteSpace(tokenService.Token?.AccessToken);
 
         try
         {
@@ -153,7 +148,7 @@ public class ChannelRewardsService(
                 TwitchExstension.ChannelId,
                 [rewardId],
                 true,
-                accessToken
+                tokenService.Token.AccessToken
             );
 
             return response.Data.FirstOrDefault();
@@ -178,8 +173,7 @@ public class ChannelRewardsService(
 
         ArgumentException.ThrowIfNullOrWhiteSpace(rewardId);
 
-        var accessToken = tokenService.Token?.AccessToken;
-        ArgumentException.ThrowIfNullOrWhiteSpace(accessToken);
+        ArgumentException.ThrowIfNullOrWhiteSpace(tokenService.Token?.AccessToken);
 
         try
         {
@@ -187,7 +181,7 @@ public class ChannelRewardsService(
                 TwitchExstension.ChannelId,
                 rewardId,
                 request,
-                accessToken
+                tokenService.Token?.AccessToken
             );
 
             logger.LogInformation("Обновлена награда канала: {RewardId}", rewardId);

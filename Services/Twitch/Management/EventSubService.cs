@@ -24,8 +24,7 @@ public class EventSubService(
     {
         if (!_firstActivation)
         {
-            var token = tokenService.Token;
-            if (token != null)
+            if (tokenService.Token != null)
             {
                 var subs = await GetEventSubsAsync();
                 var hasActiveSubscriptions =
@@ -147,8 +146,7 @@ public class EventSubService(
 
     private async Task DeleteAllSubsAsync()
     {
-        var token = tokenService.Token;
-        if (token != null)
+        if (tokenService.Token != null)
         {
             var response = await GetEventSubsAsync();
             if (response != null)
@@ -160,7 +158,7 @@ public class EventSubService(
                         await api.Helix.EventSub.DeleteEventSubSubscriptionAsync(
                             subscription.Id,
                             api.Settings.ClientId,
-                            token.AccessToken
+                            tokenService.Token.AccessToken
                         );
                     }
                     catch (HttpRequestException httpEx)
@@ -173,11 +171,10 @@ public class EventSubService(
                         );
                         if (refreshed)
                         {
-                            token = tokenService.Token ?? token;
                             await api.Helix.EventSub.DeleteEventSubSubscriptionAsync(
                                 subscription.Id,
                                 api.Settings.ClientId,
-                                token.AccessToken
+                                tokenService.Token.AccessToken
                             );
                         }
                         else
@@ -251,11 +248,10 @@ public class EventSubService(
     private async Task<bool> HandleUnauthorizedError(string operation)
     {
         logger.LogWarning("Получена ошибка 401 при {Operation}. Обновляем токен...", operation);
-        var currentToken = tokenService.Token;
         bool result;
-        if (currentToken != null)
+        if (tokenService.Token != null)
         {
-            var refreshResult = await tokenService.RefreshTokenAsync(currentToken);
+            var refreshResult = await tokenService.RefreshTokenAsync(tokenService.Token);
             if (refreshResult)
             {
                 logger.LogInformation("Токен успешно обновлен для {Operation}", operation);
@@ -290,7 +286,7 @@ public class EventSubService(
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(tokenService.Token?.AccessToken);
             ArgumentException.ThrowIfNullOrWhiteSpace(tokenService.Token?.RefreshToken);
-
+            await tokenService.EnsureActualTokenAsync(_cancellationToken);
             await DeleteAllSubsAsync();
 
             var wsOk = await EnsureWebSocketConnectedAsync();
@@ -717,12 +713,11 @@ public class EventSubService(
         GetEventSubSubscriptionsResponse? result = null;
         try
         {
-            var token = tokenService.Token;
-            if (token != null)
+            if (tokenService.Token != null)
             {
                 result = await api.Helix.EventSub.GetEventSubSubscriptionsAsync(
                     clientId: api.Settings.ClientId,
-                    accessToken: token.AccessToken
+                    accessToken: tokenService.Token.AccessToken
                 );
             }
         }
@@ -732,16 +727,15 @@ public class EventSubService(
             logger.LogWarning(
                 "Получена ошибка 401 (Unauthorized) при получении EventSub подписок. Пытаемся обновить токен..."
             );
-            var currentToken = tokenService.Token;
-            if (currentToken != null)
+            if (tokenService.Token != null)
             {
-                var refreshResult = await tokenService.RefreshTokenAsync(currentToken);
+                var refreshResult = await tokenService.RefreshTokenAsync(tokenService.Token);
                 if (refreshResult)
                 {
                     logger.LogInformation("Токен успешно обновлен, повторяем запрос...");
                     result = await api.Helix.EventSub.GetEventSubSubscriptionsAsync(
                         clientId: api.Settings.ClientId,
-                        accessToken: tokenService.Token?.AccessToken ?? currentToken.AccessToken
+                        accessToken: tokenService.Token?.AccessToken
                     );
                 }
                 else
