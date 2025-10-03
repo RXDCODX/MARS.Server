@@ -11,7 +11,6 @@ public class TwitchMessagesHubAwaker : BackgroundService
     private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
 
     private readonly CancellationToken _token;
-    private ConcurrentBag<MediaInfo>? Alerts { get; set; }
 
     public TwitchMessagesHubAwaker(
         ITwitchClient client,
@@ -58,23 +57,18 @@ public class TwitchMessagesHubAwaker : BackgroundService
             await Task.Factory.StartNew(
                 async () =>
                 {
-                    if (Alerts is not { Count: > 0 })
-                    {
-                        await using var dbContext = await _dbContextFactory.CreateDbContextAsync(
-                            _token
-                        );
+                    await using var dbContext = await _dbContextFactory.CreateDbContextAsync(
+                        _token
+                    );
 
-                        Alerts =
-                        [
-                            .. dbContext
-                                .Alerts.AsNoTracking()
-                                .Where(mediaInfo =>
-                                    !string.IsNullOrWhiteSpace(mediaInfo.TextInfo.TriggerWord)
-                                ),
-                        ];
-                    }
-
-                    var alerts = Alerts
+                    var alerts = (
+                        await dbContext
+                            .Alerts.AsNoTracking()
+                            .Where(mediaInfo =>
+                                !string.IsNullOrWhiteSpace(mediaInfo.TextInfo.TriggerWord)
+                            )
+                            .ToListAsync(cancellationToken: _token)
+                    )
                         .Where(info =>
                         {
                             var message = e.ChatMessage.Message.Trim();
@@ -181,10 +175,5 @@ public class TwitchMessagesHubAwaker : BackgroundService
                 );
             }
         }
-    }
-
-    public void ClearAlertsCache()
-    {
-        Alerts?.Clear();
     }
 }

@@ -163,7 +163,6 @@
 
     <Target Name="CopyClientDistToWwwroot" AfterTargets="Publish">
         <Message Importance="high" Text="Копирование dist в wwwroot..." />
-        <RemoveDir Directories="wwwroot\assets" />
 
         <ItemGroup>
             <DistFiles Include="..\mars.client\dist\**\*" />
