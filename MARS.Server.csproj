@@ -161,7 +161,7 @@
         <Exec WorkingDirectory="..\mars.client" Command="yarn build" />
     </Target>
 
-    <Target Name="CopyClientDistToWwwroot" AfterTargets="Publish">
+    <!--<Target Name="CopyClientDistToWwwroot" AfterTargets="Publish">
         <Message Importance="high" Text="Копирование dist в wwwroot..." />
 
         <ItemGroup>
@@ -169,17 +169,16 @@
         </ItemGroup>
 
         <Copy SourceFiles="@(DistFiles)" DestinationFolder="wwwroot\%(RecursiveDir)" SkipUnchangedFiles="true" />
-    </Target>
+    </Target>-->
 
-    <!--<Target Name="CopyClientDistToPublishWwwroot" AfterTargets="Publish">
+    <Target Name="CopyClientDistToPublishWwwroot" AfterTargets="Publish">
         <Message Importance="high" Text="Копирование dist в опубликованный wwwroot..." />
-        <RemoveDir Directories="$(PublishDir)wwwroot\assets" />
 
         <ItemGroup>
             <DistFiles Include="..\mars.client\dist\**\*" />
         </ItemGroup>
 
         <Copy SourceFiles="@(DistFiles)" DestinationFolder="$(PublishDir)wwwroot\%(RecursiveDir)" SkipUnchangedFiles="true" />
-    </Target>-->
+    </Target>
 
 </Project>
