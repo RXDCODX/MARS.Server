@@ -30,7 +30,7 @@ public class RandomMeme(
         {
             switch (twEvent.Reward.Cost)
             {
-                case 9:
+                case 11:
                 {
                     var media = await GetMeme(twEvent.UserName);
 

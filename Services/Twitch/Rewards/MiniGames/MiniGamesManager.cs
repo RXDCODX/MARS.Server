@@ -55,7 +55,7 @@ public class MiniGamesManager(
 
         // Очищаем завершенные игры перед проверкой
         RemoveCompletedGames();
-        
+
         var miniGames = MiniGames.Values;
         if (miniGames.Any(e => e.IsGameRunning))
         {
@@ -76,12 +76,19 @@ public class MiniGamesManager(
                 }
             }
         }
-        else if (cost is 8 or 7 or 6)
+        else if (cost is 9 or 8 or 7 or 6)
         {
             var asyncServiceScope = serviceProvider.CreateAsyncScope();
 
             switch (cost)
             {
+                case 9:
+                    var bullsAndCows =
+                        asyncServiceScope.ServiceProvider.GetRequiredService<TwitchBullsAndCows>();
+                    bullsAndCows.IsGameRunning = true;
+                    MiniGames.Add(9, bullsAndCows);
+                    await bullsAndCows.GameStart(name, userId, _cancellationToken);
+                    break;
                 case 8:
                     var tekkenVictorina =
                         asyncServiceScope.ServiceProvider.GetRequiredService<TekkenVictorina>();
@@ -127,6 +134,7 @@ public class MiniGamesManager(
         }
     }
 
+    // ReSharper disable once AsyncVoidMethod
     private async void ClientOnMessageReceived(object? sender, OnMessageReceivedArgs e)
     {
         if (

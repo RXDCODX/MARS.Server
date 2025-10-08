@@ -286,7 +286,6 @@ public class EventSubService(
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(tokenService.Token?.AccessToken);
             ArgumentException.ThrowIfNullOrWhiteSpace(tokenService.Token?.RefreshToken);
-            await tokenService.EnsureActualTokenAsync(_cancellationToken);
             await DeleteAllSubsAsync();
 
             var wsOk = await EnsureWebSocketConnectedAsync();

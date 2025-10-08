@@ -31,7 +31,6 @@ public class TwitchApiRateLimiter(ILogger<TwitchApiRateLimiter> logger, IService
 
             try
             {
-                await TokenService.EnsureActualTokenAsync(cancellationToken);
                 await perform();
                 await RecordRequest(startTime);
             }
@@ -62,7 +61,6 @@ public class TwitchApiRateLimiter(ILogger<TwitchApiRateLimiter> logger, IService
 
             try
             {
-                await TokenService.EnsureActualTokenAsync(cancellationToken);
                 var result = await perform();
                 await RecordRequest(startTime);
                 return result;
@@ -94,7 +92,6 @@ public class TwitchApiRateLimiter(ILogger<TwitchApiRateLimiter> logger, IService
 
             try
             {
-                await TokenService.EnsureActualTokenAsync(cancellationToken);
                 perform();
                 await RecordRequest(startTime);
             }
@@ -112,7 +109,6 @@ public class TwitchApiRateLimiter(ILogger<TwitchApiRateLimiter> logger, IService
 
     public async Task Perform(Action perform)
     {
-        await TokenService.EnsureActualTokenAsync();
         await Perform(perform, CancellationToken.None);
     }
 
@@ -126,7 +122,6 @@ public class TwitchApiRateLimiter(ILogger<TwitchApiRateLimiter> logger, IService
 
             try
             {
-                await TokenService.EnsureActualTokenAsync(cancellationToken);
                 var result = perform();
                 await RecordRequest(startTime);
                 return result;
@@ -145,7 +140,6 @@ public class TwitchApiRateLimiter(ILogger<TwitchApiRateLimiter> logger, IService
 
     public async Task<T> Perform<T>(Func<T> perform)
     {
-        await TokenService.EnsureActualTokenAsync();
         return await Perform(perform, CancellationToken.None);
     }
 

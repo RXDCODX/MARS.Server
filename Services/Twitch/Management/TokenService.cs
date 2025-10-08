@@ -8,14 +8,14 @@ public class TokenService(
     ILogger<TokenService> logger,
     IDbContextFactory<AppDbContext> factory,
     TelegramTokenNotification notification
-)
+) : BackgroundService
 {
     private static readonly SemaphoreSlim SemaphoreSlim = new(1, 1);
     private TokenInfo? _tokenInfo;
 
     public TokenInfo? Token
     {
-        get => _tokenInfo ??= GetFirstTokenAsync().GetAwaiter().GetResult();
+        get => EnsureActualTokenAsync().GetAwaiter().GetResult();
         internal set
         {
             if (value != null)
@@ -111,7 +111,7 @@ public class TokenService(
         await dbContext.SaveChangesAsync();
     }
 
-    public async Task<TokenInfo?> EnsureActualTokenAsync(
+    private async Task<TokenInfo?> EnsureActualTokenAsync(
         CancellationToken cancellationToken = default
     )
     {
@@ -119,12 +119,12 @@ public class TokenService(
 
         try
         {
-            var token = await GetTokenAsync(cancellationToken);
+            var token = _tokenInfo ??= await GetTokenAsync(cancellationToken);
 
             if (token == null)
             {
                 logger.LogWarning("Токен не найден в базе данных");
-                result = null;
+                throw new NullReferenceException();
             }
             else
             {
@@ -188,7 +188,11 @@ public class TokenService(
         }
 
         SemaphoreSlim.Release();
-
         return token;
+    }
+
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        _tokenInfo = await GetFirstTokenAsync();
     }
 }

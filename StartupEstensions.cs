@@ -33,8 +33,8 @@ using MARS.Server.Services.Twitch.Rewards.TwitchAlerts;
 using MARS.Server.Services.Twitch.Rewards.TwitchClipCreator;
 using MARS.Server.Services.Twitch.Rewards.TwitchCredits;
 using MARS.Server.Services.Twitch.Rewards.TwitchGaoAlert;
-using MARS.Server.Services.Twitch.Rewards.TwitchMichaelJacksonReward;
 using MARS.Server.Services.Twitch.Rewards.TwitchHighlitedMessage;
+using MARS.Server.Services.Twitch.Rewards.TwitchMichaelJacksonReward;
 using MARS.Server.Services.Twitch.Rewards.TwitchRandomArt;
 using MARS.Server.Services.Twitch.Rewards.TwitchRandomMeme;
 using MARS.Server.Services.Twitch.Rewards.TwitchRefundService;
@@ -198,6 +198,12 @@ public static class StartupEstensions
         IConfigurationManager manager
     )
     {
+        services.AddSingleton<TelegramTokenNotification>();
+        services.AddSingleton<TokenService>();
+        services.AddHostedService(sp => sp.GetRequiredService<TokenService>());
+        services.AddSingleton<EventSubService>();
+        services.AddHostedService(sp => sp.GetRequiredService<EventSubService>());
+
         var twitchConfig = new TwitchConfiguration();
         var twitchConfigSection = manager
             .GetSection(AppBase.Base)
@@ -248,11 +254,6 @@ public static class StartupEstensions
         // services.AddSingleton<TwitchMessageBuilderService>();
         // services.AddHostedService(sp => sp.GetRequiredService<TwitchMessageBuilderService>());
 
-        services.AddSingleton<TelegramTokenNotification>();
-        services.AddSingleton<TokenService>();
-        services.AddSingleton<EventSubService>();
-        services.AddHostedService(sp => sp.GetRequiredService<EventSubService>());
-
         services.AddSingleton<AutoHello>();
         services.AddHostedService(sp => sp.GetRequiredService<AutoHello>());
 
@@ -265,6 +266,7 @@ public static class StartupEstensions
         services.AddSingleton<RandomMeme>();
         services.AddHostedService(sp => sp.GetRequiredService<RandomMeme>());
         services.AddScoped<TwitchRussianRoulete>();
+        services.AddScoped<TwitchBullsAndCows>();
         services.AddScoped<TekkenVictorina>();
         services.AddScoped<TwitchTrivia>();
         services.AddSingleton<HighlitedMessage>();

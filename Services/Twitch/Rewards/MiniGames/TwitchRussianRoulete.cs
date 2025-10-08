@@ -156,7 +156,7 @@ public class TwitchRussianRoulete(
         return Task.CompletedTask;
     }
 
-    public Task<bool> OnRewardRedemption(string userName, string userId, int cost)
+    public async Task<bool> OnRewardRedemption(string userName, string userId, int cost)
     {
         if (cost == Cost && _isAwaitingNewPlayers && !_gameStillActive)
         {
@@ -166,13 +166,23 @@ public class TwitchRussianRoulete(
                 )
             )
             {
-                return Task.FromResult(false);
+                return false;
             }
 
             _listOfPlayers.Add(new RouletePlayer { Name = userName, TwitchId = userId });
-            return Task.FromResult(true);
+
+            // Уведомление о добавлении игрока в рулетку
+            await Task.Factory.StartNew(
+                async () =>
+                    await client.SendMessageToMainTwitchAsync(
+                        $"@{userName} присоединился к русской рулетке! Игроков в игре: {_listOfPlayers.Count}",
+                        logger
+                    )
+            );
+
+            return true;
         }
 
-        return Task.FromResult(false);
+        return false;
     }
 }
