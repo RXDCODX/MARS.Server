@@ -1,18 +1,23 @@
-﻿namespace MARS.Server.Services.SoundRequest_OBSOLETE.Entitys;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
-/// <summary>
-/// Represents a track requested by a user in the sound request system.
-/// </summary>
+namespace MARS.Server.Services.SoundRequest.Entities;
+
 public class UserRequestedTrack
 {
     [Key]
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     public Guid Id { get; set; }
+
     public string? TwitchDisplayName { get; set; }
+
     public required string TwitchId { get; set; }
+
     public int Order { get; set; }
 
-    // Внешний ключ для связи
     public Guid RequestedTrackId { get; set; }
+
     public required BaseTrackInfo RequestedTrack { get; set; }
 }
+
+

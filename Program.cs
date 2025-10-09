@@ -177,7 +177,8 @@ public static class Program
             .AddCinemaQueueServicesAsSingleton()
             .AddGameServices()
             .AddExternalApiServices()
-            .AddSpecializedServices();
+            .AddSpecializedServices()
+            .AddSoundRequest();
 
         if (builder.Environment.IsProduction())
         {

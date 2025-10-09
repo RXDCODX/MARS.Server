@@ -7,7 +7,7 @@ using MARS.Server.Services.Honkai.Entitys;
 using MARS.Server.Services.RandomMem.Entity;
 using MARS.Server.Services.Scoreboard.Entitys;
 using MARS.Server.Services.ServiceManager.Entitys;
-using MARS.Server.Services.SoundRequest_OBSOLETE.Entitys;
+using MARS.Server.Services.SoundRequest.Entities;
 using MARS.Server.Services.StreamAcrhive_UNUSED.Entitys;
 using MARS.Server.Services.Twitch.ClientMessages.AutoMessages.Entitys;
 using MARS.Server.Services.Twitch.FumoFriday.Entitys;
@@ -71,7 +71,6 @@ public sealed class AppDbContext : DbContext
     public DbSet<RootState> ApplicationState { get; set; } = null!;
     public DbSet<BaseTrackInfo> SoundRequestBaseTrackInfos { get; set; } = null!;
     public DbSet<PlayerState> SoundRequestPlayerState { get; set; } = null!;
-    public DbSet<SoundRequestBackgroundTrackId> SoundRequestBackgroundTracks { get; set; } = null!;
     public DbSet<UserRequestedTrack> SoundRequestUserQueue { get; set; } = null!;
     public DbSet<ServiceState> ServiceStates { get; set; } = null!;
     public DbSet<ScoreboardState> ScoreboardStates { get; set; } = null!;
@@ -144,12 +143,6 @@ public sealed class AppDbContext : DbContext
             .WithOne()
             .HasForeignKey<UserRequestedTrack>(urt => urt.RequestedTrackId)
             .OnDelete(DeleteBehavior.Cascade);
-
-        modelBuilder
-            .Entity<SoundRequestBackgroundTrackId>()
-            .HasOne(e => e.BaseTrackInfo)
-            .WithOne()
-            .HasForeignKey<SoundRequestBackgroundTrackId>(e => e.TrackId);
 
         modelBuilder.Entity<MediaInfo>(entity =>
         {
@@ -232,17 +225,7 @@ public sealed class AppDbContext : DbContext
             );
         });
 
-        modelBuilder.Entity<BaseTrackInfo>(entitys =>
-        {
-            entitys.OwnsOne(
-                e => e.YandexSpecificInfo,
-                a =>
-                {
-                    a.Property(t => t.ArtworkUrl).HasColumnName("YandexInfo_ArtworkUrl");
-                    a.Property(t => t.Mp3TrackUrl).HasColumnName("YandexInfo_MP3Url");
-                }
-            );
-        });
+        // No owned types for BaseTrackInfo in new SoundRequest
 
         modelBuilder.Entity<Move>().HasKey(o => new { o.CharacterName, o.Command });
         modelBuilder.Entity<MovePending>().ToTable("TekkenMovesPending");

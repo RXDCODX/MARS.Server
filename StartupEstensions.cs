@@ -11,8 +11,11 @@ using MARS.Server.Services.Scoreboard;
 using MARS.Server.Services.ServiceManager;
 using MARS.Server.Services.Shikimori;
 using MARS.Server.Services.Shikimori.Entitys;
-using MARS.Server.Services.SoundRequest_OBSOLETE;
-using MARS.Server.Services.SoundRequest_OBSOLETE.Platforms.YouTube;
+using MARS.Server.Services.SoundRequest;
+using MARS.Server.Services.SoundRequest.Interfaces;
+using MARS.Server.Services.SoundRequest.Player;
+using MARS.Server.Services.SoundRequest.Queue;
+using MARS.Server.Services.SoundRequest.YouTube;
 using MARS.Server.Services.TelegramBotService;
 using MARS.Server.Services.Twitch.AutoInfoFetch;
 using MARS.Server.Services.Twitch.Client;
@@ -57,6 +60,7 @@ using TwitchLib.Api.Core.Enums;
 using TwitchLib.Api.Core.HttpCallHandlers;
 using TwitchLib.Api.Core.Interfaces;
 using TwitchLib.EventSub.Websockets.Extensions;
+using VideoLibrary;
 using YandexMusicResolver;
 using YandexMusicResolver.Config;
 
@@ -416,17 +420,13 @@ public static class StartupEstensions
     {
         Program.IsUseSoundRequest = true;
 
-        services.AddSingleton<YouTubeApiService>();
-
-        services.AddSingleton<SoundRequestBackendPlayer>();
-        services.AddHostedService(sp => sp.GetRequiredService<SoundRequestBackendPlayer>());
-
-        services.AddSingleton<SoundRequestBackgroundPlaylist>();
-        services.AddHostedService(sp => sp.GetRequiredService<SoundRequestBackgroundPlaylist>());
-        services.AddSingleton<SoundRequestHistoryService>();
-        services.AddSingleton<SoundRequestHandler>();
+        services.AddSingleton<IPlayerController, FakeMediaPlayer>();
         services.AddSingleton<SoundRequestUserQueue>();
-        services.AddSingleton<SoundRequestSignalREvents>();
+        services.AddSingleton<SoundRequestManager>();
+        services.AddHostedService(sp => sp.GetRequiredService<SoundRequestManager>());
+        services.AddSingleton<YouTubeResolver>();
+        services.AddSingleton<SoundRequestCommandsService>();
+        services.AddHostedService(sp => sp.GetRequiredService<SoundRequestCommandsService>());
 
         return services;
     }

@@ -1,19 +1,25 @@
-﻿namespace MARS.Server.Services.SoundRequest_OBSOLETE.Entitys;
+using System.ComponentModel.DataAnnotations.Schema;
 
-/// <summary>
-/// Represents the state of the sound request player, including playback status and current track.
-/// </summary>
+namespace MARS.Server.Services.SoundRequest.Entities;
+
 public class PlayerState : ICloneable
 {
     [Key]
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     public Guid Id { get; set; }
+
     public BaseTrackInfo? CurrentTrack { get; set; }
+
     public BaseTrackInfo? NextTrack { get; set; }
+
     public TimeSpan? CurrentTrackDuration { get; set; }
+
     public bool IsPaused { get; set; }
+
     public bool IsMuted { get; set; }
+
     public bool IsStoped { get; set; }
+
     public int Volume { get; set; } = 100;
 
     public object Clone()
@@ -40,11 +46,13 @@ public static class PlayerStateUpdater
         if (newState is PlayerState state)
         {
             upAction(state);
-            // ReSharper disable once RedundantAssignment
             sourceState = state;
             sourceState.ChangeEntity();
+            return;
         }
 
         throw new InvalidCastException();
     }
 }
+
+

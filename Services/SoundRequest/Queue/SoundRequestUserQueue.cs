@@ -1,10 +1,7 @@
-﻿using MARS.Server.Services.SoundRequest_OBSOLETE.Entitys;
+using MARS.Server.Services.SoundRequest.Entities;
 
-namespace MARS.Server.Services.SoundRequest_OBSOLETE;
+namespace MARS.Server.Services.SoundRequest.Queue;
 
-/// <summary>
-/// Manages the queue of users for sound requests.
-/// </summary>
 public class SoundRequestUserQueue(
     IDbContextFactory<AppDbContext> contextFactory,
     IHostApplicationLifetime lifetime
@@ -12,15 +9,12 @@ public class SoundRequestUserQueue(
 {
     private readonly CancellationToken _cancellationToken = lifetime.ApplicationStopping;
 
-    // Добавление нового запроса в очередь
     public async Task<UserRequestedTrack> AddToQueueAsync(UserRequestedTrack track)
     {
         await using var dbContext = await contextFactory.CreateDbContextAsync(_cancellationToken);
-        // Получаем максимальный текущий Order
-        var maxOrder = await dbContext.SoundRequestUserQueue.MaxAsync(
-            t => t.Order,
-            cancellationToken: _cancellationToken
-        );
+        var maxOrder = await dbContext
+            .SoundRequestUserQueue.AsNoTracking()
+            .MaxAsync(t => (int?)t.Order, cancellationToken: _cancellationToken) ?? 0;
 
         track.Order = maxOrder + 1;
         dbContext.SoundRequestUserQueue.Add(track);
@@ -29,22 +23,18 @@ public class SoundRequestUserQueue(
         return track;
     }
 
-    // Удаление запроса из очереди с пересчетом Order
-    public async Task RemoveFromQueueAsync(Guid trackId)
+    public async Task RemoveFromQueueAsync(Guid id)
     {
         await using var dbContext = await contextFactory.CreateDbContextAsync(_cancellationToken);
-        var trackToRemove = await dbContext.SoundRequestUserQueue.FindAsync(trackId);
+        var trackToRemove = await dbContext.SoundRequestUserQueue.FindAsync(id);
         if (trackToRemove == null)
         {
             return;
         }
 
         var removedOrder = trackToRemove.Order;
-
-        // Удаляем трек
         dbContext.SoundRequestUserQueue.Remove(trackToRemove);
 
-        // Обновляем Order для всех треков, которые были после удаленного
         await dbContext
             .SoundRequestUserQueue.Where(t => t.Order > removedOrder)
             .ExecuteUpdateAsync(
@@ -55,12 +45,14 @@ public class SoundRequestUserQueue(
         await dbContext.SaveChangesAsync(_cancellationToken);
     }
 
-    // Получение текущей очереди в правильном порядке
     public async Task<List<UserRequestedTrack>> GetQueueAsync()
     {
         await using var dbContext = await contextFactory.CreateDbContextAsync(_cancellationToken);
         return await dbContext
-            .SoundRequestUserQueue.OrderBy(t => t.Order)
+            .SoundRequestUserQueue.AsNoTracking()
+            .OrderBy(t => t.Order)
             .ToListAsync(cancellationToken: _cancellationToken);
     }
 }
+
+

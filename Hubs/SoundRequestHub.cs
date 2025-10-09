@@ -1,5 +1,5 @@
-﻿using MARS.Server.Services.SoundRequest_OBSOLETE;
-using MARS.Server.Services.SoundRequest_OBSOLETE.Entitys;
+﻿using MARS.Server.Services.SoundRequest;
+using MARS.Server.Services.SoundRequest.Entities;
 using SignalRSwaggerGen.Attributes;
 using SignalRSwaggerGen.Enums;
 
@@ -7,69 +7,66 @@ namespace MARS.Server.Hubs;
 
 [SignalRHub("/hubs/soundrequest", AutoDiscover.MethodsAndParams)]
 public class SoundRequestHub(
-    SoundRequestBackendPlayer player,
-    SoundRequestUserQueue userQueue,
-    SoundRequestHistoryService history
+    SoundRequestManager manager
 ) : Hub<ISoundRequestHub>
 {
     public Task JoinAsClient() => Groups.AddToGroupAsync(Context.ConnectionId, "client");
 
     public Task Play()
     {
-        player.ResumePlayer();
+        _ = manager.Resume();
         return Task.CompletedTask;
     }
 
     public Task Pause()
     {
-        player.PausePlayer();
+        _ = manager.Pause();
         return Task.CompletedTask;
     }
 
     public Task Resume()
     {
-        player.ResumePlayer();
+        _ = manager.Resume();
         return Task.CompletedTask;
     }
 
     public Task Stop()
     {
-        player.StopPlayer();
+        _ = manager.Stop();
         return Task.CompletedTask;
     }
 
-    public Task Skip() => player.SkipTrack();
+    public Task Skip() => manager.Skip();
 
     public Task Mute()
     {
-        player.MutePlayer();
+        _ = manager.Mute();
         return Task.CompletedTask;
     }
 
     public Task Unmute()
     {
-        player.UnmutePlayer();
+        _ = manager.Unmute();
         return Task.CompletedTask;
     }
 
     public Task SetVolume(int volume)
     {
-        player.SetVolume(volume);
+        _ = manager.SetVolume(volume);
         return Task.CompletedTask;
     }
 
     public async Task AddTrackToQueue(UserRequestedTrack track) =>
-        await userQueue.AddToQueueAsync(track);
+        await manager.AddTrack(track);
 
-    public async Task<List<UserRequestedTrack>> GetQueue() => await userQueue.GetQueueAsync();
+    public async Task<List<UserRequestedTrack>> GetQueue() => await manager.GetQueue();
 
-    public async Task<List<BaseTrackInfo>> GetHistory(int count = 20)
+    public Task<List<BaseTrackInfo>> GetHistory(int count = 20)
     {
-        var arr = await history.GetLastPlayedTracks(count);
-        return [.. arr];
+        return Task.FromResult(new List<BaseTrackInfo>());
     }
 
-    public Task<PlayerState> GetPlayerState() => Task.FromResult(player.PlayerState);
+    public Task<PlayerState> GetPlayerState() => Task.FromResult(manager.GetState());
 
     public Task Ended() =>
         // Implementation of Ended method

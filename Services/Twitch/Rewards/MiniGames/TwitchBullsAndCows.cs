@@ -169,7 +169,7 @@ public class TwitchBullsAndCows(
             digits.RemoveAt(index);
         }
 
-        return new string(resultChars.ToArray());
+        return new string([.. resultChars]);
     }
 
     private static (int bulls, int cows) CalculateBullsAndCows(string secret, string guess)
@@ -213,4 +213,3 @@ public class TwitchBullsAndCows(
         return !string.IsNullOrEmpty(result);
     }
 }
-
