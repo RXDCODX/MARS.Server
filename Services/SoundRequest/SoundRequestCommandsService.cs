@@ -73,25 +73,25 @@ public class SoundRequestCommandsService(
                 return;
             }
 
-            //await using var db = await dbFactory.CreateDbContextAsync(_token);
-            //var exists = await db
-            //    .SoundRequestBaseTrackInfos.AsNoTracking()
-            //    .AnyAsync(t => t.Url == info.Url, _token);
-            //if (!exists)
-            //{
-            //    db.SoundRequestBaseTrackInfos.Add(info);
-            //    await db.SaveChangesAsync(_token);
-            //}
+            await using var db = await dbFactory.CreateDbContextAsync(_token);
+            var exists = await db
+                .SoundRequestBaseTrackInfos.AsNoTracking()
+                .AnyAsync(t => t.Url == info.Url, _token);
+            if (!exists)
+            {
+                db.SoundRequestBaseTrackInfos.Add(info);
+                await db.SaveChangesAsync(_token);
+            }
 
-            //await queue.AddToQueueAsync(
-            //    new UserRequestedTrack
-            //    {
-            //        RequestedTrack = info,
-            //        RequestedTrackId = info.Id,
-            //        TwitchId = e.ChatMessage.UserId,
-            //        TwitchDisplayName = e.ChatMessage.DisplayName,
-            //    }
-            //);
+            await queue.AddToQueueAsync(
+                new UserRequestedTrack
+                {
+                    RequestedTrack = info,
+                    RequestedTrackId = info.Id,
+                    TwitchId = e.ChatMessage.UserId,
+                    TwitchDisplayName = e.ChatMessage.DisplayName,
+                }
+            );
 
             var duration = info.Duration;
             var durationText =
