@@ -1,4 +1,5 @@
-﻿using MARS.Server.Services.Framedata;
+﻿using MARS.Server.Services;
+using MARS.Server.Services.Framedata;
 using MARS.Server.Services.Framedata.Entitys;
 using MARS.Server.Services.Framedata.Subservices.Entitys;
 using MARS.Server.Services.Framedata.Subservices.HtmlParsers;
@@ -21,10 +22,10 @@ public class FramedataController(
     /// </summary>
     /// <returns>Список всех персонажей</returns>
     [HttpGet("characters")]
-    public async Task<ActionResult<IEnumerable<TekkenCharacter>>> GetCharacters()
+    public async Task<ActionResult<OperationResult<List<TekkenCharacter>>>> GetCharacters()
     {
-        ActionResult<IEnumerable<TekkenCharacter>> result = StatusCode(500, "Внутренняя ошибка сервера");
-        
+        ActionResult<OperationResult<List<TekkenCharacter>>> result = null!;
+
         try
         {
             await using var dbContext = await factory.CreateDbContextAsync();
@@ -34,13 +35,18 @@ public class FramedataController(
                 .OrderBy(c => c.Name)
                 .ToListAsync();
 
-            result = Ok(characters);
+            result = Ok(
+                OperationResult<List<TekkenCharacter>>.Ok("Получены все персонажи", characters)
+            );
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при получении персонажей");
+            result = Ok(
+                OperationResult<List<TekkenCharacter>>.Bad("Ошибка при получении персонажей", [])
+            );
         }
-        
+
         return result;
     }
 
@@ -50,10 +56,10 @@ public class FramedataController(
     /// <param name="name">Имя персонажа</param>
     /// <returns>Персонаж</returns>
     [HttpGet("characters/{name}")]
-    public async Task<ActionResult<TekkenCharacter>> GetCharacter(string name)
+    public async Task<ActionResult<OperationResult<TekkenCharacter?>>> GetCharacter(string name)
     {
-        ActionResult<TekkenCharacter> result = StatusCode(500, "Внутренняя ошибка сервера");
-        
+        ActionResult<OperationResult<TekkenCharacter?>> result = null!;
+
         try
         {
             await using var dbContext = await factory.CreateDbContextAsync();
@@ -62,13 +68,25 @@ public class FramedataController(
                 .TekkenCharacters.Include(c => c.Movelist)
                 .FirstOrDefaultAsync(c => c.Name == name);
 
-            result = character == null ? NotFound($"Персонаж '{name}' не найден") : Ok(character);
+            if (character != null)
+            {
+                result = Ok(OperationResult<TekkenCharacter?>.Ok("Персонаж найден", character));
+            }
+            else
+            {
+                result = Ok(
+                    OperationResult<TekkenCharacter?>.Bad($"Персонаж '{name}' не найден", null)
+                );
+            }
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при получении персонажа {Name}", name);
+            result = Ok(
+                OperationResult<TekkenCharacter?>.Bad("Ошибка при получении персонажа", null)
+            );
         }
-        
+
         return result;
     }
 
@@ -78,19 +96,24 @@ public class FramedataController(
     /// <param name="character">Данные персонажа</param>
     /// <returns>Созданный персонаж</returns>
     [HttpPost("characters")]
-    public async Task<ActionResult<TekkenCharacter>> CreateCharacter(
+    public async Task<ActionResult<OperationResult<TekkenCharacter?>>> CreateCharacter(
         [FromBody] TekkenCharacter character
     )
     {
-        ActionResult<TekkenCharacter> result = StatusCode(500, "Внутренняя ошибка сервера");
-        
+        ActionResult<OperationResult<TekkenCharacter?>> result = null!;
+
         try
         {
             await using var dbContext = await factory.CreateDbContextAsync();
 
             if (await dbContext.TekkenCharacters.AnyAsync(c => c.Name == character.Name))
             {
-                result = BadRequest($"Персонаж с именем '{character.Name}' уже существует");
+                result = Ok(
+                    OperationResult<TekkenCharacter?>.Bad(
+                        $"Персонаж с именем '{character.Name}' уже существует",
+                        null
+                    )
+                );
             }
             else
             {
@@ -98,14 +121,19 @@ public class FramedataController(
                 dbContext.TekkenCharacters.Add(character);
                 await dbContext.SaveChangesAsync();
 
-                result = CreatedAtAction(nameof(GetCharacter), new { name = character.Name }, character);
+                result = Ok(
+                    OperationResult<TekkenCharacter?>.Ok("Персонаж успешно создан", character)
+                );
             }
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при создании персонажа {Name}", character.Name);
+            result = Ok(
+                OperationResult<TekkenCharacter?>.Bad("Ошибка при создании персонажа", null)
+            );
         }
-        
+
         return result;
     }
 
@@ -116,13 +144,13 @@ public class FramedataController(
     /// <param name="character">Обновленные данные</param>
     /// <returns>Обновленный персонаж</returns>
     [HttpPut("characters/{name}")]
-    public async Task<ActionResult<TekkenCharacter>> UpdateCharacter(
+    public async Task<ActionResult<OperationResult<TekkenCharacter?>>> UpdateCharacter(
         string name,
         [FromBody] TekkenCharacter character
     )
     {
-        ActionResult<TekkenCharacter> result = StatusCode(500, "Внутренняя ошибка сервера");
-        
+        ActionResult<OperationResult<TekkenCharacter?>> result = null!;
+
         try
         {
             await using var dbContext = await factory.CreateDbContextAsync();
@@ -132,7 +160,9 @@ public class FramedataController(
 
             if (existingCharacter == null)
             {
-                result = NotFound($"Персонаж '{name}' не найден");
+                result = Ok(
+                    OperationResult<TekkenCharacter?>.Bad($"Персонаж '{name}' не найден", null)
+                );
             }
             else
             {
@@ -148,14 +178,22 @@ public class FramedataController(
 
                 await dbContext.SaveChangesAsync();
 
-                result = Ok(existingCharacter);
+                result = Ok(
+                    OperationResult<TekkenCharacter?>.Ok(
+                        "Персонаж успешно обновлен",
+                        existingCharacter
+                    )
+                );
             }
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при обновлении персонажа {Name}", name);
+            result = Ok(
+                OperationResult<TekkenCharacter?>.Bad("Ошибка при обновлении персонажа", null)
+            );
         }
-        
+
         return result;
     }
 
@@ -165,8 +203,10 @@ public class FramedataController(
     /// <param name="name">Имя персонажа</param>
     /// <returns>Результат удаления</returns>
     [HttpDelete("characters/{name}")]
-    public async Task<ActionResult> DeleteCharacter(string name)
+    public async Task<ActionResult<OperationResult>> DeleteCharacter(string name)
     {
+        ActionResult<OperationResult> result = null!;
+
         try
         {
             await using var dbContext = await factory.CreateDbContextAsync();
@@ -176,19 +216,23 @@ public class FramedataController(
 
             if (character == null)
             {
-                return NotFound($"Персонаж '{name}' не найден");
+                result = Ok(OperationResult.Bad($"Персонаж '{name}' не найден"));
             }
+            else
+            {
+                dbContext.TekkenCharacters.Remove(character);
+                await dbContext.SaveChangesAsync();
 
-            dbContext.TekkenCharacters.Remove(character);
-            await dbContext.SaveChangesAsync();
-
-            return NoContent();
+                result = Ok(OperationResult.Ok("Персонаж успешно удален"));
+            }
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при удалении персонажа {Name}", name);
-            return StatusCode(500, "Внутренняя ошибка сервера");
+            result = Ok(OperationResult.Bad("Ошибка при удалении персонажа"));
         }
+
+        return result;
     }
 
     /// <summary>
@@ -197,8 +241,12 @@ public class FramedataController(
     /// <param name="characterName">Имя персонажа</param>
     /// <returns>Список движений</returns>
     [HttpGet("characters/{characterName}/moves")]
-    public async Task<ActionResult<IEnumerable<Move>>> GetCharacterMoves(string characterName)
+    public async Task<ActionResult<OperationResult<List<Move>>>> GetCharacterMoves(
+        string characterName
+    )
     {
+        ActionResult<OperationResult<List<Move>>> result = null!;
+
         try
         {
             await using var dbContext = await factory.CreateDbContextAsync();
@@ -207,7 +255,7 @@ public class FramedataController(
                 .OrderBy(m => m.Command)
                 .ToListAsync();
 
-            return Ok(moves);
+            result = Ok(OperationResult<List<Move>>.Ok("Получены движения персонажа", moves));
         }
         catch (Exception ex)
         {
@@ -216,8 +264,12 @@ public class FramedataController(
                 "Ошибка при получении движений персонажа {CharacterName}",
                 characterName
             );
-            return StatusCode(500, "Внутренняя ошибка сервера");
+            result = Ok(
+                OperationResult<List<Move>>.Bad("Ошибка при получении движений персонажа", [])
+            );
         }
+
+        return result;
     }
 
     /// <summary>
@@ -227,8 +279,13 @@ public class FramedataController(
     /// <param name="command">Команда движения</param>
     /// <returns>Движение</returns>
     [HttpGet("characters/{characterName}/moves/{command}")]
-    public async Task<ActionResult<Move>> GetMove(string characterName, string command)
+    public async Task<ActionResult<OperationResult<Move?>>> GetMove(
+        string characterName,
+        string command
+    )
     {
+        ActionResult<OperationResult<Move?>> result = null!;
+
         try
         {
             await using var dbContext = await factory.CreateDbContextAsync();
@@ -236,10 +293,19 @@ public class FramedataController(
                 m.CharacterName == characterName && m.Command == command
             );
 
-            return move == null
-                ? (ActionResult<Move>)
-                    NotFound($"Движение '{command}' для персонажа '{characterName}' не найдено")
-                : (ActionResult<Move>)Ok(move);
+            if (move != null)
+            {
+                result = Ok(OperationResult<Move?>.Ok("Движение найдено", move));
+            }
+            else
+            {
+                result = Ok(
+                    OperationResult<Move?>.Bad(
+                        $"Движение '{command}' для персонажа '{characterName}' не найдено",
+                        null
+                    )
+                );
+            }
         }
         catch (Exception ex)
         {
@@ -249,8 +315,10 @@ public class FramedataController(
                 command,
                 characterName
             );
-            return StatusCode(500, "Внутренняя ошибка сервера");
+            result = Ok(OperationResult<Move?>.Bad("Ошибка при получении движения", null));
         }
+
+        return result;
     }
 
     /// <summary>
@@ -260,41 +328,48 @@ public class FramedataController(
     /// <param name="move">Данные движения</param>
     /// <returns>Созданное движение</returns>
     [HttpPost("characters/{characterName}/moves")]
-    public async Task<ActionResult<Move>> CreateMove(string characterName, [FromBody] Move move)
+    public async Task<ActionResult<OperationResult<Move?>>> CreateMove(
+        string characterName,
+        [FromBody] Move move
+    )
     {
+        ActionResult<OperationResult<Move?>> result = null!;
+
         try
         {
             await using var dbContext = await factory.CreateDbContextAsync();
+
             // Проверяем существование персонажа
             var character = await dbContext.TekkenCharacters.FirstOrDefaultAsync(c =>
                 c.Name == characterName
             );
             if (character == null)
             {
-                return NotFound($"Персонаж '{characterName}' не найден");
+                result = Ok(
+                    OperationResult<Move?>.Bad($"Персонаж '{characterName}' не найден", null)
+                );
             }
-
-            // Проверяем существование движения
-            if (
+            else if (
                 await dbContext.TekkenMoves.AnyAsync(m =>
                     m.CharacterName == characterName && m.Command == move.Command
                 )
             )
             {
-                return BadRequest(
-                    $"Движение '{move.Command}' для персонажа '{characterName}' уже существует"
+                result = Ok(
+                    OperationResult<Move?>.Bad(
+                        $"Движение '{move.Command}' для персонажа '{characterName}' уже существует",
+                        null
+                    )
                 );
             }
+            else
+            {
+                move.CharacterName = characterName;
+                dbContext.TekkenMoves.Add(move);
+                await dbContext.SaveChangesAsync();
 
-            move.CharacterName = characterName;
-            dbContext.TekkenMoves.Add(move);
-            await dbContext.SaveChangesAsync();
-
-            return CreatedAtAction(
-                nameof(GetMove),
-                new { characterName, command = move.Command },
-                move
-            );
+                result = Ok(OperationResult<Move?>.Ok("Движение успешно создано", move));
+            }
         }
         catch (Exception ex)
         {
@@ -304,8 +379,10 @@ public class FramedataController(
                 move.Command,
                 characterName
             );
-            return StatusCode(500, "Внутренняя ошибка сервера");
+            result = Ok(OperationResult<Move?>.Bad("Ошибка при создании движения", null));
         }
+
+        return result;
     }
 
     /// <summary>
@@ -316,12 +393,14 @@ public class FramedataController(
     /// <param name="move">Обновленные данные движения</param>
     /// <returns>Обновленное движение</returns>
     [HttpPut("characters/{characterName}/moves/{command}")]
-    public async Task<ActionResult<Move>> UpdateMove(
+    public async Task<ActionResult<OperationResult<Move?>>> UpdateMove(
         string characterName,
         string command,
         [FromBody] Move move
     )
     {
+        ActionResult<OperationResult<Move?>> result = null!;
+
         try
         {
             await using var dbContext = await factory.CreateDbContextAsync();
@@ -331,31 +410,38 @@ public class FramedataController(
 
             if (existingMove == null)
             {
-                return NotFound($"Движение '{command}' для персонажа '{characterName}' не найдено");
+                result = Ok(
+                    OperationResult<Move?>.Bad(
+                        $"Движение '{command}' для персонажа '{characterName}' не найдено",
+                        null
+                    )
+                );
             }
+            else
+            {
+                // Обновляем свойства движения
+                existingMove.StanceCode = move.StanceCode;
+                existingMove.StanceName = move.StanceName;
+                existingMove.HeatEngage = move.HeatEngage;
+                existingMove.HeatSmash = move.HeatSmash;
+                existingMove.PowerCrush = move.PowerCrush;
+                existingMove.Throw = move.Throw;
+                existingMove.Homing = move.Homing;
+                existingMove.Tornado = move.Tornado;
+                existingMove.HeatBurst = move.HeatBurst;
+                existingMove.RequiresHeat = move.RequiresHeat;
+                existingMove.HitLevel = move.HitLevel;
+                existingMove.Damage = move.Damage;
+                existingMove.StartUpFrame = move.StartUpFrame;
+                existingMove.BlockFrame = move.BlockFrame;
+                existingMove.HitFrame = move.HitFrame;
+                existingMove.CounterHitFrame = move.CounterHitFrame;
+                existingMove.Notes = move.Notes?.ToArray();
 
-            // Обновляем свойства движения
-            existingMove.StanceCode = move.StanceCode;
-            existingMove.StanceName = move.StanceName;
-            existingMove.HeatEngage = move.HeatEngage;
-            existingMove.HeatSmash = move.HeatSmash;
-            existingMove.PowerCrush = move.PowerCrush;
-            existingMove.Throw = move.Throw;
-            existingMove.Homing = move.Homing;
-            existingMove.Tornado = move.Tornado;
-            existingMove.HeatBurst = move.HeatBurst;
-            existingMove.RequiresHeat = move.RequiresHeat;
-            existingMove.HitLevel = move.HitLevel;
-            existingMove.Damage = move.Damage;
-            existingMove.StartUpFrame = move.StartUpFrame;
-            existingMove.BlockFrame = move.BlockFrame;
-            existingMove.HitFrame = move.HitFrame;
-            existingMove.CounterHitFrame = move.CounterHitFrame;
-            existingMove.Notes = move.Notes?.ToArray();
+                await dbContext.SaveChangesAsync();
 
-            await dbContext.SaveChangesAsync();
-
-            return Ok(existingMove);
+                result = Ok(OperationResult<Move?>.Ok("Движение успешно обновлено", existingMove));
+            }
         }
         catch (Exception ex)
         {
@@ -365,8 +451,10 @@ public class FramedataController(
                 command,
                 characterName
             );
-            return StatusCode(500, "Внутренняя ошибка сервера");
+            result = Ok(OperationResult<Move?>.Bad("Ошибка при обновлении движения", null));
         }
+
+        return result;
     }
 
     /// <summary>
@@ -376,8 +464,13 @@ public class FramedataController(
     /// <param name="command">Команда движения</param>
     /// <returns>Результат удаления</returns>
     [HttpDelete("characters/{characterName}/moves/{command}")]
-    public async Task<ActionResult> DeleteMove(string characterName, string command)
+    public async Task<ActionResult<OperationResult>> DeleteMove(
+        string characterName,
+        string command
+    )
     {
+        ActionResult<OperationResult> result = null!;
+
         try
         {
             await using var dbContext = await factory.CreateDbContextAsync();
@@ -387,13 +480,19 @@ public class FramedataController(
 
             if (move == null)
             {
-                return NotFound($"Движение '{command}' для персонажа '{characterName}' не найдено");
+                result = Ok(
+                    OperationResult.Bad(
+                        $"Движение '{command}' для персонажа '{characterName}' не найдено"
+                    )
+                );
             }
+            else
+            {
+                dbContext.TekkenMoves.Remove(move);
+                await dbContext.SaveChangesAsync();
 
-            dbContext.TekkenMoves.Remove(move);
-            await dbContext.SaveChangesAsync();
-
-            return NoContent();
+                result = Ok(OperationResult.Ok("Движение успешно удалено"));
+            }
         }
         catch (Exception ex)
         {
@@ -403,8 +502,10 @@ public class FramedataController(
                 command,
                 characterName
             );
-            return StatusCode(500, "Внутренняя ошибка сервера");
+            result = Ok(OperationResult.Bad("Ошибка при удалении движения"));
         }
+
+        return result;
     }
 
     /// <summary>
@@ -418,7 +519,7 @@ public class FramedataController(
     /// <param name="homing">Является ли Homing (опционально)</param>
     /// <returns>Отфильтрованные движения</returns>
     [HttpGet("moves/search")]
-    public async Task<ActionResult<IEnumerable<Move>>> SearchMoves(
+    public async Task<ActionResult<OperationResult<List<Move>>>> SearchMoves(
         [FromQuery] string? characterName = null,
         [FromQuery] string? stanceCode = null,
         [FromQuery] bool? heatEngage = null,
@@ -427,6 +528,8 @@ public class FramedataController(
         [FromQuery] bool? homing = null
     )
     {
+        ActionResult<OperationResult<List<Move>>> result = null!;
+
         try
         {
             await using var dbContext = await factory.CreateDbContextAsync();
@@ -467,13 +570,15 @@ public class FramedataController(
                 .ThenBy(m => m.Command)
                 .ToListAsync();
 
-            return Ok(moves);
+            result = Ok(OperationResult<List<Move>>.Ok("Движения найдены", moves));
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при поиске движений");
-            return StatusCode(500, "Внутренняя ошибка сервера");
+            result = Ok(OperationResult<List<Move>>.Bad("Ошибка при поиске движений", []));
         }
+
+        return result;
     }
 
     /// <summary>
@@ -484,6 +589,8 @@ public class FramedataController(
     [HttpGet("characters/{name}/image")]
     public async Task<ActionResult> GetCharacterImage(string name)
     {
+        ActionResult result = null!;
+
         try
         {
             await using var dbContext = await factory.CreateDbContextAsync();
@@ -493,22 +600,25 @@ public class FramedataController(
 
             if (character == null)
             {
-                return NotFound($"Персонаж '{name}' не найден");
+                result = NotFound($"Персонаж '{name}' не найден");
             }
-
-            if (character.Image == null || character.Image.Length == 0)
+            else if (character.Image == null || character.Image.Length == 0)
             {
-                return NotFound($"Изображение для персонажа '{name}' не найдено");
+                result = NotFound($"Изображение для персонажа '{name}' не найдено");
             }
-
-            var contentType = GetContentType(character.ImageExtension);
-            return File(character.Image, contentType);
+            else
+            {
+                var contentType = GetContentType(character.ImageExtension);
+                result = File(character.Image, contentType);
+            }
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при получении изображения персонажа {Name}", name);
-            return StatusCode(500, "Внутренняя ошибка сервера");
+            result = StatusCode(500, "Внутренняя ошибка сервера");
         }
+
+        return result;
     }
 
     /// <summary>
@@ -519,6 +629,8 @@ public class FramedataController(
     [HttpGet("characters/{name}/avatar")]
     public async Task<ActionResult> GetCharacterAvatar(string name)
     {
+        ActionResult result = null!;
+
         try
         {
             await using var dbContext = await factory.CreateDbContextAsync();
@@ -528,22 +640,25 @@ public class FramedataController(
 
             if (character == null)
             {
-                return NotFound($"Персонаж '{name}' не найден");
+                result = NotFound($"Персонаж '{name}' не найден");
             }
-
-            if (character.AvatarImage == null || character.AvatarImage.Length == 0)
+            else if (character.AvatarImage == null || character.AvatarImage.Length == 0)
             {
-                return NotFound($"Аватар для персонажа '{name}' не найден");
+                result = NotFound($"Аватар для персонажа '{name}' не найден");
             }
-
-            var contentType = GetContentType(character.AvatarImageExtension);
-            return File(character.AvatarImage, contentType);
+            else
+            {
+                var contentType = GetContentType(character.AvatarImageExtension);
+                result = File(character.AvatarImage, contentType);
+            }
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при получении аватара персонажа {Name}", name);
-            return StatusCode(500, "Внутренняя ошибка сервера");
+            result = StatusCode(500, "Внутренняя ошибка сервера");
         }
+
+        return result;
     }
 
     /// <summary>
@@ -554,6 +669,8 @@ public class FramedataController(
     [HttpGet("characters/{name}/fullbody")]
     public async Task<ActionResult> GetCharacterFullBody(string name)
     {
+        ActionResult result = null!;
+
         try
         {
             await using var dbContext = await factory.CreateDbContextAsync();
@@ -563,22 +680,25 @@ public class FramedataController(
 
             if (character == null)
             {
-                return NotFound($"Персонаж '{name}' не найден");
+                result = NotFound($"Персонаж '{name}' не найден");
             }
-
-            if (character.FullBodyImage == null || character.FullBodyImage.Length == 0)
+            else if (character.FullBodyImage == null || character.FullBodyImage.Length == 0)
             {
-                return NotFound($"Полное изображение для персонажа '{name}' не найдено");
+                result = NotFound($"Полное изображение для персонажа '{name}' не найдено");
             }
-
-            var contentType = GetContentType(character.FullBodyImageExtension);
-            return File(character.FullBodyImage, contentType);
+            else
+            {
+                var contentType = GetContentType(character.FullBodyImageExtension);
+                result = File(character.FullBodyImage, contentType);
+            }
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при получении полного изображения персонажа {Name}", name);
-            return StatusCode(500, "Внутренняя ошибка сервера");
+            result = StatusCode(500, "Внутренняя ошибка сервера");
         }
+
+        return result;
     }
 
     private static string GetContentType(string? extension)
@@ -600,8 +720,11 @@ public class FramedataController(
     /// <param name="request">Запрос на парсинг</param>
     /// <returns>Результат парсинга</returns>
     [HttpPost("parse")]
-    public async Task<ActionResult<ParseResult>> ParseFramedata([FromBody] ParseRequest request)
+    public async Task<ActionResult<OperationResult<ParseResult>>> ParseFramedata(
+        [FromBody] ParseRequest request
+    )
     {
+        ActionResult<OperationResult<ParseResult>> result;
         try
         {
             var options = new FramedataParserOptions
@@ -623,25 +746,31 @@ public class FramedataController(
                 options
             );
 
-            var result = await parser.ParseCharactersAndMoves(request.CharacterNames);
+            var parsedCharacters = await parser.ParseCharactersAndMoves(request.CharacterNames);
 
-            return Ok(
-                new ParseResult
-                {
-                    Success = true,
-                    ParsedCharacters = result,
-                    Message = $"Успешно распарсено {result.Count} персонажей",
-                }
-            );
+            var parseResult = new ParseResult
+            {
+                Success = true,
+                ParsedCharacters = parsedCharacters,
+                Message = $"Успешно распарсено {parsedCharacters.Count} персонажей",
+            };
+
+            result = Ok(OperationResult<ParseResult>.Ok("Парсинг выполнен успешно", parseResult));
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при парсинге фреймдаты");
-            return StatusCode(
-                500,
-                new ParseResult { Success = false, Message = $"Ошибка при парсинге: {ex.Message}" }
+            var errorResult = new ParseResult
+            {
+                Success = false,
+                Message = $"Ошибка при парсинге: {ex.Message}",
+            };
+            result = Ok(
+                OperationResult<ParseResult>.Bad("Ошибка при парсинге фреймдаты", errorResult)
             );
         }
+
+        return result;
     }
 
     /// <summary>
@@ -650,10 +779,11 @@ public class FramedataController(
     /// <param name="request">Запрос на парсинг</param>
     /// <returns>Результат парсинга</returns>
     [HttpPost("parse-characters-only")]
-    public async Task<ActionResult<ParseResult>> ParseCharactersOnly(
+    public async Task<ActionResult<OperationResult<ParseResult>>> ParseCharactersOnly(
         [FromBody] ParseRequest request
     )
     {
+        ActionResult<OperationResult<ParseResult>> result;
         try
         {
             var options = new FramedataParserOptions
@@ -675,25 +805,33 @@ public class FramedataController(
                 options
             );
 
-            var result = await parser.ParseCharactersOnly(request.CharacterNames);
+            var parsedCharacters = await parser.ParseCharactersOnly(request.CharacterNames);
 
-            return Ok(
-                new ParseResult
-                {
-                    Success = true,
-                    ParsedCharacters = result,
-                    Message = $"Успешно распарсено {result.Count} персонажей (без мувов)",
-                }
+            var parseResult = new ParseResult
+            {
+                Success = true,
+                ParsedCharacters = parsedCharacters,
+                Message = $"Успешно распарсено {parsedCharacters.Count} персонажей (без мувов)",
+            };
+
+            result = Ok(
+                OperationResult<ParseResult>.Ok("Парсинг персонажей выполнен успешно", parseResult)
             );
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при парсинге персонажей");
-            return StatusCode(
-                500,
-                new ParseResult { Success = false, Message = $"Ошибка при парсинге: {ex.Message}" }
+            var errorResult = new ParseResult
+            {
+                Success = false,
+                Message = $"Ошибка при парсинге: {ex.Message}",
+            };
+            result = Ok(
+                OperationResult<ParseResult>.Bad("Ошибка при парсинге персонажей", errorResult)
             );
         }
+
+        return result;
     }
 
     /// <summary>
@@ -702,10 +840,12 @@ public class FramedataController(
     /// <param name="request">Запрос на дополнение</param>
     /// <returns>Результат операции</returns>
     [HttpPost("supplement")]
-    public async Task<ActionResult<ParseResult>> StartSupplement(
+    public async Task<ActionResult<OperationResult<ParseResult>>> StartSupplement(
         [FromBody] SupplementRequest request
     )
     {
+        ActionResult<OperationResult<ParseResult>> result = null!;
+
         try
         {
             // Получаем сервис фреймдаты через DI
@@ -736,27 +876,29 @@ public class FramedataController(
                 }
             });
 
-            return Ok(
-                new ParseResult
-                {
-                    Success = true,
-                    ParsedCharacters = [],
-                    Message = $"Запущено дополнение фреймдаты из {request.Source}",
-                }
-            );
+            var parseResult = new ParseResult
+            {
+                Success = true,
+                ParsedCharacters = [],
+                Message = $"Запущено дополнение фреймдаты из {request.Source}",
+            };
+
+            result = Ok(OperationResult<ParseResult>.Ok("Дополнение запущено", parseResult));
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при запуске дополнения фреймдаты");
-            return StatusCode(
-                500,
-                new ParseResult
-                {
-                    Success = false,
-                    Message = $"Ошибка при запуске дополнения: {ex.Message}",
-                }
+            var errorResult = new ParseResult
+            {
+                Success = false,
+                Message = $"Ошибка при запуске дополнения: {ex.Message}",
+            };
+            result = Ok(
+                OperationResult<ParseResult>.Bad("Ошибка при запуске дополнения", errorResult)
             );
         }
+
+        return result;
     }
 
     /// <summary>
@@ -765,8 +907,12 @@ public class FramedataController(
     /// <param name="source">Источник данных для дополнения</param>
     /// <returns>Результат операции</returns>
     [HttpPost("supplement/{source}")]
-    public async Task<ActionResult<ParseResult>> StartDefaultSupplement(FramedataSource source)
+    public async Task<ActionResult<OperationResult<ParseResult>>> StartDefaultSupplement(
+        FramedataSource source
+    )
     {
+        ActionResult<OperationResult<ParseResult>> result = null!;
+
         try
         {
             // Получаем сервис фреймдаты через DI
@@ -786,28 +932,34 @@ public class FramedataController(
                 }
             });
 
-            return Ok(
-                new ParseResult
-                {
-                    Success = true,
-                    ParsedCharacters = [],
-                    Message =
-                        $"Запущено дополнение фреймдаты из {source} с настройками по умолчанию",
-                }
+            var parseResult = new ParseResult
+            {
+                Success = true,
+                ParsedCharacters = [],
+                Message = $"Запущено дополнение фреймдаты из {source} с настройками по умолчанию",
+            };
+
+            result = Ok(
+                OperationResult<ParseResult>.Ok(
+                    "Дополнение с настройками по умолчанию запущено",
+                    parseResult
+                )
             );
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при запуске дополнения фреймдаты");
-            return StatusCode(
-                500,
-                new ParseResult
-                {
-                    Success = false,
-                    Message = $"Ошибка при запуске дополнения: {ex.Message}",
-                }
+            var errorResult = new ParseResult
+            {
+                Success = false,
+                Message = $"Ошибка при запуске дополнения: {ex.Message}",
+            };
+            result = Ok(
+                OperationResult<ParseResult>.Bad("Ошибка при запуске дополнения", errorResult)
             );
         }
+
+        return result;
     }
 }
 

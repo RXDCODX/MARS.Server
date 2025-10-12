@@ -60,7 +60,6 @@ using TwitchLib.Api.Core.Enums;
 using TwitchLib.Api.Core.HttpCallHandlers;
 using TwitchLib.Api.Core.Interfaces;
 using TwitchLib.EventSub.Websockets.Extensions;
-using VideoLibrary;
 using YandexMusicResolver;
 using YandexMusicResolver.Config;
 
@@ -446,6 +445,7 @@ public static class StartupEstensions
             // Filters
             options.DocumentFilter<DotNetTypesDocumentFilter>();
             options.DocumentFilter<PathPartitionDocumentFilter>();
+            options.DocumentFilter<OperationResultSchemaFilter>(); // Опционально: оптимизация OperationResult (пока не используется)
 
             // Two separate documents served by Swashbuckle
             options.SwaggerDoc("api", new OpenApiInfo { Title = "Telegramus API" });

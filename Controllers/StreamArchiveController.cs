@@ -1,4 +1,5 @@
-﻿using MARS.Server.Services.StreamAcrhive_UNUSED.Entitys;
+﻿using MARS.Server.Services;
+using MARS.Server.Services.StreamAcrhive_UNUSED.Entitys;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MARS.Server.Controllers;
@@ -14,27 +15,33 @@ public class StreamArchiveController(
     /// Получить все конфигурации архивирования
     /// </summary>
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<StreamArchiveConfig>>> GetConfigurations()
+    public async Task<ActionResult<OperationResult<List<StreamArchiveConfig>>>> GetConfigurations()
     {
+        ActionResult<OperationResult<List<StreamArchiveConfig>>> result = null!;
+
         try
         {
             await using var dbContext = await dbContextFactory.CreateDbContextAsync();
             var configs = await dbContext.StreamArchiveConfigs.AsNoTracking().ToListAsync();
-            return Ok(configs);
+            result = Ok(OperationResult<List<StreamArchiveConfig>>.Ok("Получены конфигурации архивирования", configs));
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при получении конфигураций архивирования");
-            return StatusCode(500, "Внутренняя ошибка сервера");
+            result = Ok(OperationResult<List<StreamArchiveConfig>>.Bad("Ошибка при получении конфигураций", []));
         }
+
+        return result;
     }
 
     /// <summary>
     /// Получить конфигурацию по ID
     /// </summary>
     [HttpGet("{id}")]
-    public async Task<ActionResult<StreamArchiveConfig>> GetConfiguration(Guid id)
+    public async Task<ActionResult<OperationResult<StreamArchiveConfig?>>> GetConfiguration(Guid id)
     {
+        ActionResult<OperationResult<StreamArchiveConfig?>> result = null!;
+
         try
         {
             await using var dbContext = await dbContextFactory.CreateDbContextAsync();
@@ -42,113 +49,133 @@ public class StreamArchiveController(
                 .StreamArchiveConfigs.AsNoTracking()
                 .FirstOrDefaultAsync(c => c.Id == id);
 
-            return config == null ? NotFound($"Конфигурация с ID {id} не найдена") : Ok(config);
+            if (config != null)
+            {
+                result = Ok(OperationResult<StreamArchiveConfig?>.Ok("Конфигурация найдена", config));
+            }
+            else
+            {
+                result = Ok(OperationResult<StreamArchiveConfig?>.Bad($"Конфигурация с ID {id} не найдена", null));
+            }
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при получении конфигурации {Id}", id);
-            return StatusCode(500, "Внутренняя ошибка сервера");
+            result = Ok(OperationResult<StreamArchiveConfig?>.Bad("Ошибка при получении конфигурации", null));
         }
+
+        return result;
     }
 
     /// <summary>
     /// Создать новую конфигурацию архивирования
     /// </summary>
     [HttpPost]
-    public async Task<ActionResult<StreamArchiveConfig>> CreateConfiguration(
+    public async Task<ActionResult<OperationResult<StreamArchiveConfig?>>> CreateConfiguration(
         [FromBody] StreamArchiveConfig config
     )
     {
+        ActionResult<OperationResult<StreamArchiveConfig?>> result = null!;
+
         try
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(ModelState);
+                result = Ok(OperationResult<StreamArchiveConfig?>.Bad("Некорректные данные модели", null));
             }
-
-            await using var dbContext = await dbContextFactory.CreateDbContextAsync();
-
-            // Проверяем, что папка существует
-            if (!Directory.Exists(config.FolderPath))
+            else if (!Directory.Exists(config.FolderPath))
             {
-                return BadRequest($"Папка {config.FolderPath} не существует");
+                result = Ok(OperationResult<StreamArchiveConfig?>.Bad($"Папка {config.FolderPath} не существует", null));
             }
+            else
+            {
+                await using var dbContext = await dbContextFactory.CreateDbContextAsync();
 
-            config.Id = Guid.NewGuid();
-            dbContext.StreamArchiveConfigs.Add(config);
-            await dbContext.SaveChangesAsync();
+                config.Id = Guid.NewGuid();
+                dbContext.StreamArchiveConfigs.Add(config);
+                await dbContext.SaveChangesAsync();
 
-            logger.LogInformation("Создана новая конфигурация архивирования {Id}", config.Id);
-            return CreatedAtAction(nameof(GetConfiguration), new { id = config.Id }, config);
+                logger.LogInformation("Создана новая конфигурация архивирования {Id}", config.Id);
+                result = Ok(OperationResult<StreamArchiveConfig?>.Ok("Конфигурация успешно создана", config));
+            }
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при создании конфигурации архивирования");
-            return StatusCode(500, "Внутренняя ошибка сервера");
+            result = Ok(OperationResult<StreamArchiveConfig?>.Bad("Ошибка при создании конфигурации", null));
         }
+
+        return result;
     }
 
     /// <summary>
     /// Обновить конфигурацию архивирования
     /// </summary>
     [HttpPut("{id}")]
-    public async Task<IActionResult> UpdateConfiguration(
+    public async Task<ActionResult<OperationResult>> UpdateConfiguration(
         Guid id,
         [FromBody] StreamArchiveConfig config
     )
     {
+        ActionResult<OperationResult> result = null!;
+
         try
         {
             if (id != config.Id)
             {
-                return BadRequest("ID в URL не совпадает с ID в теле запроса");
+                result = Ok(OperationResult.Bad("ID в URL не совпадает с ID в теле запроса"));
             }
-
-            if (!ModelState.IsValid)
+            else if (!ModelState.IsValid)
             {
-                return BadRequest(ModelState);
+                result = Ok(OperationResult.Bad("Некорректные данные модели"));
             }
-
-            await using var dbContext = await dbContextFactory.CreateDbContextAsync();
-
-            var existingConfig = await dbContext.StreamArchiveConfigs.FindAsync(id);
-            if (existingConfig == null)
+            else if (!Directory.Exists(config.FolderPath))
             {
-                return NotFound($"Конфигурация с ID {id} не найдена");
+                result = Ok(OperationResult.Bad($"Папка {config.FolderPath} не существует"));
             }
-
-            // Проверяем, что папка существует
-            if (!Directory.Exists(config.FolderPath))
+            else
             {
-                return BadRequest($"Папка {config.FolderPath} не существует");
+                await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+
+                var existingConfig = await dbContext.StreamArchiveConfigs.FindAsync(id);
+                if (existingConfig == null)
+                {
+                    result = Ok(OperationResult.Bad($"Конфигурация с ID {id} не найдена"));
+                }
+                else
+                {
+                    // Обновляем поля
+                    existingConfig.TelegramChannelId = config.TelegramChannelId;
+                    existingConfig.FileNameFormat = config.FileNameFormat;
+                    existingConfig.CheckSpan = config.CheckSpan;
+                    existingConfig.FolderPath = config.FolderPath;
+                    existingConfig.IsConvertFile = config.IsConvertFile;
+                    existingConfig.FileConvertType = config.FileConvertType;
+
+                    await dbContext.SaveChangesAsync();
+
+                    logger.LogInformation("Обновлена конфигурация архивирования {Id}", id);
+                    result = Ok(OperationResult.Ok("Конфигурация успешно обновлена"));
+                }
             }
-
-            // Обновляем поля
-            existingConfig.TelegramChannelId = config.TelegramChannelId;
-            existingConfig.FileNameFormat = config.FileNameFormat;
-            existingConfig.CheckSpan = config.CheckSpan;
-            existingConfig.FolderPath = config.FolderPath;
-            existingConfig.IsConvertFile = config.IsConvertFile;
-            existingConfig.FileConvertType = config.FileConvertType;
-
-            await dbContext.SaveChangesAsync();
-
-            logger.LogInformation("Обновлена конфигурация архивирования {Id}", id);
-            return NoContent();
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при обновлении конфигурации {Id}", id);
-            return StatusCode(500, "Внутренняя ошибка сервера");
+            result = Ok(OperationResult.Bad("Ошибка при обновлении конфигурации"));
         }
+
+        return result;
     }
 
     /// <summary>
     /// Удалить конфигурацию архивирования
     /// </summary>
     [HttpDelete("{id}")]
-    public async Task<IActionResult> DeleteConfiguration(Guid id)
+    public async Task<ActionResult<OperationResult>> DeleteConfiguration(Guid id)
     {
+        ActionResult<OperationResult> result = null!;
+
         try
         {
             await using var dbContext = await dbContextFactory.CreateDbContextAsync();
@@ -156,86 +183,98 @@ public class StreamArchiveController(
             var config = await dbContext.StreamArchiveConfigs.FindAsync(id);
             if (config == null)
             {
-                return NotFound($"Конфигурация с ID {id} не найдена");
+                result = Ok(OperationResult.Bad($"Конфигурация с ID {id} не найдена"));
             }
+            else
+            {
+                dbContext.StreamArchiveConfigs.Remove(config);
+                await dbContext.SaveChangesAsync();
 
-            dbContext.StreamArchiveConfigs.Remove(config);
-            await dbContext.SaveChangesAsync();
-
-            logger.LogInformation("Удалена конфигурация архивирования {Id}", id);
-            return NoContent();
+                logger.LogInformation("Удалена конфигурация архивирования {Id}", id);
+                result = Ok(OperationResult.Ok("Конфигурация успешно удалена"));
+            }
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при удалении конфигурации {Id}", id);
-            return StatusCode(500, "Внутренняя ошибка сервера");
+            result = Ok(OperationResult.Bad("Ошибка при удалении конфигурации"));
         }
+
+        return result;
     }
 
     /// <summary>
     /// Проверить доступность папки
     /// </summary>
     [HttpPost("validate-folder")]
-    public ActionResult<ValidateFolderResponse> ValidateFolder(
+    public ActionResult<OperationResult<ValidateFolderResponse>> ValidateFolder(
         [FromBody] ValidateFolderRequest request
     )
     {
+        ActionResult<OperationResult<ValidateFolderResponse>> result = null!;
+
         try
         {
             if (string.IsNullOrWhiteSpace(request.FolderPath))
             {
-                return BadRequest("Путь к папке не может быть пустым");
+                result = Ok(OperationResult<ValidateFolderResponse>.Bad("Путь к папке не может быть пустым", new ValidateFolderResponse()));
             }
-
-            var exists = Directory.Exists(request.FolderPath);
-            var accessible = false;
-            var files = new List<string>();
-
-            if (exists)
+            else
             {
-                try
-                {
-                    accessible = true;
-                    files = Directory
-                        .GetFiles(request.FolderPath)
-                        .Where(f => IsVideoFile(f))
-                        .Select(Path.GetFileName)
-                        .Take(10) // Показываем только первые 10 файлов
-                        .ToList()!;
-                }
-                catch (Exception ex)
-                {
-                    logger.LogWarning(
-                        ex,
-                        "Папка {FolderPath} существует, но недоступна для чтения",
-                        request.FolderPath
-                    );
-                }
-            }
+                var exists = Directory.Exists(request.FolderPath);
+                var accessible = false;
+                var files = new List<string>();
 
-            return Ok(
-                new ValidateFolderResponse
+                if (exists)
+                {
+                    try
+                    {
+                        accessible = true;
+                        files = Directory
+                            .GetFiles(request.FolderPath)
+                            .Where(f => IsVideoFile(f))
+                            .Select(Path.GetFileName)
+                            .Take(10) // Показываем только первые 10 файлов
+                            .ToList()!;
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogWarning(
+                            ex,
+                            "Папка {FolderPath} существует, но недоступна для чтения",
+                            request.FolderPath
+                        );
+                    }
+                }
+
+                var response = new ValidateFolderResponse
                 {
                     Exists = exists,
                     Accessible = accessible,
                     VideoFilesCount = files.Count,
                     SampleFiles = files,
-                }
-            );
+                };
+
+                result = Ok(OperationResult<ValidateFolderResponse>.Ok("Папка проверена", response));
+            }
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при проверке папки {FolderPath}", request.FolderPath);
-            return StatusCode(500, "Внутренняя ошибка сервера");
+            result = Ok(OperationResult<ValidateFolderResponse>.Bad("Ошибка при проверке папки", new ValidateFolderResponse()));
         }
+
+        return result;
     }
 
     /// <summary>
     /// Получить статистику по файлам для конфигурации
     /// </summary>
     [HttpGet("{configId}/files")]
-    public async Task<ActionResult<object>> GetFilesStatistics(Guid configId)
+    public async Task<ActionResult<OperationResult<object>>> GetFilesStatistics(Guid configId)
     {
+        ActionResult<OperationResult<object>> result = null!;
+
         try
         {
             await using var dbContext = await dbContextFactory.CreateDbContextAsync();
@@ -287,7 +326,7 @@ public class StreamArchiveController(
                     .ToList(),
             };
 
-            return Ok(statistics);
+            result = Ok(OperationResult<object>.Ok("Получена статистика файлов", statistics));
         }
         catch (Exception ex)
         {
@@ -296,16 +335,20 @@ public class StreamArchiveController(
                 "Ошибка при получении статистики файлов для конфигурации {ConfigId}",
                 configId
             );
-            return StatusCode(500, "Внутренняя ошибка сервера");
+            result = Ok(OperationResult<object>.Bad("Ошибка при получении статистики файлов", new { }));
         }
+
+        return result;
     }
 
     /// <summary>
     /// Получить общую статистику по всем конфигурациям
     /// </summary>
     [HttpGet("statistics")]
-    public async Task<ActionResult<object>> GetOverallStatistics()
+    public async Task<ActionResult<OperationResult<object>>> GetOverallStatistics()
     {
+        ActionResult<OperationResult<object>> result = null!;
+
         try
         {
             await using var dbContext = await dbContextFactory.CreateDbContextAsync();
@@ -348,13 +391,15 @@ public class StreamArchiveController(
                     .ToList(),
             };
 
-            return Ok(statistics);
+            result = Ok(OperationResult<object>.Ok("Получена общая статистика", statistics));
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при получении общей статистики");
-            return StatusCode(500, "Внутренняя ошибка сервера");
+            result = Ok(OperationResult<object>.Bad("Ошибка при получении общей статистики", new { }));
         }
+
+        return result;
     }
 
     private static bool IsVideoFile(string filePath)

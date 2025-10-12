@@ -1,4 +1,5 @@
-﻿using MARS.Server.Services.Twitch.Management;
+﻿using MARS.Server.Services;
+using MARS.Server.Services.Twitch.Management;
 using Microsoft.AspNetCore.Mvc;
 using TwitchLib.Api.Helix.Models.ChannelPoints;
 using TwitchLib.Api.Helix.Models.ChannelPoints.CreateCustomReward;
@@ -26,10 +27,11 @@ public class TwitchRewardsController(
     /// Получить список наград канала
     /// </summary>
     [HttpGet]
-    public async Task<ActionResult<GetCustomRewardsResponse>> GetRewards(
+    public async Task<ActionResult<OperationResult<GetCustomRewardsResponse?>>> GetRewards(
         [FromQuery] bool onlyManageable = true
     )
     {
+        ActionResult<OperationResult<GetCustomRewardsResponse?>> result;
         try
         {
             var response = await api.Helix.ChannelPoints.GetCustomRewardAsync(
@@ -38,23 +40,30 @@ public class TwitchRewardsController(
                 onlyManageable,
                 AccessToken
             );
-            return Ok(response);
+            result = Ok(
+                OperationResult<GetCustomRewardsResponse?>.Ok("Получены награды канала", response)
+            );
         }
         catch (Exception ex)
         {
             logger.LogException(ex);
-            return StatusCode(500, "Не удалось получить награды");
+            result = Ok(
+                OperationResult<GetCustomRewardsResponse?>.Bad("Не удалось получить награды", null)
+            );
         }
+
+        return result;
     }
 
     /// <summary>
     /// Создать новую награду
     /// </summary>
     [HttpPost]
-    public async Task<ActionResult<CustomReward>> CreateReward(
+    public async Task<ActionResult<OperationResult<CustomReward?>>> CreateReward(
         [FromBody] CreateCustomRewardsRequest request
     )
     {
+        ActionResult<OperationResult<CustomReward?>> result;
         try
         {
             var created = await api.Helix.ChannelPoints.CreateCustomRewardsAsync(
@@ -62,24 +71,28 @@ public class TwitchRewardsController(
                 request,
                 AccessToken
             );
-            return Ok(created.Data.FirstOrDefault());
+            var reward = created.Data.FirstOrDefault();
+            result = Ok(OperationResult<CustomReward?>.Ok("Награда успешно создана", reward));
         }
         catch (Exception ex)
         {
             logger.LogException(ex);
-            return StatusCode(500, "Не удалось создать награду");
+            result = Ok(OperationResult<CustomReward?>.Bad("Не удалось создать награду", null));
         }
+
+        return result;
     }
 
     /// <summary>
     /// Обновить существующую награду
     /// </summary>
     [HttpPatch("{rewardId}")]
-    public async Task<ActionResult<CustomReward>> UpdateReward(
+    public async Task<ActionResult<OperationResult<CustomReward?>>> UpdateReward(
         string rewardId,
         [FromBody] UpdateCustomRewardRequest request
     )
     {
+        ActionResult<OperationResult<CustomReward?>> result;
         try
         {
             var updated = await api.Helix.ChannelPoints.UpdateCustomRewardAsync(
@@ -88,27 +101,31 @@ public class TwitchRewardsController(
                 request,
                 AccessToken
             );
-            return Ok(updated.Data.FirstOrDefault());
+            var reward = updated.Data.FirstOrDefault();
+            result = Ok(OperationResult<CustomReward?>.Ok("Награда успешно обновлена", reward));
         }
         catch (TwitchLib.Api.Core.Exceptions.BadRequestException bre)
         {
             // Happens if награда не управляется приложением/неподходящие поля
             logger.LogWarning(bre, "BadRequest при обновлении награды {RewardId}", rewardId);
-            return BadRequest(bre.Message);
+            result = Ok(OperationResult<CustomReward?>.Bad(bre.Message, null));
         }
         catch (Exception ex)
         {
             logger.LogException(ex);
-            return StatusCode(500, "Не удалось обновить награду");
+            result = Ok(OperationResult<CustomReward?>.Bad("Не удалось обновить награду", null));
         }
+
+        return result;
     }
 
     /// <summary>
     /// Удалить награду
     /// </summary>
     [HttpDelete("{rewardId}")]
-    public async Task<ActionResult> DeleteReward(string rewardId)
+    public async Task<ActionResult<OperationResult>> DeleteReward(string rewardId)
     {
+        ActionResult<OperationResult> result;
         try
         {
             await api.Helix.ChannelPoints.DeleteCustomRewardAsync(
@@ -116,26 +133,31 @@ public class TwitchRewardsController(
                 rewardId,
                 AccessToken
             );
-            return NoContent();
+            result = Ok(OperationResult.Ok("Награда успешно удалена"));
         }
         catch (Exception ex)
         {
             logger.LogException(ex);
-            return StatusCode(500, "Не удалось удалить награду");
+            result = Ok(OperationResult.Bad("Не удалось удалить награду"));
         }
+
+        return result;
     }
 
     /// <summary>
     /// Получить активные/ожидающие списания (редемпшены) по награде
     /// </summary>
     [HttpGet("{rewardId}/redemptions")]
-    public async Task<ActionResult<GetCustomRewardRedemptionResponse>> GetRedemptions(
+    public async Task<
+        ActionResult<OperationResult<GetCustomRewardRedemptionResponse?>>
+    > GetRedemptions(
         string rewardId,
         [FromQuery] string status = "UNFULFILLED",
         [FromQuery] string? sort = null,
         [FromQuery] string? after = null
     )
     {
+        ActionResult<OperationResult<GetCustomRewardRedemptionResponse?>> result;
         try
         {
             var response = await api.Helix.ChannelPoints.GetCustomRewardRedemptionAsync(
@@ -146,45 +168,62 @@ public class TwitchRewardsController(
                 after,
                 AccessToken
             );
-            return Ok(response);
+            result = Ok(
+                OperationResult<GetCustomRewardRedemptionResponse?>.Ok(
+                    "Получены редемпшены",
+                    response
+                )
+            );
         }
         catch (Exception ex)
         {
             logger.LogException(ex);
-            return StatusCode(500, "Не удалось получить редемпшены");
+            result = Ok(
+                OperationResult<GetCustomRewardRedemptionResponse?>.Bad(
+                    "Не удалось получить редемпшены",
+                    null
+                )
+            );
         }
+
+        return result;
     }
 
     /// <summary>
     /// Обновить статус редемпшенов (FULFILLED/CANCELED)
     /// </summary>
     [HttpPost("{rewardId}/redemptions/status")]
-    public async Task<IActionResult> UpdateRedemptionStatus(
+    public async Task<ActionResult<OperationResult>> UpdateRedemptionStatus(
         string rewardId,
         [FromBody] UpdateCustomRewardRedemptionStatusRequest request,
         [FromQuery] List<string> ids
     )
     {
-        if (ids == null || ids.Count == 0)
-        {
-            return BadRequest("Не указаны идентификаторы редемпшенов");
-        }
-
+        ActionResult<OperationResult> result;
         try
         {
-            await api.Helix.ChannelPoints.UpdateRedemptionStatusAsync(
-                TwitchExstension.ChannelId,
-                rewardId,
-                ids,
-                request,
-                AccessToken
-            );
-            return Ok();
+            if (ids == null || ids.Count == 0)
+            {
+                result = Ok(OperationResult.Bad("Не указаны идентификаторы редемпшенов"));
+            }
+            else
+            {
+                await api.Helix.ChannelPoints.UpdateRedemptionStatusAsync(
+                    TwitchExstension.ChannelId,
+                    rewardId,
+                    ids,
+                    request,
+                    AccessToken
+                );
+                result = Ok(OperationResult.Ok("Статус редемпшенов успешно обновлен"));
+            }
         }
         catch (Exception ex)
         {
             logger.LogException(ex);
-            return StatusCode(500, "Не удалось обновить статус редемпшенов");
+            result = Ok(OperationResult.Bad("Не удалось обновить статус редемпшенов"));
         }
+
+        return result;
     }
 }

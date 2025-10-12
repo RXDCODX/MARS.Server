@@ -20,7 +20,7 @@ public class RollWaifuCommand(
 
     public override CommandParameterInfo[] Parameters =>
         [
-            new CommandParameterInfo
+            new()
             {
                 Name = "username",
                 Description = "Имя пользователя",

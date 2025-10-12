@@ -1,4 +1,5 @@
-﻿using MARS.Server.Services.Shikimori;
+﻿using MARS.Server.Services;
+using MARS.Server.Services.Shikimori;
 using MARS.Server.Services.Shikimori.Entitys;
 using Microsoft.AspNetCore.Mvc;
 
@@ -19,19 +20,27 @@ public class ShikimoriRateLimiterController(
     /// </summary>
     /// <returns>Информация о доступных слотах и времени сброса лимитов</returns>
     [HttpGet("info")]
-    public ActionResult<RateLimiterInfo> GetRateLimiterInfo()
+    public ActionResult<OperationResult<RateLimiterInfo?>> GetRateLimiterInfo()
     {
-        RateLimiterInfo? result;
+        ActionResult<OperationResult<RateLimiterInfo?>> result;
         try
         {
-            result = shikimoriService.GetRateLimiterInfo();
+            var info = shikimoriService.GetRateLimiterInfo();
+            result = Ok(
+                OperationResult<RateLimiterInfo?>.Ok("Информация о рейт лимитере получена", info)
+            );
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при получении информации о рейт лимитере");
-            return StatusCode(500, "Внутренняя ошибка сервера");
+            result = Ok(
+                OperationResult<RateLimiterInfo?>.Bad(
+                    "Ошибка при получении информации о рейт лимитере",
+                    null
+                )
+            );
         }
 
-        return Ok(result);
+        return result;
     }
 }

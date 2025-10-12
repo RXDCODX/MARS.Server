@@ -14,14 +14,14 @@ public class FumoCommand(IHubContext<TelegramusHub, ITelegramusHub> alertsHub) :
 
     public override CommandParameterInfo[] Parameters =>
         [
-            new CommandParameterInfo
+            new()
             {
                 Name = "displayName",
                 Description = "Имя пользователя",
                 Type = "string",
                 Required = true,
             },
-            new CommandParameterInfo
+            new()
             {
                 Name = "color",
                 Description = "Цвет (опционально)",

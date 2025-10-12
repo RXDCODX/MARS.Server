@@ -20,14 +20,14 @@ public class FramedataCommand(Tekken8FrameData frameData, IDbContextFactory<AppD
 
     public override CommandParameterInfo[] Parameters =>
         [
-            new CommandParameterInfo
+            new()
             {
                 Name = "character",
                 Description = "Имя персонажа",
                 Type = "string",
                 Required = true,
             },
-            new CommandParameterInfo
+            new()
             {
                 Name = "move",
                 Description = "Команда удара или тег",

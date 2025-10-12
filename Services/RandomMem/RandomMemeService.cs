@@ -40,11 +40,7 @@ public class RandomMemeService(
         CancellationToken cancellationToken = default
     )
     {
-        MemeType result = new()
-        {
-            Name = string.Empty,
-            FolderPath = string.Empty
-        };
+        MemeType result = new() { Name = string.Empty, FolderPath = string.Empty };
 
         if (
             !string.IsNullOrWhiteSpace(memeType.Name)
@@ -74,11 +70,7 @@ public class RandomMemeService(
         CancellationToken cancellationToken = default
     )
     {
-        MemeType result = new()
-        {
-            Name = string.Empty,
-            FolderPath = string.Empty
-        };
+        MemeType result = new() { Name = string.Empty, FolderPath = string.Empty };
 
         if (
             memeType.Id > 0
@@ -208,10 +200,7 @@ public class RandomMemeService(
         CancellationToken cancellationToken = default
     )
     {
-        MemeOrder result = new()
-        {
-            FilePath = string.Empty
-        };
+        MemeOrder result = new() { FilePath = string.Empty };
 
         if (!string.IsNullOrWhiteSpace(memeOrder.FilePath) && memeOrder.MemeTypeId > 0)
         {
@@ -249,10 +238,7 @@ public class RandomMemeService(
         CancellationToken cancellationToken = default
     )
     {
-        MemeOrder result = new()
-        {
-            FilePath = string.Empty
-        };
+        MemeOrder result = new() { FilePath = string.Empty };
 
         if (
             memeOrder.Id != Guid.Empty
@@ -330,7 +316,7 @@ public class RandomMemeService(
 
         var query = context.RandomMemeOrder.AsNoTracking();
 
-        if (typeId.HasValue && typeId.Value > 0)
+        if (typeId is > 0)
         {
             query = query.Where(x => x.MemeTypeId == typeId.Value);
         }
@@ -359,7 +345,7 @@ public class RandomMemeService(
 
         var query = context.RandomMemeOrder.AsNoTracking();
 
-        if (typeId.HasValue && typeId.Value > 0)
+        if (typeId is > 0)
         {
             query = query.Where(x => x.MemeTypeId == typeId.Value);
         }

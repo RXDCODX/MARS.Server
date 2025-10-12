@@ -11,9 +11,16 @@ public class TelegramOnlyCommand : BaseCommand
 
     public override Platform[] AvailablePlatforms => [Platform.Telegram];
 
-    public override CommandParameterInfo[] Parameters => [
-        new CommandParameterInfo { Name = "message", Description = "Сообщение для отправки", Type = "string", Required = true }
-    ];
+    public override CommandParameterInfo[] Parameters =>
+        [
+            new()
+            {
+                Name = "message",
+                Description = "Сообщение для отправки",
+                Type = "string",
+                Required = true,
+            },
+        ];
 
     public override Task<string> ExecuteAsync(
         Dictionary<string, object> parameters,

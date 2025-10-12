@@ -43,9 +43,14 @@ public class SoundRequestCommandsService(
             return;
         }
 
-        if (message.StartsWith("!sr ", StringComparison.OrdinalIgnoreCase))
+        var isSr =
+            message.StartsWith("!sr", StringComparison.OrdinalIgnoreCase)
+            || message.StartsWith("!soundrequest", StringComparison.OrdinalIgnoreCase);
+
+        if (isSr)
         {
-            var arg = message[4..].Trim();
+            var cmd = isSr ? "!sr" : "!soundrequest";
+            var arg = message.Length > cmd.Length ? message[cmd.Length..].Trim() : string.Empty;
             if (string.IsNullOrWhiteSpace(arg))
             {
                 return;
@@ -58,11 +63,8 @@ public class SoundRequestCommandsService(
             }
             else
             {
-                // простейший поиск — предложим вставить ссылку
-                await client.SendMessageToMainTwitchAsync(
-                    "Вставьте ссылку на YouTube видео для заказа."
-                );
-                return;
+                // текстовый запрос — ищем через YouTube Music API
+                info = await ytResolver.ResolveQueryAsync(arg, _token);
             }
 
             if (info == null)
@@ -91,7 +93,12 @@ public class SoundRequestCommandsService(
             //    }
             //);
 
-            await client.SendMessageToMainTwitchAsync($"Добавлено: {info.Title}");
+            var duration = info.Duration;
+            var durationText =
+                duration > TimeSpan.Zero
+                    ? $"{(int)duration.TotalMinutes:D2}:{duration.Seconds:D2}"
+                    : "??:??";
+            await client.SendMessageToMainTwitchAsync($"Добавлено: {info.Title} [{durationText}]");
             return;
         }
 

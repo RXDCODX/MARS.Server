@@ -80,9 +80,7 @@ public class TelegramCommandService(
             var message = update.Message;
 
             if (
-                message != null
-                && message.Type == MessageType.Text
-                && message.Text is { } messageText
+                message is { Type: MessageType.Text, Text: { } messageText }
                 && messageText.StartsWith('/')
             )
             {
@@ -241,8 +239,14 @@ public class TelegramCommandService(
         var commands = new List<string>();
 
         // Получаем команды через CommandExecutorService и фильтруем по видимости
-        var allCommands = executor.GetUserCommandsInfoAsync(Platform.Telegram).GetAwaiter().GetResult();
-        var adminCommands = executor.GetAdminCommandsInfoAsync(Platform.Telegram).GetAwaiter().GetResult();
+        var allCommands = executor
+            .GetUserCommandsInfoAsync(Platform.Telegram)
+            .GetAwaiter()
+            .GetResult();
+        var adminCommands = executor
+            .GetAdminCommandsInfoAsync(Platform.Telegram)
+            .GetAwaiter()
+            .GetResult();
 
         // Фильтруем пользовательские команды по видимости
         foreach (var command in allCommands)
@@ -270,9 +274,7 @@ public class TelegramCommandService(
             return "Нет доступных команд для вашей роли.";
         }
 
-        var result = includeAdminCommands && isAdmin
-            ? "Команды: "
-            : "Команды: ";
+        var result = includeAdminCommands && isAdmin ? "Команды: " : "Команды: ";
 
         result += string.Join(" | ", commands);
 

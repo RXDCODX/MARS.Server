@@ -1,4 +1,4 @@
-using MARS.Server.Services.CommandExecutor.Entitys;
+﻿using MARS.Server.Services.CommandExecutor.Entitys;
 using MARS.Server.Services.CommandExecutor.Entitys.Commands;
 
 namespace MARS.Server.Services.CommandExecutor.Commands;
@@ -16,7 +16,7 @@ public class AdhdCommand(IHubContext<TelegramusHub, ITelegramusHub> alertsHub) :
 
     public override CommandParameterInfo[] Parameters =>
         [
-            new CommandParameterInfo
+            new()
             {
                 Name = "seconds",
                 Description = "Количество секунд для активации ADHD эффекта",

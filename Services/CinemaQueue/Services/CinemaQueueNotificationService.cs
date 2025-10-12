@@ -102,7 +102,7 @@ public class CinemaQueueNotificationService(
 
     private async Task SendNotificationAsync(List<CinemaMediaItemDto> unwatchedItems)
     {
-        if (unwatchedItems != null && unwatchedItems.Count > 0)
+        if (unwatchedItems is { Count: > 0 })
         {
             try
             {
@@ -128,7 +128,7 @@ public class CinemaQueueNotificationService(
     {
         var result = string.Empty;
 
-        if (unwatchedItems != null && unwatchedItems.Count > 0)
+        if (unwatchedItems is { Count: > 0 })
         {
             if (unwatchedItems.Count == 1)
             {

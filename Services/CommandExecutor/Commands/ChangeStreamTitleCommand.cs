@@ -20,7 +20,7 @@ public class ChangeStreamTitleCommand(
 
     public override CommandParameterInfo[] Parameters =>
         [
-            new CommandParameterInfo
+            new()
             {
                 Name = "новое_название",
                 Description = "Новое название для трансляции",

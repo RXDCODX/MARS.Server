@@ -11,9 +11,16 @@ public class WaifuUnmergeCommand(MergeWaifu mergeWaifu) : BaseCommand
     public override bool IsAdminCommand => true;
 
     public override Platform[] AvailablePlatforms => [Platform.Telegram];
-    public override CommandParameterInfo[] Parameters => [
-        new CommandParameterInfo { Name = "identifier", Description = "ID или имя хоста", Type = "string", Required = true }
-    ];
+    public override CommandParameterInfo[] Parameters =>
+        [
+            new()
+            {
+                Name = "identifier",
+                Description = "ID или имя хоста",
+                Type = "string",
+                Required = true,
+            },
+        ];
 
     public override async Task<string> ExecuteAsync(
         Dictionary<string, object> parameters,
@@ -38,4 +45,3 @@ public class WaifuUnmergeCommand(MergeWaifu mergeWaifu) : BaseCommand
             : $"Развод между {host.Name} и {waifu.Name} состоялся";
     }
 }
-

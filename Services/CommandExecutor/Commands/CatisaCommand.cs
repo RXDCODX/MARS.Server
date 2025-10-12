@@ -13,14 +13,14 @@ public class CatisaCommand(ITwitchClient client) : BaseCommand
 
     public override CommandParameterInfo[] Parameters =>
         [
-            new CommandParameterInfo
+            new()
             {
                 Name = "channel",
                 Description = "Канал для отправки сообщения",
                 Type = "string",
                 Required = true,
             },
-            new CommandParameterInfo
+            new()
             {
                 Name = "message",
                 Description = "Текст для отправки сообщения",

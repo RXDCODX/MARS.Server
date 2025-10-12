@@ -15,7 +15,7 @@ public class ScrupFrameDataCommand(Tekken8FrameData frameData) : BaseCommand
     public override string[] Aliases => ["scrap", "parse", "framedata"];
     public override CommandParameterInfo[] Parameters =>
         [
-            new CommandParameterInfo
+            new()
             {
                 Name = "source",
                 Description = "Источник данных: wavu или tekkendocs",
@@ -23,7 +23,7 @@ public class ScrupFrameDataCommand(Tekken8FrameData frameData) : BaseCommand
                 Required = false,
                 DefaultValue = "wavu",
             },
-            new CommandParameterInfo
+            new()
             {
                 Name = "requestDelay",
                 Description = "Задержка между запросами в секундах",
@@ -31,7 +31,7 @@ public class ScrupFrameDataCommand(Tekken8FrameData frameData) : BaseCommand
                 Required = false,
                 DefaultValue = "2",
             },
-            new CommandParameterInfo
+            new()
             {
                 Name = "characterDelay",
                 Description = "Задержка между персонажами в секундах",
@@ -39,7 +39,7 @@ public class ScrupFrameDataCommand(Tekken8FrameData frameData) : BaseCommand
                 Required = false,
                 DefaultValue = "5",
             },
-            new CommandParameterInfo
+            new()
             {
                 Name = "parseMoves",
                 Description = "Парсить ли мувы для персонажей",
@@ -47,7 +47,7 @@ public class ScrupFrameDataCommand(Tekken8FrameData frameData) : BaseCommand
                 Required = false,
                 DefaultValue = "true",
             },
-            new CommandParameterInfo
+            new()
             {
                 Name = "useStaging",
                 Description = "Использовать ли staging service для изменений",
@@ -55,7 +55,7 @@ public class ScrupFrameDataCommand(Tekken8FrameData frameData) : BaseCommand
                 Required = false,
                 DefaultValue = "true",
             },
-            new CommandParameterInfo
+            new()
             {
                 Name = "maxRetries",
                 Description = "Максимальное количество попыток для одного запроса",
@@ -63,7 +63,7 @@ public class ScrupFrameDataCommand(Tekken8FrameData frameData) : BaseCommand
                 Required = false,
                 DefaultValue = "3",
             },
-            new CommandParameterInfo
+            new()
             {
                 Name = "timeout",
                 Description = "Таймаут для HTTP запросов в секундах",
@@ -71,7 +71,7 @@ public class ScrupFrameDataCommand(Tekken8FrameData frameData) : BaseCommand
                 Required = false,
                 DefaultValue = "30",
             },
-            new CommandParameterInfo
+            new()
             {
                 Name = "characters",
                 Description = "Список персонажей через запятую (например: Kazuya,Heihachi,Jin)",

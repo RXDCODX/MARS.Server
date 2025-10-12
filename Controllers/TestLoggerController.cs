@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using MARS.Server.Services;
+using Microsoft.AspNetCore.Mvc;
 
 namespace MARS.Server.Controllers;
 
@@ -7,20 +8,17 @@ namespace MARS.Server.Controllers;
 public class TestLoggerController(ILogger<TestLoggerController> logger) : ControllerBase
 {
     [HttpPost("test-warning")]
-    public ActionResult<string> TestWarning()
+    public ActionResult<OperationResult> TestWarning()
     {
-        ActionResult<string> result = Ok("Warning logged");
-        
         logger.LogWarning("Это тестовое предупреждение для проверки логгера в БД");
-        
+        ActionResult<OperationResult> result = Ok(OperationResult.Ok("Warning logged"));
+
         return result;
     }
 
     [HttpPost("test-error")]
-    public ActionResult<string> TestError()
+    public ActionResult<OperationResult> TestError()
     {
-        ActionResult<string> result = Ok("Error logged");
-        
         try
         {
             throw new InvalidOperationException("Тестовая ошибка для проверки логгера в БД");
@@ -29,17 +27,18 @@ public class TestLoggerController(ILogger<TestLoggerController> logger) : Contro
         {
             logger.LogError(ex, "Произошла тестовая ошибка");
         }
-        
+
+        ActionResult<OperationResult> result = Ok(OperationResult.Ok("Error logged"));
+
         return result;
     }
 
     [HttpPost("test-critical")]
-    public ActionResult<string> TestCritical()
+    public ActionResult<OperationResult> TestCritical()
     {
-        ActionResult<string> result = Ok("Critical logged");
-        
         logger.LogCritical("Это критическая ошибка для проверки логгера в БД");
-        
+        ActionResult<OperationResult> result = Ok(OperationResult.Ok("Critical logged"));
+
         return result;
     }
 }

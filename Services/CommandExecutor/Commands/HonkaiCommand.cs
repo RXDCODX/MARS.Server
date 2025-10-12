@@ -11,14 +11,14 @@ public class HonkaiCommand(IDbContextFactory<AppDbContext> factory) : BaseComman
     public override Platform[] AvailablePlatforms => [Platform.Telegram];
     public override CommandParameterInfo[] Parameters =>
         [
-            new CommandParameterInfo
+            new()
             {
                 Name = "chatId",
                 Description = "Id телеграм чата",
                 Type = "long",
                 Required = true,
             },
-            new CommandParameterInfo
+            new()
             {
                 Name = "username",
                 Description = "Имя пользователя",

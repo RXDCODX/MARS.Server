@@ -46,6 +46,7 @@
         <PackageReference Include="H.Hooks" Version="1.7.0" />
         <PackageReference Include="HtmlAgilityPack" Version="1.12.4" />
         <PackageReference Include="MarchSeven" Version="2.0.1" />
+        <PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" Version="2.23.0" />
         <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="9.0.9" />
         <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.9" />
         <PackageReference Include="Microsoft.AspNetCore.SpaProxy">
@@ -101,7 +102,6 @@
         <PackageReference Include="TwitchLib.Api.Helix" Version="3.9.0" />
         <PackageReference Include="TwitchLib.Api.Helix.Models" Version="3.9.0" />
         <PackageReference Include="TwitchLib.EventSub.Websockets" Version="0.7.0" />
-        <PackageReference Include="VideoLibrary" Version="3.2.9" />
         <PackageReference Include="WTelegramClient" Version="4.3.11" />
         <PackageReference Include="YandexMusicResolver" Version="7.3.0" />
     </ItemGroup>
@@ -154,6 +154,10 @@
       <Folder Include="WTelegram\" />
       <Folder Include="Services\Twitch\Rewards\TestReward\" />
       <Folder Include="Services\Twitch\TwitchFollowers\Entitys\" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\..\YoutubeReExplode\YoutubeReExplode\YoutubeReExplode.csproj" />
     </ItemGroup>
 
     <Target Name="BuildClientApp" BeforeTargets="Publish">

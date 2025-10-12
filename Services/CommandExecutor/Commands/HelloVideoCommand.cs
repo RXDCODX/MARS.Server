@@ -15,14 +15,14 @@ public class HelloVideoCommand(HelloVideoWorker helloVideoWorker) : BaseCommand
         [Platform.Api, Platform.Telegram, Platform.Twitch];
     public override CommandParameterInfo[] Parameters =>
         [
-            new CommandParameterInfo
+            new()
             {
                 Name = "name",
                 Description = "Имя пользователя",
                 Type = "string",
                 Required = true,
             },
-            new CommandParameterInfo
+            new()
             {
                 Name = "color",
                 Description = "Цвет (опционально)",

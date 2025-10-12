@@ -11,10 +11,23 @@ public class DiscordCommand : BaseCommand
 
     public override Platform[] AvailablePlatforms => [Platform.Discord];
 
-    public override CommandParameterInfo[] Parameters => [
-        new CommandParameterInfo { Name = "channel", Description = "Канал Discord", Type = "string", Required = true },
-        new CommandParameterInfo { Name = "message", Description = "Сообщение", Type = "string", Required = false }
-    ];
+    public override CommandParameterInfo[] Parameters =>
+        [
+            new()
+            {
+                Name = "channel",
+                Description = "Канал Discord",
+                Type = "string",
+                Required = true,
+            },
+            new()
+            {
+                Name = "message",
+                Description = "Сообщение",
+                Type = "string",
+                Required = false,
+            },
+        ];
 
     public override Task<string> ExecuteAsync(
         Dictionary<string, object> parameters,

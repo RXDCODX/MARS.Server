@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using MARS.Server.Services;
+using Microsoft.AspNetCore.Mvc;
 
 namespace MARS.Server.Controllers;
 
@@ -17,21 +18,25 @@ public class MediaInfoApiController(
     /// </summary>
     /// <returns>Список всех алертов</returns>
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<ApiMediaInfo>>> GetAllAlerts()
+    public async Task<ActionResult<OperationResult<List<ApiMediaInfo>>>> GetAllAlerts()
     {
+        ActionResult<OperationResult<List<ApiMediaInfo>>> result = null!;
+
         try
         {
             await using var dbContext = await factory.CreateDbContextAsync();
 
             var alerts = await dbContext.Alerts.ToListAsync();
             var apiAlerts = alerts.Select(a => new ApiMediaInfo(a)).ToList();
-            return Ok(apiAlerts);
+            result = Ok(OperationResult<List<ApiMediaInfo>>.Ok("Получены все алерты", apiAlerts));
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при получении алертов");
-            return StatusCode(500, "Внутренняя ошибка сервера");
+            result = Ok(OperationResult<List<ApiMediaInfo>>.Bad("Ошибка при получении алертов", []));
         }
+
+        return result;
     }
 
     /// <summary>
@@ -40,23 +45,32 @@ public class MediaInfoApiController(
     /// <param name="id">ID алерта</param>
     /// <returns>Алерт</returns>
     [HttpGet("{id:guid}")]
-    public async Task<ActionResult<ApiMediaInfo>> GetAlert(Guid id)
+    public async Task<ActionResult<OperationResult<ApiMediaInfo?>>> GetAlert(Guid id)
     {
+        ActionResult<OperationResult<ApiMediaInfo?>> result = null!;
+
         try
         {
             await using var dbContext = await factory.CreateDbContextAsync();
 
             var alert = await dbContext.Alerts.FirstOrDefaultAsync(a => a.Id == id);
 
-            return alert == null
-                ? NotFound($"Алерт с ID '{id}' не найден")
-                : Ok(new ApiMediaInfo(alert));
+            if (alert != null)
+            {
+                result = Ok(OperationResult<ApiMediaInfo?>.Ok("Алерт найден", new ApiMediaInfo(alert)));
+            }
+            else
+            {
+                result = Ok(OperationResult<ApiMediaInfo?>.Bad($"Алерт с ID '{id}' не найден", null));
+            }
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при получении алерта {Id}", id);
-            return StatusCode(500, "Внутренняя ошибка сервера");
+            result = Ok(OperationResult<ApiMediaInfo?>.Bad("Ошибка при получении алерта", null));
         }
+
+        return result;
     }
 
     /// <summary>
@@ -67,6 +81,8 @@ public class MediaInfoApiController(
     [HttpGet("{id:guid}/file")]
     public async Task<ActionResult> GetAlertFile(Guid id)
     {
+        ActionResult result = null!;
+
         try
         {
             await using var dbContext = await factory.CreateDbContextAsync();
@@ -74,44 +90,49 @@ public class MediaInfoApiController(
             var alert = await dbContext.Alerts.FirstOrDefaultAsync(a => a.Id == id);
             if (alert == null)
             {
-                return NotFound($"Алерт с ID '{id}' не найден");
+                result = NotFound($"Алерт с ID '{id}' не найден");
             }
-
-            var filePath = alert.FileInfo.FilePath;
-            if (string.IsNullOrEmpty(filePath))
+            else
             {
-                return NotFound("Путь к файлу не найден");
+                var filePath = alert.FileInfo.FilePath;
+                if (string.IsNullOrEmpty(filePath))
+                {
+                    result = NotFound("Путь к файлу не найден");
+                }
+                else if (filePath.StartsWith("memory/"))
+                {
+                    // TODO: Реализовать получение файла из MemoryStorage
+                    result = NotFound("Файлы в памяти пока не поддерживаются");
+                }
+                else
+                {
+                    // Для локальных файлов
+                    var fullPath = Path.Combine(
+                        Directory.GetCurrentDirectory(),
+                        "wwwroot",
+                        filePath.TrimStart('/')
+                    );
+
+                    if (!System.IO.File.Exists(fullPath))
+                    {
+                        result = NotFound($"Файл не найден по пути: {fullPath}");
+                    }
+                    else
+                    {
+                        var fileBytes = await System.IO.File.ReadAllBytesAsync(fullPath);
+                        var contentType = GetContentType(alert.FileInfo.Extension);
+                        result = File(fileBytes, contentType, alert.FileInfo.FileName);
+                    }
+                }
             }
-
-            // Если файл находится в памяти, нужно получить его из MemoryStorage
-            if (filePath.StartsWith("memory/"))
-            {
-                // TODO: Реализовать получение файла из MemoryStorage
-                return NotFound("Файлы в памяти пока не поддерживаются");
-            }
-
-            // Для локальных файлов
-            var fullPath = Path.Combine(
-                Directory.GetCurrentDirectory(),
-                "wwwroot",
-                filePath.TrimStart('/')
-            );
-
-            if (!System.IO.File.Exists(fullPath))
-            {
-                return NotFound($"Файл не найден по пути: {fullPath}");
-            }
-
-            var fileBytes = await System.IO.File.ReadAllBytesAsync(fullPath);
-            var contentType = GetContentType(alert.FileInfo.Extension);
-
-            return File(fileBytes, contentType, alert.FileInfo.FileName);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при получении файла алерта {Id}", id);
-            return StatusCode(500, "Внутренняя ошибка сервера");
+            result = StatusCode(500, "Внутренняя ошибка сервера");
         }
+
+        return result;
     }
 
     /// <summary>
@@ -145,8 +166,10 @@ public class MediaInfoApiController(
     /// <param name="alert">Данные алерта</param>
     /// <returns>Созданный алерт</returns>
     [HttpPost]
-    public async Task<ActionResult<ApiMediaInfo>> CreateAlert([FromBody] ApiMediaInfo alert)
+    public async Task<ActionResult<OperationResult<ApiMediaInfo?>>> CreateAlert([FromBody] ApiMediaInfo alert)
     {
+        ActionResult<OperationResult<ApiMediaInfo?>> result = null!;
+
         try
         {
             await using var dbContext = await factory.CreateDbContextAsync();
@@ -155,17 +178,15 @@ public class MediaInfoApiController(
             dbContext.Alerts.Add(alert);
             await dbContext.SaveChangesAsync();
 
-            return CreatedAtAction(
-                nameof(GetAlert),
-                new { id = alert.Id },
-                new ApiMediaInfo(alert)
-            );
+            result = Ok(OperationResult<ApiMediaInfo?>.Ok("Алерт успешно создан", new ApiMediaInfo(alert)));
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при создании алерта");
-            return StatusCode(500, "Внутренняя ошибка сервера");
+            result = Ok(OperationResult<ApiMediaInfo?>.Bad("Ошибка при создании алерта", null));
         }
+
+        return result;
     }
 
     /// <summary>
@@ -175,50 +196,56 @@ public class MediaInfoApiController(
     /// <param name="alert">Обновленные данные алерта</param>
     /// <returns>Обновленный алерт</returns>
     [HttpPut("{id:guid}")]
-    public async Task<ActionResult<ApiMediaInfo>> UpdateAlert(
+    public async Task<ActionResult<OperationResult<ApiMediaInfo?>>> UpdateAlert(
         Guid id,
         [FromBody] ApiMediaInfo alert
     )
     {
+        ActionResult<OperationResult<ApiMediaInfo?>> result = null!;
+
         try
         {
             if (id != alert.Id)
             {
-                return BadRequest("ID в URL не совпадает с ID в теле запроса");
+                result = Ok(OperationResult<ApiMediaInfo?>.Bad("ID в URL не совпадает с ID в теле запроса", null));
             }
-
-            await using var dbContext = await factory.CreateDbContextAsync();
-
-            var existingAlert = await dbContext.Alerts.FirstOrDefaultAsync(a => a.Id == id);
-            if (existingAlert == null)
+            else
             {
-                return NotFound($"Алерт с ID '{id}' не найден");
+                await using var dbContext = await factory.CreateDbContextAsync();
+
+                var existingAlert = await dbContext.Alerts.FirstOrDefaultAsync(a => a.Id == id);
+                if (existingAlert == null)
+                {
+                    result = Ok(OperationResult<ApiMediaInfo?>.Bad($"Алерт с ID '{id}' не найден", null));
+                }
+                else
+                {
+                    // Создаем новый объект MediaInfo с обновленными данными
+                    var updatedAlert = new MediaInfo
+                    {
+                        Id = existingAlert.Id,
+                        TextInfo = alert.TextInfo,
+                        FileInfo = alert.FileInfo,
+                        PositionInfo = alert.PositionInfo,
+                        MetaInfo = alert.MetaInfo,
+                        StylesInfo = alert.StylesInfo,
+                    };
+
+                    dbContext.Entry(existingAlert).State = EntityState.Detached;
+                    dbContext.Alerts.Update(updatedAlert);
+                    await dbContext.SaveChangesAsync();
+
+                    result = Ok(OperationResult<ApiMediaInfo?>.Ok("Алерт успешно обновлен", new ApiMediaInfo(updatedAlert)));
+                }
             }
-
-            // Создаем новый объект MediaInfo с обновленными данными
-            var updatedAlert = new MediaInfo
-            {
-                Id = existingAlert.Id,
-                TextInfo = alert.TextInfo,
-                FileInfo = alert.FileInfo,
-                PositionInfo = alert.PositionInfo,
-                MetaInfo = alert.MetaInfo,
-                StylesInfo = alert.StylesInfo,
-            };
-
-            dbContext.Entry(existingAlert).State = EntityState.Detached;
-
-            dbContext.Alerts.Update(updatedAlert);
-
-            await dbContext.SaveChangesAsync();
-
-            return Ok(new ApiMediaInfo(updatedAlert));
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при обновлении алерта {Id}", id);
-            return StatusCode(500, "Внутренняя ошибка сервера");
+            result = Ok(OperationResult<ApiMediaInfo?>.Bad("Ошибка при обновлении алерта", null));
         }
+
+        return result;
     }
 
     /// <summary>
@@ -227,8 +254,10 @@ public class MediaInfoApiController(
     /// <param name="id">ID алерта</param>
     /// <returns>Результат операции</returns>
     [HttpDelete("{id:guid}")]
-    public async Task<ActionResult> DeleteAlert(Guid id)
+    public async Task<ActionResult<OperationResult>> DeleteAlert(Guid id)
     {
+        ActionResult<OperationResult> result = null!;
+
         try
         {
             await using var dbContext = await factory.CreateDbContextAsync();
@@ -236,18 +265,21 @@ public class MediaInfoApiController(
             var alert = await dbContext.Alerts.FirstOrDefaultAsync(a => a.Id == id);
             if (alert == null)
             {
-                return NotFound($"Алерт с ID '{id}' не найден");
+                result = Ok(OperationResult.Bad($"Алерт с ID '{id}' не найден"));
             }
-
-            dbContext.Alerts.Remove(alert);
-            await dbContext.SaveChangesAsync();
-
-            return NoContent();
+            else
+            {
+                dbContext.Alerts.Remove(alert);
+                await dbContext.SaveChangesAsync();
+                result = Ok(OperationResult.Ok("Алерт успешно удален"));
+            }
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при удалении алерта {Id}", id);
-            return StatusCode(500, "Внутренняя ошибка сервера");
+            result = Ok(OperationResult.Bad("Ошибка при удалении алерта"));
         }
+
+        return result;
     }
 }

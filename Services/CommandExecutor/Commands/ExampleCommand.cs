@@ -9,11 +9,31 @@ public class ExampleCommand : BaseCommand
     public override string Description => "Пример команды с несколькими параметрами";
     public override bool IsAdminCommand => false;
 
-    public override CommandParameterInfo[] Parameters => [
-        new CommandParameterInfo { Name = "name", Description = "Имя пользователя", Type = "string", Required = true },
-        new CommandParameterInfo { Name = "age", Description = "Возраст", Type = "int", Required = false, DefaultValue = "18" },
-        new CommandParameterInfo { Name = "message", Description = "Сообщение", Type = "string", Required = false }
-    ];
+    public override CommandParameterInfo[] Parameters =>
+        [
+            new()
+            {
+                Name = "name",
+                Description = "Имя пользователя",
+                Type = "string",
+                Required = true,
+            },
+            new()
+            {
+                Name = "age",
+                Description = "Возраст",
+                Type = "int",
+                Required = false,
+                DefaultValue = "18",
+            },
+            new()
+            {
+                Name = "message",
+                Description = "Сообщение",
+                Type = "string",
+                Required = false,
+            },
+        ];
 
     public override Task<string> ExecuteAsync(
         Dictionary<string, object> parameters,

@@ -1,4 +1,5 @@
-﻿using MARS.Server.Services.CinemaQueue.Entitys;
+﻿using MARS.Server.Services;
+using MARS.Server.Services.CinemaQueue.Entitys;
 using MARS.Server.Services.CinemaQueue.Interfaces;
 using MARS.Server.Services.CinemaQueue.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -17,22 +18,32 @@ public class CinemaQueueController(
     /// Получить все элементы очереди
     /// </summary>
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<CinemaMediaItemDto>>> GetAllMediaItems(
+    public async Task<ActionResult<OperationResult<List<CinemaMediaItemDto>>>> GetAllMediaItems(
         CancellationToken cancellationToken = default
     )
     {
-        ActionResult<IEnumerable<CinemaMediaItemDto>> result = StatusCode(500, "Internal server error");
-        
+        ActionResult<OperationResult<List<CinemaMediaItemDto>>> result;
         try
         {
             var items = await cinemaQueueService.GetAllMediaItemsAsync(cancellationToken);
-            result = Ok(items);
+            result = Ok(
+                OperationResult<List<CinemaMediaItemDto>>.Ok(
+                    "Получены все элементы очереди",
+                    items.ToList()
+                )
+            );
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error getting all media items");
+            result = Ok(
+                OperationResult<List<CinemaMediaItemDto>>.Bad(
+                    "Ошибка при получении элементов очереди",
+                    []
+                )
+            );
         }
-        
+
         return result;
     }
 
@@ -40,23 +51,38 @@ public class CinemaQueueController(
     /// Получить элемент по ID
     /// </summary>
     [HttpGet("{id:guid}")]
-    public async Task<ActionResult<CinemaMediaItemDto>> GetMediaItem(
+    public async Task<ActionResult<OperationResult<CinemaMediaItemDto?>>> GetMediaItem(
         Guid id,
         CancellationToken cancellationToken = default
     )
     {
-        ActionResult<CinemaMediaItemDto> result = StatusCode(500, "Internal server error");
-        
+        ActionResult<OperationResult<CinemaMediaItemDto?>> result;
         try
         {
             var item = await cinemaQueueService.GetMediaItemByIdAsync(id, cancellationToken);
-            result = item == null ? NotFound($"Media item with ID {id} not found") : Ok(item);
+
+            if (item != null)
+            {
+                result = Ok(OperationResult<CinemaMediaItemDto?>.Ok("Элемент найден", item));
+            }
+            else
+            {
+                result = Ok(
+                    OperationResult<CinemaMediaItemDto?>.Bad(
+                        $"Media item with ID {id} not found",
+                        null
+                    )
+                );
+            }
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error getting media item with ID: {Id}", id);
+            result = Ok(
+                OperationResult<CinemaMediaItemDto?>.Bad("Ошибка при получении элемента", null)
+            );
         }
-        
+
         return result;
     }
 
@@ -64,22 +90,39 @@ public class CinemaQueueController(
     /// Получить следующий элемент для просмотра
     /// </summary>
     [HttpGet("next")]
-    public async Task<ActionResult<CinemaMediaItemDto>> GetNextMediaItem(
+    public async Task<ActionResult<OperationResult<CinemaMediaItemDto?>>> GetNextMediaItem(
         CancellationToken cancellationToken = default
     )
     {
-        ActionResult<CinemaMediaItemDto> result = StatusCode(500, "Internal server error");
-        
+        ActionResult<OperationResult<CinemaMediaItemDto?>> result;
         try
         {
             var item = await cinemaQueueService.GetNextMediaItemAsync(cancellationToken);
-            result = item == null ? NotFound("No next media item found") : Ok(item);
+
+            if (item != null)
+            {
+                result = Ok(
+                    OperationResult<CinemaMediaItemDto?>.Ok("Следующий элемент найден", item)
+                );
+            }
+            else
+            {
+                result = Ok(
+                    OperationResult<CinemaMediaItemDto?>.Bad("No next media item found", null)
+                );
+            }
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error getting next media item");
+            result = Ok(
+                OperationResult<CinemaMediaItemDto?>.Bad(
+                    "Ошибка при получении следующего элемента",
+                    null
+                )
+            );
         }
-        
+
         return result;
     }
 
@@ -87,26 +130,35 @@ public class CinemaQueueController(
     /// Получить элементы по статусу
     /// </summary>
     [HttpGet("status/{status}")]
-    public async Task<ActionResult<IEnumerable<CinemaMediaItemDto>>> GetMediaItemsByStatus(
-        MediaStatus status,
-        CancellationToken cancellationToken = default
-    )
+    public async Task<
+        ActionResult<OperationResult<List<CinemaMediaItemDto>>>
+    > GetMediaItemsByStatus(MediaStatus status, CancellationToken cancellationToken = default)
     {
-        ActionResult<IEnumerable<CinemaMediaItemDto>> result = StatusCode(500, "Internal server error");
-        
+        ActionResult<OperationResult<List<CinemaMediaItemDto>>> result;
         try
         {
             var items = await cinemaQueueService.GetMediaItemsByStatusAsync(
                 status,
                 cancellationToken
             );
-            result = Ok(items);
+            result = Ok(
+                OperationResult<List<CinemaMediaItemDto>>.Ok(
+                    "Получены элементы по статусу",
+                    items.ToList()
+                )
+            );
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error getting media items by status: {Status}", status);
+            result = Ok(
+                OperationResult<List<CinemaMediaItemDto>>.Bad(
+                    "Ошибка при получении элементов по статусу",
+                    []
+                )
+            );
         }
-        
+
         return result;
     }
 
@@ -114,13 +166,12 @@ public class CinemaQueueController(
     /// Создать новый элемент
     /// </summary>
     [HttpPost]
-    public async Task<ActionResult<CinemaMediaItemDto>> CreateMediaItem(
+    public async Task<ActionResult<OperationResult<CinemaMediaItemDto?>>> CreateMediaItem(
         CreateMediaItemRequest? request,
         CancellationToken cancellationToken = default
     )
     {
-        ActionResult<CinemaMediaItemDto> result = StatusCode(500, "Internal server error");
-        
+        ActionResult<OperationResult<CinemaMediaItemDto?>> result;
         try
         {
             if (request != null && !string.IsNullOrWhiteSpace(request.MediaUrl))
@@ -152,18 +203,23 @@ public class CinemaQueueController(
                     request,
                     cancellationToken
                 );
-                result = CreatedAtAction(nameof(GetMediaItem), new { id = mediaItem.Id }, mediaItem);
+                result = Ok(
+                    OperationResult<CinemaMediaItemDto?>.Ok("Элемент успешно создан", mediaItem)
+                );
             }
             else
             {
-                result = BadRequest("MediaUrl is required");
+                result = Ok(OperationResult<CinemaMediaItemDto?>.Bad("MediaUrl is required", null));
             }
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error creating media item: {Title}", request?.Title);
+            result = Ok(
+                OperationResult<CinemaMediaItemDto?>.Bad("Ошибка при создании элемента", null)
+            );
         }
-        
+
         return result;
     }
 
@@ -171,14 +227,13 @@ public class CinemaQueueController(
     /// Обновить элемент
     /// </summary>
     [HttpPut("{id:guid}")]
-    public async Task<ActionResult<CinemaMediaItemDto>> UpdateMediaItem(
+    public async Task<ActionResult<OperationResult<CinemaMediaItemDto?>>> UpdateMediaItem(
         Guid id,
         UpdateMediaItemRequest request,
         CancellationToken cancellationToken = default
     )
     {
-        ActionResult<CinemaMediaItemDto> result = StatusCode(500, "Internal server error");
-        
+        ActionResult<OperationResult<CinemaMediaItemDto?>> result;
         try
         {
             if (ModelState.IsValid)
@@ -188,20 +243,41 @@ public class CinemaQueueController(
                     request,
                     cancellationToken
                 );
-                result = mediaItem == null
-                    ? NotFound($"Media item with ID {id} not found")
-                    : Ok(mediaItem);
+
+                if (mediaItem != null)
+                {
+                    result = Ok(
+                        OperationResult<CinemaMediaItemDto?>.Ok(
+                            "Элемент успешно обновлен",
+                            mediaItem
+                        )
+                    );
+                }
+                else
+                {
+                    result = Ok(
+                        OperationResult<CinemaMediaItemDto?>.Bad(
+                            $"Media item with ID {id} not found",
+                            null
+                        )
+                    );
+                }
             }
             else
             {
-                result = BadRequest(ModelState);
+                result = Ok(
+                    OperationResult<CinemaMediaItemDto?>.Bad("Некорректные данные модели", null)
+                );
             }
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error updating media item with ID: {Id}", id);
+            result = Ok(
+                OperationResult<CinemaMediaItemDto?>.Bad("Ошибка при обновлении элемента", null)
+            );
         }
-        
+
         return result;
     }
 
@@ -209,23 +285,31 @@ public class CinemaQueueController(
     /// Удалить элемент
     /// </summary>
     [HttpDelete("{id:guid}")]
-    public async Task<ActionResult> DeleteMediaItem(
+    public async Task<ActionResult<OperationResult>> DeleteMediaItem(
         Guid id,
         CancellationToken cancellationToken = default
     )
     {
-        ActionResult result = StatusCode(500, "Internal server error");
-        
+        ActionResult<OperationResult> result;
         try
         {
             var deleteResult = await cinemaQueueService.DeleteMediaItemAsync(id, cancellationToken);
-            result = !deleteResult ? NotFound($"Media item with ID {id} not found") : NoContent();
+
+            if (deleteResult)
+            {
+                result = Ok(OperationResult.Ok("Элемент успешно удален"));
+            }
+            else
+            {
+                result = Ok(OperationResult.Bad($"Media item with ID {id} not found"));
+            }
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error deleting media item with ID: {Id}", id);
+            result = Ok(OperationResult.Bad("Ошибка при удалении элемента"));
         }
-        
+
         return result;
     }
 
@@ -233,25 +317,31 @@ public class CinemaQueueController(
     /// Отметить элемент как следующий для просмотра
     /// </summary>
     [HttpPost("{id:guid}/mark-as-next")]
-    public async Task<ActionResult> MarkAsNext(
+    public async Task<ActionResult<OperationResult>> MarkAsNext(
         Guid id,
         CancellationToken cancellationToken = default
     )
     {
-        ActionResult result = StatusCode(500, "Internal server error");
-        
+        ActionResult<OperationResult> result;
         try
         {
             var markResult = await cinemaQueueService.MarkAsNextAsync(id, cancellationToken);
-            result = !markResult
-                ? NotFound($"Media item with ID {id} not found")
-                : Ok(new { message = "Media item marked as next successfully" });
+
+            if (markResult)
+            {
+                result = Ok(OperationResult.Ok("Media item marked as next successfully"));
+            }
+            else
+            {
+                result = Ok(OperationResult.Bad($"Media item with ID {id} not found"));
+            }
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error marking media item as next with ID: {Id}", id);
+            result = Ok(OperationResult.Bad("Ошибка при отметке элемента как следующий"));
         }
-        
+
         return result;
     }
 
@@ -259,26 +349,36 @@ public class CinemaQueueController(
     /// Изменить статус элемента
     /// </summary>
     [HttpPatch("{id:guid}/status")]
-    public async Task<ActionResult> ChangeStatus(
+    public async Task<ActionResult<OperationResult>> ChangeStatus(
         Guid id,
         [FromBody] MediaStatus status,
         CancellationToken cancellationToken = default
     )
     {
-        ActionResult result = StatusCode(500, "Internal server error");
-        
+        ActionResult<OperationResult> result;
         try
         {
-            var statusResult = await cinemaQueueService.ChangeStatusAsync(id, status, cancellationToken);
-            result = !statusResult
-                ? NotFound($"Media item with ID {id} not found")
-                : Ok(new { message = $"Status changed to {status} successfully" });
+            var statusResult = await cinemaQueueService.ChangeStatusAsync(
+                id,
+                status,
+                cancellationToken
+            );
+
+            if (statusResult)
+            {
+                result = Ok(OperationResult.Ok($"Status changed to {status} successfully"));
+            }
+            else
+            {
+                result = Ok(OperationResult.Bad($"Media item with ID {id} not found"));
+            }
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error changing status of media item with ID: {Id}", id);
+            result = Ok(OperationResult.Bad("Ошибка при изменении статуса элемента"));
         }
-        
+
         return result;
     }
 
@@ -286,14 +386,13 @@ public class CinemaQueueController(
     /// Изменить приоритет элемента
     /// </summary>
     [HttpPatch("{id:guid}/priority")]
-    public async Task<ActionResult> ChangePriority(
+    public async Task<ActionResult<OperationResult>> ChangePriority(
         Guid id,
         [FromBody] int priority,
         CancellationToken cancellationToken = default
     )
     {
-        ActionResult result = StatusCode(500, "Internal server error");
-        
+        ActionResult<OperationResult> result;
         try
         {
             var priorityResult = await cinemaQueueService.ChangePriorityAsync(
@@ -301,15 +400,22 @@ public class CinemaQueueController(
                 priority,
                 cancellationToken
             );
-            result = !priorityResult
-                ? NotFound($"Media item with ID {id} not found")
-                : Ok(new { message = $"Priority changed to {priority} successfully" });
+
+            if (priorityResult)
+            {
+                result = Ok(OperationResult.Ok($"Priority changed to {priority} successfully"));
+            }
+            else
+            {
+                result = Ok(OperationResult.Bad($"Media item with ID {id} not found"));
+            }
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error changing priority of media item with ID: {Id}", id);
+            result = Ok(OperationResult.Bad("Ошибка при изменении приоритета элемента"));
         }
-        
+
         return result;
     }
 
@@ -317,22 +423,26 @@ public class CinemaQueueController(
     /// Получить статистику очереди
     /// </summary>
     [HttpGet("statistics")]
-    public async Task<ActionResult<CinemaQueueStatistics>> GetStatistics(
+    public async Task<ActionResult<OperationResult<CinemaQueueStatistics?>>> GetStatistics(
         CancellationToken cancellationToken = default
     )
     {
-        ActionResult<CinemaQueueStatistics> result = StatusCode(500, "Internal server error");
-        
+        ActionResult<OperationResult<CinemaQueueStatistics?>> result;
         try
         {
             var stats = await cinemaQueueService.GetStatisticsAsync(cancellationToken);
-            result = Ok(stats);
+            result = Ok(
+                OperationResult<CinemaQueueStatistics?>.Ok("Получена статистика очереди", stats)
+            );
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error getting cinema queue statistics");
+            result = Ok(
+                OperationResult<CinemaQueueStatistics?>.Bad("Ошибка при получении статистики", null)
+            );
         }
-        
+
         return result;
     }
 
@@ -340,32 +450,47 @@ public class CinemaQueueController(
     /// Получить метаданные из URL (Кинопоиск или Шикимори)
     /// </summary>
     [HttpGet("metadata")]
-    public async Task<ActionResult<MediaMetadata>> GetMetadata(
+    public async Task<ActionResult<OperationResult<MediaMetadata?>>> GetMetadata(
         [FromQuery] string url,
         CancellationToken cancellationToken = default
     )
     {
-        ActionResult<MediaMetadata> result = StatusCode(500, "Internal server error");
-        
+        ActionResult<OperationResult<MediaMetadata?>> result;
         try
         {
             if (!string.IsNullOrWhiteSpace(url))
             {
                 var metadata = await metadataService.GetMetadataAsync(url, cancellationToken);
-                result = metadata == null
-                    ? NotFound("Metadata not found for the provided URL")
-                    : Ok(metadata);
+
+                if (metadata != null)
+                {
+                    result = Ok(
+                        OperationResult<MediaMetadata?>.Ok("Метаданные получены", metadata)
+                    );
+                }
+                else
+                {
+                    result = Ok(
+                        OperationResult<MediaMetadata?>.Bad(
+                            "Metadata not found for the provided URL",
+                            null
+                        )
+                    );
+                }
             }
             else
             {
-                result = BadRequest("URL parameter is required");
+                result = Ok(OperationResult<MediaMetadata?>.Bad("URL parameter is required", null));
             }
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error getting metadata for URL: {Url}", url);
+            result = Ok(
+                OperationResult<MediaMetadata?>.Bad("Ошибка при получении метаданных", null)
+            );
         }
-        
+
         return result;
     }
 }

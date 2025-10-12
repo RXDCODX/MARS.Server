@@ -1,4 +1,5 @@
-﻿using MARS.Server.Services.Honkai.Entitys;
+﻿using MARS.Server.Services;
+using MARS.Server.Services.Honkai.Entitys;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MARS.Server.Controllers;
@@ -14,9 +15,9 @@ public class HonkaiController(
     /// Получить всех пользователей автоматических отметок
     /// </summary>
     [HttpGet("users")]
-    public async Task<ActionResult<IEnumerable<DailyAutoMarkupUser>>> GetUsers()
+    public async Task<ActionResult<OperationResult<List<DailyAutoMarkupUser>>>> GetUsers()
     {
-        ActionResult<IEnumerable<DailyAutoMarkupUser>> result = StatusCode(500, "Внутренняя ошибка сервера");
+        ActionResult<OperationResult<List<DailyAutoMarkupUser>>> result = null!;
         
         try
         {
@@ -26,11 +27,12 @@ public class HonkaiController(
                 .OrderBy(u => u.CreatedAt)
                 .ToListAsync();
 
-            result = Ok(users);
+            result = Ok(OperationResult<List<DailyAutoMarkupUser>>.Ok("Получены пользователи автоматических отметок", users));
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при получении пользователей автоматических отметок");
+            result = Ok(OperationResult<List<DailyAutoMarkupUser>>.Bad("Ошибка при получении пользователей", []));
         }
         
         return result;
@@ -40,9 +42,9 @@ public class HonkaiController(
     /// Получить пользователя по ID
     /// </summary>
     [HttpGet("users/{id:guid}")]
-    public async Task<ActionResult<DailyAutoMarkupUser>> GetUser(Guid id)
+    public async Task<ActionResult<OperationResult<DailyAutoMarkupUser?>>> GetUser(Guid id)
     {
-        ActionResult<DailyAutoMarkupUser> result = StatusCode(500, "Внутренняя ошибка сервера");
+        ActionResult<OperationResult<DailyAutoMarkupUser?>> result = null!;
         
         try
         {
@@ -51,11 +53,19 @@ public class HonkaiController(
                 .HonkaiMarkupUser.AsNoTracking()
                 .FirstOrDefaultAsync(u => u.Id == id);
 
-            result = user == null ? NotFound($"Пользователь с ID {id} не найден") : Ok(user);
+            if (user != null)
+            {
+                result = Ok(OperationResult<DailyAutoMarkupUser?>.Ok("Пользователь найден", user));
+            }
+            else
+            {
+                result = Ok(OperationResult<DailyAutoMarkupUser?>.Bad($"Пользователь с ID {id} не найден", null));
+            }
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при получении пользователя {UserId}", id);
+            result = Ok(OperationResult<DailyAutoMarkupUser?>.Bad("Ошибка при получении пользователя", null));
         }
         
         return result;
@@ -65,11 +75,11 @@ public class HonkaiController(
     /// Создать нового пользователя автоматических отметок
     /// </summary>
     [HttpPost("users")]
-    public async Task<ActionResult<DailyAutoMarkupUser>> CreateUser(
+    public async Task<ActionResult<OperationResult<DailyAutoMarkupUser?>>> CreateUser(
         [FromBody] CreateUserRequest request
     )
     {
-        ActionResult<DailyAutoMarkupUser> result = StatusCode(500, "Внутренняя ошибка сервера");
+        ActionResult<OperationResult<DailyAutoMarkupUser?>> result = null!;
         
         try
         {
@@ -111,21 +121,22 @@ public class HonkaiController(
                         user.Id
                     );
 
-                    result = CreatedAtAction(nameof(GetUser), new { id = user.Id }, user);
+                    result = Ok(OperationResult<DailyAutoMarkupUser?>.Ok("Пользователь успешно создан", user));
                 }
                 else
                 {
-                    result = Conflict("Пользователь с такими учетными данными уже существует");
+                    result = Ok(OperationResult<DailyAutoMarkupUser?>.Bad("Пользователь с такими учетными данными уже существует", null));
                 }
             }
             else
             {
-                result = BadRequest("Все обязательные поля должны быть заполнены");
+                result = Ok(OperationResult<DailyAutoMarkupUser?>.Bad("Все обязательные поля должны быть заполнены", null));
             }
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при создании пользователя автоматических отметок");
+            result = Ok(OperationResult<DailyAutoMarkupUser?>.Bad("Ошибка при создании пользователя", null));
         }
         
         return result;
@@ -135,11 +146,13 @@ public class HonkaiController(
     /// Обновить пользователя
     /// </summary>
     [HttpPut("users/{id:guid}")]
-    public async Task<ActionResult<DailyAutoMarkupUser>> UpdateUser(
+    public async Task<ActionResult<OperationResult<DailyAutoMarkupUser?>>> UpdateUser(
         Guid id,
         [FromBody] UpdateUserRequest request
     )
     {
+        ActionResult<OperationResult<DailyAutoMarkupUser?>> result = null!;
+
         try
         {
             await using var dbContext = await dbContextFactory.CreateDbContextAsync();
@@ -147,57 +160,63 @@ public class HonkaiController(
 
             if (user == null)
             {
-                return NotFound($"Пользователь с ID {id} не найден");
+                result = Ok(OperationResult<DailyAutoMarkupUser?>.Bad($"Пользователь с ID {id} не найден", null));
             }
-
-            // Обновляем только разрешенные поля
-            if (request.TwitchId != null)
+            else
             {
-                user.TwitchId = request.TwitchId;
+                // Обновляем только разрешенные поля
+                if (request.TwitchId != null)
+                {
+                    user.TwitchId = request.TwitchId;
+                }
+
+                if (request.TelegramId != null)
+                {
+                    user.TelegramId = request.TelegramId;
+                }
+
+                if (!string.IsNullOrEmpty(request.LtmidV2))
+                {
+                    user.LtmidV2 = request.LtmidV2;
+                }
+
+                if (!string.IsNullOrEmpty(request.LTokenV2))
+                {
+                    user.LTokenV2 = request.LTokenV2;
+                }
+
+                if (!string.IsNullOrEmpty(request.LtuidV2))
+                {
+                    user.LtuidV2 = request.LtuidV2;
+                }
+
+                await dbContext.SaveChangesAsync();
+
+                logger.LogInformation(
+                    "Обновлен пользователь автоматических отметок: {UserId}",
+                    user.Id
+                );
+
+                result = Ok(OperationResult<DailyAutoMarkupUser?>.Ok("Пользователь успешно обновлен", user));
             }
-
-            if (request.TelegramId != null)
-            {
-                user.TelegramId = request.TelegramId;
-            }
-
-            if (!string.IsNullOrEmpty(request.LtmidV2))
-            {
-                user.LtmidV2 = request.LtmidV2;
-            }
-
-            if (!string.IsNullOrEmpty(request.LTokenV2))
-            {
-                user.LTokenV2 = request.LTokenV2;
-            }
-
-            if (!string.IsNullOrEmpty(request.LtuidV2))
-            {
-                user.LtuidV2 = request.LtuidV2;
-            }
-
-            await dbContext.SaveChangesAsync();
-
-            logger.LogInformation(
-                "Обновлен пользователь автоматических отметок: {UserId}",
-                user.Id
-            );
-
-            return Ok(user);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при обновлении пользователя {UserId}", id);
-            return StatusCode(500, "Внутренняя ошибка сервера");
+            result = Ok(OperationResult<DailyAutoMarkupUser?>.Bad("Ошибка при обновлении пользователя", null));
         }
+
+        return result;
     }
 
     /// <summary>
     /// Удалить пользователя
     /// </summary>
     [HttpDelete("users/{id:guid}")]
-    public async Task<ActionResult> DeleteUser(Guid id)
+    public async Task<ActionResult<OperationResult>> DeleteUser(Guid id)
     {
+        ActionResult<OperationResult> result = null!;
+
         try
         {
             await using var dbContext = await dbContextFactory.CreateDbContextAsync();
@@ -205,29 +224,35 @@ public class HonkaiController(
 
             if (user == null)
             {
-                return NotFound($"Пользователь с ID {id} не найден");
+                result = Ok(OperationResult.Bad($"Пользователь с ID {id} не найден"));
             }
+            else
+            {
+                dbContext.HonkaiMarkupUser.Remove(user);
+                await dbContext.SaveChangesAsync();
 
-            dbContext.HonkaiMarkupUser.Remove(user);
-            await dbContext.SaveChangesAsync();
+                logger.LogInformation("Удален пользователь автоматических отметок: {UserId}", id);
 
-            logger.LogInformation("Удален пользователь автоматических отметок: {UserId}", id);
-
-            return NoContent();
+                result = Ok(OperationResult.Ok("Пользователь успешно удален"));
+            }
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при удалении пользователя {UserId}", id);
-            return StatusCode(500, "Внутренняя ошибка сервера");
+            result = Ok(OperationResult.Bad("Ошибка при удалении пользователя"));
         }
+
+        return result;
     }
 
     /// <summary>
     /// Принудительно активировать ежедневные отметки для пользователя
     /// </summary>
     [HttpPost("users/{id:guid}/redeem-now")]
-    public async Task<ActionResult<object>> RedeemNow(Guid id)
+    public async Task<ActionResult<OperationResult>> RedeemNow(Guid id)
     {
+        ActionResult<OperationResult> result = null!;
+
         try
         {
             await using var dbContext = await dbContextFactory.CreateDbContextAsync();
@@ -235,35 +260,36 @@ public class HonkaiController(
 
             if (user == null)
             {
-                return NotFound($"Пользователь с ID {id} не найден");
+                result = Ok(OperationResult.Bad($"Пользователь с ID {id} не найден"));
             }
+            else
+            {
+                // Сбрасываем время последней отметки, чтобы сервис мог снова активировать отметки
+                user.LastAutoMarkup = DateTime.UtcNow.AddDays(-1);
+                await dbContext.SaveChangesAsync();
 
-            // Сбрасываем время последней отметки, чтобы сервис мог снова активировать отметки
-            user.LastAutoMarkup = DateTime.UtcNow.AddDays(-1);
-            await dbContext.SaveChangesAsync();
+                logger.LogInformation("Сброшено время последней отметки для пользователя {UserId}", id);
 
-            logger.LogInformation("Сброшено время последней отметки для пользователя {UserId}", id);
-
-            return Ok(
-                new
-                {
-                    message = "Время последней отметки сброшено. Отметки будут активированы при следующей проверке.",
-                }
-            );
+                result = Ok(OperationResult.Ok("Время последней отметки сброшено. Отметки будут активированы при следующей проверке."));
+            }
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при сбросе времени отметки для пользователя {UserId}", id);
-            return StatusCode(500, "Внутренняя ошибка сервера");
+            result = Ok(OperationResult.Bad("Ошибка при сбросе времени отметки"));
         }
+
+        return result;
     }
 
     /// <summary>
     /// Получить статистику пользователей
     /// </summary>
     [HttpGet("stats")]
-    public async Task<ActionResult<object>> GetStats()
+    public async Task<ActionResult<OperationResult<object>>> GetStats()
     {
+        ActionResult<OperationResult<object>> result = null!;
+
         try
         {
             await using var dbContext = await dbContextFactory.CreateDbContextAsync();
@@ -294,13 +320,15 @@ public class HonkaiController(
                 UsersNotMarkedToday = totalUsers - usersMarkedToday,
             };
 
-            return Ok(stats);
+            result = Ok(OperationResult<object>.Ok("Получена статистика пользователей", stats));
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при получении статистики");
-            return StatusCode(500, "Внутренняя ошибка сервера");
+            result = Ok(OperationResult<object>.Bad("Ошибка при получении статистики", new { }));
         }
+
+        return result;
     }
 }
 

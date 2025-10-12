@@ -1,13 +1,51 @@
-﻿using System.Text.RegularExpressions;
-using System.Web;
-using MARS.Server.Services.SoundRequest.Entities;
-using VideoLibrary;
+﻿using MARS.Server.Services.SoundRequest.Entities;
+using YoutubeReExplode;
+using YoutubeReExplode.Common;
 
 namespace MARS.Server.Services.SoundRequest.YouTube;
 
-public class YouTubeResolver(IHttpClientFactory httpClientFactory, ILogger<YouTubeResolver> logger)
+public class YouTubeResolver(ILogger<YouTubeResolver> logger)
 {
-    private readonly IHttpClientFactory _httpClientFactory = httpClientFactory;
+    private readonly YoutubeClient _youtubeClient = new();
+
+    public async Task<BaseTrackInfo?> ResolveQueryAsync(string query, CancellationToken ct)
+    {
+        BaseTrackInfo? result = null;
+
+        if (!string.IsNullOrWhiteSpace(query))
+        {
+            try
+            {
+                // Поиск видео по запросу
+                var searchResults = _youtubeClient.Search.GetVideosAsync(query, ct);
+
+                await foreach (var video in searchResults)
+                {
+                    result = new BaseTrackInfo
+                    {
+                        Id = Guid.NewGuid(),
+                        Url = video.Url,
+                        VideoId = video.Id,
+                        TrackName = video.Title,
+                        Authors = [video.Author.ChannelTitle],
+                        Duration = video.Duration ?? TimeSpan.Zero,
+                        ArtworkUrl = video
+                            .Thumbnails.OrderByDescending(t => t.Resolution.Area)
+                            .FirstOrDefault()
+                            ?.Url,
+                    };
+
+                    return result;
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogException(ex);
+            }
+        }
+
+        return result;
+    }
 
     public async Task<BaseTrackInfo?> ResolveVideoAsync(string url, CancellationToken ct)
     {
@@ -17,18 +55,21 @@ public class YouTubeResolver(IHttpClientFactory httpClientFactory, ILogger<YouTu
         {
             try
             {
-                using var youTube = Client.For(VideoLibrary.YouTube.Default);
-                var video = await Task.Run(() => youTube.GetVideo(url), ct);
+                // YoutubeExplode может парсить URL напрямую
+                var video = await _youtubeClient.Videos.GetAsync(url, ct);
 
                 result = new BaseTrackInfo
                 {
                     Id = Guid.NewGuid(),
                     Url = url,
-                    VideoId = ExtractVideoId(url),
+                    VideoId = video.Id,
                     TrackName = video.Title,
-                    Authors = [video.FullName],
-                    Duration = TimeSpan.Zero,
-                    ArtworkUrl = null,
+                    Authors = [video.Author.ChannelTitle],
+                    Duration = video.Duration ?? TimeSpan.Zero,
+                    ArtworkUrl = video
+                        .Thumbnails.OrderByDescending(t => t.Resolution.Area)
+                        .FirstOrDefault()
+                        ?.Url,
                 };
             }
             catch (Exception ex)
@@ -46,30 +87,47 @@ public class YouTubeResolver(IHttpClientFactory httpClientFactory, ILogger<YouTu
 
         if (!string.IsNullOrWhiteSpace(playlistUrl))
         {
-            // libvideo не поддерживает плейлисты напрямую; предполагаем внешний парсер (будет добавлено позже)
-            result = [];
-            await Task.CompletedTask;
-        }
-
-        return result;
-    }
-
-    private static string? ExtractVideoId(string url)
-    {
-        string? result = null;
-        if (!string.IsNullOrWhiteSpace(url))
-        {
-            if (Uri.TryCreate(url, UriKind.Absolute, out var uri))
+            try
             {
-                if (uri.Host.Contains("youtu.be"))
+                // YoutubeReExplode может парсить URL плейлиста напрямую
+                var playlistVideos = _youtubeClient.Playlists.GetVideosAsync(playlistUrl);
+
+                // Собираем видео из плейлиста (ограничиваем до 200 треков)
+                var videos = new List<BaseTrackInfo>();
+                var count = 0;
+
+                await foreach (var video in playlistVideos)
                 {
-                    result = uri.AbsolutePath.Trim('/');
+                    if (count >= 200)
+                    {
+                        break;
+                    }
+
+                    videos.Add(
+                        new BaseTrackInfo
+                        {
+                            Id = Guid.NewGuid(),
+                            Url = video.Url,
+                            VideoId = video.Id,
+                            TrackName = video.Title,
+                            Authors = [video.Author.ChannelTitle],
+                            Duration = video.Duration ?? TimeSpan.Zero,
+                            ArtworkUrl = video
+                                .Thumbnails.OrderByDescending(t => t.Resolution.Area)
+                                .FirstOrDefault()
+                                ?.Url,
+                        }
+                    );
+
+                    count++;
                 }
-                else if (uri.Host.Contains("youtube.com"))
-                {
-                    var query = HttpUtility.ParseQueryString(uri.Query);
-                    result = query["v"];
-                }
+
+                result = [.. videos];
+            }
+            catch (Exception ex)
+            {
+                logger.LogException(ex);
+                result = [];
             }
         }
 
