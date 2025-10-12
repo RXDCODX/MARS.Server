@@ -159,32 +159,66 @@ public class FollowerDbService(
     /// <returns>True если операция успешна</returns>
     public async Task<bool> DeleteFollowerAsync(string userId)
     {
-        if (string.IsNullOrWhiteSpace(userId))
-        {
-            return false;
-        }
+        var result = false;
 
-        try
+        if (!string.IsNullOrWhiteSpace(userId))
         {
-            await using var context = await factory.CreateDbContextAsync();
-            var entity = await context
-                .FollowersEntitys.AsNoTracking()
-                .FirstOrDefaultAsync(f => f.UserId == userId);
-
-            if (entity != null)
+            try
             {
-                context.FollowersEntitys.Remove(entity);
-                await context.SaveChangesAsync();
-                return true;
-            }
+                await using var context = await factory.CreateDbContextAsync();
+                var entity = await context
+                    .FollowersEntitys.AsNoTracking()
+                    .FirstOrDefaultAsync(f => f.UserId == userId);
 
-            return false;
+                if (entity != null)
+                {
+                    context.FollowersEntitys.Remove(entity);
+                    await context.SaveChangesAsync();
+                    result = true;
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Ошибка при удалении фоловера {UserId} из базы данных", userId);
+            }
         }
-        catch (Exception ex)
+
+        return result;
+    }
+
+    /// <summary>
+    /// Удалить несколько фоловеров из базы данных
+    /// </summary>
+    /// <param name="userIds">Список ID пользователей для удаления</param>
+    /// <returns>Количество удаленных записей</returns>
+    public async Task<int> DeleteFollowersAsync(ICollection<string> userIds)
+    {
+        var result = 0;
+
+        if (userIds is { Count: > 0 })
         {
-            logger.LogError(ex, "Ошибка при удалении фоловера {UserId} из базы данных", userId);
-            return false;
+            try
+            {
+                await using var context = await factory.CreateDbContextAsync();
+                var entities = await context
+                    .FollowersEntitys.AsNoTracking()
+                    .Where(f => userIds.Contains(f.UserId))
+                    .ToListAsync();
+
+                if (entities.Count > 0)
+                {
+                    context.FollowersEntitys.RemoveRange(entities);
+                    result = await context.SaveChangesAsync();
+                    logger.LogInformation("Удалено {Count} фоловеров из базы данных", result);
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Ошибка при массовом удалении фоловеров из базы данных");
+            }
         }
+
+        return result;
     }
 
     /// <summary>

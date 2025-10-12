@@ -15,6 +15,11 @@ public abstract class PlatformCommandServiceBase<T>
     /// </summary>
     protected virtual int DefaultMaxResponseLength => 1000;
 
+    /// <summary>
+    /// Префиксы команд для данной платформы (например: '/', '!')
+    /// </summary>
+    public virtual char[] CommandPrefixes => ['/'];
+
     public abstract IEnumerable<string> UserCommands { get; }
     public abstract IEnumerable<string> AdminCommands { get; }
 
@@ -28,6 +33,49 @@ public abstract class PlatformCommandServiceBase<T>
     public virtual bool IsUserAdmin(T userId)
     {
         return IsAdmin.Invoke(userId);
+    }
+
+    /// <summary>
+    /// Получить префиксы команд для данной платформы
+    /// </summary>
+    /// <returns>Массив символов-префиксов</returns>
+    public virtual char[] GetCommandPrefixes()
+    {
+        return CommandPrefixes;
+    }
+
+    /// <summary>
+    /// Убрать префикс команды из строки
+    /// </summary>
+    /// <param name="commandText">Текст с префиксом</param>
+    /// <returns>Текст без префикса</returns>
+    public virtual string TrimCommandPrefix(string commandText)
+    {
+        var result = commandText;
+
+        if (!string.IsNullOrWhiteSpace(commandText))
+        {
+            result = commandText.TrimStart(CommandPrefixes);
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Проверить, начинается ли строка с префикса команды
+    /// </summary>
+    /// <param name="text">Текст для проверки</param>
+    /// <returns>True если текст начинается с префикса команды</returns>
+    public virtual bool StartsWithCommandPrefix(string text)
+    {
+        var result = false;
+
+        if (!string.IsNullOrWhiteSpace(text))
+        {
+            result = CommandPrefixes.Any(prefix => text.StartsWith(prefix));
+        }
+
+        return result;
     }
 
     /// <summary>

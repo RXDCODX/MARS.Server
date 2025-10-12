@@ -17,6 +17,8 @@ public class TelegramCommandService(
 
     protected override int DefaultMaxResponseLength => 4096;
 
+    public override char[] CommandPrefixes => ['/'];
+
     public override IEnumerable<string> UserCommands =>
         executor.GetUserCommandsAsync(Platform.Telegram).GetAwaiter().GetResult();
 
@@ -81,7 +83,7 @@ public class TelegramCommandService(
 
             if (
                 message is { Type: MessageType.Text, Text: { } messageText }
-                && messageText.StartsWith('/')
+                && StartsWithCommandPrefix(messageText)
             )
             {
                 await Task.Factory.StartNew(async () =>
@@ -95,7 +97,7 @@ public class TelegramCommandService(
                         );
                         if (commandParts.Length > 0)
                         {
-                            var commandName = commandParts[0].Substring(1); // Убираем "/"
+                            var commandName = TrimCommandPrefix(commandParts[0]);
                             var input = commandParts.Length > 1 ? commandParts[1] : "";
 
                             // Обработка специальной команды commands
@@ -111,7 +113,7 @@ public class TelegramCommandService(
                                 );
                                 await SendMessage(message.Chat.Id, commandsList);
                             }
-                            // Обработка специальной команды c (краткий список)
+                            // Обработка специальной команды с (краткий список)
                             else if (commandName.Equals("c", StringComparison.OrdinalIgnoreCase))
                             {
                                 var includeAdminCommands = IsUserAdmin(message.Chat.Id);
@@ -146,14 +148,14 @@ public class TelegramCommandService(
                                         if (!isAdminCommand || IsUserAdmin(message.From?.Id ?? 0))
                                         {
                                             // Выполняем команду через новый сервис
-                                            string result;
                                             try
                                             {
-                                                result = await commandService.ExecuteCommandAsync(
-                                                    commandName,
-                                                    input,
-                                                    Platform.Telegram
-                                                );
+                                                var result =
+                                                    await commandService.ExecuteCommandAsync(
+                                                        commandName,
+                                                        input,
+                                                        Platform.Telegram
+                                                    );
 
                                                 // Отправляем результат
                                                 await SendMessage(message.Chat.Id, result);

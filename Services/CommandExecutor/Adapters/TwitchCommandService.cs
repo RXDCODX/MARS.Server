@@ -19,6 +19,8 @@ public class TwitchCommandService : PlatformCommandServiceBase<string>, IHostedS
 
     protected override int DefaultMaxResponseLength => 500; // Twitch имеет ограничения на длину сообщений
 
+    public override char[] CommandPrefixes => ['!'];
+
     public override IEnumerable<string> UserCommands =>
         _commands
             .Values.Where(c => !c.IsAdminCommand && c.IsAvailableOnPlatform(Platform.Twitch))
@@ -105,8 +107,8 @@ public class TwitchCommandService : PlatformCommandServiceBase<string>, IHostedS
                     var username = e.ChatMessage.Username;
                     var userId = e.ChatMessage.UserId;
 
-                    // Проверяем, что сообщение начинается с команды
-                    if (!message.StartsWith('!'))
+                    // Проверяем, что сообщение начинается с префикса команды
+                    if (!StartsWithCommandPrefix(message))
                     {
                         return;
                     }
@@ -118,7 +120,7 @@ public class TwitchCommandService : PlatformCommandServiceBase<string>, IHostedS
                         return;
                     }
 
-                    var commandName = commandParts[0].Substring(1); // Убираем "!"
+                    var commandName = TrimCommandPrefix(commandParts[0]);
                     var input = commandParts.Length > 1 ? commandParts[1] : "";
 
                     // Обработка специальной команды commands
@@ -182,12 +184,28 @@ public class TwitchCommandService : PlatformCommandServiceBase<string>, IHostedS
                         return;
                     }
 
+                    // Проверяем доступность команды для платформы Twitch
+                    if (!command.IsAvailableOnPlatform(Platform.Twitch))
+                    {
+                        await SendMessage(
+                            $"Команда '{commandName}' недоступна на платформе Twitch."
+                        );
+                        return;
+                    }
+
                     // Выполняем команду
                     string result;
                     try
                     {
                         // Разбираем параметры из входной строки
                         var parameters = command.ParseParameters(input);
+
+                        // Добавляем информацию о пользователе Twitch в параметры
+                        parameters["userId"] = userId;
+                        parameters["displayName"] = username;
+                        parameters["isModerator"] = e.ChatMessage.IsModerator;
+                        parameters["isVip"] = e.ChatMessage.IsVip;
+                        parameters["isBroadcaster"] = e.ChatMessage.IsBroadcaster;
 
                         // Выполняем команду
                         result = await command.ExecuteAsync(parameters, Platform.Twitch);

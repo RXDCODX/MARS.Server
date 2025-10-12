@@ -72,8 +72,10 @@ public class ChangeStreamTitleCommand(
             }
             else
             {
-                return await streamManagementService.GetCurrentTitleAsync()
-                    ?? "Не удалось получить текущее название трансляции";
+                var answer = await streamManagementService.GetCurrentTitleAsync();
+                return string.IsNullOrWhiteSpace(answer)
+                    ? "Не удалось получить текущее название трансляции"
+                    : "Текущее название трансляции: " + answer;
             }
         }
         catch (Exception ex)

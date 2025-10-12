@@ -3,32 +3,192 @@ using MARS.Server.Services.CommandExecutor.Entitys.Commands;
 
 namespace MARS.Server.Services.CommandExecutor.Commands;
 
-public class HelpCommand : BaseCommand
+public class HelpCommand(ICommandService commandService) : BaseCommand
 {
     public override string CommandName => "help";
     public override string Description =>
-        "Показывает справку по возможностям бота и форматам медиа";
+        "Показывает справку по возможностям бота и форматам медиа, или информацию о конкретной команде";
     public override bool IsAdminCommand => false;
 
-    public override Platform[] AvailablePlatforms => [Platform.Telegram];
+    public override Platform[] AvailablePlatforms =>
+        [Platform.Telegram, Platform.Api, Platform.Twitch];
 
-    public override CommandVisibility Visibility => CommandVisibility.All; // Видна везде
+    public override CommandVisibility Visibility => CommandVisibility.All;
 
-    public override Task<string> ExecuteAsync(
+    public override CommandParameterInfo[] Parameters =>
+        [
+            new()
+            {
+                Name = "commandName",
+                Description = "Название команды для получения справки",
+                Type = "string",
+                Required = false,
+            },
+        ];
+
+    public override async Task<string> ExecuteAsync(
         Dictionary<string, object> parameters,
         Platform platform = Platform.None,
         CancellationToken cancellationToken = default
     )
     {
-        const string usage = """
+        string result;
+
+        // Проверяем, указано ли название команды
+        var hasCommandName =
+            parameters.TryGetValue("commandName", out var commandNameObj)
+            && !string.IsNullOrWhiteSpace(commandNameObj?.ToString());
+
+        if (hasCommandName)
+        {
+            var commandName = commandNameObj!.ToString()!.Trim();
+
+            // Убираем префиксы команд для данной платформы
+            var prefixes = GetCommandPrefixesForPlatform(platform);
+            commandName = commandName.TrimStart(prefixes);
+
+            // Получаем справку по конкретной команде
+            var commandHelp = await GetCommandHelp(commandName, platform, cancellationToken);
+
+            result = !string.IsNullOrWhiteSpace(commandHelp)
+                ? commandHelp
+                : $"Команда '{commandName}' не найдена. Используйте /commands или /c для списка доступных команд.";
+        }
+        else
+        {
+            // Возвращаем общую справку
+            result = GetGeneralHelp();
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Получить префиксы команд для указанной платформы
+    /// </summary>
+    /// <param name="platform">Платформа</param>
+    /// <returns>Массив символов-префиксов</returns>
+    private static char[] GetCommandPrefixesForPlatform(Platform platform)
+    {
+        char[] result = platform switch
+        {
+            Platform.Twitch => ['!'],
+            Platform.Telegram => ['/'],
+            _ => ['/', '!'],
+        };
+
+        return result;
+    }
+
+    private static string GetGeneralHelp()
+    {
+        var result = """
             Можно отправлять:
             1) Войсы
             2) Стикеры, на анимированные стикеры (в формате tgs) распростроняется кулдаун
             3) Видео до 20 мб в формате webm/mp4
             4) Аудио, но не советую. В них нету смысла, на стриме есть саундреквест
             5) Различные картинки, советую брать пикчи до разрешения в 1920x1080, кинешь выше - сломаю колени
+
+            💡 Подсказка: используйте /help <команда> для получения информации о конкретной команде
+            Например: /help catisa или /help !catisa
             """;
 
-        return Task.FromResult(usage);
+        return result;
+    }
+
+    private async Task<string> GetCommandHelp(
+        string commandName,
+        Platform platform,
+        CancellationToken cancellationToken
+    )
+    {
+        var result = string.Empty;
+
+        if (!string.IsNullOrWhiteSpace(commandName))
+        {
+            // Получаем информацию о всех командах
+            var userCommands = await commandService.GetUserCommandsInfoAsync(
+                platform,
+                cancellationToken
+            );
+            var adminCommands = await commandService.GetAdminCommandsInfoAsync(
+                platform,
+                cancellationToken
+            );
+
+            // Объединяем массивы команд
+            var allCommands = userCommands.Concat(adminCommands).ToArray();
+
+            // Ищем команду по имени (игнорируя регистр)
+            var command = allCommands.FirstOrDefault(c =>
+                c.Name.Equals(commandName, StringComparison.OrdinalIgnoreCase)
+            );
+
+            if (command != null)
+            {
+                result = FormatCommandHelp(command, platform);
+            }
+        }
+
+        return result;
+    }
+
+    private static string FormatCommandHelp(CommandInfo command, Platform platform)
+    {
+        var result = string.Empty;
+
+        if (command != null)
+        {
+            var prefix = platform switch
+            {
+                Platform.Twitch => "!",
+                Platform.Telegram => "/",
+                Platform.Api => "/",
+                _ => "/",
+            };
+
+            var commandType = command.IsAdminCommand
+                ? "Админская команда"
+                : "Пользовательская команда";
+
+            var parametersInfo = string.Empty;
+            if (command.Parameters.Length > 0)
+            {
+                var paramsList = command.Parameters.Select(p =>
+                {
+                    var required = p.Required ? "(обязательный)" : "(опциональный)";
+                    var defaultValue = !string.IsNullOrWhiteSpace(p.DefaultValue)
+                        ? $", по умолчанию: {p.DefaultValue}"
+                        : "";
+                    return $"  • {p.Name} ({p.Type}) {required}{defaultValue}\n    {p.Description}";
+                });
+                parametersInfo = $"\n\n📋 Параметры:\n{string.Join("\n", paramsList)}";
+            }
+            else
+            {
+                parametersInfo = "\n\n📋 Параметры: нет";
+            }
+
+            var usage =
+                command.Parameters.Length > 0
+                    ? $"\n\n💡 Использование:\n{prefix}{command.Name} {string.Join(" ", command.Parameters.Select(p => p.Required ? $"<{p.Name}>" : $"[{p.Name}]"))}"
+                    : $"\n\n💡 Использование:\n{prefix}{command.Name}";
+
+            var platforms = string.Join(", ", command.AvailablePlatforms.Select(p => p.ToString()));
+
+            result = $"""
+                {commandType}: {prefix}{command.Name}
+
+                📝 Описание:
+                {command.Description}
+                {parametersInfo}
+                {usage}
+
+                🌐 Доступна на платформах: {platforms}
+                """;
+        }
+
+        return result;
     }
 }

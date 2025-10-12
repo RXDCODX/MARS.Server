@@ -18,7 +18,7 @@ public class TanyaCommand : BaseCommand
     )
     {
         // Дата последнего рабочего дня Тани
-        var lastWorkDay1 = new DateTimeOffset(2024, 1, 22, default, default, default, default);
+        var lastWorkDay1 = new DateTimeOffset(2024, 1, 22, 0, 0, 0, TimeSpan.Zero);
 
         // Текущая дата
         var today = DateTimeOffset.Now;
@@ -63,4 +63,3 @@ public class TanyaCommand : BaseCommand
         }
     }
 }
-

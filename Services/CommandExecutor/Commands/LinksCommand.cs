@@ -9,7 +9,8 @@ public class LinksCommand : BaseCommand
     public override string Description => "Показывает полезные ссылки для игр";
     public override bool IsAdminCommand => false;
 
-    public override Platform[] AvailablePlatforms => [Platform.Telegram];
+    public override Platform[] AvailablePlatforms =>
+        [Platform.Telegram, Platform.Twitch, Platform.Api];
 
     public override Task<string> ExecuteAsync(
         Dictionary<string, object> parameters,
@@ -43,4 +44,3 @@ public class LinksCommand : BaseCommand
         return Task.FromResult(usage);
     }
 }
-

@@ -29,4 +29,3 @@ public class StartCommand : BaseCommand
         return Task.FromResult(usage);
     }
 }
-

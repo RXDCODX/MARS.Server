@@ -47,4 +47,9 @@ public interface IRxdcodxViewersService
     /// Обновить аватарки для пользователей без них
     /// </summary>
     Task<int> UpdateMissingAvatarsAsync();
+
+    /// <summary>
+    /// Актуализировать данные о фоловерах, модераторах и VIP
+    /// </summary>
+    Task ActualizeFollowersAsync();
 }

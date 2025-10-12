@@ -10,8 +10,7 @@ public class GenshinCommand : BaseCommand
         "Показывает информацию о ежедневных уведомлениях Genshin Impact";
     public override bool IsAdminCommand => false;
 
-    public override Platform[] AvailablePlatforms =>
-        [Platform.Telegram, Platform.Api, Platform.Discord, Platform.Vk, Platform.Twitch];
+    public override Platform[] AvailablePlatforms => [Platform.Telegram];
 
     public override Task<string> ExecuteAsync(
         Dictionary<string, object> parameters,

@@ -424,8 +424,11 @@ public static class StartupEstensions
         services.AddSingleton<SoundRequestManager>();
         services.AddHostedService(sp => sp.GetRequiredService<SoundRequestManager>());
         services.AddSingleton<YouTubeResolver>();
-        services.AddSingleton<SoundRequestCommandsService>();
-        services.AddHostedService(sp => sp.GetRequiredService<SoundRequestCommandsService>());
+        services.AddSingleton<SoundRequestService>();
+
+        // SoundRequest команды теперь обрабатываются через CommandExecutor
+        // services.AddSingleton<SoundRequestCommandsService>();
+        // services.AddHostedService(sp => sp.GetRequiredService<SoundRequestCommandsService>());
 
         return services;
     }

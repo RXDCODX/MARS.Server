@@ -9,7 +9,7 @@ public class PlatformTestCommand(ILogger<PlatformTestCommand> logger) : BaseComm
     public override string Description => "Тестовая команда для демонстрации работы с платформами";
     public override bool IsAdminCommand => true;
 
-    public override Platform[] AvailablePlatforms => [Platform.Telegram, Platform.Api, Platform.Discord, Platform.Vk, Platform.Twitch];
+    public override Platform[] AvailablePlatforms => [Platform.All];
 
     public override string[] Aliases => ["ptest"];
 
@@ -67,4 +67,3 @@ public class PlatformTestCommand(ILogger<PlatformTestCommand> logger) : BaseComm
         );
     }
 }
-

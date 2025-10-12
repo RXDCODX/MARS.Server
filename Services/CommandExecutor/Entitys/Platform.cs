@@ -12,4 +12,5 @@ public enum Platform
     Twitch,
     Discord,
     Vk,
+    All = Api | Telegram | Twitch | Discord | Vk,
 }

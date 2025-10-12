@@ -7,7 +7,7 @@ public class FumoCommand(IHubContext<TelegramusHub, ITelegramusHub> alertsHub) :
 {
     public override string CommandName => "fumo";
     public override string Description => "Отправляет фумо в чат";
-    public override bool IsAdminCommand => false;
+    public override bool IsAdminCommand => true;
 
     public override Platform[] AvailablePlatforms =>
         [Platform.Api, Platform.Telegram, Platform.Twitch];

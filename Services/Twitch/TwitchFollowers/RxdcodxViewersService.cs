@@ -40,8 +40,8 @@ public class RxdcodxViewersService(
                     followersFromDb.Count
                 );
 
-                // Обновляем данные из API в фоновом режиме
-                _ = Task.Run(UpdateFollowersFromApiAsync);
+                // Актуализируем данные при запуске
+                await ActualizeFollowersDataAsync();
             }
             else
             {
@@ -71,6 +71,75 @@ public class RxdcodxViewersService(
         {
             // Логируем ошибку, но не прерываем работу сервиса
             logger.LogError(ex, "Ошибка при инициализации кеша фоловеров");
+        }
+    }
+
+    /// <summary>
+    /// Актуализация данных о фоловерах, модераторах и VIP при запуске приложения
+    /// </summary>
+    private async Task ActualizeFollowersDataAsync()
+    {
+        try
+        {
+            logger.LogInformation("Начало актуализации данных о фоловерах, модераторах и VIP");
+
+            // Получаем текущие данные из API
+            var currentFollowersFromApi = await LoadFollowersFromApiAsync();
+
+            if (currentFollowersFromApi != null && currentFollowersFromApi.Count > 0)
+            {
+                // Получаем данные из БД
+                var followersFromDb = await followerDbService.GetAllFollowersFromDbAsync();
+
+                // Определяем кого нужно удалить (есть в БД, но нет в API)
+                var currentUserIdsFromApi = currentFollowersFromApi
+                    .Select(f => f.UserId)
+                    .ToHashSet();
+                var userIdsToDelete = followersFromDb
+                    .Where(f => !currentUserIdsFromApi.Contains(f.UserId))
+                    .Select(f => f.UserId)
+                    .ToList();
+
+                if (userIdsToDelete.Count > 0)
+                {
+                    var deletedCount = await followerDbService.DeleteFollowersAsync(
+                        userIdsToDelete
+                    );
+                    logger.LogInformation(
+                        "Удалено {Count} пользователей, которые отписались или больше не модераторы/VIP",
+                        deletedCount
+                    );
+                }
+
+                // Обогащаем данные дополнительной информацией
+                var enrichedFollowers = await userInfoService.EnrichFollowersInfoAsync(
+                    currentFollowersFromApi
+                );
+
+                // Обновляем аватарки для пользователей без них
+                await userInfoService.UpdateMissingAvatarsAsync(enrichedFollowers);
+
+                // Обновляем все данные в БД (статусы могли измениться)
+                var savedCount = await followerDbService.SaveOrUpdateFollowersAsync(
+                    enrichedFollowers
+                );
+
+                logger.LogInformation(
+                    "Актуализация завершена: обновлено/добавлено {SavedCount} записей, удалено {DeletedCount} записей",
+                    savedCount,
+                    userIdsToDelete.Count
+                );
+            }
+            else
+            {
+                logger.LogWarning(
+                    "Не удалось получить данные из API для актуализации, используем существующий кеш"
+                );
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при актуализации данных фоловеров");
         }
     }
 
@@ -489,6 +558,8 @@ public class RxdcodxViewersService(
     /// </summary>
     public async Task<int> UpdateMissingAvatarsAsync()
     {
+        var result = 0;
+
         try
         {
             // Получаем пользователей без аватарок из БД
@@ -497,51 +568,66 @@ public class RxdcodxViewersService(
             if (usersWithoutAvatars.Count == 0)
             {
                 logger.LogInformation("Все пользователи уже имеют аватарки");
-                return 0;
             }
-
-            logger.LogInformation(
-                "Найдено {Count} пользователей без аватарок, обновляем...",
-                usersWithoutAvatars.Count
-            );
-
-            // Обновляем аватарки через TwitchUserInfoService
-            var updatedCount = await userInfoService.UpdateMissingAvatarsAsync(usersWithoutAvatars);
-
-            if (updatedCount > 0)
+            else
             {
-                // Получаем только пользователей с обновленными аватарками
-                var usersWithUpdatedAvatars = usersWithoutAvatars
-                    .Where(u => !string.IsNullOrWhiteSpace(u.ProfileImageUrl))
-                    .ToList();
+                logger.LogInformation(
+                    "Найдено {Count} пользователей без аватарок, обновляем...",
+                    usersWithoutAvatars.Count
+                );
 
-                if (usersWithUpdatedAvatars.Count > 0)
+                // Обновляем аватарки через TwitchUserInfoService
+                var updatedCount = await userInfoService.UpdateMissingAvatarsAsync(
+                    usersWithoutAvatars
+                );
+
+                if (updatedCount > 0)
                 {
-                    // Сохраняем обновленные данные в БД
-                    var dbUpdatedCount = await followerDbService.UpdateAvatarsAsync(
-                        usersWithUpdatedAvatars
-                    );
+                    // Получаем только пользователей с обновленными аватарками
+                    var usersWithUpdatedAvatars = usersWithoutAvatars
+                        .Where(u => !string.IsNullOrWhiteSpace(u.ProfileImageUrl))
+                        .ToList();
 
-                    logger.LogInformation(
-                        "Успешно обновлено {Count} аватарок в памяти и {DbCount} в БД",
-                        updatedCount,
-                        dbUpdatedCount
-                    );
+                    if (usersWithUpdatedAvatars.Count > 0)
+                    {
+                        // Сохраняем обновленные данные в БД
+                        var dbUpdatedCount = await followerDbService.UpdateAvatarsAsync(
+                            usersWithUpdatedAvatars
+                        );
+
+                        logger.LogInformation(
+                            "Успешно обновлено {Count} аватарок в памяти и {DbCount} в БД",
+                            updatedCount,
+                            dbUpdatedCount
+                        );
+                        result = updatedCount;
+                    }
+                    else
+                    {
+                        logger.LogWarning(
+                            "Аватарки обновились в памяти, но не найдены для сохранения в БД"
+                        );
+                    }
                 }
                 else
                 {
-                    logger.LogWarning(
-                        "Аватарки обновились в памяти, но не найдены для сохранения в БД"
-                    );
+                    result = updatedCount;
                 }
             }
-
-            return updatedCount;
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при обновлении аватарок пользователей");
-            return 0;
         }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Актуализировать данные о фоловерах, модераторах и VIP (публичный метод)
+    /// </summary>
+    public async Task ActualizeFollowersAsync()
+    {
+        await ActualizeFollowersDataAsync();
     }
 }

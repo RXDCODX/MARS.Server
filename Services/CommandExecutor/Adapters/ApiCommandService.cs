@@ -17,6 +17,8 @@ public class ApiCommandService : PlatformCommandServiceBase<string>
 
     protected override int DefaultMaxResponseLength => 10000; // API может поддерживать более длинные ответы
 
+    public override char[] CommandPrefixes => ['/', '!'];
+
     public override IEnumerable<string> UserCommands =>
         _commands
             .Values.Where(c => !c.IsAdminCommand && c.IsAvailableOnPlatform(Platform.Api))
@@ -109,39 +111,47 @@ public class ApiCommandService : PlatformCommandServiceBase<string>
 
                     if (_commands.TryGetValue(commandName, out var command))
                     {
-                        // Проверяем количество обязательных параметров
-                        var commandInfo = command.GetParameterInfo();
-                        var requiredParams = commandInfo.Where(p => p.Required).ToArray();
-                        var inputParts = string.IsNullOrWhiteSpace(input) ? [] : input.Split(' ');
-
-                        if (inputParts.Length < requiredParams.Length)
+                        // Проверяем доступность команды для платформы API
+                        if (!command.IsAvailableOnPlatform(Platform.Api))
                         {
-                            var missingParam = requiredParams[inputParts.Length];
-                            result =
-                                $"Не хватает параметра '{missingParam.Name}'. Использование: {commandName} {string.Join(" ", requiredParams.Select(p => $"<{p.Name}>"))}";
+                            result = $"Команда '{commandName}' недоступна на платформе API.";
                         }
                         else
                         {
-                            // Разбираем параметры из входной строки
-                            var parameters = command.ParseParameters(input);
+                            // Проверяем количество обязательных параметров
+                            var commandInfo = command.GetParameterInfo();
+                            var requiredParams = commandInfo.Where(p => p.Required).ToArray();
+                            var inputParts = string.IsNullOrWhiteSpace(input) ? [] : input.Split(' ');
 
-                            // Выполняем команду
-                            var commandResult = await command.ExecuteAsync(
-                                parameters,
-                                Platform.Api,
-                                cancellationToken
-                            );
+                            if (inputParts.Length < requiredParams.Length)
+                            {
+                                var missingParam = requiredParams[inputParts.Length];
+                                result =
+                                    $"Не хватает параметра '{missingParam.Name}'. Использование: {commandName} {string.Join(" ", requiredParams.Select(p => $"<{p.Name}>"))}";
+                            }
+                            else
+                            {
+                                // Разбираем параметры из входной строки
+                                var parameters = command.ParseParameters(input);
 
-                            // Валидируем ответ для платформы
-                            result = ValidateResponse(commandResult);
+                                // Выполняем команду
+                                var commandResult = await command.ExecuteAsync(
+                                    parameters,
+                                    Platform.Api,
+                                    cancellationToken
+                                );
 
-                            _logger.LogInformation(
-                                "Команда '{CommandName}' выполнена через API с результатом: {Result}",
-                                commandName,
-                                result.Length > 100
-                                    ? string.Concat(result.AsSpan(0, 100), "...")
-                                    : result
-                            );
+                                // Валидируем ответ для платформы
+                                result = ValidateResponse(commandResult);
+
+                                _logger.LogInformation(
+                                    "Команда '{CommandName}' выполнена через API с результатом: {Result}",
+                                    commandName,
+                                    result.Length > 100
+                                        ? string.Concat(result.AsSpan(0, 100), "...")
+                                        : result
+                                );
+                            }
                         }
                     }
                 }

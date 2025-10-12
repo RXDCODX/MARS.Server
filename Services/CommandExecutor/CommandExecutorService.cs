@@ -308,24 +308,32 @@ public class CommandExecutorService(CommandFactory commandFactory)
 
             if (_commands.TryGetValue(commandName, out var command))
             {
-                // Проверяем количество обязательных параметров
-                var commandInfo = command.GetParameterInfo();
-                var requiredParams = commandInfo.Where(p => p.Required).ToArray();
-                var inputParts = string.IsNullOrWhiteSpace(input) ? [] : input.Split(' ');
-
-                if (inputParts.Length < requiredParams.Length)
+                // Проверяем доступность команды для платформы
+                if (!command.IsAvailableOnPlatform(platform))
                 {
-                    var missingParam = requiredParams[inputParts.Length];
-                    result =
-                        $"Не хватает параметра '{missingParam.Name}'. Использование: {commandName} {string.Join(" ", requiredParams.Select(p => $"<{p.Name}>"))}";
+                    result = $"Команда '{commandName}' недоступна на текущей платформе.";
                 }
                 else
                 {
-                    // Разбираем параметры из входной строки
-                    var parameters = command.ParseParameters(input);
+                    // Проверяем количество обязательных параметров
+                    var commandInfo = command.GetParameterInfo();
+                    var requiredParams = commandInfo.Where(p => p.Required).ToArray();
+                    var inputParts = string.IsNullOrWhiteSpace(input) ? [] : input.Split(' ');
 
-                    // Выполняем команду
-                    result = await command.ExecuteAsync(parameters, platform, cancellationToken);
+                    if (inputParts.Length < requiredParams.Length)
+                    {
+                        var missingParam = requiredParams[inputParts.Length];
+                        result =
+                            $"Не хватает параметра '{missingParam.Name}'. Использование: {commandName} {string.Join(" ", requiredParams.Select(p => $"<{p.Name}>"))}";
+                    }
+                    else
+                    {
+                        // Разбираем параметры из входной строки
+                        var parameters = command.ParseParameters(input);
+
+                        // Выполняем команду
+                        result = await command.ExecuteAsync(parameters, platform, cancellationToken);
+                    }
                 }
             }
         }
