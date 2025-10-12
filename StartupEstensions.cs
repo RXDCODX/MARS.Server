@@ -70,6 +70,7 @@ public static class StartupEstensions
     internal static IServiceCollection AddBaseAspNetMiddlewares(this IServiceCollection services)
     {
         services.AddSpaYarp();
+        services.AddApplicationInsightsTelemetry();
 
         services
             .AddSignalR(options =>
