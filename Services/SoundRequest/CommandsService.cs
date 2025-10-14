@@ -1,4 +1,5 @@
 ﻿using MARS.Server.Services.SoundRequest.Entities;
+using MARS.Server.Services.SoundRequest.Interfaces;
 using MARS.Server.Services.SoundRequest.Queue;
 using MARS.Server.Services.SoundRequest.YouTube;
 
@@ -10,7 +11,10 @@ namespace MARS.Server.Services.SoundRequest;
 public class CommandsService(
     YouTubeResolver ytResolver,
     SoundRequestUserQueue queue,
-    IDbContextFactory<AppDbContext> dbFactory
+    IDbContextFactory<AppDbContext> dbFactory,
+    IPlayerController playerController,
+    StateManager stateManager,
+    SignalRService signalRService
 )
 {
     /// <summary>
@@ -44,17 +48,30 @@ public class CommandsService(
 
         if (info != null)
         {
-            // Сохраняем трек в базу данных, если его там ещё нет
-            await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
-            var exists = await db
-                .SoundRequestBaseTrackInfos.AsNoTracking()
-                .AnyAsync(t => t.Url == info.Url, cancellationToken);
+            // Проверяем состояние плеера ДО добавления в очередь
+            var currentState = await stateManager.GetStateAsync();
+            var wasPlayerStopped = currentState.IsStoped;
 
-            if (!exists)
+            // Сохраняем трек в базу данных или загружаем существующий
+            await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+            var existingTrack = await db
+                .SoundRequestBaseTrackInfos.AsNoTracking()
+                .FirstOrDefaultAsync(t => t.Url == info.Url, cancellationToken);
+
+            if (existingTrack != null)
             {
+                // Используем существующий трек вместо нового
+                info = existingTrack;
+            }
+            else
+            {
+                // Трек новый, сохраняем его
                 db.SoundRequestBaseTrackInfos.Add(info);
                 await db.SaveChangesAsync(cancellationToken);
             }
+
+            // Проверяем размер очереди ДО добавления
+            var queueCountBefore = await queue.GetQueueCountAsync();
 
             // Добавляем трек в очередь
             await queue.AddToQueueAsync(
@@ -66,6 +83,22 @@ public class CommandsService(
                     TwitchDisplayName = displayName,
                 }
             );
+
+            // Если плеер был остановлен И очередь была пуста - запускаем воспроизведение
+            if (wasPlayerStopped && queueCountBefore == 0)
+            {
+                await playerController.PlayAsync(info, userId, displayName, cancellationToken);
+                var addedTrack = (await queue.GetQueueAsync()).First(t =>
+                    t.RequestedTrackId == info.Id
+                );
+                await queue.RemoveFromQueueAsync(addedTrack.Id);
+                await NotifyQueueChangedAsync();
+            }
+            else
+            {
+                // Если не запускаем автоматически - уведомляем об изменении очереди
+                await NotifyQueueChangedAsync();
+            }
 
             var duration = info.Duration;
             var durationText =
@@ -155,6 +188,10 @@ public class CommandsService(
         {
             db.SoundRequestUserQueue.Remove(last);
             await db.SaveChangesAsync(cancellationToken);
+
+            // Уведомляем об изменении очереди
+            await NotifyQueueChangedAsync();
+
             result = "Последний заказ удален";
         }
         else
@@ -185,16 +222,30 @@ public class CommandsService(
 
         if (items is { Length: > 0 })
         {
+            // Проверяем состояние плеера ДО добавления плейлиста
+            var currentState = await stateManager.GetStateAsync();
+            var wasPlayerStopped = currentState.IsStoped;
+            var queueCountBefore = await queue.GetQueueCountAsync();
+
             await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+            BaseTrackInfo? firstTrack = null;
 
             foreach (var info in items)
             {
-                var exists = await db
+                // Проверяем существование трека и загружаем его, если есть
+                var existingTrack = await db
                     .SoundRequestBaseTrackInfos.AsNoTracking()
-                    .AnyAsync(t => t.Url == info.Url, cancellationToken);
+                    .FirstOrDefaultAsync(t => t.Url == info.Url, cancellationToken);
 
-                if (!exists)
+                var trackToAdd = info;
+                if (existingTrack != null)
                 {
+                    // Используем существующий трек
+                    trackToAdd = existingTrack;
+                }
+                else
+                {
+                    // Трек новый, сохраняем его
                     db.SoundRequestBaseTrackInfos.Add(info);
                     await db.SaveChangesAsync(cancellationToken);
                 }
@@ -202,12 +253,36 @@ public class CommandsService(
                 await queue.AddToQueueAsync(
                     new UserRequestedTrack
                     {
-                        RequestedTrack = info,
-                        RequestedTrackId = info.Id,
+                        RequestedTrack = trackToAdd,
+                        RequestedTrackId = trackToAdd.Id,
                         TwitchId = userId,
                         TwitchDisplayName = displayName,
                     }
                 );
+
+                // Запоминаем первый трек плейлиста
+                firstTrack ??= trackToAdd;
+            }
+
+            // Если плеер был остановлен И очередь была пуста - запускаем первый трек
+            if (wasPlayerStopped && queueCountBefore == 0 && firstTrack != null)
+            {
+                await playerController.PlayAsync(
+                    firstTrack,
+                    userId,
+                    displayName,
+                    cancellationToken
+                );
+                var addedTrack = (await queue.GetQueueAsync()).First(t =>
+                    t.RequestedTrackId == firstTrack.Id
+                );
+                await queue.RemoveFromQueueAsync(addedTrack.Id);
+                await NotifyQueueChangedAsync();
+            }
+            else
+            {
+                // Если не запускаем автоматически - уведомляем об изменении очереди
+                await NotifyQueueChangedAsync();
             }
 
             result = $"Добавлено треков: {items.Length}";
@@ -219,4 +294,14 @@ public class CommandsService(
 
         return result;
     }
+
+    /// <summary>
+    /// Уведомить клиентов об изменении очереди
+    /// </summary>
+    private async Task NotifyQueueChangedAsync()
+    {
+        var currentQueue = await queue.GetQueueAsync();
+        await signalRService.NotifyQueueChangedAsync(currentQueue);
+    }
 }
+

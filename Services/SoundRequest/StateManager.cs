@@ -42,6 +42,8 @@ public class StateManager : IDisposable
                 IsMuted = _currentState.IsMuted,
                 IsStoped = _currentState.IsStoped,
                 Volume = _currentState.Volume,
+                CurrentTrackRequestedBy = _currentState.CurrentTrackRequestedBy,
+                CurrentTrackRequestedByDisplayName = _currentState.CurrentTrackRequestedByDisplayName,
             };
         }
         finally
@@ -68,6 +70,8 @@ public class StateManager : IDisposable
                 IsMuted = _currentState.IsMuted,
                 IsStoped = _currentState.IsStoped,
                 Volume = _currentState.Volume,
+                CurrentTrackRequestedBy = _currentState.CurrentTrackRequestedBy,
+                CurrentTrackRequestedByDisplayName = _currentState.CurrentTrackRequestedByDisplayName,
             };
         }
         finally
@@ -105,6 +109,8 @@ public class StateManager : IDisposable
                     IsMuted = _currentState.IsMuted,
                     IsStoped = _currentState.IsStoped,
                     Volume = _currentState.Volume,
+                    CurrentTrackRequestedBy = _currentState.CurrentTrackRequestedBy,
+                    CurrentTrackRequestedByDisplayName = _currentState.CurrentTrackRequestedByDisplayName,
                 };
             }
         }
@@ -131,6 +137,29 @@ public class StateManager : IDisposable
                 state.CurrentTrack = track;
                 state.CurrentTrackDuration = track?.Duration;
                 state.IsStoped = track == null;
+            },
+            notify
+        );
+    }
+
+    /// <summary>
+    /// Установить текущий трек с информацией о пользователе, заказавшем трек
+    /// </summary>
+    public async Task SetCurrentTrackAsync(
+        BaseTrackInfo? track,
+        string? requestedBy,
+        string? requestedByDisplayName,
+        bool notify = true
+    )
+    {
+        await UpdateStateAsync(
+            state =>
+            {
+                state.CurrentTrack = track;
+                state.CurrentTrackDuration = track?.Duration;
+                state.IsStoped = track == null;
+                state.CurrentTrackRequestedBy = requestedBy;
+                state.CurrentTrackRequestedByDisplayName = requestedByDisplayName;
             },
             notify
         );
@@ -198,6 +227,19 @@ public class StateManager : IDisposable
     /// </summary>
     public async Task StartPlayingAsync(BaseTrackInfo track, bool notify = true)
     {
+        await StartPlayingAsync(track, null, null, notify);
+    }
+
+    /// <summary>
+    /// Начать воспроизведение трека с информацией о пользователе, заказавшем трек
+    /// </summary>
+    public async Task StartPlayingAsync(
+        BaseTrackInfo track,
+        string? requestedBy,
+        string? requestedByDisplayName,
+        bool notify = true
+    )
+    {
         await UpdateStateAsync(
             state =>
             {
@@ -205,6 +247,8 @@ public class StateManager : IDisposable
                 state.CurrentTrackDuration = track.Duration;
                 state.IsPaused = false;
                 state.IsStoped = false;
+                state.CurrentTrackRequestedBy = requestedBy;
+                state.CurrentTrackRequestedByDisplayName = requestedByDisplayName;
             },
             notify
         );
@@ -223,6 +267,8 @@ public class StateManager : IDisposable
                 state.CurrentTrackDuration = null;
                 state.IsPaused = false;
                 state.IsStoped = true;
+                state.CurrentTrackRequestedBy = null;
+                state.CurrentTrackRequestedByDisplayName = null;
             },
             notify
         );

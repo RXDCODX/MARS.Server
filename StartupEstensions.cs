@@ -419,16 +419,19 @@ public static class StartupEstensions
     {
         Program.IsUseSoundRequest = true;
 
-        services.AddSingleton<IPlayerController, FakeMediaPlayer>();
+        // Регистрируем базовые сервисы
+        services.AddSingleton<StateManager>();
+        services.AddSingleton<SignalRService>();
         services.AddSingleton<SoundRequestUserQueue>();
+        services.AddSingleton<YouTubeResolver>();
+
+        // Регистрируем плеер
+        services.AddSingleton<IPlayerController, MainPlayer>();
+
+        // Регистрируем менеджер и CommandsService
         services.AddSingleton<SoundRequestManager>();
         services.AddHostedService(sp => sp.GetRequiredService<SoundRequestManager>());
-        services.AddSingleton<YouTubeResolver>();
         services.AddSingleton<CommandsService>();
-
-        // SoundRequest команды теперь обрабатываются через CommandExecutor
-        // services.AddSingleton<SoundRequestCommandsService>();
-        // services.AddHostedService(sp => sp.GetRequiredService<SoundRequestCommandsService>());
 
         return services;
     }

@@ -22,4 +22,14 @@ public class PlayerState
     public bool IsStoped { get; set; }
 
     public int Volume { get; set; } = 100;
+
+    /// <summary>
+    /// Twitch ID пользователя, заказавшего текущий трек
+    /// </summary>
+    public string? CurrentTrackRequestedBy { get; set; }
+
+    /// <summary>
+    /// Отображаемое имя пользователя, заказавшего текущий трек
+    /// </summary>
+    public string? CurrentTrackRequestedByDisplayName { get; set; }
 }

@@ -5,6 +5,12 @@ namespace MARS.Server.Services.SoundRequest.Interfaces;
 public interface IPlayerController
 {
     Task PlayAsync(BaseTrackInfo track, CancellationToken ct);
+    Task PlayAsync(
+        BaseTrackInfo track,
+        string? requestedBy,
+        string? requestedByDisplayName,
+        CancellationToken ct
+    );
     Task PauseAsync(CancellationToken ct);
     Task ResumeAsync(CancellationToken ct);
     Task StopAsync(CancellationToken ct);
