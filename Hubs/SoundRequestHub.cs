@@ -1,4 +1,4 @@
-﻿using MARS.Server.Services.SoundRequest;
+using MARS.Server.Services.SoundRequest;
 using MARS.Server.Services.SoundRequest.Entities;
 using SignalRSwaggerGen.Attributes;
 using SignalRSwaggerGen.Enums;
@@ -10,43 +10,43 @@ public class SoundRequestHub(
     SoundRequestManager manager
 ) : Hub<ISoundRequestHub>
 {
-    public Task JoinAsClient() => Groups.AddToGroupAsync(Context.ConnectionId, "client");
+    public Task JoinAsClient() => Groups.AddToGroupAsync(Context.ConnectionId, SignalRService.ClientGroupName);
 
     public Task Play()
     {
-        _ = manager.Resume();
+        _ = manager.ResumeAsync();
         return Task.CompletedTask;
     }
 
     public Task Pause()
     {
-        _ = manager.Pause();
+        _ = manager.PauseAsync();
         return Task.CompletedTask;
     }
 
     public Task Resume()
     {
-        _ = manager.Resume();
+        _ = manager.ResumeAsync();
         return Task.CompletedTask;
     }
 
     public Task Stop()
     {
-        _ = manager.Stop();
+        _ = manager.StopAsync();
         return Task.CompletedTask;
     }
 
-    public Task Skip() => manager.Skip();
+    public Task Skip() => manager.SkipAsync();
 
     public Task Mute()
     {
-        _ = manager.Mute();
+        _ = manager.MuteAsync();
         return Task.CompletedTask;
     }
 
     public Task Unmute()
     {
-        _ = manager.Unmute();
+        _ = manager.UnmuteAsync();
         return Task.CompletedTask;
     }
 
@@ -59,24 +59,51 @@ public class SoundRequestHub(
     public async Task AddTrackToQueue(UserRequestedTrack track) =>
         await manager.AddTrack(track);
 
-    public async Task<List<UserRequestedTrack>> GetQueue() => await manager.GetQueue();
+    public async Task<List<UserRequestedTrack>> GetQueue() => await manager.GetQueueAsync();
 
-    public Task<List<BaseTrackInfo>> GetHistory(int count = 20)
+    public async Task<List<BaseTrackInfo>> GetHistory(int count = 20)
     {
-        return Task.FromResult(new List<BaseTrackInfo>());
+        return await manager.GetHistoryAsync(count);
     }
 
     public Task<PlayerState> GetPlayerState() => Task.FromResult(manager.GetState());
 
-    public Task Ended() =>
-        // Implementation of Ended method
-        Task.CompletedTask;
+    public async Task PlayNext()
+    {
+        await manager.PlayNextFromQueueAsync();
+    }
 
-    public Task Started() =>
-        // Implementation of Started method
-        Task.CompletedTask;
+    public async Task PlayTrack(Guid trackId)
+    {
+        await manager.PlayTrackFromQueueAsync(trackId);
+    }
 
-    public Task ErrorPlaying() =>
-        // Implementation of ErrorPlaying method
-        Task.CompletedTask;
+    public async Task RemoveTrack(Guid trackId)
+    {
+        await manager.RemoveTrack(trackId);
+    }
+
+    /// <summary>
+    /// Вызывается фронтендом когда трек завершил воспроизведение
+    /// </summary>
+    public async Task Ended()
+    {
+        await manager.OnTrackEnded();
+    }
+
+    /// <summary>
+    /// Вызывается фронтендом когда трек начал воспроизведение
+    /// </summary>
+    public async Task Started()
+    {
+        await manager.OnTrackStarted();
+    }
+
+    /// <summary>
+    /// Вызывается фронтендом при ошибке воспроизведения
+    /// </summary>
+    public async Task ErrorPlaying()
+    {
+        await manager.OnTrackError();
+    }
 }

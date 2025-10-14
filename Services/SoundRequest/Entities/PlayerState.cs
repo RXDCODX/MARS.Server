@@ -1,8 +1,9 @@
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace MARS.Server.Services.SoundRequest.Entities;
 
-public class PlayerState : ICloneable
+public class PlayerState
 {
     [Key]
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -21,38 +22,4 @@ public class PlayerState : ICloneable
     public bool IsStoped { get; set; }
 
     public int Volume { get; set; } = 100;
-
-    public object Clone()
-    {
-        return MemberwiseClone();
-    }
-
-    public event EntityChanged? EntityChanged;
-
-    public void ChangeEntity()
-    {
-        EntityChanged?.Invoke(this, EventArgs.Empty);
-    }
 }
-
-public delegate Task EntityChanged(object? sender, EventArgs eventargs);
-
-public static class PlayerStateUpdater
-{
-    public static void UpdatePlayerState(this PlayerState sourceState, Action<PlayerState> upAction)
-    {
-        var newState = sourceState.Clone();
-
-        if (newState is PlayerState state)
-        {
-            upAction(state);
-            sourceState = state;
-            sourceState.ChangeEntity();
-            return;
-        }
-
-        throw new InvalidCastException();
-    }
-}
-
-

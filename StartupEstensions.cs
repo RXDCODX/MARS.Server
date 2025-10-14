@@ -13,7 +13,6 @@ using MARS.Server.Services.Shikimori;
 using MARS.Server.Services.Shikimori.Entitys;
 using MARS.Server.Services.SoundRequest;
 using MARS.Server.Services.SoundRequest.Interfaces;
-using MARS.Server.Services.SoundRequest.Player;
 using MARS.Server.Services.SoundRequest.Queue;
 using MARS.Server.Services.SoundRequest.YouTube;
 using MARS.Server.Services.TelegramBotService;
@@ -425,7 +424,7 @@ public static class StartupEstensions
         services.AddSingleton<SoundRequestManager>();
         services.AddHostedService(sp => sp.GetRequiredService<SoundRequestManager>());
         services.AddSingleton<YouTubeResolver>();
-        services.AddSingleton<SoundRequestService>();
+        services.AddSingleton<CommandsService>();
 
         // SoundRequest команды теперь обрабатываются через CommandExecutor
         // services.AddSingleton<SoundRequestCommandsService>();

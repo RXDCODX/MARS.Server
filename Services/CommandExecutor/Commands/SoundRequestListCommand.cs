@@ -4,7 +4,7 @@ using MARS.Server.Services.SoundRequest;
 
 namespace MARS.Server.Services.CommandExecutor.Commands;
 
-public class SoundRequestListCommand(SoundRequestService soundRequestService) : BaseCommand
+public class SoundRequestListCommand(CommandsService commandsService) : BaseCommand
 {
     public override string CommandName => "srlist";
     public override string Description =>
@@ -70,7 +70,7 @@ public class SoundRequestListCommand(SoundRequestService soundRequestService) : 
                 var userId = userIdObj!.ToString()!;
                 var displayName = displayNameObj!.ToString()!;
 
-                result = await soundRequestService.AddPlaylistAsync(
+                result = await commandsService.AddPlaylistAsync(
                     playlistUrl,
                     userId,
                     displayName,

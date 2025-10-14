@@ -1,4 +1,4 @@
-using MARS.Server.Services.SoundRequest.Entities;
+﻿using MARS.Server.Services.SoundRequest.Entities;
 
 namespace MARS.Server.Services.SoundRequest.Queue;
 
@@ -12,9 +12,10 @@ public class SoundRequestUserQueue(
     public async Task<UserRequestedTrack> AddToQueueAsync(UserRequestedTrack track)
     {
         await using var dbContext = await contextFactory.CreateDbContextAsync(_cancellationToken);
-        var maxOrder = await dbContext
-            .SoundRequestUserQueue.AsNoTracking()
-            .MaxAsync(t => (int?)t.Order, cancellationToken: _cancellationToken) ?? 0;
+        var maxOrder =
+            await dbContext
+                .SoundRequestUserQueue.AsNoTracking()
+                .MaxAsync(t => (int?)t.Order, cancellationToken: _cancellationToken) ?? 0;
 
         track.Order = maxOrder + 1;
         dbContext.SoundRequestUserQueue.Add(track);
@@ -26,7 +27,10 @@ public class SoundRequestUserQueue(
     public async Task RemoveFromQueueAsync(Guid id)
     {
         await using var dbContext = await contextFactory.CreateDbContextAsync(_cancellationToken);
-        var trackToRemove = await dbContext.SoundRequestUserQueue.FindAsync(id);
+        var trackToRemove = await dbContext.SoundRequestUserQueue.FindAsync(
+            [id],
+            cancellationToken: _cancellationToken
+        );
         if (trackToRemove == null)
         {
             return;
@@ -50,9 +54,34 @@ public class SoundRequestUserQueue(
         await using var dbContext = await contextFactory.CreateDbContextAsync(_cancellationToken);
         return await dbContext
             .SoundRequestUserQueue.AsNoTracking()
+            .Include(t => t.RequestedTrack)
             .OrderBy(t => t.Order)
             .ToListAsync(cancellationToken: _cancellationToken);
     }
+
+    public async Task<UserRequestedTrack?> GetNextTrackAsync()
+    {
+        UserRequestedTrack? result = null;
+
+        await using var dbContext = await contextFactory.CreateDbContextAsync(_cancellationToken);
+        result = await dbContext
+            .SoundRequestUserQueue.AsNoTracking()
+            .Include(t => t.RequestedTrack)
+            .OrderBy(t => t.Order)
+            .FirstOrDefaultAsync(cancellationToken: _cancellationToken);
+
+        return result;
+    }
+
+    public async Task<int> GetQueueCountAsync()
+    {
+        int result;
+
+        await using var dbContext = await contextFactory.CreateDbContextAsync(_cancellationToken);
+        result = await dbContext.SoundRequestUserQueue.CountAsync(
+            cancellationToken: _cancellationToken
+        );
+
+        return result;
+    }
 }
-
-

@@ -4,7 +4,7 @@ using MARS.Server.Services.SoundRequest;
 
 namespace MARS.Server.Services.CommandExecutor.Commands;
 
-public class SongCommand(SoundRequestService soundRequestService) : BaseCommand
+public class SongCommand(CommandsService commandsService) : BaseCommand
 {
     public override string CommandName => "song";
     public override string Description => "Показать текущую или последнюю проигранную песню";
@@ -20,7 +20,7 @@ public class SongCommand(SoundRequestService soundRequestService) : BaseCommand
         CancellationToken cancellationToken = default
     )
     {
-        var result = await soundRequestService.GetCurrentSongAsync(cancellationToken);
+        var result = await commandsService.GetCurrentSongAsync(cancellationToken);
         return result;
     }
 }

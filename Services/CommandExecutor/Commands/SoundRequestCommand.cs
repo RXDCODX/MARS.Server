@@ -1,10 +1,10 @@
-using MARS.Server.Services.CommandExecutor.Entitys;
+﻿using MARS.Server.Services.CommandExecutor.Entitys;
 using MARS.Server.Services.CommandExecutor.Entitys.Commands;
 using MARS.Server.Services.SoundRequest;
 
 namespace MARS.Server.Services.CommandExecutor.Commands;
 
-public class SoundRequestCommand(SoundRequestService soundRequestService) : BaseCommand
+public class SoundRequestCommand(CommandsService commandsService) : BaseCommand
 {
     public override string CommandName => "sr";
     public override string Description => "Добавить трек в очередь звуковых запросов";
@@ -51,7 +51,7 @@ public class SoundRequestCommand(SoundRequestService soundRequestService) : Base
             var userId = userIdObj!.ToString()!;
             var displayName = displayNameObj!.ToString()!;
 
-            result = await soundRequestService.AddTrackAsync(
+            result = await commandsService.AddTrackAsync(
                 query,
                 userId,
                 displayName,
@@ -68,4 +68,3 @@ public class SoundRequestCommand(SoundRequestService soundRequestService) : Base
         return result;
     }
 }
-

@@ -4,7 +4,7 @@ using MARS.Server.Services.SoundRequest;
 
 namespace MARS.Server.Services.CommandExecutor.Commands;
 
-public class WrongCommand(SoundRequestService soundRequestService) : BaseCommand
+public class WrongCommand(CommandsService commandsService) : BaseCommand
 {
     public override string CommandName => "wrong";
     public override string Description => "Отменить последний заказанный трек";
@@ -29,7 +29,7 @@ public class WrongCommand(SoundRequestService soundRequestService) : BaseCommand
         if (hasUserId)
         {
             var userId = userIdObj!.ToString()!;
-            result = await soundRequestService.CancelLastTrackAsync(userId, cancellationToken);
+            result = await commandsService.CancelLastTrackAsync(userId, cancellationToken);
         }
         else
         {

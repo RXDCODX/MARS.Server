@@ -4,7 +4,16 @@ namespace MARS.Server.Hubs.Interfaces;
 
 public interface ISoundRequestHub
 {
-    public Task PlayerStateChange(PlayerState playerState);
+    /// <summary>
+    /// Уведомление клиентов об изменении состояния плеера
+    /// </summary>
+    Task PlayerStateChange(PlayerState playerState);
+
+    /// <summary>
+    /// Уведомление клиентов об изменении очереди
+    /// </summary>
+    Task QueueChanged(List<UserRequestedTrack> queue);
+
     Task Play();
     Task Pause();
     Task Resume();

@@ -1,13 +1,13 @@
-using MARS.Server.Services.SoundRequest.Entities;
+﻿using MARS.Server.Services.SoundRequest.Entities;
 using MARS.Server.Services.SoundRequest.Queue;
 using MARS.Server.Services.SoundRequest.YouTube;
 
 namespace MARS.Server.Services.SoundRequest;
 
 /// <summary>
-/// Сервис для работы с звуковыми запросами
+/// Сервис для работы со звуковыми запросами
 /// </summary>
-public class SoundRequestService(
+public class CommandsService(
     YouTubeResolver ytResolver,
     SoundRequestUserQueue queue,
     IDbContextFactory<AppDbContext> dbFactory
@@ -220,4 +220,3 @@ public class SoundRequestService(
         return result;
     }
 }
-

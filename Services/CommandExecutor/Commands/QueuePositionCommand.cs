@@ -4,7 +4,7 @@ using MARS.Server.Services.SoundRequest;
 
 namespace MARS.Server.Services.CommandExecutor.Commands;
 
-public class QueuePositionCommand(SoundRequestService soundRequestService) : BaseCommand
+public class QueuePositionCommand(CommandsService commandsService) : BaseCommand
 {
     public override string CommandName => "queue";
     public override string Description => "Показать вашу позицию в очереди звуковых запросов";
@@ -29,7 +29,7 @@ public class QueuePositionCommand(SoundRequestService soundRequestService) : Bas
         if (hasUserId)
         {
             var userId = userIdObj!.ToString()!;
-            result = await soundRequestService.GetUserQueuePositionAsync(userId);
+            result = await commandsService.GetUserQueuePositionAsync(userId);
         }
         else
         {
