@@ -52,24 +52,6 @@ public class CommandsService(
             var currentState = await stateManager.GetStateAsync();
             var wasPlayerStopped = currentState.IsStoped;
 
-            // Сохраняем трек в базу данных или загружаем существующий
-            await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
-            var existingTrack = await db
-                .SoundRequestBaseTrackInfos.AsNoTracking()
-                .FirstOrDefaultAsync(t => t.Url == info.Url, cancellationToken);
-
-            if (existingTrack != null)
-            {
-                // Используем существующий трек вместо нового
-                info = existingTrack;
-            }
-            else
-            {
-                // Трек новый, сохраняем его
-                db.SoundRequestBaseTrackInfos.Add(info);
-                await db.SaveChangesAsync(cancellationToken);
-            }
-
             // Проверяем размер очереди ДО добавления
             var queueCountBefore = await queue.GetQueueCountAsync();
 
@@ -160,6 +142,58 @@ public class CommandsService(
         else
         {
             result = "Вы не в очереди";
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Получить информацию о количестве треков перед заказанным треком и примерное время ожидания
+    /// </summary>
+    /// <param name="userId">ID пользователя Twitch (обязательно)</param>
+    public async Task<string> GetUserQueueDetailsAsync(string userId)
+    {
+        string result;
+
+        var list = await queue.GetQueueAsync();
+        var firstUserTrackIndex = list.FindIndex(t => t.TwitchId == userId);
+
+        if (firstUserTrackIndex < 0)
+        {
+            result = "У вас нет треков в очереди";
+        }
+        else
+        {
+            // Количество треков перед первым треком пользователя
+            var tracksBeforeCount = firstUserTrackIndex;
+
+            // Рассчитываем общую длительность треков перед первым треком пользователя
+            var totalWaitTime = TimeSpan.Zero;
+
+            for (var i = 0; i < firstUserTrackIndex; i++)
+            {
+                var track = list[i];
+                if (track.RequestedTrack.Duration > TimeSpan.Zero)
+                {
+                    totalWaitTime += track.RequestedTrack.Duration;
+                }
+            }
+
+            // Формируем результат
+            if (tracksBeforeCount == 0)
+            {
+                result = "Ваш трек следующий в очереди!";
+            }
+            else
+            {
+                var waitTimeText =
+                    totalWaitTime > TimeSpan.Zero
+                        ? $"{(int)totalWaitTime.TotalMinutes:D2}:{totalWaitTime.Seconds:D2}"
+                        : "неизвестно";
+
+                result =
+                    $"Треков в очереди: {tracksBeforeCount}, включим примерно через: ~{waitTimeText}";
+            }
         }
 
         return result;
@@ -304,4 +338,3 @@ public class CommandsService(
         await signalRService.NotifyQueueChangedAsync(currentQueue);
     }
 }
-

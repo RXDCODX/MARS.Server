@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace MARS.Server.Services.SoundRequest.Entities;
@@ -16,7 +16,7 @@ public class BaseTrackInfo
 
     public TimeSpan Duration { get; set; }
 
-    public required string Url { get; init; }
+    public required Uri Url { get; init; }
 
     public DateTime LastTimePlays { get; set; } = DateTime.UnixEpoch;
 
@@ -39,5 +39,3 @@ public class BaseTrackInfo
         }
     }
 }
-
-

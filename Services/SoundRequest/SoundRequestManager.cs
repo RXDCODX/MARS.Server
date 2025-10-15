@@ -1,4 +1,4 @@
-using MARS.Server.Services.SoundRequest.Entities;
+﻿using MARS.Server.Services.SoundRequest.Entities;
 using MARS.Server.Services.SoundRequest.Interfaces;
 using MARS.Server.Services.SoundRequest.Queue;
 
@@ -224,4 +224,3 @@ public class SoundRequestManager(
 
     #endregion
 }
-

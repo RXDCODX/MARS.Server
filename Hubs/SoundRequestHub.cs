@@ -1,4 +1,4 @@
-using MARS.Server.Services.SoundRequest;
+﻿using MARS.Server.Services.SoundRequest;
 using MARS.Server.Services.SoundRequest.Entities;
 using SignalRSwaggerGen.Attributes;
 using SignalRSwaggerGen.Enums;
@@ -6,11 +6,10 @@ using SignalRSwaggerGen.Enums;
 namespace MARS.Server.Hubs;
 
 [SignalRHub("/hubs/soundrequest", AutoDiscover.MethodsAndParams)]
-public class SoundRequestHub(
-    SoundRequestManager manager
-) : Hub<ISoundRequestHub>
+public class SoundRequestHub(SoundRequestManager manager) : Hub<ISoundRequestHub>
 {
-    public Task JoinAsClient() => Groups.AddToGroupAsync(Context.ConnectionId, SignalRService.ClientGroupName);
+    public Task BePlayer() =>
+        Groups.AddToGroupAsync(Context.ConnectionId, SignalRService.PlayerGroupName);
 
     public Task Play()
     {
@@ -56,8 +55,7 @@ public class SoundRequestHub(
         return Task.CompletedTask;
     }
 
-    public async Task AddTrackToQueue(UserRequestedTrack track) =>
-        await manager.AddTrack(track);
+    public async Task AddTrackToQueue(UserRequestedTrack track) => await manager.AddTrack(track);
 
     public async Task<List<UserRequestedTrack>> GetQueue() => await manager.GetQueueAsync();
 

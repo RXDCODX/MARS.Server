@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace MARS.Server.Services.SoundRequest.Entities;
@@ -15,9 +15,7 @@ public class UserRequestedTrack
 
     public int Order { get; set; }
 
-    public Guid RequestedTrackId { get; set; }
+    public Guid? RequestedTrackId { get; set; }
 
     public required BaseTrackInfo RequestedTrack { get; set; }
 }
-
-

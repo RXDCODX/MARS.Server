@@ -18,6 +18,8 @@ public class SoundRequestUserQueue(
                 .MaxAsync(t => (int?)t.Order, cancellationToken: _cancellationToken) ?? 0;
 
         track.Order = maxOrder + 1;
+        track.RequestedTrackId ??= track.RequestedTrack?.Id;
+
         dbContext.SoundRequestUserQueue.Add(track);
         await dbContext.SaveChangesAsync(_cancellationToken);
 

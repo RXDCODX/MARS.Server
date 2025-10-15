@@ -26,10 +26,12 @@ public class PlayerState
     /// <summary>
     /// Twitch ID пользователя, заказавшего текущий трек
     /// </summary>
+    [MaxLength(50)]
     public string? CurrentTrackRequestedBy { get; set; }
 
     /// <summary>
     /// Отображаемое имя пользователя, заказавшего текущий трек
     /// </summary>
+    [MaxLength(1000)]
     public string? CurrentTrackRequestedByDisplayName { get; set; }
 }

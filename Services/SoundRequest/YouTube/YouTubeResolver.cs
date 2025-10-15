@@ -1,4 +1,5 @@
 ﻿using MARS.Server.Services.SoundRequest.Entities;
+using TL;
 using YoutubeReExplode;
 using YoutubeReExplode.Common;
 
@@ -24,7 +25,7 @@ public class YouTubeResolver(ILogger<YouTubeResolver> logger)
                     result = new BaseTrackInfo
                     {
                         Id = Guid.NewGuid(),
-                        Url = video.Url,
+                        Url = new Uri(video.Url),
                         VideoId = video.Id,
                         TrackName = video.Title,
                         Authors = [video.Author.ChannelTitle],
@@ -61,7 +62,7 @@ public class YouTubeResolver(ILogger<YouTubeResolver> logger)
                 result = new BaseTrackInfo
                 {
                     Id = Guid.NewGuid(),
-                    Url = url,
+                    Url = new Uri(video.Url),
                     VideoId = video.Id,
                     TrackName = video.Title,
                     Authors = [video.Author.ChannelTitle],
@@ -107,7 +108,7 @@ public class YouTubeResolver(ILogger<YouTubeResolver> logger)
                         new BaseTrackInfo
                         {
                             Id = Guid.NewGuid(),
-                            Url = video.Url,
+                            Url = new Uri(video.Url),
                             VideoId = video.Id,
                             TrackName = video.Title,
                             Authors = [video.Author.ChannelTitle],

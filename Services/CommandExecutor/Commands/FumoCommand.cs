@@ -50,10 +50,8 @@ public class FumoCommand(IHubContext<TelegramusHub, ITelegramusHub> alertsHub) :
             await alertsHub.Clients.All.FumoFriday(displayName, color);
             return $"Фумо фрайдей с {displayName} с цветом {color} объявлен!";
         }
-        else
-        {
-            await alertsHub.Clients.All.FumoFriday(displayName);
-            return $"Фумо фрайдей с {displayName} объявлен!";
-        }
+
+        await alertsHub.Clients.All.FumoFriday(displayName);
+        return $"Фумо фрайдей с {displayName} объявлен!";
     }
 }

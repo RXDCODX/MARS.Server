@@ -1,5 +1,6 @@
 ﻿using MARS.Server.Services.CommandExecutor.Entitys;
 using MARS.Server.Services.CommandExecutor.Entitys.Commands;
+using Microsoft.Kiota.Abstractions.Extensions;
 using TwitchLib.Client.Events;
 
 namespace MARS.Server.Services.CommandExecutor.Adapters;
@@ -198,14 +199,21 @@ public class TwitchCommandService : PlatformCommandServiceBase<string>, IHostedS
                     try
                     {
                         // Разбираем параметры из входной строки
-                        var parameters = command.ParseParameters(input);
+                        Dictionary<string, object> parameters = new()
+                        {
+                            { "userId", userId },
+                            { "displayName", username },
+                            { "isModerator", e.ChatMessage.IsModerator },
+                            { "isVip", e.ChatMessage.IsVip },
+                            { "isBroadcaster", e.ChatMessage.IsBroadcaster },
+                        };
 
-                        // Добавляем информацию о пользователе Twitch в параметры
-                        parameters["userId"] = userId;
-                        parameters["displayName"] = username;
-                        parameters["isModerator"] = e.ChatMessage.IsModerator;
-                        parameters["isVip"] = e.ChatMessage.IsVip;
-                        parameters["isBroadcaster"] = e.ChatMessage.IsBroadcaster;
+                        var newParams = command.ParseParameters(input);
+
+                        foreach (var keyValuePair in newParams)
+                        {
+                            parameters.AddOrReplace(keyValuePair.Key, keyValuePair.Value);
+                        }
 
                         // Выполняем команду
                         result = await command.ExecuteAsync(parameters, Platform.Twitch);
