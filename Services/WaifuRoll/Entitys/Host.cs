@@ -12,9 +12,8 @@ public class Host
     /// <summary>
     /// Ссылка на пользователя Twitch
     /// </summary>
-    [Required]
     [ForeignKey(nameof(TwitchId))]
-    public required TwitchUser TwitchUser { get; set; }
+    public TwitchUser? TwitchUser { get; set; }
 
     /// <summary>
     /// Имя пользователя (дублируется из TwitchUser для обратной совместимости)

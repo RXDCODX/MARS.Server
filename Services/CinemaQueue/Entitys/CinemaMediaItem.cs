@@ -34,6 +34,18 @@ public class CinemaMediaItem
     [ForeignKey(nameof(TwitchUserId))]
     public TwitchUser? TwitchUser { get; set; }
 
+    /// <summary>
+    /// Имя пользователя, добавившего медиа (дублируется для обратной совместимости)
+    /// </summary>
+    [MaxLength(100)]
+    public string? AddedBy { get; set; }
+
+    /// <summary>
+    /// Имя пользователя Twitch (дублируется для обратной совместимости)
+    /// </summary>
+    [MaxLength(100)]
+    public string? TwitchUsername { get; set; }
+
     public string? Notes { get; set; }
 
     public bool IsNext { get; set; } = false;

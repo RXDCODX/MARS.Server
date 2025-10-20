@@ -1,5 +1,4 @@
 ﻿using MARS.Server.Services.Twitch.Rewards.ChannelRewards.Entities;
-using MARS.Server.Services.Twitch.Rewards.ChannelRewards.Models;
 using TwitchLib.Api.Helix.Models.ChannelPoints.CreateCustomReward;
 
 namespace MARS.Server.Services.Twitch.Rewards.ChannelRewards;

@@ -1,13 +1,10 @@
-﻿using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using MARS.Server.Services.CinemaQueue.Entitys;
 using MARS.Server.Services.Honkai.Entitys;
 using MARS.Server.Services.SoundRequest.Entities;
 using MARS.Server.Services.Twitch.FumoFriday.Entitys;
 using MARS.Server.Services.Twitch.HelloVideos.Entitys;
 using MARS.Server.Services.Twitch.MiniGamesStats.Entitys;
-using MARS.Server.Services.WaifuRoll.Entitys;
 
 namespace MARS.Server.Services.Twitch.Entitys;
 
@@ -24,7 +21,7 @@ public class TwitchUser
     [Key]
     [Required]
     [MaxLength(50)]
-    public required string TwitchId { get; set; }
+    public required string TwitchId { get; init; }
 
     /// <summary>
     /// Логин пользователя

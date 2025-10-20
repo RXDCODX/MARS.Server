@@ -1,7 +1,5 @@
 ﻿using MARS.Server.Services.SoundRequest.Entities;
-using TL;
 using YoutubeReExplode;
-using YoutubeReExplode.Common;
 
 namespace MARS.Server.Services.SoundRequest.YouTube;
 

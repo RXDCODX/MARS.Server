@@ -11,9 +11,15 @@ public class TwitchLeaderboardUser
     /// <summary>
     /// Ссылка на пользователя Twitch
     /// </summary>
-    [Required]
     [ForeignKey(nameof(TwitchId))]
-    public required TwitchUser TwitchUser { get; set; }
+    public TwitchUser? TwitchUser { get; set; }
+
+    /// <summary>
+    /// Отображаемое имя пользователя (дублируется для обратной совместимости)
+    /// </summary>
+    [Required]
+    [MaxLength(100)]
+    public string DisplayName { get; set; } = string.Empty;
 
     [NotMapped]
     public int TotalWins => TekkenVictorinaWins + RussianRouletteWins + TriviaWins;

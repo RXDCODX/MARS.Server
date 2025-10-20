@@ -22,9 +22,8 @@ public class FollowerInfo
     /// <summary>
     /// Ссылка на пользователя Twitch
     /// </summary>
-    [Required]
     [ForeignKey(nameof(UserId))]
-    public required TwitchUser TwitchUser { get; set; }
+    public TwitchUser? TwitchUser { get; set; }
 
     /// <summary>
     /// Имя пользователя (дублируется из TwitchUser для обратной совместимости)
@@ -158,6 +157,13 @@ public class FollowerInfo
         {
             UserId = userId,
             TwitchUser = twitchUser,
+            UserName = userLogin,
+            UserLogin = userLogin,
+            DisplayName = displayName,
+            ProfileImageUrl = profileImageUrl,
+            ChatColor = chatColor,
+            IsModerator = isModerator,
+            IsVip = isVip,
             FollowedAt = followedAt ?? DateTime.UnixEpoch,
             LastUpdated = DateTime.UtcNow,
         };
@@ -179,6 +185,11 @@ public class FollowerInfo
         {
             UserId = moderator.UserId,
             TwitchUser = twitchUser,
+            UserName = moderator.UserName,
+            UserLogin = moderator.UserLogin,
+            DisplayName = moderator.UserName,
+            IsModerator = true,
+            IsVip = false,
             FollowedAt = DateTime.UnixEpoch,
             LastUpdated = DateTime.UtcNow,
         };
@@ -200,6 +211,11 @@ public class FollowerInfo
         {
             UserId = vip.UserId,
             TwitchUser = twitchUser,
+            UserName = vip.UserName,
+            UserLogin = vip.UserLogin,
+            DisplayName = vip.UserName,
+            IsModerator = false,
+            IsVip = true,
             FollowedAt = DateTime.UnixEpoch,
             LastUpdated = DateTime.UtcNow,
         };
@@ -207,7 +223,7 @@ public class FollowerInfo
 
     public override string ToString()
     {
-        return $"{TwitchUser.DisplayName} ({TwitchUser.UserLogin}) - подписался {FollowedAt:yyyy-MM-dd HH:mm:ss}";
+        return $"{DisplayName} ({UserLogin}) - подписался {FollowedAt:yyyy-MM-dd HH:mm:ss}";
     }
 
     public override bool Equals(object? obj)

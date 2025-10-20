@@ -12,9 +12,8 @@ public class WaifuRollGuarantee
     /// <summary>
     /// Ссылка на пользователя Twitch
     /// </summary>
-    [Required]
     [ForeignKey(nameof(TwitchId))]
-    public required TwitchUser TwitchUser { get; set; }
+    public TwitchUser? TwitchUser { get; set; }
 
     public int RollCount { get; set; } = 0;
 

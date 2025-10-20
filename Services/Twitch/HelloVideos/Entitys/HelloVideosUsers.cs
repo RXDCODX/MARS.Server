@@ -15,9 +15,15 @@ public class HelloVideosUsers
     /// <summary>
     /// Ссылка на пользователя Twitch
     /// </summary>
-    [Required]
     [ForeignKey(nameof(TwitchId))]
-    public required TwitchUser TwitchUser { get; set; }
+    public TwitchUser? TwitchUser { get; set; }
+
+    /// <summary>
+    /// Имя пользователя (дублируется для обратной совместимости)
+    /// </summary>
+    [Required]
+    [MaxLength(100)]
+    public string Name { get; set; } = string.Empty;
 
     public DateTimeOffset LastTimeNotif { get; set; }
 

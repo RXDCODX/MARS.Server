@@ -11,9 +11,14 @@ public class FumoUser
     /// <summary>
     /// Ссылка на пользователя Twitch
     /// </summary>
-    [Required]
     [ForeignKey(nameof(TwitchId))]
-    public required TwitchUser TwitchUser { get; set; }
+    public TwitchUser? TwitchUser { get; set; }
+
+    /// <summary>
+    /// Отображаемое имя пользователя (дублируется для обратной совместимости)
+    /// </summary>
+    [MaxLength(100)]
+    public string? DisplayName { get; set; }
 
     public DateTimeOffset LastTime { get; set; }
 }
