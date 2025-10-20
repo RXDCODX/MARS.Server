@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using MARS.Server.Services.Twitch.Entitys;
 
 namespace MARS.Server.Services.SoundRequest.Entities;
 
@@ -9,9 +10,15 @@ public class PlayerState
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     public Guid Id { get; set; }
 
-    public BaseTrackInfo? CurrentTrack { get; set; }
+    /// <summary>
+    /// ID текущего трека (foreign key)
+    /// </summary>
+    public Guid? CurrentTrackId { get; set; }
 
-    public BaseTrackInfo? NextTrack { get; set; }
+    /// <summary>
+    /// ID следующего трека (foreign key)
+    /// </summary>
+    public Guid? NextTrackId { get; set; }
 
     public TimeSpan? CurrentTrackDuration { get; set; }
 
@@ -30,8 +37,14 @@ public class PlayerState
     public string? CurrentTrackRequestedBy { get; set; }
 
     /// <summary>
-    /// Отображаемое имя пользователя, заказавшего текущий трек
+    /// Ссылка на пользователя Twitch, заказавшего текущий трек
     /// </summary>
-    [MaxLength(1000)]
-    public string? CurrentTrackRequestedByDisplayName { get; set; }
+    [ForeignKey(nameof(CurrentTrackRequestedBy))]
+    public TwitchUser? CurrentTrackRequestedByTwitchUser { get; set; }
+
+    [NotMapped]
+    public BaseTrackInfo? CurrentTrack { get; set; }
+
+    [NotMapped]
+    public BaseTrackInfo? NextTrack { get; set; }
 }

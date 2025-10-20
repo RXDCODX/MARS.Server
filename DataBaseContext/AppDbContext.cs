@@ -10,6 +10,7 @@ using MARS.Server.Services.ServiceManager.Entitys;
 using MARS.Server.Services.SoundRequest.Entities;
 using MARS.Server.Services.StreamAcrhive_UNUSED.Entitys;
 using MARS.Server.Services.Twitch.ClientMessages.AutoMessages.Entitys;
+using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.FumoFriday.Entitys;
 using MARS.Server.Services.Twitch.HelloVideos.Entitys;
 using MARS.Server.Services.Twitch.Management.Entitys;
@@ -48,6 +49,7 @@ public sealed class AppDbContext : DbContext
         }
     }
 
+    public DbSet<TwitchUser> TwitchUsers { get; set; } = null!;
     public DbSet<Host> Hosts { get; set; } = null!;
     public DbSet<Waifu> Waifus { get; set; } = null!;
     public DbSet<TelegramUser> TelegramUsers { get; set; } = null!;
@@ -71,7 +73,6 @@ public sealed class AppDbContext : DbContext
     public DbSet<RootState> ApplicationState { get; set; } = null!;
     public DbSet<BaseTrackInfo> SoundRequestBaseTrackInfos { get; set; } = null!;
     public DbSet<PlayerState> SoundRequestPlayerState { get; set; } = null!;
-    public DbSet<UserRequestedTrack> SoundRequestUserQueue { get; set; } = null!;
     public DbSet<ServiceState> ServiceStates { get; set; } = null!;
     public DbSet<ScoreboardState> ScoreboardStates { get; set; } = null!;
     public DbSet<ScoreboardPlayer> ScoreboardPlayers { get; set; } = null!;
@@ -137,12 +138,20 @@ public sealed class AppDbContext : DbContext
                 ]
             );
 
+        // Конфигурация для PlayerState - foreign keys для треков
         modelBuilder
-            .Entity<UserRequestedTrack>()
-            .HasOne(urt => urt.RequestedTrack)
-            .WithOne()
-            .HasForeignKey<UserRequestedTrack>(urt => urt.RequestedTrackId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .Entity<PlayerState>()
+            .HasOne<BaseTrackInfo>()
+            .WithMany()
+            .HasForeignKey(ps => ps.CurrentTrackId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        modelBuilder
+            .Entity<PlayerState>()
+            .HasOne<BaseTrackInfo>()
+            .WithMany()
+            .HasForeignKey(ps => ps.NextTrackId)
+            .OnDelete(DeleteBehavior.SetNull);
 
         modelBuilder.Entity<MediaInfo>(entity =>
         {
@@ -295,6 +304,87 @@ public sealed class AppDbContext : DbContext
             .Entity<StreamArchiveFile>()
             .HasIndex(f => new { f.ConfigId, f.OriginalFilePath })
             .IsUnique();
+
+        // Конфигурация связей с TwitchUser
+        // Host -> TwitchUser (многие к одному)
+        modelBuilder
+            .Entity<Host>()
+            .HasOne(h => h.TwitchUser)
+            .WithMany()
+            .HasForeignKey(h => h.TwitchId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // TwitchLeaderboardUser -> TwitchUser (один к одному)
+        modelBuilder
+            .Entity<TwitchLeaderboardUser>()
+            .HasOne(tlu => tlu.TwitchUser)
+            .WithOne(tu => tu.LeaderboardStats)
+            .HasForeignKey<TwitchLeaderboardUser>(tlu => tlu.TwitchId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // FollowerInfo -> TwitchUser (один к одному)
+        modelBuilder
+            .Entity<FollowerInfo>()
+            .HasOne(fi => fi.TwitchUser)
+            .WithOne()
+            .HasForeignKey<FollowerInfo>(fi => fi.UserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // FumoUser -> TwitchUser (один к одному)
+        modelBuilder
+            .Entity<FumoUser>()
+            .HasOne(fu => fu.TwitchUser)
+            .WithOne(tu => tu.FumoUser)
+            .HasForeignKey<FumoUser>(fu => fu.TwitchId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // HelloVideosUsers -> TwitchUser (многие к одному)
+        modelBuilder
+            .Entity<HelloVideosUsers>()
+            .HasOne(hvu => hvu.TwitchUser)
+            .WithMany(tu => tu.HelloVideos)
+            .HasForeignKey(hvu => hvu.TwitchId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // WaifuRollGuarantee -> TwitchUser (один к одному)
+        modelBuilder
+            .Entity<WaifuRollGuarantee>()
+            .HasOne(wrg => wrg.TwitchUser)
+            .WithOne(tu => tu.WaifuRollGuarantee)
+            .HasForeignKey<WaifuRollGuarantee>(wrg => wrg.TwitchId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // DailyAutoMarkupUser -> TwitchUser (многие к одному, опционально)
+        modelBuilder
+            .Entity<DailyAutoMarkupUser>()
+            .HasOne(damu => damu.TwitchUser)
+            .WithMany(tu => tu.HonkaiMarkups)
+            .HasForeignKey(damu => damu.TwitchId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        // CinemaMediaItem -> TwitchUser (многие к одному, опционально)
+        modelBuilder
+            .Entity<CinemaMediaItem>()
+            .HasOne(cmi => cmi.TwitchUser)
+            .WithMany(tu => tu.CinemaQueueItems)
+            .HasForeignKey(cmi => cmi.TwitchUserId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        // BaseTrackInfo -> TwitchUser (многие к одному, опционально)
+        modelBuilder
+            .Entity<BaseTrackInfo>()
+            .HasOne(bti => bti.RequestedByTwitchUser)
+            .WithMany(tu => tu.RequestedTracks)
+            .HasForeignKey(bti => bti.RequestedByTwitchId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        // PlayerState -> TwitchUser (многие к одному, опционально)
+        modelBuilder
+            .Entity<PlayerState>()
+            .HasOne(ps => ps.CurrentTrackRequestedByTwitchUser)
+            .WithMany(tu => tu.PlayerStates)
+            .HasForeignKey(ps => ps.CurrentTrackRequestedBy)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)

@@ -55,25 +55,18 @@ public class CommandsService(
             // Проверяем размер очереди ДО добавления
             var queueCountBefore = await queue.GetQueueCountAsync();
 
+            // Устанавливаем информацию о пользователе
+            info.RequestedByTwitchId = userId;
+            info.RequestedByDisplayName = displayName;
+
             // Добавляем трек в очередь
-            await queue.AddToQueueAsync(
-                new UserRequestedTrack
-                {
-                    RequestedTrack = info,
-                    RequestedTrackId = info.Id,
-                    TwitchId = userId,
-                    TwitchDisplayName = displayName,
-                }
-            );
+            await queue.AddToQueueAsync(info);
 
             // Если плеер был остановлен И очередь была пуста - запускаем воспроизведение
             if (wasPlayerStopped && queueCountBefore == 0)
             {
                 await playerController.PlayAsync(info, userId, displayName, cancellationToken);
-                var addedTrack = (await queue.GetQueueAsync()).First(t =>
-                    t.RequestedTrackId == info.Id
-                );
-                await queue.RemoveFromQueueAsync(addedTrack.Id);
+                await queue.RemoveFromQueueAsync(info.Id);
                 await NotifyQueueChangedAsync();
             }
             else
@@ -133,7 +126,7 @@ public class CommandsService(
         string result;
 
         var list = await queue.GetQueueAsync();
-        var idx = list.FindIndex(t => t.TwitchId == userId);
+        var idx = list.FindIndex(t => t.RequestedByTwitchId == userId);
 
         if (idx >= 0)
         {
@@ -156,7 +149,7 @@ public class CommandsService(
         string result;
 
         var list = await queue.GetQueueAsync();
-        var firstUserTrackIndex = list.FindIndex(t => t.TwitchId == userId);
+        var firstUserTrackIndex = list.FindIndex(t => t.RequestedByTwitchId == userId);
 
         if (firstUserTrackIndex < 0)
         {
@@ -173,9 +166,9 @@ public class CommandsService(
             for (var i = 0; i < firstUserTrackIndex; i++)
             {
                 var track = list[i];
-                if (track.RequestedTrack.Duration > TimeSpan.Zero)
+                if (track.Duration > TimeSpan.Zero)
                 {
-                    totalWaitTime += track.RequestedTrack.Duration;
+                    totalWaitTime += track.Duration;
                 }
             }
 
@@ -214,13 +207,17 @@ public class CommandsService(
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
 
         var last = await db
-            .SoundRequestUserQueue.Where(t => t.TwitchId == userId)
-            .OrderByDescending(t => t.Order)
+            .SoundRequestBaseTrackInfos
+            .Where(t => !t.IsDeleted && t.QueueOrder != null && t.RequestedByTwitchId == userId)
+            .OrderByDescending(t => t.QueueOrder)
             .FirstOrDefaultAsync(cancellationToken);
 
         if (last != null)
         {
-            db.SoundRequestUserQueue.Remove(last);
+            // Помечаем как удаленный
+            last.IsDeleted = true;
+            last.QueueOrder = null;
+            db.SoundRequestBaseTrackInfos.Update(last);
             await db.SaveChangesAsync(cancellationToken);
 
             // Уведомляем об изменении очереди
@@ -284,15 +281,11 @@ public class CommandsService(
                     await db.SaveChangesAsync(cancellationToken);
                 }
 
-                await queue.AddToQueueAsync(
-                    new UserRequestedTrack
-                    {
-                        RequestedTrack = trackToAdd,
-                        RequestedTrackId = trackToAdd.Id,
-                        TwitchId = userId,
-                        TwitchDisplayName = displayName,
-                    }
-                );
+                // Устанавливаем информацию о пользователе
+                trackToAdd.RequestedByTwitchId = userId;
+                trackToAdd.RequestedByDisplayName = displayName;
+
+                await queue.AddToQueueAsync(trackToAdd);
 
                 // Запоминаем первый трек плейлиста
                 firstTrack ??= trackToAdd;
@@ -307,10 +300,7 @@ public class CommandsService(
                     displayName,
                     cancellationToken
                 );
-                var addedTrack = (await queue.GetQueueAsync()).First(t =>
-                    t.RequestedTrackId == firstTrack.Id
-                );
-                await queue.RemoveFromQueueAsync(addedTrack.Id);
+                await queue.RemoveFromQueueAsync(firstTrack.Id);
                 await NotifyQueueChangedAsync();
             }
             else

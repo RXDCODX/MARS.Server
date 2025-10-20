@@ -1,4 +1,6 @@
-﻿namespace MARS.Server.Services.WaifuRoll.Entitys;
+﻿using MARS.Server.Services.Twitch.Entitys;
+
+namespace MARS.Server.Services.WaifuRoll.Entitys;
 
 [Table("WaifuRollGuarantees")]
 public class WaifuRollGuarantee
@@ -6,6 +8,13 @@ public class WaifuRollGuarantee
     [Key]
     [DatabaseGenerated(DatabaseGeneratedOption.None)]
     public required string TwitchId { get; set; }
+
+    /// <summary>
+    /// Ссылка на пользователя Twitch
+    /// </summary>
+    [Required]
+    [ForeignKey(nameof(TwitchId))]
+    public required TwitchUser TwitchUser { get; set; }
 
     public int RollCount { get; set; } = 0;
 

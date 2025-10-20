@@ -75,6 +75,8 @@ public class MainPlayer(
     {
         try
         {
+            Console.WriteLine($"[MainPlayer.PlayAsync] Начинаем воспроизведение трека: {track.TrackName}, URL: {track.Url}");
+            
             // Обновляем состояние - начинаем воспроизведение
             await stateManager.StartPlayingAsync(
                 track,
@@ -82,6 +84,8 @@ public class MainPlayer(
                 requestedByDisplayName,
                 notify: true
             );
+
+            Console.WriteLine("[MainPlayer.PlayAsync] Состояние обновлено, уведомление отправлено");
 
             // Обновляем время последнего воспроизведения в БД
             await UpdateTrackLastPlayedAsync(track);
@@ -94,9 +98,12 @@ public class MainPlayer(
             {
                 await OnStarted.Invoke(track);
             }
+            
+            Console.WriteLine("[MainPlayer.PlayAsync] Трек успешно запущен");
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            Console.WriteLine($"[MainPlayer.PlayAsync] ОШИБКА: {ex.Message}");
             // При ошибке вызываем событие ошибки
             if (OnError != null)
             {
@@ -190,13 +197,17 @@ public class MainPlayer(
     {
         var nextTrack = await queue.GetNextTrackAsync();
 
+        Console.WriteLine($"[PlayNextFromQueueAsync] NextTrack: {(nextTrack != null ? nextTrack.TrackName : "null")}");
+
         if (nextTrack != null)
         {
+            Console.WriteLine($"[PlayNextFromQueueAsync] Начинаем воспроизведение: {nextTrack.TrackName}");
+            
             // Воспроизводим трек с информацией о пользователе
             await PlayAsync(
-                nextTrack.RequestedTrack,
-                nextTrack.TwitchId,
-                nextTrack.TwitchDisplayName,
+                nextTrack,
+                nextTrack.RequestedByTwitchId,
+                nextTrack.RequestedByDisplayName,
                 _cancellationToken
             );
 
@@ -205,9 +216,12 @@ public class MainPlayer(
 
             // Уведомляем об изменении очереди
             await NotifyQueueChangedAsync();
+            
+            Console.WriteLine("[PlayNextFromQueueAsync] Трек успешно запущен");
         }
         else
         {
+            Console.WriteLine("[PlayNextFromQueueAsync] Очередь пуста - останавливаем плеер");
             // Очередь пуста - останавливаем воспроизведение
             await StopAsync(_cancellationToken);
         }
@@ -219,7 +233,7 @@ public class MainPlayer(
     private async Task LoadNextTrackAsync()
     {
         var nextTrack = await queue.GetNextTrackAsync();
-        await stateManager.SetNextTrackAsync(nextTrack?.RequestedTrack, notify: true);
+        await stateManager.SetNextTrackAsync(nextTrack, notify: true);
     }
 
     /// <summary>

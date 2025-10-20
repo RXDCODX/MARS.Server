@@ -2,6 +2,10 @@
 
 namespace MARS.Server.Hubs.Interfaces;
 
+/// <summary>
+/// Интерфейс для методов, которые СЕРВЕР вызывает на КЛИЕНТЕ (уведомления)
+/// Методы, которые КЛИЕНТ вызывает на СЕРВЕРЕ, находятся в самом Hub классе
+/// </summary>
 public interface ISoundRequestHub
 {
     /// <summary>
@@ -12,18 +16,5 @@ public interface ISoundRequestHub
     /// <summary>
     /// Уведомление клиентов об изменении очереди
     /// </summary>
-    Task QueueChanged(List<UserRequestedTrack> queue);
-
-    Task Play();
-    Task Pause();
-    Task Resume();
-    Task Stop();
-    Task Skip();
-    Task Mute();
-    Task Unmute();
-    Task SetVolume(int volume);
-    Task AddTrackToQueue(UserRequestedTrack track);
-    Task<List<UserRequestedTrack>> GetQueue();
-    Task<List<BaseTrackInfo>> GetHistory(int count = 20);
-    Task<PlayerState> GetPlayerState();
+    Task QueueChanged(List<BaseTrackInfo> queue);
 }

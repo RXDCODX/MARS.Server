@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using MARS.Server.Services.Twitch.Entitys;
 
 namespace MARS.Server.Services.SoundRequest.Entities;
 
@@ -23,6 +24,25 @@ public class BaseTrackInfo
     public string? ArtworkUrl { get; set; }
 
     public string? VideoId { get; set; }
+
+    public bool IsDeleted { get; set; } = false;
+
+    /// <summary>
+    /// Порядок в очереди (0 = текущий трек, null = не в очереди)
+    /// </summary>
+    public int? QueueOrder { get; set; }
+
+    /// <summary>
+    /// Twitch ID пользователя, заказавшего трек
+    /// </summary>
+    [MaxLength(50)]
+    public string? RequestedByTwitchId { get; set; }
+
+    /// <summary>
+    /// Ссылка на пользователя Twitch, заказавшего трек
+    /// </summary>
+    [ForeignKey(nameof(RequestedByTwitchId))]
+    public TwitchUser? RequestedByTwitchUser { get; set; }
 
     [NotMapped]
     public string Title

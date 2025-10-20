@@ -3,6 +3,7 @@ using System;
 using MARS.Server.DataBaseContext;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MARS.Server.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251019152922_AddOrderAndIsDeletedToBaseTrackInfo")]
+    partial class AddOrderAndIsDeletedToBaseTrackInfo
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -695,16 +698,8 @@ namespace MARS.Server.Migrations
                     b.Property<DateTime>("LastTimePlays")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int?>("QueueOrder")
+                    b.Property<int>("Order")
                         .HasColumnType("integer");
-
-                    b.Property<string>("RequestedByDisplayName")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<string>("RequestedByTwitchId")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
 
                     b.Property<string>("TrackName")
                         .IsRequired()
@@ -759,11 +754,34 @@ namespace MARS.Server.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CurrentTrackId");
-
-                    b.HasIndex("NextTrackId");
-
                     b.ToTable("SoundRequestPlayerState");
+                });
+
+            modelBuilder.Entity("MARS.Server.Services.SoundRequest.Entities.UserRequestedTrack", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("RequestedTrackId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("TwitchDisplayName")
+                        .HasColumnType("text");
+
+                    b.Property<string>("TwitchId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RequestedTrackId")
+                        .IsUnique();
+
+                    b.ToTable("SoundRequestUserQueue");
                 });
 
             modelBuilder.Entity("MARS.Server.Services.StreamAcrhive_UNUSED.Entitys.StreamArchiveConfig", b =>
@@ -1619,17 +1637,14 @@ namespace MARS.Server.Migrations
                     b.Navigation("ScoreboardState");
                 });
 
-            modelBuilder.Entity("MARS.Server.Services.SoundRequest.Entities.PlayerState", b =>
+            modelBuilder.Entity("MARS.Server.Services.SoundRequest.Entities.UserRequestedTrack", b =>
                 {
-                    b.HasOne("MARS.Server.Services.SoundRequest.Entities.BaseTrackInfo", null)
-                        .WithMany()
-                        .HasForeignKey("CurrentTrackId")
-                        .OnDelete(DeleteBehavior.SetNull);
+                    b.HasOne("MARS.Server.Services.SoundRequest.Entities.BaseTrackInfo", "RequestedTrack")
+                        .WithOne()
+                        .HasForeignKey("MARS.Server.Services.SoundRequest.Entities.UserRequestedTrack", "RequestedTrackId")
+                        .OnDelete(DeleteBehavior.Cascade);
 
-                    b.HasOne("MARS.Server.Services.SoundRequest.Entities.BaseTrackInfo", null)
-                        .WithMany()
-                        .HasForeignKey("NextTrackId")
-                        .OnDelete(DeleteBehavior.SetNull);
+                    b.Navigation("RequestedTrack");
                 });
 
             modelBuilder.Entity("MARS.Server.Services.StreamAcrhive_UNUSED.Entitys.StreamArchiveFile", b =>

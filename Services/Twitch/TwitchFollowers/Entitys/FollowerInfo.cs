@@ -1,4 +1,5 @@
 ﻿using System.Globalization;
+using MARS.Server.Services.Twitch.Entitys;
 using Newtonsoft.Json;
 using TwitchLib.Api.Helix.Models.Channels.GetChannelFollowers;
 using TwitchLib.Api.Helix.Models.Channels.GetChannelVIPs;
@@ -12,40 +13,59 @@ namespace MARS.Server.Services.Twitch.TwitchFollowers.Entitys;
 public class FollowerInfo
 {
     /// <summary>
-    /// ID пользователя
+    /// ID пользователя Twitch
     /// </summary>
     [Key]
     [Required]
     public required string UserId { get; init; }
 
     /// <summary>
-    /// Имя пользователя
+    /// Ссылка на пользователя Twitch
     /// </summary>
     [Required]
-    public required string UserName { get; set; }
+    [ForeignKey(nameof(UserId))]
+    public required TwitchUser TwitchUser { get; set; }
 
     /// <summary>
-    /// Логин пользователя
+    /// Имя пользователя (дублируется из TwitchUser для обратной совместимости)
     /// </summary>
     [Required]
-    public required string UserLogin { get; set; }
+    [MaxLength(100)]
+    public string UserName { get; set; } = string.Empty;
 
     /// <summary>
-    /// Отображаемое имя пользователя
+    /// Логин пользователя (дублируется из TwitchUser для обратной совместимости)
     /// </summary>
+    [Required]
+    [MaxLength(100)]
+    public string UserLogin { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Отображаемое имя пользователя (дублируется из TwitchUser для обратной совместимости)
+    /// </summary>
+    [MaxLength(100)]
     public string? DisplayName { get; set; }
 
     /// <summary>
-    /// Ссылка на аватарку пользователя
+    /// Ссылка на аватарку пользователя (дублируется из TwitchUser для обратной совместимости)
     /// </summary>
+    [MaxLength(500)]
     public string? ProfileImageUrl { get; set; }
 
     /// <summary>
-    /// Цвет ника пользователя в чате
+    /// Цвет ника пользователя в чате (дублируется из TwitchUser для обратной совместимости)
     /// </summary>
+    [MaxLength(20)]
     public string? ChatColor { get; set; }
 
+    /// <summary>
+    /// Является ли пользователь модератором (дублируется из TwitchUser для обратной совместимости)
+    /// </summary>
     public bool IsModerator { get; set; }
+
+    /// <summary>
+    /// Является ли пользователь VIP (дублируется из TwitchUser для обратной совместимости)
+    /// </summary>
     public bool IsVip { get; set; }
 
     [System.Text.Json.Serialization.JsonIgnore]
@@ -69,19 +89,31 @@ public class FollowerInfo
     /// <returns>Новый экземпляр FollowerInfo</returns>
     public static FollowerInfo FromChannelFollower(ChannelFollower follower)
     {
+        var followedAt = DateTimeOffset
+            .Parse(
+                follower.FollowedAt,
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.RoundtripKind
+            )
+            .LocalDateTime;
+
+        var twitchUser = new TwitchUser
+        {
+            TwitchId = follower.UserId,
+            UserLogin = follower.UserLogin,
+            DisplayName = follower.UserName,
+            FollowedAt = followedAt,
+            LastUpdated = DateTime.UtcNow,
+        };
+
         return new FollowerInfo
         {
             UserId = follower.UserId,
+            TwitchUser = twitchUser,
             UserName = follower.UserName,
             UserLogin = follower.UserLogin,
-            DisplayName = follower.UserName, // По умолчанию используем UserName
-            FollowedAt = DateTimeOffset
-                .Parse(
-                    follower.FollowedAt,
-                    CultureInfo.InvariantCulture,
-                    DateTimeStyles.RoundtripKind
-                )
-                .LocalDateTime,
+            DisplayName = follower.UserName,
+            FollowedAt = followedAt,
             LastUpdated = DateTime.UtcNow,
         };
     }
@@ -109,16 +141,23 @@ public class FollowerInfo
         DateTime? followedAt = null
     )
     {
-        return new FollowerInfo
+        var twitchUser = new TwitchUser
         {
-            UserId = userId,
+            TwitchId = userId,
             UserLogin = userLogin,
-            UserName = userLogin, // UserName обычно совпадает с UserLogin
             DisplayName = displayName,
             ProfileImageUrl = profileImageUrl,
             ChatColor = chatColor,
             IsModerator = isModerator,
             IsVip = isVip,
+            FollowedAt = followedAt,
+            LastUpdated = DateTime.UtcNow,
+        };
+
+        return new FollowerInfo
+        {
+            UserId = userId,
+            TwitchUser = twitchUser,
             FollowedAt = followedAt ?? DateTime.UnixEpoch,
             LastUpdated = DateTime.UtcNow,
         };
@@ -126,37 +165,49 @@ public class FollowerInfo
 
     public static FollowerInfo FromModerator(Moderator moderator)
     {
+        var twitchUser = new TwitchUser
+        {
+            TwitchId = moderator.UserId,
+            UserLogin = moderator.UserLogin,
+            DisplayName = moderator.UserName,
+            IsModerator = true,
+            IsVip = false,
+            LastUpdated = DateTime.UtcNow,
+        };
+
         return new FollowerInfo()
         {
             UserId = moderator.UserId,
+            TwitchUser = twitchUser,
             FollowedAt = DateTime.UnixEpoch,
-            UserLogin = moderator.UserLogin,
-            UserName = moderator.UserName,
-            DisplayName = moderator.UserName, // По умолчанию используем UserName
-            IsModerator = true,
-            IsVip = false,
-            LastUpdated = DateTime.Now,
+            LastUpdated = DateTime.UtcNow,
         };
     }
 
     public static FollowerInfo FromVip(ChannelVIPsResponseModel vip)
     {
-        return new FollowerInfo()
+        var twitchUser = new TwitchUser
         {
-            FollowedAt = DateTime.UnixEpoch,
-            UserId = vip.UserId,
+            TwitchId = vip.UserId,
             UserLogin = vip.UserLogin,
-            UserName = vip.UserName,
-            DisplayName = vip.UserName, // По умолчанию используем UserName
+            DisplayName = vip.UserName,
             IsModerator = false,
             IsVip = true,
-            LastUpdated = DateTime.Now,
+            LastUpdated = DateTime.UtcNow,
+        };
+
+        return new FollowerInfo()
+        {
+            UserId = vip.UserId,
+            TwitchUser = twitchUser,
+            FollowedAt = DateTime.UnixEpoch,
+            LastUpdated = DateTime.UtcNow,
         };
     }
 
     public override string ToString()
     {
-        return $"{UserName} ({UserLogin}) - подписался {FollowedAt:yyyy-MM-dd HH:mm:ss}";
+        return $"{TwitchUser.DisplayName} ({TwitchUser.UserLogin}) - подписался {FollowedAt:yyyy-MM-dd HH:mm:ss}";
     }
 
     public override bool Equals(object? obj)

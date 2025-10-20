@@ -1,10 +1,19 @@
-﻿namespace MARS.Server.Services.Twitch.MiniGamesStats.Entitys;
+﻿using MARS.Server.Services.Twitch.Entitys;
+
+namespace MARS.Server.Services.Twitch.MiniGamesStats.Entitys;
 
 public class TwitchLeaderboardUser
 {
     [Key]
+    [Required]
     public required string TwitchId { get; set; }
-    public required string DisplayName { get; set; }
+
+    /// <summary>
+    /// Ссылка на пользователя Twitch
+    /// </summary>
+    [Required]
+    [ForeignKey(nameof(TwitchId))]
+    public required TwitchUser TwitchUser { get; set; }
 
     [NotMapped]
     public int TotalWins => TekkenVictorinaWins + RussianRouletteWins + TriviaWins;

@@ -5,7 +5,7 @@ using MARS.Server.Services.SoundRequest.Queue;
 namespace MARS.Server.Services.SoundRequest;
 
 /// <summary>
-/// Фасад для управления системой звуковых запросов
+/// Фасад для управления системой звуковых запросов.
 /// Объединяет функциональность плеера, очереди и SignalR уведомлений
 /// </summary>
 public class SoundRequestManager(
@@ -38,6 +38,30 @@ public class SoundRequestManager(
     #endregion
 
     #region Player Control
+
+    /// <summary>
+    /// Воспроизвести плеер (Resume или начать воспроизведение следующего трека)
+    /// </summary>
+    public async Task PlayAsync()
+    {
+        var state = GetState();
+        var queueCount = (await queue.GetQueueAsync()).Count;
+        
+        Console.WriteLine($"[PlayAsync] State: IsStoped={state.IsStoped}, HasCurrentTrack={state.CurrentTrack != null}, QueueCount={queueCount}");
+        
+        // Если плеер остановлен или нет текущего трека, начинаем воспроизведение следующего
+        if (state.IsStoped || state.CurrentTrack == null)
+        {
+            Console.WriteLine("[PlayAsync] Вызываем PlayNextFromQueueAsync");
+            await PlayNextFromQueueAsync();
+        }
+        else
+        {
+            // Иначе просто снимаем паузу
+            Console.WriteLine("[PlayAsync] Вызываем ResumeAsync");
+            await ResumeAsync();
+        }
+    }
 
     /// <summary>
     /// Возобновить воспроизведение
@@ -88,6 +112,40 @@ public class SoundRequestManager(
     }
 
     /// <summary>
+    /// Переключить воспроизведение (Play/Pause)
+    /// </summary>
+    public async Task TogglePlayPauseAsync()
+    {
+        var state = GetState();
+        
+        if (state.IsPaused)
+        {
+            await PlayAsync();
+        }
+        else
+        {
+            await PauseAsync();
+        }
+    }
+
+    /// <summary>
+    /// Переключить звук (Mute/Unmute)
+    /// </summary>
+    public async Task ToggleMuteAsync()
+    {
+        var state = GetState();
+        
+        if (state.IsMuted)
+        {
+            await UnmuteAsync();
+        }
+        else
+        {
+            await MuteAsync();
+        }
+    }
+
+    /// <summary>
     /// Установить громкость
     /// </summary>
     public Task SetVolume(int volume)
@@ -110,7 +168,7 @@ public class SoundRequestManager(
     /// <summary>
     /// Получить очередь треков
     /// </summary>
-    public async Task<List<UserRequestedTrack>> GetQueueAsync()
+    public async Task<List<BaseTrackInfo>> GetQueueAsync()
     {
         return await queue.GetQueueAsync();
     }
@@ -118,7 +176,7 @@ public class SoundRequestManager(
     /// <summary>
     /// Добавить трек в очередь
     /// </summary>
-    public async Task AddTrack(UserRequestedTrack track)
+    public async Task AddTrack(BaseTrackInfo track)
     {
         await queue.AddToQueueAsync(track);
     }
@@ -139,15 +197,15 @@ public class SoundRequestManager(
     /// </summary>
     public async Task PlayTrackFromQueueAsync(Guid trackId)
     {
-        var track = (await queue.GetQueueAsync()).FirstOrDefault(t => t.Id == trackId);
+        var track = await queue.GetTrackByIdAsync(trackId);
 
         if (track != null && playerController is MainPlayer mainPlayer)
         {
             // Воспроизводим выбранный трек
             await playerController.PlayAsync(
-                track.RequestedTrack,
-                track.TwitchId,
-                track.TwitchDisplayName,
+                track,
+                track.RequestedByTwitchId,
+                track.RequestedByDisplayName,
                 _cancellationToken
             );
 

@@ -1,4 +1,6 @@
-﻿namespace MARS.Server.Services.CinemaQueue.Entitys;
+﻿using MARS.Server.Services.Twitch.Entitys;
+
+namespace MARS.Server.Services.CinemaQueue.Entitys;
 
 [Table("CinemaQueue")]
 public class CinemaMediaItem
@@ -23,14 +25,14 @@ public class CinemaMediaItem
 
     public DateTimeOffset? ScheduledFor { get; set; }
 
-    [MaxLength(100)]
-    public string? AddedBy { get; set; }
-
     [MaxLength(50)]
     public string? TwitchUserId { get; set; }
 
-    [MaxLength(100)]
-    public string? TwitchUsername { get; set; }
+    /// <summary>
+    /// Ссылка на пользователя Twitch, добавившего медиа
+    /// </summary>
+    [ForeignKey(nameof(TwitchUserId))]
+    public TwitchUser? TwitchUser { get; set; }
 
     public string? Notes { get; set; }
 

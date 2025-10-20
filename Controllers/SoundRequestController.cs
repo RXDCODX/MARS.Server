@@ -47,22 +47,22 @@ public class SoundRequestController(
     /// Получить очередь треков
     /// </summary>
     [HttpGet("queue")]
-    public async Task<ActionResult<OperationResult<List<UserRequestedTrack>>>> GetQueue(
+    public async Task<ActionResult<OperationResult<List<BaseTrackInfo>>>> GetQueue(
         CancellationToken cancellationToken = default
     )
     {
-        ActionResult<OperationResult<List<UserRequestedTrack>>> result;
+        ActionResult<OperationResult<List<BaseTrackInfo>>> result;
 
         try
         {
             var queue = await manager.GetQueueAsync();
-            result = Ok(OperationResult<List<UserRequestedTrack>>.Ok("Очередь получена", queue));
+            result = Ok(OperationResult<List<BaseTrackInfo>>.Ok("Очередь получена", queue));
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при получении очереди");
             result = Ok(
-                OperationResult<List<UserRequestedTrack>>.Bad("Ошибка при получении очереди", [])
+                OperationResult<List<BaseTrackInfo>>.Bad("Ошибка при получении очереди", [])
             );
         }
 
@@ -97,7 +97,7 @@ public class SoundRequestController(
     }
 
     /// <summary>
-    /// Воспроизвести плеер (Resume)
+    /// Воспроизвести плеер (Resume или начать воспроизведение следующего трека)
     /// </summary>
     [HttpPost("play")]
     public async Task<ActionResult<OperationResult>> Play(
@@ -108,7 +108,7 @@ public class SoundRequestController(
 
         try
         {
-            await manager.ResumeAsync();
+            await manager.PlayAsync();
             result = Ok(OperationResult.Ok("Плеер запущен"));
         }
         catch (Exception ex)
@@ -139,6 +139,33 @@ public class SoundRequestController(
         {
             logger.LogError(ex, "Ошибка при постановке на паузу");
             result = Ok(OperationResult.Bad("Ошибка при постановке на паузу"));
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Переключить воспроизведение (Play/Pause)
+    /// </summary>
+    [HttpPost("toggle-play-pause")]
+    public async Task<ActionResult<OperationResult>> TogglePlayPause(
+        CancellationToken cancellationToken = default
+    )
+    {
+        ActionResult<OperationResult> result;
+
+        try
+        {
+            var state = manager.GetState();
+            await manager.TogglePlayPauseAsync();
+            
+            var message = state.IsPaused ? "Плеер запущен" : "Плеер поставлен на паузу";
+            result = Ok(OperationResult.Ok(message));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при переключении воспроизведения");
+            result = Ok(OperationResult.Bad("Ошибка при переключении воспроизведения"));
         }
 
         return result;
@@ -301,6 +328,33 @@ public class SoundRequestController(
         {
             logger.LogError(ex, "Ошибка при изменении звука");
             result = Ok(OperationResult.Bad("Ошибка при изменении звука"));
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Переключить звук (Mute/Unmute)
+    /// </summary>
+    [HttpPost("toggle-mute")]
+    public async Task<ActionResult<OperationResult>> ToggleMute(
+        CancellationToken cancellationToken = default
+    )
+    {
+        ActionResult<OperationResult> result;
+
+        try
+        {
+            var state = manager.GetState();
+            await manager.ToggleMuteAsync();
+            
+            var message = state.IsMuted ? "Звук включен" : "Звук выключен";
+            result = Ok(OperationResult.Ok(message));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при переключении звука");
+            result = Ok(OperationResult.Bad("Ошибка при переключении звука"));
         }
 
         return result;

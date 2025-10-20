@@ -35,6 +35,8 @@ public class StateManager : IDisposable
             return new PlayerState
             {
                 Id = _currentState.Id,
+                CurrentTrackId = _currentState.CurrentTrackId,
+                NextTrackId = _currentState.NextTrackId,
                 CurrentTrack = _currentState.CurrentTrack,
                 NextTrack = _currentState.NextTrack,
                 CurrentTrackDuration = _currentState.CurrentTrackDuration,
@@ -63,6 +65,8 @@ public class StateManager : IDisposable
             return new PlayerState
             {
                 Id = _currentState.Id,
+                CurrentTrackId = _currentState.CurrentTrackId,
+                NextTrackId = _currentState.NextTrackId,
                 CurrentTrack = _currentState.CurrentTrack,
                 NextTrack = _currentState.NextTrack,
                 CurrentTrackDuration = _currentState.CurrentTrackDuration,
@@ -102,6 +106,8 @@ public class StateManager : IDisposable
                 stateToNotify = new PlayerState
                 {
                     Id = _currentState.Id,
+                    CurrentTrackId = _currentState.CurrentTrackId,
+                    NextTrackId = _currentState.NextTrackId,
                     CurrentTrack = _currentState.CurrentTrack,
                     NextTrack = _currentState.NextTrack,
                     CurrentTrackDuration = _currentState.CurrentTrackDuration,
@@ -134,6 +140,7 @@ public class StateManager : IDisposable
         await UpdateStateAsync(
             state =>
             {
+                state.CurrentTrackId = track?.Id;
                 state.CurrentTrack = track;
                 state.CurrentTrackDuration = track?.Duration;
                 state.IsStoped = track == null;
@@ -155,6 +162,7 @@ public class StateManager : IDisposable
         await UpdateStateAsync(
             state =>
             {
+                state.CurrentTrackId = track?.Id;
                 state.CurrentTrack = track;
                 state.CurrentTrackDuration = track?.Duration;
                 state.IsStoped = track == null;
@@ -170,7 +178,14 @@ public class StateManager : IDisposable
     /// </summary>
     public async Task SetNextTrackAsync(BaseTrackInfo? track, bool notify = true)
     {
-        await UpdateStateAsync(state => state.NextTrack = track, notify);
+        await UpdateStateAsync(
+            state =>
+            {
+                state.NextTrackId = track?.Id;
+                state.NextTrack = track;
+            },
+            notify
+        );
     }
 
     /// <summary>
@@ -243,6 +258,7 @@ public class StateManager : IDisposable
         await UpdateStateAsync(
             state =>
             {
+                state.CurrentTrackId = track.Id;
                 state.CurrentTrack = track;
                 state.CurrentTrackDuration = track.Duration;
                 state.IsPaused = false;
@@ -262,6 +278,8 @@ public class StateManager : IDisposable
         await UpdateStateAsync(
             state =>
             {
+                state.CurrentTrackId = null;
+                state.NextTrackId = null;
                 state.CurrentTrack = null;
                 state.NextTrack = null;
                 state.CurrentTrackDuration = null;

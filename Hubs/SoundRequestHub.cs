@@ -1,5 +1,4 @@
 ﻿using MARS.Server.Services.SoundRequest;
-using MARS.Server.Services.SoundRequest.Entities;
 using SignalRSwaggerGen.Attributes;
 using SignalRSwaggerGen.Enums;
 
@@ -8,77 +7,34 @@ namespace MARS.Server.Hubs;
 [SignalRHub("/hubs/soundrequest", AutoDiscover.MethodsAndParams)]
 public class SoundRequestHub(SoundRequestManager manager) : Hub<ISoundRequestHub>
 {
-    public Task BePlayer() =>
-        Groups.AddToGroupAsync(Context.ConnectionId, SignalRService.PlayerGroupName);
+    /// <summary>
+    /// Имя группы для клиентов плеера
+    /// </summary>
+    public const string MainPlayerName = "mainplayer";
+    public const string FramePlayerGroupName = "frameplayer";
+    public const string ApiPlayerGroupName = "apiplayer";
+    public const string AllPlayers = "all";
 
-    public Task Play()
+    public static readonly List<string> SoundRequestGroups =
+    [
+        MainPlayerName,
+        FramePlayerGroupName,
+        ApiPlayerGroupName,
+    ];
+
+    public Task Join(string groupName)
     {
-        _ = manager.ResumeAsync();
+        var name = SoundRequestGroups.Find(e =>
+            e.Equals(groupName, StringComparison.OrdinalIgnoreCase)
+        );
+
+        if (name is not null)
+        {
+            Groups.AddToGroupAsync(Context.ConnectionId, name);
+            Groups.AddToGroupAsync(Context.ConnectionId, AllPlayers);
+        }
+
         return Task.CompletedTask;
-    }
-
-    public Task Pause()
-    {
-        _ = manager.PauseAsync();
-        return Task.CompletedTask;
-    }
-
-    public Task Resume()
-    {
-        _ = manager.ResumeAsync();
-        return Task.CompletedTask;
-    }
-
-    public Task Stop()
-    {
-        _ = manager.StopAsync();
-        return Task.CompletedTask;
-    }
-
-    public Task Skip() => manager.SkipAsync();
-
-    public Task Mute()
-    {
-        _ = manager.MuteAsync();
-        return Task.CompletedTask;
-    }
-
-    public Task Unmute()
-    {
-        _ = manager.UnmuteAsync();
-        return Task.CompletedTask;
-    }
-
-    public Task SetVolume(int volume)
-    {
-        _ = manager.SetVolume(volume);
-        return Task.CompletedTask;
-    }
-
-    public async Task AddTrackToQueue(UserRequestedTrack track) => await manager.AddTrack(track);
-
-    public async Task<List<UserRequestedTrack>> GetQueue() => await manager.GetQueueAsync();
-
-    public async Task<List<BaseTrackInfo>> GetHistory(int count = 20)
-    {
-        return await manager.GetHistoryAsync(count);
-    }
-
-    public Task<PlayerState> GetPlayerState() => Task.FromResult(manager.GetState());
-
-    public async Task PlayNext()
-    {
-        await manager.PlayNextFromQueueAsync();
-    }
-
-    public async Task PlayTrack(Guid trackId)
-    {
-        await manager.PlayTrackFromQueueAsync(trackId);
-    }
-
-    public async Task RemoveTrack(Guid trackId)
-    {
-        await manager.RemoveTrack(trackId);
     }
 
     /// <summary>
@@ -103,5 +59,15 @@ public class SoundRequestHub(SoundRequestManager manager) : Hub<ISoundRequestHub
     public async Task ErrorPlaying()
     {
         await manager.OnTrackError();
+    }
+
+    public override Task OnDisconnectedAsync(Exception? exception)
+    {
+        foreach (var group in SoundRequestGroups)
+        {
+            Groups.RemoveFromGroupAsync(Context.ConnectionId, group);
+        }
+
+        return Task.CompletedTask;
     }
 }
