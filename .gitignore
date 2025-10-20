@@ -371,3 +371,4 @@ appsettings.Development.json
 appsettings.json
 /WTelegram/WTelegram.session
 /wwwroot/assets/*
+/Logs.csv
