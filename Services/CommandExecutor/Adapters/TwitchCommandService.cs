@@ -1,5 +1,7 @@
 ﻿using MARS.Server.Services.CommandExecutor.Entitys;
 using MARS.Server.Services.CommandExecutor.Entitys.Commands;
+using MARS.Server.Services.Twitch;
+using MARS.Server.Services.Twitch.Entitys;
 using Microsoft.Kiota.Abstractions.Extensions;
 using TwitchLib.Client.Events;
 
@@ -13,6 +15,7 @@ public class TwitchCommandService : PlatformCommandServiceBase<string>, IHostedS
     private readonly CommandFactory _commandFactory;
     private readonly ITwitchClient _client;
     private readonly ILogger<TwitchCommandService> _logger;
+    private readonly IServiceProvider _serviceProvider;
     private readonly Dictionary<string, BaseCommand> _commands;
     private readonly Dictionary<string, string> _aliases;
 
@@ -41,12 +44,14 @@ public class TwitchCommandService : PlatformCommandServiceBase<string>, IHostedS
     public TwitchCommandService(
         CommandFactory commandFactory,
         ITwitchClient client,
+        IServiceProvider serviceProviderProvider,
         IHostApplicationLifetime lifetime,
         ILogger<TwitchCommandService> logger
     )
     {
         _commandFactory = commandFactory;
         _client = client;
+        _serviceProvider = serviceProviderProvider;
         _logger = logger;
         _commands = new Dictionary<string, BaseCommand>(StringComparer.OrdinalIgnoreCase);
         _aliases = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -198,22 +203,16 @@ public class TwitchCommandService : PlatformCommandServiceBase<string>, IHostedS
                     string result;
                     try
                     {
-                        // Разбираем параметры из входной строки
-                        Dictionary<string, object> parameters = new()
-                        {
-                            { "userId", userId },
-                            { "displayName", username },
-                            { "isModerator", e.ChatMessage.IsModerator },
-                            { "isVip", e.ChatMessage.IsVip },
-                            { "isBroadcaster", e.ChatMessage.IsBroadcaster },
-                        };
+                        var parameters = command.ParseParameters(input);
 
-                        var newParams = command.ParseParameters(input);
-
-                        foreach (var keyValuePair in newParams)
-                        {
-                            parameters.AddOrReplace(keyValuePair.Key, keyValuePair.Value);
-                        }
+                        // Гарантируем наличие пользователя в БД и добавляем в параметры
+                        var userEnsureService = _serviceProvider
+                            .CreateAsyncScope()
+                            .ServiceProvider.GetRequiredService<TwitchUserEnsureService>();
+                        var twitchUser = await userEnsureService.EnsureUserExistsAsync(
+                            e.ChatMessage
+                        );
+                        parameters["user"] = twitchUser;
 
                         // Выполняем команду
                         result = await command.ExecuteAsync(parameters, Platform.Twitch);

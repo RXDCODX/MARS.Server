@@ -2,6 +2,7 @@
 using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.Twitch.TwitchFollowers;
 using TwitchLib.Client.Events;
+using TwitchLib.Client.Models;
 using User = TwitchLib.Api.Helix.Models.Users.GetUsers.User;
 
 namespace MARS.Server.Services.Twitch;
@@ -78,9 +79,9 @@ public class TwitchUserSyncService(
         }
     }
 
-    private async Task ProcessUserAsync(TwitchLib.Client.Models.ChatMessage chatMessage)
+    private async Task ProcessUserAsync(ChatMessage chatMessage)
     {
-        var userId = chatMessage.Id;
+        var userId = chatMessage.UserId;
         var userName = chatMessage.Username;
         var displayName = chatMessage.DisplayName;
 
@@ -122,12 +123,9 @@ public class TwitchUserSyncService(
         }
     }
 
-    private async Task CreateUserAsync(
-        AppDbContext db,
-        TwitchLib.Client.Models.ChatMessage chatMessage
-    )
+    private async Task CreateUserAsync(AppDbContext db, ChatMessage chatMessage)
     {
-        var userId = chatMessage.Id;
+        var userId = chatMessage.UserId;
         var userName = chatMessage.Username;
         var displayName = chatMessage.DisplayName;
 
@@ -191,10 +189,10 @@ public class TwitchUserSyncService(
     private async Task UpdateUserAsync(
         AppDbContext db,
         TwitchUser existingUser,
-        TwitchLib.Client.Models.ChatMessage chatMessage
+        ChatMessage chatMessage
     )
     {
-        var userId = chatMessage.Id;
+        var userId = chatMessage.UserId;
         var userName = chatMessage.Username;
         var displayName = chatMessage.DisplayName;
 
@@ -293,9 +291,3 @@ public class TwitchUserSyncService(
         base.Dispose();
     }
 }
-
-
-
-
-
-

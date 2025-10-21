@@ -16,6 +16,7 @@ using MARS.Server.Services.SoundRequest.Interfaces;
 using MARS.Server.Services.SoundRequest.Queue;
 using MARS.Server.Services.SoundRequest.YouTube;
 using MARS.Server.Services.TelegramBotService;
+using MARS.Server.Services.Twitch;
 using MARS.Server.Services.Twitch.AutoInfoFetch;
 using MARS.Server.Services.Twitch.Client;
 using MARS.Server.Services.Twitch.ClientMessages.AutoMessages;
@@ -337,9 +338,6 @@ public static class StartupEstensions
         services.AddSingleton<TwitchGaoAlert>();
         services.AddHostedService(sp => sp.GetRequiredService<TwitchGaoAlert>());
 
-        services.AddSingleton<TwitchNameActualizer>();
-        services.AddHostedService(sp => sp.GetRequiredService<TwitchNameActualizer>());
-
         services.AddSingleton<ChannelRewardsService>();
         //services.AddHostedService<AlertInitializationService>();
 
@@ -351,6 +349,9 @@ public static class StartupEstensions
 
         // Регистрируем сервис для работы с автоматическими сообщениями
         services.AddAutoMessagesService();
+
+        // Регистрируем сервисы для работы с пользователями Twitch
+        services.AddScoped<TwitchUserEnsureService>();
 
         return services;
     }
