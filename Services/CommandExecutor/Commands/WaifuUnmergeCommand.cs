@@ -41,7 +41,7 @@ public class WaifuUnmergeCommand(MergeWaifu mergeWaifu) : BaseCommand
             : await mergeWaifu.Unmerge(identifier);
 
         return host is null ? "Не удалось найти этого хоста"
-            : waifu is null ? $"Не удалось найти вайфу этого мужичка ({host.TwitchId}:{host.Name})"
-            : $"Развод между {host.Name} и {waifu.Name} состоялся";
+            : waifu is null ? $"Не удалось найти вайфу этого мужичка ({host.TwitchId}:{host.TwitchUser?.DisplayName})"
+            : $"Развод между {host.TwitchUser?.DisplayName} и {waifu.Name} состоялся";
     }
 }

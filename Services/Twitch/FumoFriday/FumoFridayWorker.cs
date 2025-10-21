@@ -122,7 +122,6 @@ public class FumoFridayWorker(
                             {
                                 TwitchId = id,
                                 LastTime = now,
-                                DisplayName = name,
                             };
 
                             await dbContext.FumoUsers.AddAsync(host, _cancellationToken);

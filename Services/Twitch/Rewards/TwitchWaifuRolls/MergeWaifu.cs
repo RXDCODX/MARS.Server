@@ -49,7 +49,7 @@ public class MergeWaifu(
                 if (host is not null)
                 {
                     host.TwitchId = twEvent.UserId;
-                    host.Name = twEvent.UserName;
+                    // Обновление TwitchUser выполняется отдельным сервисом
 
                     if (!host.IsPrivated)
                     {
@@ -258,7 +258,6 @@ public class MergeWaifu(
                 host = new Host
                 {
                     TwitchId = twEvent.UserId,
-                    Name = twEvent.UserName,
                     HostCoolDown = new HostCoolDown { HostId = twEvent.UserId },
                     HostGreetings = new HostAutoHello { HostId = twEvent.UserId },
                 };
@@ -281,10 +280,14 @@ public class MergeWaifu(
     public async Task<(Waifu? waifu, Host? host)> Unmerge(string nickname)
     {
         await using var dbContext = await factory.CreateDbContextAsync(_cancellationToken);
-        var host = await dbContext.Hosts.SingleOrDefaultAsync(
-            e => e.Name != null && EF.Functions.Like(e.Name, $"%{nickname}%"),
-            _cancellationToken
-        );
+        var host = await dbContext
+            .Hosts.Include(e => e.TwitchUser)
+            .SingleOrDefaultAsync(
+                e =>
+                    e.TwitchUser != null
+                    && EF.Functions.ILike(e.TwitchUser.DisplayName, $"%{nickname}%"),
+                _cancellationToken
+            );
 
         if (host is { IsPrivated: true })
         {

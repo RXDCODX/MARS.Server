@@ -95,7 +95,6 @@ public class TekkenVictorinaLeaderbord(
         {
             var newUser = new TwitchLeaderboardUser()
             {
-                DisplayName = name,
                 TwitchId = twitchId,
                 TekkenVictorinaWins = 1,
                 TekkenVictorinaWinsWithWaifu = isWaifuWin ? 1 : 0,
@@ -140,7 +139,7 @@ public class TekkenVictorinaLeaderbord(
                             var text = string.Join(
                                 " | ",
                                 leaders.Select(leaderboardUser =>
-                                    $"[{leaderboardUser.DisplayName}]({leaderboardUser.TekkenVictorinaWins} /w WaifuHelp:{leaderboardUser.TekkenVictorinaWinsWithWaifu})"
+                                    $"[{leaderboardUser.TwitchUser?.DisplayName}]({leaderboardUser.TekkenVictorinaWins} /w WaifuHelp:{leaderboardUser.TekkenVictorinaWinsWithWaifu})"
                                 )
                             );
                             await client.SendMessageToMainTwitchAsync($"@{user}, " + text);

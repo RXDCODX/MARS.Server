@@ -56,11 +56,11 @@ public class RollWaifuCommand(
                 );
 
                 var result =
-                    $"Вайфу ролл с вайфучкой {waifu.Name} для {resultRoll.Data.Host.Name} выполнен!";
+                    $"Вайфу ролл с вайфучкой {waifu.Name} для {resultRoll.Data.Host.TwitchUser?.DisplayName} выполнен!";
 
                 await alertsHub.Clients.All.WaifuRoll(
                     waifu,
-                    resultRoll.Data.Host.Name ?? throw new NullReferenceException(),
+                    resultRoll.Data.Host.TwitchUser?.DisplayName ?? throw new NullReferenceException(),
                     resultRoll.Data.Husband
                 );
 

@@ -110,8 +110,9 @@ public class HelloVideoWorker(
         var user = dbContext
             .HelloVideosUsers.AsNoTracking()
             .Include(e => e.MediaInfo)
+            .Include(e => e.TwitchUser)
             .AsEnumerable()
-            .FirstOrDefault(e => name.Equals(e.Name, StringComparison.OrdinalIgnoreCase));
+            .FirstOrDefault(e => e.TwitchUser != null && name.Equals(e.TwitchUser.DisplayName, StringComparison.OrdinalIgnoreCase));
 
         if (user == null)
         {
@@ -124,6 +125,6 @@ public class HelloVideoWorker(
         var mediaDto = new MediaDto() { MediaInfo = user.MediaInfo };
 
         await hubContext.Clients.All.Alert(mediaDto);
-        return user.Name;
+        return user.TwitchUser?.DisplayName;
     }
 }

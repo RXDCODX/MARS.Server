@@ -16,8 +16,7 @@ public class RxdcodxViewersService(
     EventSubWebsocketClient wsClient,
     IHostApplicationLifetime lifetime,
     ILogger<RxdcodxViewersService> logger,
-    FollowerDbService followerDbService,
-    TwitchUserInfoService userInfoService
+    FollowerDbService followerDbService
 ) : BackgroundService, IRxdcodxViewersService
 {
     private const string ChannelId = TwitchExstension.ChannelId; // ID канала rxdcodx
@@ -49,20 +48,13 @@ public class RxdcodxViewersService(
                 var followers = await LoadFollowersFromApiAsync();
                 if (followers != null)
                 {
-                    // Обогащаем данные дополнительной информацией
-                    var enrichedFollowers = await userInfoService.EnrichFollowersInfoAsync(
-                        followers
-                    );
-
-                    // Обновляем аватарки для пользователей без них
-                    await userInfoService.UpdateMissingAvatarsAsync(enrichedFollowers);
-
+                    // Обновление TwitchUser выполняется отдельным сервисом
                     // Сохраняем в БД
-                    await followerDbService.SaveOrUpdateFollowersAsync(enrichedFollowers);
+                    await followerDbService.SaveOrUpdateFollowersAsync(followers);
 
                     logger.LogInformation(
                         "Кеш фоловеров инициализирован из API и сохранен в БД: {Count} фоловеров",
-                        enrichedFollowers.Count
+                        followers.Count
                     );
                 }
             }
@@ -111,17 +103,10 @@ public class RxdcodxViewersService(
                     );
                 }
 
-                // Обогащаем данные дополнительной информацией
-                var enrichedFollowers = await userInfoService.EnrichFollowersInfoAsync(
-                    currentFollowersFromApi
-                );
-
-                // Обновляем аватарки для пользователей без них
-                await userInfoService.UpdateMissingAvatarsAsync(enrichedFollowers);
-
+                // Обновление TwitchUser выполняется отдельным сервисом
                 // Обновляем все данные в БД (статусы могли измениться)
                 var savedCount = await followerDbService.SaveOrUpdateFollowersAsync(
-                    enrichedFollowers
+                    currentFollowersFromApi
                 );
 
                 logger.LogInformation(
@@ -153,18 +138,13 @@ public class RxdcodxViewersService(
             var followers = await LoadFollowersFromApiAsync();
             if (followers != null)
             {
-                // Обогащаем данные дополнительной информацией
-                var enrichedFollowers = await userInfoService.EnrichFollowersInfoAsync(followers);
-
-                // Обновляем аватарки для пользователей без них
-                await userInfoService.UpdateMissingAvatarsAsync(enrichedFollowers);
-
+                // Обновление TwitchUser выполняется отдельным сервисом
                 // Сохраняем в БД (это и есть наш кеш)
-                await followerDbService.SaveOrUpdateFollowersAsync(enrichedFollowers);
+                await followerDbService.SaveOrUpdateFollowersAsync(followers);
 
                 logger.LogInformation(
                     "Данные фоловеров обновлены из API: {Count} фоловеров",
-                    enrichedFollowers.Count
+                    followers.Count
                 );
             }
         }
@@ -213,7 +193,10 @@ public class RxdcodxViewersService(
                 tokenService.Token.AccessToken
             );
 
-            var moderators = result2.Data.Select(FollowerInfo.FromModerator);
+            var moderators = result2.Data.Select(mod => new FollowerInfo
+            {
+                UserId = mod.UserId
+            });
 
             foreach (FollowerInfo followerInfo in moderators)
             {
@@ -228,7 +211,10 @@ public class RxdcodxViewersService(
                 tokenService.Token.AccessToken
             );
 
-            var vips = result3.Data.Select(FollowerInfo.FromVip);
+            var vips = result3.Data.Select(vip => new FollowerInfo
+            {
+                UserId = vip.UserId
+            });
 
             foreach (FollowerInfo followerInfo in vips)
             {
@@ -248,7 +234,10 @@ public class RxdcodxViewersService(
 
                 pagination = result.Pagination?.Cursor ?? string.Empty;
                 var isSameInfo = false;
-                var followers = result.Data.Select(FollowerInfo.FromChannelFollower);
+                var followers = result.Data.Select(follower => new FollowerInfo
+                {
+                    UserId = follower.UserId
+                });
                 foreach (FollowerInfo followerInfo in followers)
                 {
                     var isHaveSameInfo = list.Add(followerInfo);
@@ -257,15 +246,12 @@ public class RxdcodxViewersService(
                     {
                         var userInfo = list.First(e => e.UserId == followerInfo.UserId);
 
-                        if (userInfo.IsJustFollower)
+                        // Обновление TwitchUser выполняется отдельным сервисом
+                        // Просто проверяем наличие пользователя в списке
+                        if (userInfo.TwitchUser?.IsJustFollower ?? true)
                         {
                             isSameInfo = true;
                             break;
-                        }
-                        else
-                        {
-                            userInfo.FollowedAt = followerInfo.FollowedAt;
-                            userInfo.LastUpdated = DateTime.Now;
                         }
                     }
                 }
@@ -297,18 +283,13 @@ public class RxdcodxViewersService(
             var followers = await LoadFollowersFromApiAsync();
             if (followers != null)
             {
-                // Обогащаем данные дополнительной информацией
-                var enrichedFollowers = await userInfoService.EnrichFollowersInfoAsync(followers);
-
-                // Обновляем аватарки для пользователей без них
-                await userInfoService.UpdateMissingAvatarsAsync(enrichedFollowers);
-
+                // Обновление TwitchUser выполняется отдельным сервисом
                 // Сохраняем в БД (это и есть наш кеш)
-                await followerDbService.SaveOrUpdateFollowersAsync(enrichedFollowers);
+                await followerDbService.SaveOrUpdateFollowersAsync(followers);
 
                 logger.LogInformation(
                     "Кеш фоловеров обновлен из API и сохранен в БД. Количество: {Count}",
-                    enrichedFollowers.Count
+                    followers.Count
                 );
             }
         }
@@ -353,20 +334,11 @@ public class RxdcodxViewersService(
                 var newFollower = new FollowerInfo
                 {
                     UserId = twEvent.UserId,
-                    UserName = twEvent.UserName,
-                    UserLogin = twEvent.UserLogin,
-                    FollowedAt = twEvent.FollowedAt.LocalDateTime,
-                    LastUpdated = DateTime.UtcNow,
                 };
 
-                // Обогащаем данные дополнительной информацией
-                var enrichedFollower = await userInfoService.EnrichFollowerInfoAsync(newFollower);
-
-                // Обновляем аватарку если её нет
-                await userInfoService.UpdateUserAvatarAsync(enrichedFollower);
-
+                // Обновление TwitchUser выполняется отдельным сервисом
                 // Сохраняем в БД (это и есть наш кеш)
-                var isNew = await followerDbService.SaveOrUpdateFollowerAsync(enrichedFollower);
+                var isNew = await followerDbService.SaveOrUpdateFollowerAsync(newFollower);
 
                 if (isNew)
                 {
@@ -399,23 +371,12 @@ public class RxdcodxViewersService(
         {
             var newVip = new FollowerInfo()
             {
-                FollowedAt = DateTime.UnixEpoch,
-                LastUpdated = DateTime.UtcNow,
                 UserId = twEvent.UserId,
-                UserLogin = twEvent.UserLogin,
-                UserName = twEvent.UserName,
-                IsModerator = false,
-                IsVip = true,
             };
 
-            // Обогащаем данные дополнительной информацией
-            var enrichedVip = await userInfoService.EnrichFollowerInfoAsync(newVip);
-
-            // Обновляем аватарку если её нет
-            await userInfoService.UpdateUserAvatarAsync(enrichedVip);
-
+            // Обновление TwitchUser выполняется отдельным сервисом
             // Сохраняем в БД (это и есть наш кеш)
-            await followerDbService.SaveOrUpdateFollowerAsync(enrichedVip);
+            await followerDbService.SaveOrUpdateFollowerAsync(newVip);
 
             logger.LogInformation(
                 "Добавлен новый VIP: {UserName} (ID: {UserId})",
@@ -432,23 +393,12 @@ public class RxdcodxViewersService(
         {
             var newModerator = new FollowerInfo()
             {
-                FollowedAt = DateTime.UnixEpoch,
-                LastUpdated = DateTime.UtcNow,
                 UserId = twEvent.UserId,
-                UserLogin = twEvent.UserLogin,
-                UserName = twEvent.UserName,
-                IsModerator = true,
-                IsVip = false,
             };
 
-            // Обогащаем данные дополнительной информацией
-            var enrichedModerator = await userInfoService.EnrichFollowerInfoAsync(newModerator);
-
-            // Обновляем аватарку если её нет
-            await userInfoService.UpdateUserAvatarAsync(enrichedModerator);
-
+            // Обновление TwitchUser выполняется отдельным сервисом
             // Сохраняем в БД (это и есть наш кеш)
-            await followerDbService.SaveOrUpdateFollowerAsync(enrichedModerator);
+            await followerDbService.SaveOrUpdateFollowerAsync(newModerator);
 
             logger.LogInformation(
                 "Добавлен новый модератор: {UserName} (ID: {UserId})",
@@ -476,16 +426,11 @@ public class RxdcodxViewersService(
             var followers = await LoadFollowersFromApiAsync();
             if (followers != null)
             {
-                // Обогащаем данные дополнительной информацией
-                var enrichedFollowers = await userInfoService.EnrichFollowersInfoAsync(followers);
-
-                // Обновляем аватарки для пользователей без них
-                await userInfoService.UpdateMissingAvatarsAsync(enrichedFollowers);
-
+                // Обновление TwitchUser выполняется отдельным сервисом
                 // Сохраняем в БД (это и есть наш кеш)
-                await followerDbService.SaveOrUpdateFollowersAsync(enrichedFollowers);
+                await followerDbService.SaveOrUpdateFollowersAsync(followers);
 
-                return [.. enrichedFollowers];
+                return [.. followers];
             }
         }
         catch (Exception ex)
@@ -571,48 +516,12 @@ public class RxdcodxViewersService(
             }
             else
             {
+                // Обновление TwitchUser (и аватарок) выполняется отдельным сервисом
                 logger.LogInformation(
-                    "Найдено {Count} пользователей без аватарок, обновляем...",
+                    "Найдено {Count} пользователей без аватарок (обновление выполняется отдельным сервисом)",
                     usersWithoutAvatars.Count
                 );
-
-                // Обновляем аватарки через TwitchUserInfoService
-                var updatedCount = await userInfoService.UpdateMissingAvatarsAsync(
-                    usersWithoutAvatars
-                );
-
-                if (updatedCount > 0)
-                {
-                    // Получаем только пользователей с обновленными аватарками
-                    var usersWithUpdatedAvatars = usersWithoutAvatars
-                        .Where(u => !string.IsNullOrWhiteSpace(u.ProfileImageUrl))
-                        .ToList();
-
-                    if (usersWithUpdatedAvatars.Count > 0)
-                    {
-                        // Сохраняем обновленные данные в БД
-                        var dbUpdatedCount = await followerDbService.UpdateAvatarsAsync(
-                            usersWithUpdatedAvatars
-                        );
-
-                        logger.LogInformation(
-                            "Успешно обновлено {Count} аватарок в памяти и {DbCount} в БД",
-                            updatedCount,
-                            dbUpdatedCount
-                        );
-                        result = updatedCount;
-                    }
-                    else
-                    {
-                        logger.LogWarning(
-                            "Аватарки обновились в памяти, но не найдены для сохранения в БД"
-                        );
-                    }
-                }
-                else
-                {
-                    result = updatedCount;
-                }
+                result = 0;
             }
         }
         catch (Exception ex)

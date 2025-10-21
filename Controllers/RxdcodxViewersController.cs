@@ -142,9 +142,9 @@ public class RxdcodxViewersController(
                     .Select(u => new
                     {
                         userId = u.UserId,
-                        userName = u.UserName,
-                        profileImageUrl = u.ProfileImageUrl,
-                        lastUpdated = u.LastUpdated,
+                        userName = u.TwitchUser?.DisplayName,
+                        profileImageUrl = u.TwitchUser?.ProfileImageUrl,
+                        lastUpdated = u.TwitchUser?.LastUpdated,
                     })
                     .ToList(),
                 message = $"Найдено {count} пользователей без аватарок",

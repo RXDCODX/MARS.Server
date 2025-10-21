@@ -74,7 +74,6 @@ public class WaifuRollService(
                 host = new Host
                 {
                     TwitchId = id,
-                    Name = displayName,
                     HostGreetings = new HostAutoHello { HostId = id },
                     HostCoolDown = cd,
                 };
@@ -142,13 +141,15 @@ public class WaifuRollService(
             {
                 await using var dbContext = await factory.CreateDbContextAsync();
 
-                var host = await dbContext.Hosts.FirstOrDefaultAsync(e =>
-                    e.Name != null && EF.Functions.Like(e.Name, $"%{name}%")
-                );
+                var host = await dbContext.Hosts
+                    .Include(e => e.TwitchUser)
+                    .FirstOrDefaultAsync(e =>
+                        e.TwitchUser != null && EF.Functions.Like(e.TwitchUser.DisplayName, $"%{name}%")
+                    );
 
                 if (host is not null)
                 {
-                    var waifu = await RollTheWaifu(host.TwitchId, host.Name, true);
+                    var waifu = await RollTheWaifu(host.TwitchId, host.TwitchUser?.DisplayName ?? string.Empty, true);
 
                     var response = new TelegramRollWaifuResponse
                     {
@@ -364,7 +365,6 @@ public class WaifuRollService(
                 host = new Host
                 {
                     TwitchId = id,
-                    Name = displayName,
                     HostCoolDown = new HostCoolDown { HostId = id },
                     HostGreetings = new HostAutoHello { HostId = id },
                 };
@@ -392,10 +392,11 @@ public class WaifuRollService(
                     .Hosts.AsNoTracking()
                     .Include(e => e.HostCoolDown)
                     .Include(e => e.HostGreetings)
+                    .Include(e => e.TwitchUser)
                     .Where(e => !e.IsPrivated)
                     .ElementAtAsync(Random.Shared.Next(count));
 
-                var replace = message.Replace("{randomHost}", host.Name);
+                var replace = message.Replace("{randomHost}", host.TwitchUser?.DisplayName ?? "Unknown");
                 result = string.Concat(
                     "@{user}, твой супруг прислал(-а) тебе сообщение: ",
                     replace
