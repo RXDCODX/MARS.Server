@@ -42,12 +42,6 @@ public class BaseTrackInfo
     [ForeignKey(nameof(RequestedByTwitchId))]
     public TwitchUser? RequestedByTwitchUser { get; set; }
 
-    /// <summary>
-    /// Отображаемое имя пользователя (дублируется для обратной совместимости)
-    /// </summary>
-    [MaxLength(1000)]
-    public string? RequestedByDisplayName { get; set; }
-
     [NotMapped]
     public string Title
     {

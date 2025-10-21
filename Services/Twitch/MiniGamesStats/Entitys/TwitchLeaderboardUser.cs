@@ -6,6 +6,7 @@ public class TwitchLeaderboardUser
 {
     [Key]
     [Required]
+    [DatabaseGenerated(DatabaseGeneratedOption.None)]
     public required string TwitchId { get; set; }
 
     /// <summary>
@@ -13,13 +14,6 @@ public class TwitchLeaderboardUser
     /// </summary>
     [ForeignKey(nameof(TwitchId))]
     public TwitchUser? TwitchUser { get; set; }
-
-    /// <summary>
-    /// Отображаемое имя пользователя (дублируется для обратной совместимости)
-    /// </summary>
-    [Required]
-    [MaxLength(100)]
-    public string DisplayName { get; set; } = string.Empty;
 
     [NotMapped]
     public int TotalWins => TekkenVictorinaWins + RussianRouletteWins + TriviaWins;

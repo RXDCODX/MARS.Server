@@ -56,7 +56,6 @@ public class CommandsService(
 
             // Устанавливаем информацию о пользователе
             info.RequestedByTwitchId = user?.TwitchId ?? string.Empty;
-            info.RequestedByDisplayName = user?.DisplayName ?? string.Empty;
 
             // Добавляем трек в очередь
             await queue.AddToQueueAsync(info);
@@ -299,7 +298,6 @@ public class CommandsService(
 
                 // Устанавливаем информацию о пользователе
                 trackToAdd.RequestedByTwitchId = user?.TwitchId ?? string.Empty;
-                trackToAdd.RequestedByDisplayName = user?.DisplayName ?? string.Empty;
 
                 await queue.AddToQueueAsync(trackToAdd);
 

@@ -10,6 +10,7 @@ public class HelloVideosUsers
     public Guid Id { get; set; }
 
     [Required]
+    [DatabaseGenerated(DatabaseGeneratedOption.None)]
     public required string TwitchId { get; set; }
 
     /// <summary>
@@ -18,16 +19,11 @@ public class HelloVideosUsers
     [ForeignKey(nameof(TwitchId))]
     public TwitchUser? TwitchUser { get; set; }
 
-    /// <summary>
-    /// Имя пользователя (дублируется для обратной совместимости)
-    /// </summary>
-    [Required]
-    [MaxLength(100)]
-    public string Name { get; set; } = string.Empty;
-
     public DateTimeOffset LastTimeNotif { get; set; }
 
     [Required]
     public Guid MediaInfoId { get; set; }
+
+    [ForeignKey(nameof(MediaInfoId))]
     public required MediaInfo MediaInfo { get; set; }
 }

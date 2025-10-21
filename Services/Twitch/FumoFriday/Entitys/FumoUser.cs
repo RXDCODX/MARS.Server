@@ -6,6 +6,7 @@ public class FumoUser
 {
     [Key]
     [Required]
+    [DatabaseGenerated(DatabaseGeneratedOption.None)]
     public required string TwitchId { get; set; }
 
     /// <summary>
@@ -13,12 +14,6 @@ public class FumoUser
     /// </summary>
     [ForeignKey(nameof(TwitchId))]
     public TwitchUser? TwitchUser { get; set; }
-
-    /// <summary>
-    /// Отображаемое имя пользователя (дублируется для обратной совместимости)
-    /// </summary>
-    [MaxLength(100)]
-    public string? DisplayName { get; set; }
 
     public DateTimeOffset LastTime { get; set; }
 }

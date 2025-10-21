@@ -24,6 +24,7 @@ public class TwitchUser
     [Key]
     [Required]
     [MaxLength(50)]
+    [DatabaseGenerated(DatabaseGeneratedOption.None)]
     public required string TwitchId { get; init; }
 
     /// <summary>

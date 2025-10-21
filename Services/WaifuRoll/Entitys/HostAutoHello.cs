@@ -7,9 +7,9 @@ public class HostAutoHello
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     public Guid Guid { get; set; } = Guid.NewGuid();
 
-    [ForeignKey("HostId")]
     public required string HostId { get; set; }
 
+    [ForeignKey(nameof(HostId))]
     public Host? Host { get; set; }
 
     public DateTimeOffset Time { get; set; }

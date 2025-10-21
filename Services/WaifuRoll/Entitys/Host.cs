@@ -14,13 +14,6 @@ public class Host
     /// </summary>
     [ForeignKey(nameof(TwitchId))]
     public TwitchUser? TwitchUser { get; set; }
-
-    /// <summary>
-    /// Имя пользователя (дублируется из TwitchUser для обратной совместимости)
-    /// </summary>
-    [MaxLength(100)]
-    public string? Name { get; set; }
-
     public DateTimeOffset WhenOrdered { get; set; }
     public string? WaifuBrideId { get; set; }
     public bool IsPrivated { get; set; }

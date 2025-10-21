@@ -40,9 +40,9 @@ public class PlayerState
     [ForeignKey(nameof(CurrentTrackRequestedBy))]
     public TwitchUser? CurrentTrackRequestedByTwitchUser { get; set; }
 
-    [NotMapped]
+    [ForeignKey(nameof(CurrentTrackId))]
     public BaseTrackInfo? CurrentTrack { get; set; }
 
-    [NotMapped]
+    [ForeignKey(nameof(NextTrackId))]
     public BaseTrackInfo? NextTrack { get; set; }
 }
