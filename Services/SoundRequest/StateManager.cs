@@ -1,4 +1,5 @@
 ﻿using MARS.Server.Services.SoundRequest.Entities;
+using MARS.Server.Services.Twitch.Entitys;
 
 namespace MARS.Server.Services.SoundRequest;
 
@@ -45,7 +46,7 @@ public class StateManager : IDisposable
                 IsStoped = _currentState.IsStoped,
                 Volume = _currentState.Volume,
                 CurrentTrackRequestedBy = _currentState.CurrentTrackRequestedBy,
-                CurrentTrackRequestedByDisplayName = _currentState.CurrentTrackRequestedByDisplayName,
+                CurrentTrackRequestedByTwitchUser = _currentState.CurrentTrackRequestedByTwitchUser,
             };
         }
         finally
@@ -75,7 +76,7 @@ public class StateManager : IDisposable
                 IsStoped = _currentState.IsStoped,
                 Volume = _currentState.Volume,
                 CurrentTrackRequestedBy = _currentState.CurrentTrackRequestedBy,
-                CurrentTrackRequestedByDisplayName = _currentState.CurrentTrackRequestedByDisplayName,
+                CurrentTrackRequestedByTwitchUser = _currentState.CurrentTrackRequestedByTwitchUser,
             };
         }
         finally
@@ -116,7 +117,8 @@ public class StateManager : IDisposable
                     IsStoped = _currentState.IsStoped,
                     Volume = _currentState.Volume,
                     CurrentTrackRequestedBy = _currentState.CurrentTrackRequestedBy,
-                    CurrentTrackRequestedByDisplayName = _currentState.CurrentTrackRequestedByDisplayName,
+                    CurrentTrackRequestedByTwitchUser =
+                        _currentState.CurrentTrackRequestedByTwitchUser,
                 };
             }
         }
@@ -154,8 +156,7 @@ public class StateManager : IDisposable
     /// </summary>
     public async Task SetCurrentTrackAsync(
         BaseTrackInfo? track,
-        string? requestedBy,
-        string? requestedByDisplayName,
+        TwitchUser? user,
         bool notify = true
     )
     {
@@ -166,8 +167,8 @@ public class StateManager : IDisposable
                 state.CurrentTrack = track;
                 state.CurrentTrackDuration = track?.Duration;
                 state.IsStoped = track == null;
-                state.CurrentTrackRequestedBy = requestedBy;
-                state.CurrentTrackRequestedByDisplayName = requestedByDisplayName;
+                state.CurrentTrackRequestedBy = user?.TwitchId;
+                state.CurrentTrackRequestedByTwitchUser = user;
             },
             notify
         );
@@ -238,22 +239,9 @@ public class StateManager : IDisposable
     }
 
     /// <summary>
-    /// Начать воспроизведение трека
-    /// </summary>
-    public async Task StartPlayingAsync(BaseTrackInfo track, bool notify = true)
-    {
-        await StartPlayingAsync(track, null, null, notify);
-    }
-
-    /// <summary>
     /// Начать воспроизведение трека с информацией о пользователе, заказавшем трек
     /// </summary>
-    public async Task StartPlayingAsync(
-        BaseTrackInfo track,
-        string? requestedBy,
-        string? requestedByDisplayName,
-        bool notify = true
-    )
+    public async Task StartPlayingAsync(BaseTrackInfo track, TwitchUser? user, bool notify = true)
     {
         await UpdateStateAsync(
             state =>
@@ -263,8 +251,8 @@ public class StateManager : IDisposable
                 state.CurrentTrackDuration = track.Duration;
                 state.IsPaused = false;
                 state.IsStoped = false;
-                state.CurrentTrackRequestedBy = requestedBy;
-                state.CurrentTrackRequestedByDisplayName = requestedByDisplayName;
+                state.CurrentTrackRequestedBy = user?.TwitchId;
+                state.CurrentTrackRequestedByTwitchUser = user;
             },
             notify
         );
@@ -286,7 +274,7 @@ public class StateManager : IDisposable
                 state.IsPaused = false;
                 state.IsStoped = true;
                 state.CurrentTrackRequestedBy = null;
-                state.CurrentTrackRequestedByDisplayName = null;
+                state.CurrentTrackRequestedByTwitchUser = null;
             },
             notify
         );

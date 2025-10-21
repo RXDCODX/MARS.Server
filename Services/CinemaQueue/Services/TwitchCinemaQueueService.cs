@@ -10,7 +10,8 @@ public class TwitchCinemaQueueService(
     EventSubWebsocketClient wsClient,
     ILogger<TwitchCinemaQueueService> logger,
     ITwitchClient twitchClient,
-    IMediaMetadataService metadataService
+    IMediaMetadataService metadataService,
+    IDbContextFactory<AppDbContext> dbFactory
 ) : BackgroundService
 {
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
@@ -82,6 +83,26 @@ public class TwitchCinemaQueueService(
                 return;
             }
 
+            // Проверяем, существует ли пользователь в базе данных
+            string? validTwitchUserId = null;
+            await using var db = await dbFactory.CreateDbContextAsync();
+            var userExists = await db.TwitchUsers
+                .AsNoTracking()
+                .AnyAsync(u => u.TwitchId == userId);
+
+            if (userExists)
+            {
+                validTwitchUserId = userId;
+            }
+            else
+            {
+                logger.LogWarning(
+                    "Twitch user {UserId} ({UserName}) not found in database, skipping TwitchUserId",
+                    userId,
+                    userName
+                );
+            }
+
             // Получаем метаданные из ссылки
             var metadata = await metadataService.GetMetadataAsync(userInput);
 
@@ -109,7 +130,7 @@ public class TwitchCinemaQueueService(
                 Description = description,
                 MediaUrl = userInput,
                 AddedBy = userName,
-                TwitchUserId = userId,
+                TwitchUserId = validTwitchUserId,
                 TwitchUsername = userName,
                 Notes = $"Twitch reward redemption - {DateTime.Now}",
             };

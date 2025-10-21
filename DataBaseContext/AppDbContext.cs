@@ -144,14 +144,14 @@ public sealed class AppDbContext : DbContext
             .HasOne<BaseTrackInfo>()
             .WithMany()
             .HasForeignKey(ps => ps.CurrentTrackId)
-            .OnDelete(DeleteBehavior.SetNull);
+            .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder
             .Entity<PlayerState>()
             .HasOne<BaseTrackInfo>()
             .WithMany()
             .HasForeignKey(ps => ps.NextTrackId)
-            .OnDelete(DeleteBehavior.SetNull);
+            .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<MediaInfo>(entity =>
         {
@@ -360,7 +360,7 @@ public sealed class AppDbContext : DbContext
             .HasOne(damu => damu.TwitchUser)
             .WithMany(tu => tu.HonkaiMarkups)
             .HasForeignKey(damu => damu.TwitchId)
-            .OnDelete(DeleteBehavior.SetNull);
+            .OnDelete(DeleteBehavior.Restrict);
 
         // CinemaMediaItem -> TwitchUser (многие к одному, опционально)
         modelBuilder
@@ -368,7 +368,7 @@ public sealed class AppDbContext : DbContext
             .HasOne(cmi => cmi.TwitchUser)
             .WithMany(tu => tu.CinemaQueueItems)
             .HasForeignKey(cmi => cmi.TwitchUserId)
-            .OnDelete(DeleteBehavior.SetNull);
+            .OnDelete(DeleteBehavior.Restrict);
 
         // BaseTrackInfo -> TwitchUser (многие к одному, опционально)
         modelBuilder
@@ -376,7 +376,7 @@ public sealed class AppDbContext : DbContext
             .HasOne(bti => bti.RequestedByTwitchUser)
             .WithMany(tu => tu.RequestedTracks)
             .HasForeignKey(bti => bti.RequestedByTwitchId)
-            .OnDelete(DeleteBehavior.SetNull);
+            .OnDelete(DeleteBehavior.Restrict);
 
         // PlayerState -> TwitchUser (многие к одному, опционально)
         modelBuilder
@@ -384,7 +384,7 @@ public sealed class AppDbContext : DbContext
             .HasOne(ps => ps.CurrentTrackRequestedByTwitchUser)
             .WithMany(tu => tu.PlayerStates)
             .HasForeignKey(ps => ps.CurrentTrackRequestedBy)
-            .OnDelete(DeleteBehavior.SetNull);
+            .OnDelete(DeleteBehavior.Restrict);
     }
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)

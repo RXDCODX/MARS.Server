@@ -3,6 +3,7 @@ using System;
 using MARS.Server.DataBaseContext;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MARS.Server.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251020174831_TwitchUser")]
+    partial class TwitchUser
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1423,7 +1426,7 @@ namespace MARS.Server.Migrations
                     b.HasOne("MARS.Server.Services.Twitch.Entitys.TwitchUser", "TwitchUser")
                         .WithMany("CinemaQueueItems")
                         .HasForeignKey("TwitchUserId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("TwitchUser");
                 });
@@ -1455,7 +1458,7 @@ namespace MARS.Server.Migrations
                     b.HasOne("MARS.Server.Services.Twitch.Entitys.TwitchUser", "TwitchUser")
                         .WithMany("HonkaiMarkups")
                         .HasForeignKey("TwitchId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("TwitchUser");
                 });
@@ -1704,7 +1707,7 @@ namespace MARS.Server.Migrations
                     b.HasOne("MARS.Server.Services.Twitch.Entitys.TwitchUser", "RequestedByTwitchUser")
                         .WithMany("RequestedTracks")
                         .HasForeignKey("RequestedByTwitchId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("RequestedByTwitchUser");
                 });
@@ -1714,17 +1717,17 @@ namespace MARS.Server.Migrations
                     b.HasOne("MARS.Server.Services.SoundRequest.Entities.BaseTrackInfo", null)
                         .WithMany()
                         .HasForeignKey("CurrentTrackId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("MARS.Server.Services.Twitch.Entitys.TwitchUser", "CurrentTrackRequestedByTwitchUser")
                         .WithMany("PlayerStates")
                         .HasForeignKey("CurrentTrackRequestedBy")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("MARS.Server.Services.SoundRequest.Entities.BaseTrackInfo", null)
                         .WithMany()
                         .HasForeignKey("NextTrackId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("CurrentTrackRequestedByTwitchUser");
                 });

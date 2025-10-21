@@ -1,6 +1,7 @@
-using MARS.Server.Services.CommandExecutor.Entitys;
+﻿using MARS.Server.Services.CommandExecutor.Entitys;
 using MARS.Server.Services.CommandExecutor.Entitys.Commands;
 using MARS.Server.Services.SoundRequest;
+using MARS.Server.Services.Twitch.Entitys;
 
 namespace MARS.Server.Services.CommandExecutor.Commands;
 
@@ -34,58 +35,57 @@ public class SoundRequestListCommand(CommandsService commandsService) : BaseComm
     {
         string result;
 
-        // Проверяем права VIP/MOD/Broadcaster для Twitch
-        var hasPermission = true;
-        if (platform == Platform.Twitch)
-        {
-            var isModerator =
-                parameters.TryGetValue("isModerator", out var modObj) && (bool)modObj;
-            var isVip = parameters.TryGetValue("isVip", out var vipObj) && (bool)vipObj;
-            var isBroadcaster =
-                parameters.TryGetValue("isBroadcaster", out var broadcasterObj)
-                && (bool)broadcasterObj;
+        TwitchUser? user = null;
 
-            hasPermission = isModerator || isVip || isBroadcaster;
+        // Пытаемся получить TwitchUser из параметров
+        if (parameters.TryGetValue("user", out var userObj))
+        {
+            if (userObj is TwitchUser twitchUser)
+            {
+                user = twitchUser;
+            }
         }
 
-        if (!hasPermission)
+        if (user == null)
         {
-            result = "Плейлист могут заказывать только VIP/MOD";
+            result = "Не удалось получить информацию о пользователе";
         }
         else
         {
-            var hasPlaylistUrl =
-                parameters.TryGetValue("playlistUrl", out var playlistUrlObj)
-                && !string.IsNullOrWhiteSpace(playlistUrlObj?.ToString());
-            var hasUserId =
-                parameters.TryGetValue("userId", out var userIdObj)
-                && !string.IsNullOrWhiteSpace(userIdObj?.ToString());
-            var hasDisplayName =
-                parameters.TryGetValue("displayName", out var displayNameObj)
-                && !string.IsNullOrWhiteSpace(displayNameObj?.ToString());
-
-            if (hasPlaylistUrl && hasUserId && hasDisplayName)
+            // Проверяем права VIP/MOD/Broadcaster для Twitch
+            var hasPermission = true;
+            if (platform == Platform.Twitch)
             {
-                var playlistUrl = playlistUrlObj!.ToString()!.Trim();
-                var userId = userIdObj!.ToString()!;
-                var displayName = displayNameObj!.ToString()!;
+                hasPermission = user.IsModerator || user.IsVip || user.TwitchId == "broadcaster";
+            }
 
-                result = await commandsService.AddPlaylistAsync(
-                    playlistUrl,
-                    userId,
-                    displayName,
-                    cancellationToken
-                );
+            if (!hasPermission)
+            {
+                result = "Плейлист могут заказывать только VIP/MOD";
             }
             else
             {
-                result = !hasPlaylistUrl
-                    ? "Необходимо указать URL плейлиста"
-                    : "Не удалось определить пользователя";
+                var hasPlaylistUrl =
+                    parameters.TryGetValue("playlistUrl", out var playlistUrlObj)
+                    && !string.IsNullOrWhiteSpace(playlistUrlObj?.ToString());
+
+                if (hasPlaylistUrl)
+                {
+                    var playlistUrl = playlistUrlObj!.ToString()!.Trim();
+
+                    result = await commandsService.AddPlaylistAsync(
+                        playlistUrl,
+                        user,
+                        cancellationToken
+                    );
+                }
+                else
+                {
+                    result = "Необходимо указать URL плейлиста";
+                }
             }
         }
 
         return result;
     }
 }
-

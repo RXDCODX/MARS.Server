@@ -5,7 +5,8 @@ namespace MARS.Server.Services.CinemaQueue.Services;
 
 public class CinemaQueueService(
     ICinemaQueueRepository repository,
-    ILogger<CinemaQueueService> logger
+    ILogger<CinemaQueueService> logger,
+    IDbContextFactory<AppDbContext> dbFactory
 ) : ICinemaQueueService
 {
     public async Task<IEnumerable<CinemaMediaItemDto>> GetAllMediaItemsAsync(
@@ -110,6 +111,25 @@ public class CinemaQueueService(
         {
             try
             {
+                // Проверяем, существует ли пользователь в базе данных, если указан TwitchUserId
+                var validTwitchUserId = request.TwitchUserId;
+                if (!string.IsNullOrWhiteSpace(request.TwitchUserId))
+                {
+                    await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+                    var userExists = await db
+                        .TwitchUsers.AsNoTracking()
+                        .AnyAsync(u => u.TwitchId == request.TwitchUserId, cancellationToken);
+
+                    if (!userExists)
+                    {
+                        logger.LogWarning(
+                            "Twitch user {UserId} not found in database, clearing TwitchUserId",
+                            request.TwitchUserId
+                        );
+                        validTwitchUserId = null;
+                    }
+                }
+
                 var mediaItem = new CinemaMediaItem
                 {
                     Title = request.Title,
@@ -118,7 +138,7 @@ public class CinemaQueueService(
                     Priority = request.Priority,
                     ScheduledFor = request.ScheduledFor,
                     AddedBy = request.AddedBy,
-                    TwitchUserId = request.TwitchUserId,
+                    TwitchUserId = validTwitchUserId,
                     TwitchUsername = request.TwitchUsername,
                     Notes = request.Notes,
                     Status = MediaStatus.Pending,
@@ -138,7 +158,11 @@ public class CinemaQueueService(
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Error creating media item: {Title}", request.Title ?? "Untitled");
+                logger.LogError(
+                    ex,
+                    "Error creating media item: {Title}",
+                    request.Title ?? "Untitled"
+                );
                 throw;
             }
         }

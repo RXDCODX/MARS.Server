@@ -1,16 +1,11 @@
-using MARS.Server.Services.SoundRequest.Entities;
+﻿using MARS.Server.Services.SoundRequest.Entities;
+using MARS.Server.Services.Twitch.Entitys;
 
 namespace MARS.Server.Services.SoundRequest.Interfaces;
 
 public interface IPlayerController
 {
-    Task PlayAsync(BaseTrackInfo track, CancellationToken ct);
-    Task PlayAsync(
-        BaseTrackInfo track,
-        string? requestedBy,
-        string? requestedByDisplayName,
-        CancellationToken ct
-    );
+    Task PlayAsync(BaseTrackInfo track, TwitchUser? user, CancellationToken ct);
     Task PauseAsync(CancellationToken ct);
     Task ResumeAsync(CancellationToken ct);
     Task StopAsync(CancellationToken ct);
@@ -25,5 +20,3 @@ public interface IPlayerController
     event Func<BaseTrackInfo, Task>? OnEnded;
     event Func<BaseTrackInfo, Task>? OnError;
 }
-
-

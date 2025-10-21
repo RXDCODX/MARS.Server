@@ -11,7 +11,8 @@ namespace MARS.Server.Controllers;
 public class CinemaQueueController(
     ICinemaQueueService cinemaQueueService,
     ILogger<CinemaQueueController> logger,
-    IMediaMetadataService metadataService
+    IMediaMetadataService metadataService,
+    IDbContextFactory<AppDbContext> dbFactory
 ) : ControllerBase
 {
     /// <summary>
@@ -196,6 +197,24 @@ public class CinemaQueueController(
                         {
                             request.Description = metadata.Description;
                         }
+                    }
+                }
+
+                // Проверяем, существует ли пользователь в базе данных, если указан TwitchUserId
+                if (!string.IsNullOrWhiteSpace(request.TwitchUserId))
+                {
+                    await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+                    var userExists = await db.TwitchUsers
+                        .AsNoTracking()
+                        .AnyAsync(u => u.TwitchId == request.TwitchUserId, cancellationToken);
+
+                    if (!userExists)
+                    {
+                        logger.LogWarning(
+                            "Twitch user {UserId} not found in database, clearing TwitchUserId",
+                            request.TwitchUserId
+                        );
+                        request.TwitchUserId = null;
                     }
                 }
 

@@ -5,6 +5,9 @@ using MARS.Server.Services.SoundRequest.Entities;
 using MARS.Server.Services.Twitch.FumoFriday.Entitys;
 using MARS.Server.Services.Twitch.HelloVideos.Entitys;
 using MARS.Server.Services.Twitch.MiniGamesStats.Entitys;
+using TwitchLib.Client.Models;
+using TwitchLib.EventSub.Core.Models.Chat;
+using ChatMessage = TwitchLib.Client.Models.ChatMessage;
 
 namespace MARS.Server.Services.Twitch.Entitys;
 
@@ -122,5 +125,26 @@ public class TwitchUser
     public override int GetHashCode()
     {
         return TwitchId.GetHashCode();
+    }
+
+    public static explicit operator TwitchUser(ChatMessage chatMessage) =>
+        CreateTwitchUser(chatMessage);
+
+    public static TwitchUser FromTwitchApi(ChatMessage chatMessage) =>
+        CreateTwitchUser(chatMessage);
+
+    private static TwitchUser CreateTwitchUser(ChatMessage chatMessage)
+    {
+        return new TwitchUser()
+        {
+            DisplayName = chatMessage.DisplayName,
+            TwitchId = chatMessage.Id,
+            UserLogin = chatMessage.Username,
+            IsModerator = chatMessage.IsModerator,
+            IsVip = chatMessage.IsVip,
+            ChatColor = chatMessage.ColorHex,
+            CreatedAt = DateTime.Now,
+            LastUpdated = DateTime.Now,
+        };
     }
 }

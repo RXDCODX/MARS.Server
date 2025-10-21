@@ -2,6 +2,7 @@
 using MARS.Server.Services.SoundRequest.Interfaces;
 using MARS.Server.Services.SoundRequest.Queue;
 using MARS.Server.Services.SoundRequest.YouTube;
+using MARS.Server.Services.Twitch.Entitys;
 
 namespace MARS.Server.Services.SoundRequest;
 
@@ -21,13 +22,11 @@ public class CommandsService(
     /// Добавить трек в очередь по URL или поисковому запросу
     /// </summary>
     /// <param name="query">URL видео или поисковый запрос (обязательно)</param>
-    /// <param name="userId">ID пользователя Twitch (обязательно)</param>
-    /// <param name="displayName">Отображаемое имя пользователя (обязательно)</param>
+    /// <param name="user">Пользователь Twitch (обязательно)</param>
     /// <param name="cancellationToken">Токен отмены</param>
     public async Task<string> AddTrackAsync(
         string query,
-        string userId,
-        string displayName,
+        TwitchUser? user,
         CancellationToken cancellationToken = default
     )
     {
@@ -56,24 +55,20 @@ public class CommandsService(
             var queueCountBefore = await queue.GetQueueCountAsync();
 
             // Устанавливаем информацию о пользователе
-            info.RequestedByTwitchId = userId;
-            info.RequestedByDisplayName = displayName;
+            info.RequestedByTwitchId = user?.TwitchId ?? string.Empty;
+            info.RequestedByDisplayName = user?.DisplayName ?? string.Empty;
 
             // Добавляем трек в очередь
             await queue.AddToQueueAsync(info);
 
-            // Если плеер был остановлен И очередь была пуста - запускаем воспроизведение
-            if (wasPlayerStopped && queueCountBefore == 0)
-            {
-                await playerController.PlayAsync(info, userId, displayName, cancellationToken);
-                await queue.RemoveFromQueueAsync(info.Id);
-                await NotifyQueueChangedAsync();
-            }
-            else
-            {
-                // Если не запускаем автоматически - уведомляем об изменении очереди
-                await NotifyQueueChangedAsync();
-            }
+            // Пытаемся запустить воспроизведение если нужно
+            await TryAutoPlayTrackAsync(
+                wasPlayerStopped,
+                queueCountBefore,
+                info,
+                user,
+                cancellationToken
+            );
 
             var duration = info.Duration;
             var durationText =
@@ -120,21 +115,28 @@ public class CommandsService(
     /// <summary>
     /// Получить позицию пользователя в очереди
     /// </summary>
-    /// <param name="userId">ID пользователя Twitch (обязательно)</param>
-    public async Task<string> GetUserQueuePositionAsync(string userId)
+    /// <param name="user">Пользователь Twitch (обязательно)</param>
+    public async Task<string> GetUserQueuePositionAsync(TwitchUser? user)
     {
         string result;
 
-        var list = await queue.GetQueueAsync();
-        var idx = list.FindIndex(t => t.RequestedByTwitchId == userId);
-
-        if (idx >= 0)
+        if (user == null)
         {
-            result = $"Ваша позиция в очереди: {idx + 1}";
+            result = "Не удалось определить пользователя";
         }
         else
         {
-            result = "Вы не в очереди";
+            var list = await queue.GetQueueAsync();
+            var idx = list.FindIndex(t => t.RequestedByTwitchId == user.TwitchId);
+
+            if (idx >= 0)
+            {
+                result = $"Ваша позиция в очереди: {idx + 1}";
+            }
+            else
+            {
+                result = "Вы не в очереди";
+            }
         }
 
         return result;
@@ -143,49 +145,56 @@ public class CommandsService(
     /// <summary>
     /// Получить информацию о количестве треков перед заказанным треком и примерное время ожидания
     /// </summary>
-    /// <param name="userId">ID пользователя Twitch (обязательно)</param>
-    public async Task<string> GetUserQueueDetailsAsync(string userId)
+    /// <param name="user">Пользователь Twitch (обязательно)</param>
+    public async Task<string> GetUserQueueDetailsAsync(TwitchUser? user)
     {
         string result;
 
-        var list = await queue.GetQueueAsync();
-        var firstUserTrackIndex = list.FindIndex(t => t.RequestedByTwitchId == userId);
-
-        if (firstUserTrackIndex < 0)
+        if (user == null)
         {
-            result = "У вас нет треков в очереди";
+            result = "Не удалось определить пользователя";
         }
         else
         {
-            // Количество треков перед первым треком пользователя
-            var tracksBeforeCount = firstUserTrackIndex;
+            var list = await queue.GetQueueAsync();
+            var firstUserTrackIndex = list.FindIndex(t => t.RequestedByTwitchId == user.TwitchId);
 
-            // Рассчитываем общую длительность треков перед первым треком пользователя
-            var totalWaitTime = TimeSpan.Zero;
-
-            for (var i = 0; i < firstUserTrackIndex; i++)
+            if (firstUserTrackIndex < 0)
             {
-                var track = list[i];
-                if (track.Duration > TimeSpan.Zero)
-                {
-                    totalWaitTime += track.Duration;
-                }
-            }
-
-            // Формируем результат
-            if (tracksBeforeCount == 0)
-            {
-                result = "Ваш трек следующий в очереди!";
+                result = "У вас нет треков в очереди";
             }
             else
             {
-                var waitTimeText =
-                    totalWaitTime > TimeSpan.Zero
-                        ? $"{(int)totalWaitTime.TotalMinutes:D2}:{totalWaitTime.Seconds:D2}"
-                        : "неизвестно";
+                // Количество треков перед первым треком пользователя
+                var tracksBeforeCount = firstUserTrackIndex;
 
-                result =
-                    $"Треков в очереди: {tracksBeforeCount}, включим примерно через: ~{waitTimeText}";
+                // Рассчитываем общую длительность треков перед первым треком пользователя
+                var totalWaitTime = TimeSpan.Zero;
+
+                for (var i = 0; i < firstUserTrackIndex; i++)
+                {
+                    var track = list[i];
+                    if (track.Duration > TimeSpan.Zero)
+                    {
+                        totalWaitTime += track.Duration;
+                    }
+                }
+
+                // Формируем результат
+                if (tracksBeforeCount == 0)
+                {
+                    result = "Ваш трек следующий в очереди!";
+                }
+                else
+                {
+                    var waitTimeText =
+                        totalWaitTime > TimeSpan.Zero
+                            ? $"{(int)totalWaitTime.TotalMinutes:D2}:{totalWaitTime.Seconds:D2}"
+                            : "неизвестно";
+
+                    result =
+                        $"Треков в очереди: {tracksBeforeCount}, включим примерно через: ~{waitTimeText}";
+                }
             }
         }
 
@@ -195,39 +204,47 @@ public class CommandsService(
     /// <summary>
     /// Отменить последний заказанный трек пользователя
     /// </summary>
-    /// <param name="userId">ID пользователя Twitch (обязательно)</param>
+    /// <param name="user">Пользователь Twitch (обязательно)</param>
     /// <param name="cancellationToken">Токен отмены</param>
     public async Task<string> CancelLastTrackAsync(
-        string userId,
+        TwitchUser? user,
         CancellationToken cancellationToken = default
     )
     {
         string result;
 
-        await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
-
-        var last = await db
-            .SoundRequestBaseTrackInfos
-            .Where(t => !t.IsDeleted && t.QueueOrder != null && t.RequestedByTwitchId == userId)
-            .OrderByDescending(t => t.QueueOrder)
-            .FirstOrDefaultAsync(cancellationToken);
-
-        if (last != null)
+        if (user == null)
         {
-            // Помечаем как удаленный
-            last.IsDeleted = true;
-            last.QueueOrder = null;
-            db.SoundRequestBaseTrackInfos.Update(last);
-            await db.SaveChangesAsync(cancellationToken);
-
-            // Уведомляем об изменении очереди
-            await NotifyQueueChangedAsync();
-
-            result = "Последний заказ удален";
+            result = "Не удалось определить пользователя";
         }
         else
         {
-            result = "Нечего отменять";
+            await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+
+            var last = await db
+                .SoundRequestBaseTrackInfos.Where(t =>
+                    !t.IsDeleted && t.QueueOrder != null && t.RequestedByTwitchId == user.TwitchId
+                )
+                .OrderByDescending(t => t.QueueOrder)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (last != null)
+            {
+                // Помечаем как удаленный
+                last.IsDeleted = true;
+                last.QueueOrder = null;
+                db.SoundRequestBaseTrackInfos.Update(last);
+                await db.SaveChangesAsync(cancellationToken);
+
+                // Уведомляем об изменении очереди
+                await NotifyQueueChangedAsync();
+
+                result = "Последний заказ удален";
+            }
+            else
+            {
+                result = "Нечего отменять";
+            }
         }
 
         return result;
@@ -242,8 +259,7 @@ public class CommandsService(
     /// <param name="cancellationToken">Токен отмены</param>
     public async Task<string> AddPlaylistAsync(
         string playlistUrl,
-        string userId,
-        string displayName,
+        TwitchUser? user,
         CancellationToken cancellationToken = default
     )
     {
@@ -282,8 +298,8 @@ public class CommandsService(
                 }
 
                 // Устанавливаем информацию о пользователе
-                trackToAdd.RequestedByTwitchId = userId;
-                trackToAdd.RequestedByDisplayName = displayName;
+                trackToAdd.RequestedByTwitchId = user?.TwitchId ?? string.Empty;
+                trackToAdd.RequestedByDisplayName = user?.DisplayName ?? string.Empty;
 
                 await queue.AddToQueueAsync(trackToAdd);
 
@@ -294,12 +310,7 @@ public class CommandsService(
             // Если плеер был остановлен И очередь была пуста - запускаем первый трек
             if (wasPlayerStopped && queueCountBefore == 0 && firstTrack != null)
             {
-                await playerController.PlayAsync(
-                    firstTrack,
-                    userId,
-                    displayName,
-                    cancellationToken
-                );
+                await playerController.PlayAsync(firstTrack, user, cancellationToken);
                 await queue.RemoveFromQueueAsync(firstTrack.Id);
                 await NotifyQueueChangedAsync();
             }
@@ -326,5 +337,28 @@ public class CommandsService(
     {
         var currentQueue = await queue.GetQueueAsync();
         await signalRService.NotifyQueueChangedAsync(currentQueue);
+    }
+
+    /// <summary>
+    /// Попытаться автоматически запустить воспроизведение трека, если плеер остановлен и очередь была пуста
+    /// </summary>
+    private async Task TryAutoPlayTrackAsync(
+        bool wasPlayerStopped,
+        int queueCountBefore,
+        BaseTrackInfo track,
+        TwitchUser? user,
+        CancellationToken cancellationToken
+    )
+    {
+        if (wasPlayerStopped && queueCountBefore == 0)
+        {
+            await playerController.PlayAsync(track, user, cancellationToken);
+            await queue.RemoveFromQueueAsync(track.Id);
+            await NotifyQueueChangedAsync();
+        }
+        else
+        {
+            await NotifyQueueChangedAsync();
+        }
     }
 }

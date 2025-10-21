@@ -15,12 +15,13 @@ public class SoundRequestUserQueue(
     public async Task<BaseTrackInfo> AddToQueueAsync(BaseTrackInfo track)
     {
         await using var dbContext = await contextFactory.CreateDbContextAsync(_cancellationToken);
-        
+
         // Получаем максимальный порядок в очереди
-        var maxOrder = await dbContext
-            .SoundRequestBaseTrackInfos.AsNoTracking()
-            .Where(t => t.QueueOrder != null)
-            .MaxAsync(t => (int?)t.QueueOrder, cancellationToken: _cancellationToken) ?? -1;
+        var maxOrder =
+            await dbContext
+                .SoundRequestBaseTrackInfos.AsNoTracking()
+                .Where(t => t.QueueOrder != null)
+                .MaxAsync(t => (int?)t.QueueOrder, cancellationToken: _cancellationToken) ?? -1;
 
         track.QueueOrder = maxOrder + 1;
         track.IsDeleted = false;
@@ -37,19 +38,19 @@ public class SoundRequestUserQueue(
     public async Task RemoveFromQueueAsync(Guid id)
     {
         await using var dbContext = await contextFactory.CreateDbContextAsync(_cancellationToken);
-        
+
         var trackToRemove = await dbContext.SoundRequestBaseTrackInfos.FindAsync(
             [id],
             cancellationToken: _cancellationToken
         );
-        
+
         if (trackToRemove == null)
         {
             return;
         }
 
         var removedOrder = trackToRemove.QueueOrder;
-        
+
         // Помечаем как удаленный
         trackToRemove.IsDeleted = true;
         trackToRemove.QueueOrder = null;
@@ -59,8 +60,9 @@ public class SoundRequestUserQueue(
         if (removedOrder.HasValue)
         {
             await dbContext
-                .SoundRequestBaseTrackInfos
-                .Where(t => t.QueueOrder > removedOrder.Value && !t.IsDeleted)
+                .SoundRequestBaseTrackInfos.Where(t =>
+                    t.QueueOrder > removedOrder.Value && !t.IsDeleted
+                )
                 .ExecuteUpdateAsync(
                     e => e.SetProperty(t => t.QueueOrder, t => t.QueueOrder - 1),
                     cancellationToken: _cancellationToken
@@ -76,7 +78,7 @@ public class SoundRequestUserQueue(
     public async Task<List<BaseTrackInfo>> GetQueueAsync()
     {
         await using var dbContext = await contextFactory.CreateDbContextAsync(_cancellationToken);
-        
+
         return await dbContext
             .SoundRequestBaseTrackInfos.AsNoTracking()
             .Where(t => !t.IsDeleted && t.QueueOrder != null)
@@ -92,7 +94,7 @@ public class SoundRequestUserQueue(
         BaseTrackInfo? result = null;
 
         await using var dbContext = await contextFactory.CreateDbContextAsync(_cancellationToken);
-        
+
         result = await dbContext
             .SoundRequestBaseTrackInfos.AsNoTracking()
             .Where(t => !t.IsDeleted && t.QueueOrder != null)
@@ -107,16 +109,12 @@ public class SoundRequestUserQueue(
     /// </summary>
     public async Task<int> GetQueueCountAsync()
     {
-        int result;
-
         await using var dbContext = await contextFactory.CreateDbContextAsync(_cancellationToken);
-        
-        result = await dbContext
-            .SoundRequestBaseTrackInfos
-            .CountAsync(
-                t => !t.IsDeleted && t.QueueOrder != null,
-                cancellationToken: _cancellationToken
-            );
+
+        var result = await dbContext.SoundRequestBaseTrackInfos.CountAsync(
+            t => !t.IsDeleted && t.QueueOrder != null,
+            cancellationToken: _cancellationToken
+        );
 
         return result;
     }
@@ -126,11 +124,9 @@ public class SoundRequestUserQueue(
     /// </summary>
     public async Task<BaseTrackInfo?> GetTrackByIdAsync(Guid id)
     {
-        BaseTrackInfo? result;
-
         await using var dbContext = await contextFactory.CreateDbContextAsync(_cancellationToken);
-        
-        result = await dbContext
+
+        BaseTrackInfo? result = await dbContext
             .SoundRequestBaseTrackInfos.AsNoTracking()
             .FirstOrDefaultAsync(t => t.Id == id, cancellationToken: _cancellationToken);
 
@@ -142,11 +138,9 @@ public class SoundRequestUserQueue(
     /// </summary>
     public async Task<List<BaseTrackInfo>> GetUserTracksAsync(string twitchId)
     {
-        List<BaseTrackInfo> result;
-
         await using var dbContext = await contextFactory.CreateDbContextAsync(_cancellationToken);
-        
-        result = await dbContext
+
+        List<BaseTrackInfo> result = await dbContext
             .SoundRequestBaseTrackInfos.AsNoTracking()
             .Where(t => !t.IsDeleted && t.QueueOrder != null && t.RequestedByTwitchId == twitchId)
             .OrderBy(t => t.QueueOrder)

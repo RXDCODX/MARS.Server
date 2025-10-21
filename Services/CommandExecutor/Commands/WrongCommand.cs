@@ -1,6 +1,7 @@
 using MARS.Server.Services.CommandExecutor.Entitys;
 using MARS.Server.Services.CommandExecutor.Entitys.Commands;
 using MARS.Server.Services.SoundRequest;
+using MARS.Server.Services.Twitch.Entitys;
 
 namespace MARS.Server.Services.CommandExecutor.Commands;
 
@@ -22,18 +23,24 @@ public class WrongCommand(CommandsService commandsService) : BaseCommand
     {
         string result;
 
-        var hasUserId =
-            parameters.TryGetValue("userId", out var userIdObj)
-            && !string.IsNullOrWhiteSpace(userIdObj?.ToString());
+        TwitchUser? user = null;
 
-        if (hasUserId)
+        // Пытаемся получить TwitchUser из параметров
+        if (parameters.TryGetValue("user", out var userObj))
         {
-            var userId = userIdObj!.ToString()!;
-            result = await commandsService.CancelLastTrackAsync(userId, cancellationToken);
+            if (userObj is TwitchUser twitchUser)
+            {
+                user = twitchUser;
+            }
+        }
+
+        if (user == null)
+        {
+            result = "Не удалось получить информацию о пользователе";
         }
         else
         {
-            result = "Не удалось определить пользователя";
+            result = await commandsService.CancelLastTrackAsync(user, cancellationToken);
         }
 
         return result;

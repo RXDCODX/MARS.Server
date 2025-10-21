@@ -1,6 +1,7 @@
 ﻿using MARS.Server.Services;
 using MARS.Server.Services.SoundRequest;
 using MARS.Server.Services.SoundRequest.Entities;
+using MARS.Server.Services.Twitch.Entitys;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MARS.Server.Controllers;
@@ -13,7 +14,8 @@ namespace MARS.Server.Controllers;
 public class SoundRequestController(
     SoundRequestManager manager,
     CommandsService service,
-    ILogger<SoundRequestController> logger
+    ILogger<SoundRequestController> logger,
+    IDbContextFactory<AppDbContext> factory
 ) : ControllerBase
 {
     /// <summary>
@@ -158,7 +160,7 @@ public class SoundRequestController(
         {
             var state = manager.GetState();
             await manager.TogglePlayPauseAsync();
-            
+
             var message = state.IsPaused ? "Плеер запущен" : "Плеер поставлен на паузу";
             result = Ok(OperationResult.Ok(message));
         }
@@ -347,7 +349,7 @@ public class SoundRequestController(
         {
             var state = manager.GetState();
             await manager.ToggleMuteAsync();
-            
+
             var message = state.IsMuted ? "Звук включен" : "Звук выключен";
             result = Ok(OperationResult.Ok(message));
         }
@@ -365,26 +367,34 @@ public class SoundRequestController(
     /// </summary>
     [HttpPost("add-track")]
     public async Task<ActionResult<OperationResult<string>>> AddTrack(
-        [FromBody] AddTrackRequest request,
+        [FromQuery] string request,
         CancellationToken cancellationToken = default
     )
     {
         ActionResult<OperationResult<string>> result;
 
-        if (
-            !string.IsNullOrWhiteSpace(request.Query)
-            && !string.IsNullOrWhiteSpace(request.UserId)
-            && !string.IsNullOrWhiteSpace(request.DisplayName)
-        )
+        if (!string.IsNullOrWhiteSpace(request))
         {
             try
             {
-                var message = await service.AddTrackAsync(
-                    request.Query,
-                    request.UserId,
-                    request.DisplayName,
-                    cancellationToken
-                );
+                await using var dbContext = await factory.CreateDbContextAsync(cancellationToken);
+                var user =
+                    (
+                        await dbContext
+                            .TwitchUsers.AsNoTracking()
+                            .FirstOrDefaultAsync(
+                                e => e.TwitchId == TwitchExstension.ChannelId,
+                                cancellationToken: cancellationToken
+                            )
+                    )
+                    ?? new TwitchUser()
+                    {
+                        TwitchId = TwitchExstension.ChannelId,
+                        DisplayName = TwitchExstension.Channel,
+                        UserLogin = TwitchExstension.Channel,
+                    };
+
+                var message = await service.AddTrackAsync(request, user, cancellationToken);
                 result = Ok(OperationResult<string>.Ok(message, message));
             }
             catch (Exception ex)
@@ -408,26 +418,34 @@ public class SoundRequestController(
     /// </summary>
     [HttpPost("add-playlist")]
     public async Task<ActionResult<OperationResult<string>>> AddPlaylist(
-        [FromBody] AddPlaylistRequest request,
+        [FromQuery] string request,
         CancellationToken cancellationToken = default
     )
     {
         ActionResult<OperationResult<string>> result;
 
-        if (
-            !string.IsNullOrWhiteSpace(request.PlaylistUrl)
-            && !string.IsNullOrWhiteSpace(request.UserId)
-            && !string.IsNullOrWhiteSpace(request.DisplayName)
-        )
+        if (!string.IsNullOrWhiteSpace(request))
         {
             try
             {
-                var message = await service.AddPlaylistAsync(
-                    request.PlaylistUrl,
-                    request.UserId,
-                    request.DisplayName,
-                    cancellationToken
-                );
+                await using var dbContext = await factory.CreateDbContextAsync(cancellationToken);
+                var user =
+                    (
+                        await dbContext
+                            .TwitchUsers.AsNoTracking()
+                            .FirstOrDefaultAsync(
+                                e => e.TwitchId == TwitchExstension.ChannelId,
+                                cancellationToken: cancellationToken
+                            )
+                    )
+                    ?? new TwitchUser()
+                    {
+                        TwitchId = TwitchExstension.ChannelId,
+                        DisplayName = TwitchExstension.Channel,
+                        UserLogin = TwitchExstension.Channel,
+                    };
+
+                var message = await service.AddPlaylistAsync(request, user, cancellationToken);
                 result = Ok(OperationResult<string>.Ok(message, message));
             }
             catch (Exception ex)
@@ -512,7 +530,15 @@ public class SoundRequestController(
         {
             try
             {
-                var message = await service.GetUserQueuePositionAsync(userId);
+                await using var dbContext = await factory.CreateDbContextAsync(cancellationToken);
+                var user = await dbContext
+                    .TwitchUsers.AsNoTracking()
+                    .FirstOrDefaultAsync(
+                        e => e.TwitchId == TwitchExstension.ChannelId,
+                        cancellationToken: cancellationToken
+                    );
+
+                var message = await service.GetUserQueuePositionAsync(user);
                 result = Ok(OperationResult<string>.Ok(message, message));
             }
             catch (Exception ex)
@@ -533,46 +559,4 @@ public class SoundRequestController(
 
         return result;
     }
-}
-
-/// <summary>
-/// Запрос на добавление трека
-/// </summary>
-public record AddTrackRequest
-{
-    /// <summary>
-    /// URL видео или поисковый запрос
-    /// </summary>
-    public required string Query { get; init; }
-
-    /// <summary>
-    /// ID пользователя Twitch
-    /// </summary>
-    public required string UserId { get; init; }
-
-    /// <summary>
-    /// Отображаемое имя пользователя
-    /// </summary>
-    public required string DisplayName { get; init; }
-}
-
-/// <summary>
-/// Запрос на добавление плейлиста
-/// </summary>
-public record AddPlaylistRequest
-{
-    /// <summary>
-    /// URL плейлиста YouTube
-    /// </summary>
-    public required string PlaylistUrl { get; init; }
-
-    /// <summary>
-    /// ID пользователя Twitch
-    /// </summary>
-    public required string UserId { get; init; }
-
-    /// <summary>
-    /// Отображаемое имя пользователя
-    /// </summary>
-    public required string DisplayName { get; init; }
 }

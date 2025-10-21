@@ -46,9 +46,11 @@ public class SoundRequestManager(
     {
         var state = GetState();
         var queueCount = (await queue.GetQueueAsync()).Count;
-        
-        Console.WriteLine($"[PlayAsync] State: IsStoped={state.IsStoped}, HasCurrentTrack={state.CurrentTrack != null}, QueueCount={queueCount}");
-        
+
+        Console.WriteLine(
+            $"[PlayAsync] State: IsStoped={state.IsStoped}, HasCurrentTrack={state.CurrentTrack != null}, QueueCount={queueCount}"
+        );
+
         // Если плеер остановлен или нет текущего трека, начинаем воспроизведение следующего
         if (state.IsStoped || state.CurrentTrack == null)
         {
@@ -117,7 +119,7 @@ public class SoundRequestManager(
     public async Task TogglePlayPauseAsync()
     {
         var state = GetState();
-        
+
         if (state.IsPaused)
         {
             await PlayAsync();
@@ -134,7 +136,7 @@ public class SoundRequestManager(
     public async Task ToggleMuteAsync()
     {
         var state = GetState();
-        
+
         if (state.IsMuted)
         {
             await UnmuteAsync();
@@ -204,8 +206,7 @@ public class SoundRequestManager(
             // Воспроизводим выбранный трек
             await playerController.PlayAsync(
                 track,
-                track.RequestedByTwitchId,
-                track.RequestedByDisplayName,
+                track.RequestedByTwitchUser,
                 _cancellationToken
             );
 

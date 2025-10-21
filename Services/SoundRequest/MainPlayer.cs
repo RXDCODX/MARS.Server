@@ -1,6 +1,7 @@
 ﻿using MARS.Server.Services.SoundRequest.Entities;
 using MARS.Server.Services.SoundRequest.Interfaces;
 using MARS.Server.Services.SoundRequest.Queue;
+using MARS.Server.Services.Twitch.Entitys;
 
 namespace MARS.Server.Services.SoundRequest;
 
@@ -56,34 +57,18 @@ public class MainPlayer(
     #region IPlayerController Implementation
 
     /// <summary>
-    /// Начать воспроизведение трека
-    /// </summary>
-    public async Task PlayAsync(BaseTrackInfo track, CancellationToken ct)
-    {
-        await PlayAsync(track, null, null, ct);
-    }
-
-    /// <summary>
     /// Начать воспроизведение трека с информацией о пользователе, заказавшем трек
     /// </summary>
-    public async Task PlayAsync(
-        BaseTrackInfo track,
-        string? requestedBy,
-        string? requestedByDisplayName,
-        CancellationToken ct
-    )
+    public async Task PlayAsync(BaseTrackInfo track, TwitchUser? user, CancellationToken ct)
     {
         try
         {
-            Console.WriteLine($"[MainPlayer.PlayAsync] Начинаем воспроизведение трека: {track.TrackName}, URL: {track.Url}");
-            
-            // Обновляем состояние - начинаем воспроизведение
-            await stateManager.StartPlayingAsync(
-                track,
-                requestedBy,
-                requestedByDisplayName,
-                notify: true
+            Console.WriteLine(
+                $"[MainPlayer.PlayAsync] Начинаем воспроизведение трека: {track.TrackName}, URL: {track.Url}"
             );
+
+            // Обновляем состояние - начинаем воспроизведение
+            await stateManager.StartPlayingAsync(track, user, notify: true);
 
             Console.WriteLine("[MainPlayer.PlayAsync] Состояние обновлено, уведомление отправлено");
 
@@ -98,7 +83,7 @@ public class MainPlayer(
             {
                 await OnStarted.Invoke(track);
             }
-            
+
             Console.WriteLine("[MainPlayer.PlayAsync] Трек успешно запущен");
         }
         catch (Exception ex)
@@ -197,26 +182,25 @@ public class MainPlayer(
     {
         var nextTrack = await queue.GetNextTrackAsync();
 
-        Console.WriteLine($"[PlayNextFromQueueAsync] NextTrack: {(nextTrack != null ? nextTrack.TrackName : "null")}");
+        Console.WriteLine(
+            $"[PlayNextFromQueueAsync] NextTrack: {(nextTrack != null ? nextTrack.TrackName : "null")}"
+        );
 
         if (nextTrack != null)
         {
-            Console.WriteLine($"[PlayNextFromQueueAsync] Начинаем воспроизведение: {nextTrack.TrackName}");
-            
-            // Воспроизводим трек с информацией о пользователе
-            await PlayAsync(
-                nextTrack,
-                nextTrack.RequestedByTwitchId,
-                nextTrack.RequestedByDisplayName,
-                _cancellationToken
+            Console.WriteLine(
+                $"[PlayNextFromQueueAsync] Начинаем воспроизведение: {nextTrack.TrackName}"
             );
+
+            // Воспроизводим трек с информацией о пользователе
+            await PlayAsync(nextTrack, nextTrack.RequestedByTwitchUser, _cancellationToken);
 
             // Удаляем из очереди
             await queue.RemoveFromQueueAsync(nextTrack.Id);
 
             // Уведомляем об изменении очереди
             await NotifyQueueChangedAsync();
-            
+
             Console.WriteLine("[PlayNextFromQueueAsync] Трек успешно запущен");
         }
         else

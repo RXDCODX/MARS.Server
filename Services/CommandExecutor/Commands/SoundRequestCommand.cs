@@ -1,6 +1,7 @@
 ﻿using MARS.Server.Services.CommandExecutor.Entitys;
 using MARS.Server.Services.CommandExecutor.Entitys.Commands;
 using MARS.Server.Services.SoundRequest;
+using MARS.Server.Services.Twitch.Entitys;
 
 namespace MARS.Server.Services.CommandExecutor.Commands;
 
@@ -35,34 +36,37 @@ public class SoundRequestCommand(CommandsService commandsService) : BaseCommand
     {
         string result;
 
-        var hasQuery =
-            parameters.TryGetValue("query", out var queryObj)
-            && !string.IsNullOrWhiteSpace(queryObj?.ToString());
-        var hasUserId =
-            parameters.TryGetValue("userId", out var userIdObj)
-            && !string.IsNullOrWhiteSpace(userIdObj?.ToString());
-        var hasDisplayName =
-            parameters.TryGetValue("displayName", out var displayNameObj)
-            && !string.IsNullOrWhiteSpace(displayNameObj?.ToString());
+        TwitchUser? user = null;
 
-        if (hasQuery && hasUserId && hasDisplayName)
+        // Пытаемся получить TwitchUser из параметров
+        if (parameters.TryGetValue("user", out var userObj))
         {
-            var query = queryObj!.ToString()!.Trim();
-            var userId = userIdObj!.ToString()!;
-            var displayName = displayNameObj!.ToString()!;
+            if (userObj is TwitchUser twitchUser)
+            {
+                user = twitchUser;
+            }
+        }
 
-            result = await commandsService.AddTrackAsync(
-                query,
-                userId,
-                displayName,
-                cancellationToken
-            );
+        if (user == null)
+        {
+            result = "Не удалось получить информацию о пользователе";
         }
         else
         {
-            result = !hasQuery
-                ? "Необходимо указать URL видео или поисковый запрос"
-                : "Не удалось определить пользователя";
+            var hasQuery =
+                parameters.TryGetValue("query", out var queryObj)
+                && !string.IsNullOrWhiteSpace(queryObj.ToString());
+
+            if (hasQuery)
+            {
+                var query = queryObj!.ToString()!.Trim();
+
+                result = await commandsService.AddTrackAsync(query, user, cancellationToken);
+            }
+            else
+            {
+                result = "Необходимо указать URL видео или поисковый запрос";
+            }
         }
 
         return result;

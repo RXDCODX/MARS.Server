@@ -8,6 +8,7 @@ using MARS.Server.Services.KeyboardHook_UNUSED;
 using MARS.Server.Services.Logs.Interfaces;
 using MARS.Server.Services.Logs.Services;
 using MARS.Server.Services.MemoryStorageService;
+using MARS.Server.Services.Twitch;
 using MARS.Server.Services.Twitch.Rewards;
 using WTelegram;
 
@@ -167,6 +168,7 @@ public static class Program
 
         services
             .AddTwitchServices(configuration)
+            .AddHostedService<TwitchUserSyncService>()
             .AddCommandExecutorServices()
             .AddTelegramThings(loggerFactory)
             .AddConfiguration(configuration)
