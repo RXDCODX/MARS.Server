@@ -161,7 +161,7 @@ public class SoundRequestController(
             var state = manager.GetState();
             await manager.TogglePlayPauseAsync();
 
-            var message = state.IsPaused ? "Плеер запущен" : "Плеер поставлен на паузу";
+            var message = state.State == PlaybackState.Paused ? "Плеер запущен" : "Плеер поставлен на паузу";
             result = Ok(OperationResult.Ok(message));
         }
         catch (Exception ex)

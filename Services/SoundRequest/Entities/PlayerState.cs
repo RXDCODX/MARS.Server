@@ -20,11 +20,15 @@ public class PlayerState
 
     public TimeSpan? CurrentTrackDuration { get; set; }
 
-    public bool IsPaused { get; set; }
+    /// <summary>
+    /// Текущее состояние воспроизведения плеера
+    /// </summary>
+    public PlaybackState State { get; set; } = PlaybackState.Stopped;
 
+    /// <summary>
+    /// Звук выключен (независимо от состояния воспроизведения)
+    /// </summary>
     public bool IsMuted { get; set; }
-
-    public bool IsStoped { get; set; }
 
     public int Volume { get; set; } = 100;
 

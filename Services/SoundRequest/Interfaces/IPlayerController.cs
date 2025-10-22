@@ -15,8 +15,4 @@ public interface IPlayerController
     Task UnmuteAsync(CancellationToken ct);
 
     PlayerState GetState();
-
-    event Func<BaseTrackInfo, Task>? OnStarted;
-    event Func<BaseTrackInfo, Task>? OnEnded;
-    event Func<BaseTrackInfo, Task>? OnError;
 }

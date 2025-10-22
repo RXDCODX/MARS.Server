@@ -60,7 +60,7 @@ public class YouTubeResolver(ILogger<YouTubeResolver> logger)
                 result = new BaseTrackInfo
                 {
                     Id = Guid.NewGuid(),
-                    Url = new Uri(video.Url),
+                    Url = new Uri(url),
                     VideoId = video.Id,
                     TrackName = video.Title,
                     Authors = [video.Author.ChannelTitle],

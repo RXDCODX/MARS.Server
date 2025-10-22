@@ -1,11 +1,14 @@
 ﻿using MARS.Server.Services.SoundRequest;
+using MARS.Server.Services.SoundRequest.Entities;
 using SignalRSwaggerGen.Attributes;
 using SignalRSwaggerGen.Enums;
+using StateManager = MARS.Server.Services.SoundRequest.StateManager;
 
 namespace MARS.Server.Hubs;
 
 [SignalRHub("/hubs/soundrequest", AutoDiscover.MethodsAndParams)]
-public class SoundRequestHub(SoundRequestManager manager) : Hub<ISoundRequestHub>
+public class SoundRequestHub(OutSignalRHubService service, StateManager stateManager)
+    : Hub<ISoundRequestHub>
 {
     /// <summary>
     /// Имя группы для клиентов плеера
@@ -21,6 +24,11 @@ public class SoundRequestHub(SoundRequestManager manager) : Hub<ISoundRequestHub
         FramePlayerGroupName,
         ApiPlayerGroupName,
     ];
+
+    public override Task OnConnectedAsync()
+    {
+        return Clients.Caller.PlayerStateChange(stateManager.GetState());
+    }
 
     public Task Join(string groupName)
     {
@@ -40,25 +48,25 @@ public class SoundRequestHub(SoundRequestManager manager) : Hub<ISoundRequestHub
     /// <summary>
     /// Вызывается фронтендом когда трек завершил воспроизведение
     /// </summary>
-    public async Task Ended()
+    public Task Ended(BaseTrackInfo info)
     {
-        await manager.OnTrackEnded();
+        return service.OnEndedInvoke(info);
     }
 
     /// <summary>
     /// Вызывается фронтендом когда трек начал воспроизведение
     /// </summary>
-    public async Task Started()
+    public Task Started(BaseTrackInfo info)
     {
-        await manager.OnTrackStarted();
+        return service.OnStartedInvoke(info);
     }
 
     /// <summary>
     /// Вызывается фронтендом при ошибке воспроизведения
     /// </summary>
-    public async Task ErrorPlaying()
+    public Task ErrorPlaying(BaseTrackInfo info)
     {
-        await manager.OnTrackError();
+        return service.OnErrorInvoke(info);
     }
 
     public override Task OnDisconnectedAsync(Exception? exception)

@@ -8,33 +8,84 @@ namespace MARS.Server.Services.SoundRequest;
 /// <summary>
 /// Основной контроллер аудиоплеера с интеграцией всех сервисов
 /// </summary>
-public class MainPlayer(
-    StateManager stateManager,
-    SignalRService signalRService,
-    SoundRequestUserQueue queue,
-    IDbContextFactory<AppDbContext> dbFactory,
-    IHostApplicationLifetime lifetime
-) : IPlayerController, IDisposable
+public class MainPlayer : IPlayerController, IDisposable
 {
-    private readonly CancellationToken _cancellationToken = lifetime.ApplicationStopping;
+    private readonly CancellationToken _cancellationToken;
     private bool _disposed;
-
-    #region IPlayerController Events
-
-    /// <summary>
-    /// Событие начала воспроизведения трека
-    /// </summary>
-    public event Func<BaseTrackInfo, Task>? OnStarted;
+    private readonly StateManager _stateManager;
+    private readonly InSignalRHubService _inSignalRHubService;
+    private readonly SoundRequestUserQueue _queue;
+    private readonly IDbContextFactory<AppDbContext> _dbFactory;
+    private readonly ILogger<MainPlayer> _logger;
 
     /// <summary>
-    /// Событие завершения воспроизведения трека
+    /// Основной контроллер аудиоплеера с интеграцией всех сервисов
     /// </summary>
-    public event Func<BaseTrackInfo, Task>? OnEnded;
+    public MainPlayer(
+        StateManager stateManager,
+        InSignalRHubService inSignalRHubService,
+        OutSignalRHubService outSignalRHubService,
+        SoundRequestUserQueue queue,
+        IDbContextFactory<AppDbContext> dbFactory,
+        IHostApplicationLifetime lifetime,
+        ILogger<MainPlayer> logger
+    )
+    {
+        _stateManager = stateManager;
+        _inSignalRHubService = inSignalRHubService;
+        _queue = queue;
+        _dbFactory = dbFactory;
+        _logger = logger;
+        _cancellationToken = lifetime.ApplicationStopping;
+
+        outSignalRHubService.OnEnded += OutSignalRHubServiceOnEnded;
+        outSignalRHubService.OnStarted += OutSignalRHubServiceOnStarted;
+        outSignalRHubService.OnError += OutSignalRHubServiceOnError;
+    }
+
+    #region SignalREventsHandlers
 
     /// <summary>
-    /// Событие ошибки воспроизведения
+    /// Обработчик события ошибки воспроизведения с фронтенда
     /// </summary>
-    public event Func<BaseTrackInfo, Task>? OnError;
+    private async Task OutSignalRHubServiceOnError(BaseTrackInfo arg)
+    {
+        _logger.LogError(
+            "[SignalR Event] Получена ошибка воспроизведения трека: {TrackName} (ID: {TrackId})",
+            arg.TrackName,
+            arg.Id
+        );
+
+        await OnTrackErrorAsync(arg);
+    }
+
+    /// <summary>
+    /// Обработчик события начала воспроизведения трека с фронтенда
+    /// </summary>
+    private async Task OutSignalRHubServiceOnStarted(BaseTrackInfo arg)
+    {
+        _logger.LogInformation(
+            "[SignalR Event] Трек начал воспроизведение: {TrackName} (ID: {TrackId})",
+            arg.TrackName,
+            arg.Id
+        );
+
+        await OnTrackStartedAsync(arg);
+    }
+
+    /// <summary>
+    /// Обработчик события завершения воспроизведения трека с фронтенда
+    /// </summary>
+    private async Task OutSignalRHubServiceOnEnded(BaseTrackInfo arg)
+    {
+        _logger.LogInformation(
+            "[SignalR Event] Трек завершил воспроизведение: {TrackName} (ID: {TrackId})",
+            arg.TrackName,
+            arg.Id
+        );
+
+        await OnTrackEndedAsync(arg);
+    }
 
     #endregion
 
@@ -43,12 +94,15 @@ public class MainPlayer(
     /// <summary>
     /// Инициализация плеера и подписка на события состояния
     /// </summary>
-    public void Initialize()
+    public async Task InitializeAsync()
     {
+        // Инициализируем StateManager (загружаем состояние из БД)
+        await _stateManager.InitializeAsync();
+
         // Подписываемся на изменения состояния для отправки через SignalR
-        stateManager.StateChanged += async (state) =>
+        _stateManager.StateChanged += async (state) =>
         {
-            await signalRService.NotifyPlayerStateChangedAsync(state);
+            await _inSignalRHubService.NotifyPlayerStateChangedAsync(state);
         };
     }
 
@@ -63,14 +117,16 @@ public class MainPlayer(
     {
         try
         {
-            Console.WriteLine(
-                $"[MainPlayer.PlayAsync] Начинаем воспроизведение трека: {track.TrackName}, URL: {track.Url}"
+            _logger.LogInformation(
+                "Начинаем воспроизведение трека: {TrackName}, URL: {Url}",
+                track.TrackName,
+                track.Url
             );
 
             // Обновляем состояние - начинаем воспроизведение
-            await stateManager.StartPlayingAsync(track, user, notify: true);
+            await _stateManager.StartPlayingAsync(track, user, notify: true);
 
-            Console.WriteLine("[MainPlayer.PlayAsync] Состояние обновлено, уведомление отправлено");
+            _logger.LogDebug("Состояние обновлено, уведомление отправлено");
 
             // Обновляем время последнего воспроизведения в БД
             await UpdateTrackLastPlayedAsync(track);
@@ -78,22 +134,13 @@ public class MainPlayer(
             // Загружаем следующий трек из очереди
             await LoadNextTrackAsync();
 
-            // Вызываем событие начала воспроизведения
-            if (OnStarted != null)
-            {
-                await OnStarted.Invoke(track);
-            }
-
-            Console.WriteLine("[MainPlayer.PlayAsync] Трек успешно запущен");
+            _logger.LogInformation("Трек успешно запущен: {TrackName}", track.TrackName);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[MainPlayer.PlayAsync] ОШИБКА: {ex.Message}");
+            _logger.LogError(ex, "Ошибка при воспроизведении трека: {TrackName}", track.TrackName);
             // При ошибке вызываем событие ошибки
-            if (OnError != null)
-            {
-                await OnError.Invoke(track);
-            }
+            await OutSignalRHubServiceOnError(track);
         }
     }
 
@@ -102,7 +149,7 @@ public class MainPlayer(
     /// </summary>
     public async Task PauseAsync(CancellationToken ct)
     {
-        await stateManager.SetPausedAsync(true, notify: true);
+        await _stateManager.SetPausedAsync(true, notify: true);
     }
 
     /// <summary>
@@ -110,7 +157,7 @@ public class MainPlayer(
     /// </summary>
     public async Task ResumeAsync(CancellationToken ct)
     {
-        await stateManager.SetPausedAsync(false, notify: true);
+        await _stateManager.SetPausedAsync(false, notify: true);
     }
 
     /// <summary>
@@ -118,7 +165,7 @@ public class MainPlayer(
     /// </summary>
     public async Task StopAsync(CancellationToken ct)
     {
-        await stateManager.StopPlaybackAsync(notify: true);
+        await _stateManager.StopPlaybackAsync(notify: true);
     }
 
     /// <summary>
@@ -126,14 +173,7 @@ public class MainPlayer(
     /// </summary>
     public async Task SkipAsync(CancellationToken ct)
     {
-        var currentState = await stateManager.GetStateAsync();
-        var currentTrack = currentState.CurrentTrack;
-
-        // Вызываем событие завершения для текущего трека
-        if (currentTrack != null && OnEnded != null)
-        {
-            await OnEnded.Invoke(currentTrack);
-        }
+        _logger.LogInformation("Пропуск текущего трека");
 
         // Воспроизводим следующий трек из очереди
         await PlayNextFromQueueAsync();
@@ -144,7 +184,7 @@ public class MainPlayer(
     /// </summary>
     public async Task SetVolumeAsync(int volume, CancellationToken ct)
     {
-        await stateManager.SetVolumeAsync(volume, notify: true);
+        await _stateManager.SetVolumeAsync(volume, notify: true);
     }
 
     /// <summary>
@@ -152,7 +192,7 @@ public class MainPlayer(
     /// </summary>
     public async Task MuteAsync(CancellationToken ct)
     {
-        await stateManager.SetMutedAsync(true, notify: true);
+        await _stateManager.SetMutedAsync(true, notify: true);
     }
 
     /// <summary>
@@ -160,7 +200,7 @@ public class MainPlayer(
     /// </summary>
     public async Task UnmuteAsync(CancellationToken ct)
     {
-        await stateManager.SetMutedAsync(false, notify: true);
+        await _stateManager.SetMutedAsync(false, notify: true);
     }
 
     /// <summary>
@@ -168,7 +208,7 @@ public class MainPlayer(
     /// </summary>
     public PlayerState GetState()
     {
-        return stateManager.GetState();
+        return _stateManager.GetState();
     }
 
     #endregion
@@ -180,32 +220,37 @@ public class MainPlayer(
     /// </summary>
     public async Task PlayNextFromQueueAsync()
     {
-        var nextTrack = await queue.GetNextTrackAsync();
+        var nextTrack = await _queue.GetNextTrackAsync();
 
-        Console.WriteLine(
-            $"[PlayNextFromQueueAsync] NextTrack: {(nextTrack != null ? nextTrack.TrackName : "null")}"
+        _logger.LogDebug(
+            "Следующий трек из очереди: {TrackName}",
+            nextTrack != null ? nextTrack.TrackName : "null"
         );
 
         if (nextTrack != null)
         {
-            Console.WriteLine(
-                $"[PlayNextFromQueueAsync] Начинаем воспроизведение: {nextTrack.TrackName}"
+            _logger.LogInformation(
+                "Начинаем воспроизведение следующего трека: {TrackName}",
+                nextTrack.TrackName
             );
 
             // Воспроизводим трек с информацией о пользователе
             await PlayAsync(nextTrack, nextTrack.RequestedByTwitchUser, _cancellationToken);
 
             // Удаляем из очереди
-            await queue.RemoveFromQueueAsync(nextTrack.Id);
+            await _queue.RemoveFromQueueAsync(nextTrack.Id);
 
             // Уведомляем об изменении очереди
             await NotifyQueueChangedAsync();
 
-            Console.WriteLine("[PlayNextFromQueueAsync] Трек успешно запущен");
+            _logger.LogInformation(
+                "Трек из очереди успешно запущен: {TrackName}",
+                nextTrack.TrackName
+            );
         }
         else
         {
-            Console.WriteLine("[PlayNextFromQueueAsync] Очередь пуста - останавливаем плеер");
+            _logger.LogInformation("Очередь пуста - останавливаем плеер");
             // Очередь пуста - останавливаем воспроизведение
             await StopAsync(_cancellationToken);
         }
@@ -216,8 +261,8 @@ public class MainPlayer(
     /// </summary>
     private async Task LoadNextTrackAsync()
     {
-        var nextTrack = await queue.GetNextTrackAsync();
-        await stateManager.SetNextTrackAsync(nextTrack, notify: true);
+        var nextTrack = await _queue.GetNextTrackAsync();
+        await _stateManager.SetNextTrackAsync(nextTrack, notify: true);
     }
 
     /// <summary>
@@ -225,8 +270,8 @@ public class MainPlayer(
     /// </summary>
     private async Task NotifyQueueChangedAsync()
     {
-        var currentQueue = await queue.GetQueueAsync();
-        await signalRService.NotifyQueueChangedAsync(currentQueue);
+        var currentQueue = await _queue.GetQueueAsync();
+        await _inSignalRHubService.NotifyQueueChangedAsync(currentQueue);
     }
 
     #endregion
@@ -236,19 +281,19 @@ public class MainPlayer(
     /// <summary>
     /// Вызывается когда трек завершился на фронтенде
     /// </summary>
-    public async Task OnTrackEndedAsync()
+    /// <param name="track">Информация о завершенном треке</param>
+    public async Task OnTrackEndedAsync(BaseTrackInfo track)
     {
-        var currentState = await stateManager.GetStateAsync();
-        var currentTrack = currentState.CurrentTrack;
+        var currentState = await _stateManager.GetStateAsync();
 
-        // Вызываем событие завершения
-        if (currentTrack != null && OnEnded != null)
-        {
-            await OnEnded.Invoke(currentTrack);
-        }
+        _logger.LogInformation(
+            "Обработка завершения трека: {TrackName} (ID: {TrackId})",
+            track.TrackName,
+            track.Id
+        );
 
         // Если плеер не остановлен и не на паузе - воспроизводим следующий
-        if (!currentState.IsStoped && !currentState.IsPaused)
+        if (currentState.State == PlaybackState.Playing)
         {
             await PlayNextFromQueueAsync();
         }
@@ -257,33 +302,33 @@ public class MainPlayer(
     /// <summary>
     /// Вызывается когда трек начал воспроизведение на фронтенде
     /// </summary>
-    public async Task OnTrackStartedAsync()
+    /// <param name="track">Информация о начавшем воспроизведение треке</param>
+    public async Task OnTrackStartedAsync(BaseTrackInfo track)
     {
-        var currentState = await stateManager.GetStateAsync();
-        var currentTrack = currentState.CurrentTrack;
+        _logger.LogInformation(
+            "Обработка начала воспроизведения трека: {TrackName} (ID: {TrackId})",
+            track.TrackName,
+            track.Id
+        );
 
-        if (currentTrack != null)
-        {
-            await UpdateTrackLastPlayedAsync(currentTrack);
-        }
+        // Обновляем время последнего воспроизведения в БД
+        await UpdateTrackLastPlayedAsync(track);
 
         // Уведомляем клиентов об обновлении состояния
-        await stateManager.NotifyStateChangedAsync();
+        await _stateManager.NotifyStateChangedAsync();
     }
 
     /// <summary>
     /// Вызывается при ошибке воспроизведения на фронтенде
     /// </summary>
-    public async Task OnTrackErrorAsync()
+    /// <param name="track">Информация о треке, при воспроизведении которого произошла ошибка</param>
+    public async Task OnTrackErrorAsync(BaseTrackInfo track)
     {
-        var currentState = await stateManager.GetStateAsync();
-        var currentTrack = currentState.CurrentTrack;
-
-        // Вызываем событие ошибки
-        if (currentTrack != null && OnError != null)
-        {
-            await OnError.Invoke(currentTrack);
-        }
+        _logger.LogError(
+            "Обработка ошибки воспроизведения трека: {TrackName} (ID: {TrackId})",
+            track.TrackName,
+            track.Id
+        );
 
         // Пытаемся воспроизвести следующий трек
         await PlayNextFromQueueAsync();
@@ -300,7 +345,7 @@ public class MainPlayer(
     {
         try
         {
-            await using var db = await dbFactory.CreateDbContextAsync(_cancellationToken);
+            await using var db = await _dbFactory.CreateDbContextAsync(_cancellationToken);
 
             var dbTrack = await db.SoundRequestBaseTrackInfos.FirstOrDefaultAsync(
                 t => t.Id == track.Id,

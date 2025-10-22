@@ -19,15 +19,13 @@ public class SoundRequestManager(
 
     #region IHostedService Implementation
 
-    public Task StartAsync(CancellationToken cancellationToken)
+    public async Task StartAsync(CancellationToken cancellationToken)
     {
         // Инициализация плеера если он MainPlayer
         if (playerController is MainPlayer mainPlayer)
         {
-            mainPlayer.Initialize();
+            await mainPlayer.InitializeAsync();
         }
-
-        return Task.CompletedTask;
     }
 
     public Task StopAsync(CancellationToken cancellationToken)
@@ -48,11 +46,11 @@ public class SoundRequestManager(
         var queueCount = (await queue.GetQueueAsync()).Count;
 
         Console.WriteLine(
-            $"[PlayAsync] State: IsStoped={state.IsStoped}, HasCurrentTrack={state.CurrentTrack != null}, QueueCount={queueCount}"
+            $"[PlayAsync] State: State={state.State}, HasCurrentTrack={state.CurrentTrack != null}, QueueCount={queueCount}"
         );
 
         // Если плеер остановлен или нет текущего трека, начинаем воспроизведение следующего
-        if (state.IsStoped || state.CurrentTrack == null)
+        if (state.State == PlaybackState.Stopped || state.CurrentTrack == null)
         {
             Console.WriteLine("[PlayAsync] Вызываем PlayNextFromQueueAsync");
             await PlayNextFromQueueAsync();
@@ -120,7 +118,7 @@ public class SoundRequestManager(
     {
         var state = GetState();
 
-        if (state.IsPaused)
+        if (state.State == PlaybackState.Paused)
         {
             await PlayAsync();
         }
@@ -232,53 +230,14 @@ public class SoundRequestManager(
     /// </summary>
     public async Task<List<BaseTrackInfo>> GetHistoryAsync(int count = 20)
     {
-        List<BaseTrackInfo> result;
-
         await using var db = await dbFactory.CreateDbContextAsync(_cancellationToken);
-        result = await db
+        List<BaseTrackInfo> result = await db
             .SoundRequestBaseTrackInfos.AsNoTracking()
             .OrderByDescending(t => t.LastTimePlays)
             .Take(count)
             .ToListAsync(_cancellationToken);
 
         return result;
-    }
-
-    #endregion
-
-    #region Track Events
-
-    /// <summary>
-    /// Вызывается когда трек завершил воспроизведение
-    /// </summary>
-    public async Task OnTrackEnded()
-    {
-        if (playerController is MainPlayer mainPlayer)
-        {
-            await mainPlayer.OnTrackEndedAsync();
-        }
-    }
-
-    /// <summary>
-    /// Вызывается когда трек начал воспроизведение
-    /// </summary>
-    public async Task OnTrackStarted()
-    {
-        if (playerController is MainPlayer mainPlayer)
-        {
-            await mainPlayer.OnTrackStartedAsync();
-        }
-    }
-
-    /// <summary>
-    /// Вызывается при ошибке воспроизведения
-    /// </summary>
-    public async Task OnTrackError()
-    {
-        if (playerController is MainPlayer mainPlayer)
-        {
-            await mainPlayer.OnTrackErrorAsync();
-        }
     }
 
     #endregion

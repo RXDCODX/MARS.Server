@@ -5,7 +5,7 @@ namespace MARS.Server.Services.SoundRequest;
 /// <summary>
 /// Сервис для управления отправкой уведомлений через SignalR Hub
 /// </summary>
-public class SignalRService(IHubContext<SoundRequestHub, ISoundRequestHub> hubContext)
+public class InSignalRHubService(IHubContext<SoundRequestHub, ISoundRequestHub> hubContext)
 {
     /// <summary>
     /// Уведомить клиентов об изменении состояния плеера

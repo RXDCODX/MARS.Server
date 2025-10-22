@@ -422,7 +422,8 @@ public static class StartupEstensions
 
         // Регистрируем базовые сервисы
         services.AddSingleton<StateManager>();
-        services.AddSingleton<SignalRService>();
+        services.AddSingleton<InSignalRHubService>();
+        services.AddSingleton<OutSignalRHubService>();
         services.AddSingleton<SoundRequestUserQueue>();
         services.AddSingleton<YouTubeResolver>();
 

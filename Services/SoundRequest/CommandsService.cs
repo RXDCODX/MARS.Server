@@ -15,7 +15,7 @@ public class CommandsService(
     IDbContextFactory<AppDbContext> dbFactory,
     IPlayerController playerController,
     StateManager stateManager,
-    SignalRService signalRService
+    InSignalRHubService inSignalRHubService
 )
 {
     /// <summary>
@@ -49,7 +49,7 @@ public class CommandsService(
         {
             // Проверяем состояние плеера ДО добавления в очередь
             var currentState = await stateManager.GetStateAsync();
-            var wasPlayerStopped = currentState.IsStoped;
+            var wasPlayerStopped = currentState.State == PlaybackState.Stopped;
 
             // Проверяем размер очереди ДО добавления
             var queueCountBefore = await queue.GetQueueCountAsync();
@@ -128,14 +128,7 @@ public class CommandsService(
             var list = await queue.GetQueueAsync();
             var idx = list.FindIndex(t => t.RequestedByTwitchId == user.TwitchId);
 
-            if (idx >= 0)
-            {
-                result = $"Ваша позиция в очереди: {idx + 1}";
-            }
-            else
-            {
-                result = "Вы не в очереди";
-            }
+            result = idx >= 0 ? $"Ваша позиция в очереди: {idx + 1}" : "Вы не в очереди";
         }
 
         return result;
@@ -270,7 +263,7 @@ public class CommandsService(
         {
             // Проверяем состояние плеера ДО добавления плейлиста
             var currentState = await stateManager.GetStateAsync();
-            var wasPlayerStopped = currentState.IsStoped;
+            var wasPlayerStopped = currentState.State == PlaybackState.Stopped;
             var queueCountBefore = await queue.GetQueueCountAsync();
 
             await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
@@ -334,7 +327,7 @@ public class CommandsService(
     private async Task NotifyQueueChangedAsync()
     {
         var currentQueue = await queue.GetQueueAsync();
-        await signalRService.NotifyQueueChangedAsync(currentQueue);
+        await inSignalRHubService.NotifyQueueChangedAsync(currentQueue);
     }
 
     /// <summary>
