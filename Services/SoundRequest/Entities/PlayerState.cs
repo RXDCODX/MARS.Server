@@ -18,7 +18,7 @@ public class PlayerState
     /// </summary>
     public Guid? NextTrackId { get; set; }
 
-    public TimeSpan? CurrentTrackDuration { get; set; }
+    public TimeSpan? CurrentTrackProgress { get; set; }
 
     /// <summary>
     /// Текущее состояние воспроизведения плеера
@@ -30,9 +30,6 @@ public class PlayerState
     /// </summary>
     public bool IsMuted { get; set; }
 
-    /// <summary>
-    /// Громкость (0.0 - 100.0)
-    /// </summary>
     public float Volume { get; set; } = 100f;
 
     /// <summary>

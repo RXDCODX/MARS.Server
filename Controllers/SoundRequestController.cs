@@ -29,6 +29,14 @@ public class SoundRequestController(
         try
         {
             var state = manager.GetState();
+            logger.LogInformation(
+                "[GetPlayerState] Состояние плеера: State={State}, CurrentTrack={CurrentTrack}, NextTrack={NextTrack}, Volume={Volume}",
+                state.State,
+                state.CurrentTrack?.TrackName ?? "null",
+                state.NextTrack?.TrackName ?? "null",
+                state.Volume
+            );
+
             result = Ok(OperationResult<PlayerState>.Ok("Состояние плеера получено", state));
         }
         catch (Exception ex)

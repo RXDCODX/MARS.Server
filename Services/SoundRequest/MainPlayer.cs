@@ -104,6 +104,37 @@ public class MainPlayer : IPlayerController, IDisposable
         {
             await _inSignalRHubService.NotifyPlayerStateChangedAsync(state);
         };
+
+        // Загружаем следующий трек из очереди, если он еще не загружен
+        var currentState = await _stateManager.GetStateAsync();
+        var queueCount = (await _queue.GetQueueAsync()).Count;
+
+        _logger.LogInformation(
+            "[InitializeAsync] Текущее состояние: State={State}, CurrentTrack={CurrentTrack}, NextTrack={NextTrack}, QueueCount={QueueCount}",
+            currentState.State,
+            currentState.CurrentTrack?.TrackName ?? "null",
+            currentState.NextTrack?.TrackName ?? "null",
+            queueCount
+        );
+
+        if (currentState.NextTrack == null && queueCount > 0)
+        {
+            _logger.LogInformation(
+                "[InitializeAsync] Следующий трек не установлен, но в очереди есть {QueueCount} треков, загружаем...",
+                queueCount
+            );
+            await LoadNextTrackAsync();
+
+            var updatedState = await _stateManager.GetStateAsync();
+            _logger.LogInformation(
+                "[InitializeAsync] После загрузки: NextTrack={NextTrack}",
+                updatedState.NextTrack?.TrackName ?? "null"
+            );
+        }
+        else if (queueCount == 0)
+        {
+            _logger.LogInformation("[InitializeAsync] Очередь пуста, следующий трек не загружается");
+        }
     }
 
     #endregion

@@ -74,6 +74,11 @@ public class SoundRequestHub(OutSignalRHubService service, StateManager stateMan
         return stateManager.SetVolumeAsync(volume);
     }
 
+    public Task TrackProgress(TimeSpan span)
+    {
+        return stateManager.UpdateStateAsync(e => e.CurrentTrackProgress = span);
+    }
+
     public override Task OnDisconnectedAsync(Exception? exception)
     {
         foreach (var group in SoundRequestGroups)

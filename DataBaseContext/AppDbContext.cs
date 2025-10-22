@@ -321,6 +321,20 @@ public sealed class AppDbContext : DbContext
             .WithOne()
             .HasForeignKey<FollowerInfo>(fi => fi.UserId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder
+            .Entity<PlayerState>()
+            .HasOne(ps => ps.CurrentTrack)
+            .WithOne()
+            .HasForeignKey<PlayerState>(ps => ps.CurrentTrackId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder
+            .Entity<PlayerState>()
+            .HasOne(ps => ps.NextTrack)
+            .WithOne()
+            .HasForeignKey<PlayerState>(ps => ps.NextTrackId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)

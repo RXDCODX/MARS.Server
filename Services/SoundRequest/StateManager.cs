@@ -7,13 +7,21 @@ namespace MARS.Server.Services.SoundRequest;
 /// <summary>
 /// Менеджер состояния плеера с поддержкой многопоточности и персистентностью в БД
 /// </summary>
-public class StateManager : IDisposable
+public class StateManager(
+    IDbContextFactory<AppDbContext> dbFactory,
+    IHostApplicationLifetime lifetime,
+    ILogger<StateManager> logger
+) : IDisposable
 {
     private readonly SemaphoreSlim _semaphore = new(1, 1);
-    private readonly IDbContextFactory<AppDbContext> _dbFactory;
-    private readonly ILogger<StateManager> _logger;
-    private readonly CancellationToken _cancellationToken;
-    private PlayerState _currentState;
+    private readonly CancellationToken _cancellationToken = lifetime.ApplicationStopping;
+    private PlayerState _currentState = new()
+    {
+        Id = Guid.NewGuid(),
+        Volume = 100f,
+        State = PlaybackState.Stopped,
+        IsMuted = false,
+    };
     private bool _disposed;
     private bool _isInitialized;
 
@@ -21,24 +29,6 @@ public class StateManager : IDisposable
     /// Событие изменения состояния плеера
     /// </summary>
     public event Func<PlayerState, Task>? StateChanged;
-
-    public StateManager(
-        IDbContextFactory<AppDbContext> dbFactory,
-        IHostApplicationLifetime lifetime,
-        ILogger<StateManager> logger
-    )
-    {
-        _dbFactory = dbFactory;
-        _logger = logger;
-        _cancellationToken = lifetime.ApplicationStopping;
-        _currentState = new PlayerState
-        {
-            Id = Guid.NewGuid(),
-            Volume = 100f,
-            State = PlaybackState.Stopped,
-            IsMuted = false,
-        };
-    }
 
     /// <summary>
     /// Инициализация состояния из БД (вызывается один раз при старте)
@@ -58,30 +48,43 @@ public class StateManager : IDisposable
                 return;
             }
 
-            await using var db = await _dbFactory.CreateDbContextAsync(_cancellationToken);
+            await using var db = await dbFactory.CreateDbContextAsync(_cancellationToken);
 
             // Пытаемся загрузить существующее состояние из БД
             var dbState = await db
                 .SoundRequestPlayerState.AsNoTracking()
                 .Include(s => s.CurrentTrack)
+                .ThenInclude(s => s!.RequestedByTwitchUser)
                 .Include(s => s.NextTrack)
+                .ThenInclude(s => s!.RequestedByTwitchUser)
                 .Include(s => s.CurrentTrackRequestedByTwitchUser)
                 .FirstOrDefaultAsync(_cancellationToken);
 
             if (dbState != null)
             {
-                _logger.LogInformation(
-                    "Загружено состояние плеера из БД: ID={StateId}, State={State}, Volume={Volume}",
+                dbState.State = PlaybackState.Stopped;
+
+                if (dbState.State == PlaybackState.Stopped)
+                {
+                    dbState.CurrentTrackProgress = TimeSpan.Zero;
+                }
+
+                logger.LogInformation(
+                    "Загружено состояние плеера из БД: ID={StateId}, State={State}, Volume={Volume}, CurrentTrack={CurrentTrack}, NextTrack={NextTrack}, CurrentTrackId={CurrentTrackId}, NextTrackId={NextTrackId}",
                     dbState.Id,
                     dbState.State,
-                    dbState.Volume
+                    dbState.Volume,
+                    dbState.CurrentTrack?.TrackName ?? "null",
+                    dbState.NextTrack?.TrackName ?? "null",
+                    dbState.CurrentTrackId?.ToString() ?? "null",
+                    dbState.NextTrackId?.ToString() ?? "null"
                 );
                 _currentState = dbState;
             }
             else
             {
                 // Создаем новое состояние в БД
-                _logger.LogInformation("Состояние плеера не найдено в БД, создаем новое");
+                logger.LogInformation("Состояние плеера не найдено в БД, создаем новое");
                 db.SoundRequestPlayerState.Add(_currentState);
                 await db.SaveChangesAsync(_cancellationToken);
             }
@@ -90,7 +93,7 @@ public class StateManager : IDisposable
         }
         catch (Exception ex)
         {
-            _logger.LogError(
+            logger.LogError(
                 ex,
                 "Ошибка при инициализации состояния плеера из БД, используем состояние по умолчанию"
             );
@@ -107,7 +110,7 @@ public class StateManager : IDisposable
     /// </summary>
     public async Task<PlayerState> GetStateAsync()
     {
-        await _semaphore.WaitAsync();
+        await _semaphore.WaitAsync(_cancellationToken);
         try
         {
             // Возвращаем копию состояния
@@ -118,7 +121,7 @@ public class StateManager : IDisposable
                 NextTrackId = _currentState.NextTrackId,
                 CurrentTrack = _currentState.CurrentTrack,
                 NextTrack = _currentState.NextTrack,
-                CurrentTrackDuration = _currentState.CurrentTrackDuration,
+                CurrentTrackProgress = _currentState.CurrentTrackProgress,
                 State = _currentState.State,
                 IsMuted = _currentState.IsMuted,
                 Volume = _currentState.Volume,
@@ -137,7 +140,7 @@ public class StateManager : IDisposable
     /// </summary>
     public PlayerState GetState()
     {
-        _semaphore.Wait();
+        _semaphore.Wait(_cancellationToken);
         try
         {
             return new PlayerState
@@ -147,7 +150,7 @@ public class StateManager : IDisposable
                 NextTrackId = _currentState.NextTrackId,
                 CurrentTrack = _currentState.CurrentTrack,
                 NextTrack = _currentState.NextTrack,
-                CurrentTrackDuration = _currentState.CurrentTrackDuration,
+                CurrentTrackProgress = _currentState.CurrentTrackProgress,
                 State = _currentState.State,
                 IsMuted = _currentState.IsMuted,
                 Volume = _currentState.Volume,
@@ -168,7 +171,7 @@ public class StateManager : IDisposable
     {
         try
         {
-            await using var db = await _dbFactory.CreateDbContextAsync(_cancellationToken);
+            await using var db = await dbFactory.CreateDbContextAsync(_cancellationToken);
 
             // Проверяем существует ли запись в БД
             var existingState = await db.SoundRequestPlayerState.FindAsync(
@@ -181,7 +184,7 @@ public class StateManager : IDisposable
                 // Обновляем существующую запись
                 existingState.CurrentTrackId = _currentState.CurrentTrackId;
                 existingState.NextTrackId = _currentState.NextTrackId;
-                existingState.CurrentTrackDuration = _currentState.CurrentTrackDuration;
+                existingState.CurrentTrackProgress = _currentState.CurrentTrackProgress;
                 existingState.State = _currentState.State;
                 existingState.IsMuted = _currentState.IsMuted;
                 existingState.Volume = _currentState.Volume;
@@ -197,7 +200,7 @@ public class StateManager : IDisposable
 
             await db.SaveChangesAsync(_cancellationToken);
 
-            _logger.LogDebug(
+            logger.LogDebug(
                 "Состояние плеера сохранено в БД: State={State}, Volume={Volume}",
                 _currentState.State,
                 _currentState.Volume
@@ -205,7 +208,7 @@ public class StateManager : IDisposable
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Ошибка при сохранении состояния плеера в БД");
+            logger.LogError(ex, "Ошибка при сохранении состояния плеера в БД");
         }
     }
 
@@ -221,7 +224,7 @@ public class StateManager : IDisposable
     {
         PlayerState? stateToNotify = null;
 
-        await _semaphore.WaitAsync();
+        await _semaphore.WaitAsync(_cancellationToken);
         try
         {
             updateAction(_currentState);
@@ -235,7 +238,7 @@ public class StateManager : IDisposable
                     NextTrackId = _currentState.NextTrackId,
                     CurrentTrack = _currentState.CurrentTrack,
                     NextTrack = _currentState.NextTrack,
-                    CurrentTrackDuration = _currentState.CurrentTrackDuration,
+                    CurrentTrackProgress = _currentState.CurrentTrackProgress,
                     State = _currentState.State,
                     IsMuted = _currentState.IsMuted,
                     Volume = _currentState.Volume,
@@ -270,7 +273,6 @@ public class StateManager : IDisposable
             {
                 state.CurrentTrackId = track?.Id;
                 state.CurrentTrack = track;
-                state.CurrentTrackDuration = track?.Duration;
                 state.State = track == null ? PlaybackState.Stopped : PlaybackState.WaitingForTrack;
             },
             notify
@@ -291,7 +293,6 @@ public class StateManager : IDisposable
             {
                 state.CurrentTrackId = track?.Id;
                 state.CurrentTrack = track;
-                state.CurrentTrackDuration = track?.Duration;
                 state.State = track == null ? PlaybackState.Stopped : PlaybackState.WaitingForTrack;
                 state.CurrentTrackRequestedBy = user?.TwitchId;
                 state.CurrentTrackRequestedByTwitchUser = user;
@@ -327,7 +328,7 @@ public class StateManager : IDisposable
                 if (playbackState == PlaybackState.Stopped)
                 {
                     state.CurrentTrack = null;
-                    state.CurrentTrackDuration = null;
+                    state.CurrentTrackProgress = null;
                 }
             },
             notify
@@ -392,7 +393,6 @@ public class StateManager : IDisposable
             {
                 state.CurrentTrackId = track.Id;
                 state.CurrentTrack = track;
-                state.CurrentTrackDuration = track.Duration;
                 state.State = PlaybackState.Playing;
                 state.CurrentTrackRequestedBy = user?.TwitchId;
                 state.CurrentTrackRequestedByTwitchUser = user;
@@ -413,7 +413,7 @@ public class StateManager : IDisposable
                 state.NextTrackId = null;
                 state.CurrentTrack = null;
                 state.NextTrack = null;
-                state.CurrentTrackDuration = null;
+                state.CurrentTrackProgress = null;
                 state.State = PlaybackState.Stopped;
                 state.CurrentTrackRequestedBy = null;
                 state.CurrentTrackRequestedByTwitchUser = null;
