@@ -79,39 +79,10 @@ public class TwitchUser
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     /// <summary>
-    /// Навигационные свойства для связанных сущностей
-    /// </summary>
-    [NotMapped]
-    public TwitchLeaderboardUser? LeaderboardStats { get; set; }
-
-    [NotMapped]
-    public FumoUser? FumoUser { get; set; }
-
-    [NotMapped]
-    public ICollection<HelloVideosUsers> HelloVideos { get; set; } = new List<HelloVideosUsers>();
-
-    [NotMapped]
-    public WaifuRollGuarantee? WaifuRollGuarantee { get; set; }
-
-    [NotMapped]
-    public ICollection<DailyAutoMarkupUser> HonkaiMarkups { get; set; } =
-        new List<DailyAutoMarkupUser>();
-
-    [NotMapped]
-    public ICollection<CinemaMediaItem> CinemaQueueItems { get; set; } =
-        new List<CinemaMediaItem>();
-
-    [NotMapped]
-    public ICollection<BaseTrackInfo> RequestedTracks { get; set; } = new List<BaseTrackInfo>();
-
-    [NotMapped]
-    public ICollection<PlayerState> PlayerStates { get; set; } = new List<PlayerState>();
-
-    /// <summary>
     /// Проверить, является ли пользователь просто фоловером
     /// </summary>
     [NotMapped]
-    public bool IsJustFollower => !IsModerator && !IsVip;
+    public bool IsSimpleUser => !IsModerator && !IsVip;
 
     public override string ToString()
     {

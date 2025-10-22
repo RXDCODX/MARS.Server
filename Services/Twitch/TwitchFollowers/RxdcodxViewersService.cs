@@ -248,7 +248,7 @@ public class RxdcodxViewersService(
 
                         // Обновление TwitchUser выполняется отдельным сервисом
                         // Просто проверяем наличие пользователя в списке
-                        if (userInfo.TwitchUser?.IsJustFollower ?? true)
+                        if (userInfo.TwitchUser?.IsSimpleUser ?? true)
                         {
                             isSameInfo = true;
                             break;

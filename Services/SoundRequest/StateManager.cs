@@ -34,7 +34,7 @@ public class StateManager : IDisposable
         _currentState = new PlayerState
         {
             Id = Guid.NewGuid(),
-            Volume = 100,
+            Volume = 100f,
             State = PlaybackState.Stopped,
             IsMuted = false,
         };
@@ -369,14 +369,14 @@ public class StateManager : IDisposable
     }
 
     /// <summary>
-    /// Установить громкость
+    /// Установить громкость (0.0 - 100.0)
     /// </summary>
-    public async Task SetVolumeAsync(int volume, bool notify = true)
+    public async Task SetVolumeAsync(float volume, bool notify = true)
     {
         await UpdateStateAsync(
             state =>
             {
-                state.Volume = Math.Clamp(volume, 0, 100);
+                state.Volume = Math.Clamp(volume, 0f, 100f);
             },
             notify
         );

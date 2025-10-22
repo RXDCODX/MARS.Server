@@ -10,7 +10,7 @@ public interface IPlayerController
     Task ResumeAsync(CancellationToken ct);
     Task StopAsync(CancellationToken ct);
     Task SkipAsync(CancellationToken ct);
-    Task SetVolumeAsync(int volume, CancellationToken ct);
+    Task SetVolumeAsync(float volume, CancellationToken ct);
     Task MuteAsync(CancellationToken ct);
     Task UnmuteAsync(CancellationToken ct);
 

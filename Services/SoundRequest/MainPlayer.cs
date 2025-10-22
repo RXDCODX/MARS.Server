@@ -180,9 +180,9 @@ public class MainPlayer : IPlayerController, IDisposable
     }
 
     /// <summary>
-    /// Установить громкость
+    /// Установить громкость (0.0 - 100.0)
     /// </summary>
-    public async Task SetVolumeAsync(int volume, CancellationToken ct)
+    public async Task SetVolumeAsync(float volume, CancellationToken ct)
     {
         await _stateManager.SetVolumeAsync(volume, notify: true);
     }

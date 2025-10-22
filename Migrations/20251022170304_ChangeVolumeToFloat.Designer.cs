@@ -3,6 +3,7 @@ using System;
 using MARS.Server.DataBaseContext;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MARS.Server.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251022170304_ChangeVolumeToFloat")]
+    partial class ChangeVolumeToFloat
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1364,8 +1367,9 @@ namespace MARS.Server.Migrations
             modelBuilder.Entity("MARS.Server.Services.CinemaQueue.Entitys.CinemaMediaItem", b =>
                 {
                     b.HasOne("MARS.Server.Services.Twitch.Entitys.TwitchUser", "TwitchUser")
-                        .WithMany()
-                        .HasForeignKey("TwitchUserId");
+                        .WithMany("CinemaQueueItems")
+                        .HasForeignKey("TwitchUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("TwitchUser");
                 });
@@ -1395,8 +1399,9 @@ namespace MARS.Server.Migrations
             modelBuilder.Entity("MARS.Server.Services.Honkai.Entitys.DailyAutoMarkupUser", b =>
                 {
                     b.HasOne("MARS.Server.Services.Twitch.Entitys.TwitchUser", "TwitchUser")
-                        .WithMany()
-                        .HasForeignKey("TwitchId");
+                        .WithMany("HonkaiMarkups")
+                        .HasForeignKey("TwitchId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("TwitchUser");
                 });
@@ -1643,8 +1648,9 @@ namespace MARS.Server.Migrations
             modelBuilder.Entity("MARS.Server.Services.SoundRequest.Entities.BaseTrackInfo", b =>
                 {
                     b.HasOne("MARS.Server.Services.Twitch.Entitys.TwitchUser", "RequestedByTwitchUser")
-                        .WithMany()
-                        .HasForeignKey("RequestedByTwitchId");
+                        .WithMany("RequestedTracks")
+                        .HasForeignKey("RequestedByTwitchId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("RequestedByTwitchUser");
                 });
@@ -1662,8 +1668,9 @@ namespace MARS.Server.Migrations
                         .HasConstraintName("FK_SoundRequestPlayerState_SoundRequestBaseTrackInfos_Current~1");
 
                     b.HasOne("MARS.Server.Services.Twitch.Entitys.TwitchUser", "CurrentTrackRequestedByTwitchUser")
-                        .WithMany()
-                        .HasForeignKey("CurrentTrackRequestedBy");
+                        .WithMany("PlayerStates")
+                        .HasForeignKey("CurrentTrackRequestedBy")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("MARS.Server.Services.SoundRequest.Entities.BaseTrackInfo", null)
                         .WithMany()
@@ -1707,9 +1714,9 @@ namespace MARS.Server.Migrations
             modelBuilder.Entity("MARS.Server.Services.Twitch.FumoFriday.Entitys.FumoUser", b =>
                 {
                     b.HasOne("MARS.Server.Services.Twitch.Entitys.TwitchUser", "TwitchUser")
-                        .WithMany()
-                        .HasForeignKey("TwitchId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .WithOne("FumoUser")
+                        .HasForeignKey("MARS.Server.Services.Twitch.FumoFriday.Entitys.FumoUser", "TwitchId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("TwitchUser");
@@ -1724,9 +1731,9 @@ namespace MARS.Server.Migrations
                         .IsRequired();
 
                     b.HasOne("MARS.Server.Services.Twitch.Entitys.TwitchUser", "TwitchUser")
-                        .WithMany()
+                        .WithMany("HelloVideos")
                         .HasForeignKey("TwitchId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("MediaInfo");
@@ -1737,9 +1744,9 @@ namespace MARS.Server.Migrations
             modelBuilder.Entity("MARS.Server.Services.Twitch.MiniGamesStats.Entitys.TwitchLeaderboardUser", b =>
                 {
                     b.HasOne("MARS.Server.Services.Twitch.Entitys.TwitchUser", "TwitchUser")
-                        .WithMany()
-                        .HasForeignKey("TwitchId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .WithOne("LeaderboardStats")
+                        .HasForeignKey("MARS.Server.Services.Twitch.MiniGamesStats.Entitys.TwitchLeaderboardUser", "TwitchId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("TwitchUser");
@@ -1792,9 +1799,9 @@ namespace MARS.Server.Migrations
             modelBuilder.Entity("MARS.Server.Services.WaifuRoll.Entitys.WaifuRollGuarantee", b =>
                 {
                     b.HasOne("MARS.Server.Services.Twitch.Entitys.TwitchUser", "TwitchUser")
-                        .WithMany()
-                        .HasForeignKey("TwitchId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .WithOne("WaifuRollGuarantee")
+                        .HasForeignKey("MARS.Server.Services.WaifuRoll.Entitys.WaifuRollGuarantee", "TwitchId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("TwitchUser");
@@ -1820,6 +1827,25 @@ namespace MARS.Server.Migrations
             modelBuilder.Entity("MARS.Server.Services.StreamAcrhive_UNUSED.Entitys.StreamArchiveFile", b =>
                 {
                     b.Navigation("Chunks");
+                });
+
+            modelBuilder.Entity("MARS.Server.Services.Twitch.Entitys.TwitchUser", b =>
+                {
+                    b.Navigation("CinemaQueueItems");
+
+                    b.Navigation("FumoUser");
+
+                    b.Navigation("HelloVideos");
+
+                    b.Navigation("HonkaiMarkups");
+
+                    b.Navigation("LeaderboardStats");
+
+                    b.Navigation("PlayerStates");
+
+                    b.Navigation("RequestedTracks");
+
+                    b.Navigation("WaifuRollGuarantee");
                 });
 
             modelBuilder.Entity("MARS.Server.Services.WaifuRoll.Entitys.Host", b =>

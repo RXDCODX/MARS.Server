@@ -30,7 +30,10 @@ public class PlayerState
     /// </summary>
     public bool IsMuted { get; set; }
 
-    public int Volume { get; set; } = 100;
+    /// <summary>
+    /// Громкость (0.0 - 100.0)
+    /// </summary>
+    public float Volume { get; set; } = 100f;
 
     /// <summary>
     /// Twitch ID пользователя, заказавшего текущий трек

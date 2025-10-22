@@ -146,9 +146,9 @@ public class SoundRequestManager(
     }
 
     /// <summary>
-    /// Установить громкость
+    /// Установить громкость (0.0 - 100.0)
     /// </summary>
-    public Task SetVolume(int volume)
+    public Task SetVolume(float volume)
     {
         return playerController.SetVolumeAsync(volume, _cancellationToken);
     }

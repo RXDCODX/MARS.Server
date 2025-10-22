@@ -69,6 +69,11 @@ public class SoundRequestHub(OutSignalRHubService service, StateManager stateMan
         return service.OnErrorInvoke(info);
     }
 
+    public Task VolumeChange(float volume)
+    {
+        return stateManager.SetVolumeAsync(volume);
+    }
+
     public override Task OnDisconnectedAsync(Exception? exception)
     {
         foreach (var group in SoundRequestGroups)

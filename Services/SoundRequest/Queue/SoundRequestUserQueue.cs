@@ -81,6 +81,7 @@ public class SoundRequestUserQueue(
 
         return await dbContext
             .SoundRequestBaseTrackInfos.AsNoTracking()
+            .Include(e => e.RequestedByTwitchUser)
             .Where(t => !t.IsDeleted && t.QueueOrder != null)
             .OrderBy(t => t.QueueOrder)
             .ToListAsync(cancellationToken: _cancellationToken);

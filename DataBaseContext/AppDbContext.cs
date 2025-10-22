@@ -314,76 +314,12 @@ public sealed class AppDbContext : DbContext
             .HasForeignKey(h => h.TwitchId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // TwitchLeaderboardUser -> TwitchUser (один к одному)
-        modelBuilder
-            .Entity<TwitchLeaderboardUser>()
-            .HasOne(tlu => tlu.TwitchUser)
-            .WithOne(tu => tu.LeaderboardStats)
-            .HasForeignKey<TwitchLeaderboardUser>(tlu => tlu.TwitchId)
-            .OnDelete(DeleteBehavior.Restrict);
-
         // FollowerInfo -> TwitchUser (один к одному)
         modelBuilder
             .Entity<FollowerInfo>()
             .HasOne(fi => fi.TwitchUser)
             .WithOne()
             .HasForeignKey<FollowerInfo>(fi => fi.UserId)
-            .OnDelete(DeleteBehavior.Restrict);
-
-        // FumoUser -> TwitchUser (один к одному)
-        modelBuilder
-            .Entity<FumoUser>()
-            .HasOne(fu => fu.TwitchUser)
-            .WithOne(tu => tu.FumoUser)
-            .HasForeignKey<FumoUser>(fu => fu.TwitchId)
-            .OnDelete(DeleteBehavior.Restrict);
-
-        // HelloVideosUsers -> TwitchUser (многие к одному)
-        modelBuilder
-            .Entity<HelloVideosUsers>()
-            .HasOne(hvu => hvu.TwitchUser)
-            .WithMany(tu => tu.HelloVideos)
-            .HasForeignKey(hvu => hvu.TwitchId)
-            .OnDelete(DeleteBehavior.Restrict);
-
-        // WaifuRollGuarantee -> TwitchUser (один к одному)
-        modelBuilder
-            .Entity<WaifuRollGuarantee>()
-            .HasOne(wrg => wrg.TwitchUser)
-            .WithOne(tu => tu.WaifuRollGuarantee)
-            .HasForeignKey<WaifuRollGuarantee>(wrg => wrg.TwitchId)
-            .OnDelete(DeleteBehavior.Restrict);
-
-        // DailyAutoMarkupUser -> TwitchUser (многие к одному, опционально)
-        modelBuilder
-            .Entity<DailyAutoMarkupUser>()
-            .HasOne(damu => damu.TwitchUser)
-            .WithMany(tu => tu.HonkaiMarkups)
-            .HasForeignKey(damu => damu.TwitchId)
-            .OnDelete(DeleteBehavior.Restrict);
-
-        // CinemaMediaItem -> TwitchUser (многие к одному, опционально)
-        modelBuilder
-            .Entity<CinemaMediaItem>()
-            .HasOne(cmi => cmi.TwitchUser)
-            .WithMany(tu => tu.CinemaQueueItems)
-            .HasForeignKey(cmi => cmi.TwitchUserId)
-            .OnDelete(DeleteBehavior.Restrict);
-
-        // BaseTrackInfo -> TwitchUser (многие к одному, опционально)
-        modelBuilder
-            .Entity<BaseTrackInfo>()
-            .HasOne(bti => bti.RequestedByTwitchUser)
-            .WithMany(tu => tu.RequestedTracks)
-            .HasForeignKey(bti => bti.RequestedByTwitchId)
-            .OnDelete(DeleteBehavior.Restrict);
-
-        // PlayerState -> TwitchUser (многие к одному, опционально)
-        modelBuilder
-            .Entity<PlayerState>()
-            .HasOne(ps => ps.CurrentTrackRequestedByTwitchUser)
-            .WithMany(tu => tu.PlayerStates)
-            .HasForeignKey(ps => ps.CurrentTrackRequestedBy)
             .OnDelete(DeleteBehavior.Restrict);
     }
 

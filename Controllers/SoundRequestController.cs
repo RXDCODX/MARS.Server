@@ -271,22 +271,22 @@ public class SoundRequestController(
     }
 
     /// <summary>
-    /// Установить громкость плеера
+    /// Установить громкость плеера (0.0 - 100.0)
     /// </summary>
-    [HttpPost("volume/{volume:int}")]
+    [HttpPost("volume/{volume:float}")]
     public async Task<ActionResult<OperationResult>> SetVolume(
-        [FromRoute] int volume,
+        [FromRoute] float volume,
         CancellationToken cancellationToken = default
     )
     {
         ActionResult<OperationResult> result;
 
-        if (volume is >= 0 and <= 100)
+        if (volume is >= 0f and <= 100f)
         {
             try
             {
                 await manager.SetVolume(volume);
-                result = Ok(OperationResult.Ok($"Громкость установлена на {volume}%"));
+                result = Ok(OperationResult.Ok($"Громкость установлена на {volume:F1}%"));
             }
             catch (Exception ex)
             {
@@ -296,7 +296,7 @@ public class SoundRequestController(
         }
         else
         {
-            result = Ok(OperationResult.Bad("Громкость должна быть от 0 до 100"));
+            result = Ok(OperationResult.Bad("Громкость должна быть от 0.0 до 100.0"));
         }
 
         return result;
