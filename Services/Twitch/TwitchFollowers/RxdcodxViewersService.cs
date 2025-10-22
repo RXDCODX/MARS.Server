@@ -1,5 +1,7 @@
-﻿using MARS.Server.Services.Twitch.Management;
+﻿using System.Collections;
+using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.Twitch.TwitchFollowers.Entitys;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Websockets;
 
@@ -21,6 +23,17 @@ public class RxdcodxViewersService(
 {
     private const string ChannelId = TwitchExstension.ChannelId; // ID канала rxdcodx
     private const string ChannelName = TwitchExstension.Channel;
+
+    private static readonly IEqualityComparer<FollowerInfo> UsersComparer =
+        new ValueComparer<FollowerInfo>(
+            (e1, e2) =>
+                e1 != null
+                && e2 != null
+                && !string.IsNullOrWhiteSpace(e1.UserId)
+                && !string.IsNullOrWhiteSpace(e2.UserId)
+                && e1.UserId.Equals(e2.UserId),
+            info => int.Parse(info.UserId)
+        );
 
     /// <summary>
     /// Инициализация кеша фоловеров при запуске сервиса
@@ -180,8 +193,9 @@ public class RxdcodxViewersService(
             }
         }
 
-        var pagination = "1";
-        var list = new HashSet<FollowerInfo>();
+        var pagination = string.Empty;
+        var firstRequest = true;
+        var list = new HashSet<FollowerInfo>(UsersComparer);
 
         try
         {
@@ -193,10 +207,7 @@ public class RxdcodxViewersService(
                 tokenService.Token.AccessToken
             );
 
-            var moderators = result2.Data.Select(mod => new FollowerInfo
-            {
-                UserId = mod.UserId
-            });
+            var moderators = result2.Data.Select(mod => new FollowerInfo { UserId = mod.UserId });
 
             foreach (FollowerInfo followerInfo in moderators)
             {
@@ -211,19 +222,16 @@ public class RxdcodxViewersService(
                 tokenService.Token.AccessToken
             );
 
-            var vips = result3.Data.Select(vip => new FollowerInfo
-            {
-                UserId = vip.UserId
-            });
+            var vips = result3.Data.Select(vip => new FollowerInfo { UserId = vip.UserId });
 
             foreach (FollowerInfo followerInfo in vips)
             {
                 list.Add(followerInfo);
             }
 
-            while (!string.IsNullOrWhiteSpace(pagination))
+            while (!string.IsNullOrWhiteSpace(pagination) || firstRequest)
             {
-                pagination = string.Empty;
+                firstRequest = false;
                 var result = await api.Helix.Channels.GetChannelFollowersAsync(
                     ChannelId,
                     null,
@@ -236,7 +244,7 @@ public class RxdcodxViewersService(
                 var isSameInfo = false;
                 var followers = result.Data.Select(follower => new FollowerInfo
                 {
-                    UserId = follower.UserId
+                    UserId = follower.UserId,
                 });
                 foreach (FollowerInfo followerInfo in followers)
                 {
@@ -331,10 +339,7 @@ public class RxdcodxViewersService(
 
             if (twEvent.BroadcasterUserId == ChannelId)
             {
-                var newFollower = new FollowerInfo
-                {
-                    UserId = twEvent.UserId,
-                };
+                var newFollower = new FollowerInfo { UserId = twEvent.UserId };
 
                 // Обновление TwitchUser выполняется отдельным сервисом
                 // Сохраняем в БД (это и есть наш кеш)
@@ -369,10 +374,7 @@ public class RxdcodxViewersService(
         var twEvent = args.Payload.Event;
         if (twEvent.BroadcasterUserId.Equals(TwitchExstension.ChannelId))
         {
-            var newVip = new FollowerInfo()
-            {
-                UserId = twEvent.UserId,
-            };
+            var newVip = new FollowerInfo() { UserId = twEvent.UserId };
 
             // Обновление TwitchUser выполняется отдельным сервисом
             // Сохраняем в БД (это и есть наш кеш)
@@ -391,10 +393,7 @@ public class RxdcodxViewersService(
         var twEvent = args.Payload.Event;
         if (twEvent.BroadcasterUserId.Equals(TwitchExstension.ChannelId))
         {
-            var newModerator = new FollowerInfo()
-            {
-                UserId = twEvent.UserId,
-            };
+            var newModerator = new FollowerInfo() { UserId = twEvent.UserId };
 
             // Обновление TwitchUser выполняется отдельным сервисом
             // Сохраняем в БД (это и есть наш кеш)

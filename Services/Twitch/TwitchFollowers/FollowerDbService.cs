@@ -123,6 +123,7 @@ public class FollowerDbService(
             var existingEntities = await context
                 .FollowersEntitys.AsNoTracking()
                 .Where(f => userIds.Contains(f.UserId))
+                .Include(followerInfo => followerInfo.TwitchUser)
                 .ToListAsync();
 
             foreach (var followerInfo in followersInfo)
@@ -131,7 +132,7 @@ public class FollowerDbService(
                     e.UserId == followerInfo.UserId
                 );
 
-                if (existingEntity != null)
+                if (existingEntity is { TwitchUser: not null })
                 {
                     context.FollowersEntitys.Update(followerInfo);
                 }
@@ -298,7 +299,9 @@ public class FollowerDbService(
             return await context
                 .FollowersEntitys.AsNoTracking()
                 .Include(f => f.TwitchUser)
-                .Where(f => f.TwitchUser == null || string.IsNullOrWhiteSpace(f.TwitchUser.ProfileImageUrl))
+                .Where(f =>
+                    f.TwitchUser == null || string.IsNullOrWhiteSpace(f.TwitchUser.ProfileImageUrl)
+                )
                 .ToListAsync();
         }
         catch (Exception ex)
@@ -320,7 +323,9 @@ public class FollowerDbService(
             return await context
                 .FollowersEntitys.AsNoTracking()
                 .Include(f => f.TwitchUser)
-                .CountAsync(f => f.TwitchUser == null || string.IsNullOrWhiteSpace(f.TwitchUser.ProfileImageUrl));
+                .CountAsync(f =>
+                    f.TwitchUser == null || string.IsNullOrWhiteSpace(f.TwitchUser.ProfileImageUrl)
+                );
         }
         catch (Exception ex)
         {
@@ -328,5 +333,4 @@ public class FollowerDbService(
             return 0;
         }
     }
-
 }
