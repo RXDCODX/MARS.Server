@@ -30,56 +30,77 @@ public class CommandsService(
         CancellationToken cancellationToken = default
     )
     {
-        string result;
+        var result = string.Empty;
 
-        BaseTrackInfo? info;
-
-        // Проверяем, является ли запрос URL
-        if (Uri.TryCreate(query, UriKind.Absolute, out _))
+        if (!string.IsNullOrWhiteSpace(query))
         {
-            info = await ytResolver.ResolveVideoAsync(query, cancellationToken);
+            // Проверяем, является ли запрос URL
+            BaseTrackInfo? info = null;
+            if (Uri.TryCreate(query, UriKind.Absolute, out _))
+            {
+                // Пытаемся извлечь VideoId из URL
+                var videoId = ExtractYouTubeVideoId(query);
+
+                // Если удалось извлечь VideoId, проверяем БД
+                if (!string.IsNullOrWhiteSpace(videoId))
+                {
+                    await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+                    info = await db
+                        .SoundRequestBaseTrackInfos.AsNoTracking()
+                        .FirstOrDefaultAsync(
+                            t => t.VideoId == videoId && !t.IsDeleted,
+                            cancellationToken
+                        );
+                }
+
+                // Если в БД не нашли, обращаемся к YouTube API
+                if (info == null)
+                {
+                    info = await ytResolver.ResolveVideoAsync(query, cancellationToken);
+                }
+            }
+            else
+            {
+                // Текстовый запрос — ищем через YouTube Music API
+                info = await ytResolver.ResolveQueryAsync(query, cancellationToken);
+            }
+
+            if (info != null && user != null)
+            {
+                // Проверяем состояние плеера ДО добавления в очередь
+                var currentState = await stateManager.GetStateAsync();
+                var wasPlayerStopped = currentState.State == PlaybackState.Stopped;
+
+                // Проверяем размер очереди ДО добавления
+                var queueCountBefore = await queue.GetQueueCountAsync();
+
+                // Добавляем трек в очередь
+                var queueItem = await queue.AddToQueueAsync(info, user.TwitchId, user);
+
+                // Пытаемся запустить воспроизведение если нужно
+                await TryAutoPlayQueueItemAsync(
+                    wasPlayerStopped,
+                    queueCountBefore,
+                    queueItem,
+                    cancellationToken
+                );
+
+                var duration = info.Duration;
+                var durationText =
+                    duration > TimeSpan.Zero
+                        ? $"{(int)duration.TotalMinutes:D2}:{duration.Seconds:D2}"
+                        : "??:??";
+
+                result = $"Добавлено: {info.Title} [{durationText}]";
+            }
+            else
+            {
+                result = "Не удалось распознать видео по ссылке";
+            }
         }
         else
         {
-            // Текстовый запрос — ищем через YouTube Music API
-            info = await ytResolver.ResolveQueryAsync(query, cancellationToken);
-        }
-
-        if (info != null)
-        {
-            // Проверяем состояние плеера ДО добавления в очередь
-            var currentState = await stateManager.GetStateAsync();
-            var wasPlayerStopped = currentState.State == PlaybackState.Stopped;
-
-            // Проверяем размер очереди ДО добавления
-            var queueCountBefore = await queue.GetQueueCountAsync();
-
-            // Устанавливаем информацию о пользователе
-            info.RequestedByTwitchId = user?.TwitchId ?? string.Empty;
-
-            // Добавляем трек в очередь
-            await queue.AddToQueueAsync(info);
-
-            // Пытаемся запустить воспроизведение если нужно
-            await TryAutoPlayTrackAsync(
-                wasPlayerStopped,
-                queueCountBefore,
-                info,
-                user,
-                cancellationToken
-            );
-
-            var duration = info.Duration;
-            var durationText =
-                duration > TimeSpan.Zero
-                    ? $"{(int)duration.TotalMinutes:D2}:{duration.Seconds:D2}"
-                    : "??:??";
-
-            result = $"Добавлено: {info.Title} [{durationText}]";
-        }
-        else
-        {
-            result = "Не удалось распознать видео по ссылке";
+            result = "Неверные параметры запроса";
         }
 
         return result;
@@ -117,77 +138,18 @@ public class CommandsService(
     /// <param name="user">Пользователь Twitch (обязательно)</param>
     public async Task<string> GetUserQueuePositionAsync(TwitchUser? user)
     {
-        string result;
+        var result = string.Empty;
 
-        if (user == null)
-        {
-            result = "Не удалось определить пользователя";
-        }
-        else
+        if (user != null)
         {
             var list = await queue.GetQueueAsync();
-            var idx = list.FindIndex(t => t.RequestedByTwitchId == user.TwitchId);
+            var idx = list.FindIndex(qi => qi.RequestedByTwitchId == user.TwitchId);
 
             result = idx >= 0 ? $"Ваша позиция в очереди: {idx + 1}" : "Вы не в очереди";
         }
-
-        return result;
-    }
-
-    /// <summary>
-    /// Получить информацию о количестве треков перед заказанным треком и примерное время ожидания
-    /// </summary>
-    /// <param name="user">Пользователь Twitch (обязательно)</param>
-    public async Task<string> GetUserQueueDetailsAsync(TwitchUser? user)
-    {
-        string result;
-
-        if (user == null)
-        {
-            result = "Не удалось определить пользователя";
-        }
         else
         {
-            var list = await queue.GetQueueAsync();
-            var firstUserTrackIndex = list.FindIndex(t => t.RequestedByTwitchId == user.TwitchId);
-
-            if (firstUserTrackIndex < 0)
-            {
-                result = "У вас нет треков в очереди";
-            }
-            else
-            {
-                // Количество треков перед первым треком пользователя
-                var tracksBeforeCount = firstUserTrackIndex;
-
-                // Рассчитываем общую длительность треков перед первым треком пользователя
-                var totalWaitTime = TimeSpan.Zero;
-
-                for (var i = 0; i < firstUserTrackIndex; i++)
-                {
-                    var track = list[i];
-                    if (track.Duration > TimeSpan.Zero)
-                    {
-                        totalWaitTime += track.Duration;
-                    }
-                }
-
-                // Формируем результат
-                if (tracksBeforeCount == 0)
-                {
-                    result = "Ваш трек следующий в очереди!";
-                }
-                else
-                {
-                    var waitTimeText =
-                        totalWaitTime > TimeSpan.Zero
-                            ? $"{(int)totalWaitTime.TotalMinutes:D2}:{totalWaitTime.Seconds:D2}"
-                            : "неизвестно";
-
-                    result =
-                        $"Треков в очереди: {tracksBeforeCount}, включим примерно через: ~{waitTimeText}";
-                }
-            }
+            result = "Не удалось определить пользователя";
         }
 
         return result;
@@ -213,25 +175,25 @@ public class CommandsService(
         {
             await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
 
-            var last = await db
-                .SoundRequestBaseTrackInfos.Where(t =>
-                    !t.IsDeleted && t.QueueOrder != null && t.RequestedByTwitchId == user.TwitchId
+            var lastQueueItem = await db
+                .SoundRequestQueueItems.Include(qi => qi.Track)
+                .Where(qi =>
+                    !qi.IsDeleted
+                    && qi.QueueOrder != null
+                    && qi.RequestedByTwitchId == user.TwitchId
                 )
-                .OrderByDescending(t => t.QueueOrder)
+                .OrderByDescending(qi => qi.QueueOrder)
                 .FirstOrDefaultAsync(cancellationToken);
 
-            if (last != null)
+            if (lastQueueItem is { Track: not null })
             {
-                // Помечаем как удаленный
-                last.IsDeleted = true;
-                last.QueueOrder = null;
-                db.SoundRequestBaseTrackInfos.Update(last);
-                await db.SaveChangesAsync(cancellationToken);
+                // Удаляем из очереди
+                await queue.RemoveFromQueueAsync(lastQueueItem.Id);
 
                 // Уведомляем об изменении очереди
                 await NotifyQueueChangedAsync();
 
-                result = "Последний заказ удален";
+                result = $"Отменён трек: {lastQueueItem.Track.Title}";
             }
             else
             {
@@ -259,50 +221,34 @@ public class CommandsService(
 
         var items = await ytResolver.ResolvePlaylistAsync(playlistUrl);
 
-        if (items is { Length: > 0 })
+        if (items is { Length: > 0 } && user != null)
         {
             // Проверяем состояние плеера ДО добавления плейлиста
             var currentState = await stateManager.GetStateAsync();
             var wasPlayerStopped = currentState.State == PlaybackState.Stopped;
             var queueCountBefore = await queue.GetQueueCountAsync();
 
-            await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
-            BaseTrackInfo? firstTrack = null;
+            QueueItem? firstQueueItem = null;
 
             foreach (var info in items)
             {
-                // Проверяем существование трека и загружаем его, если есть
-                var existingTrack = await db
-                    .SoundRequestBaseTrackInfos.AsNoTracking()
-                    .FirstOrDefaultAsync(t => t.Url == info.Url, cancellationToken);
+                // Добавляем трек в очередь
+                var queueItem = await queue.AddToQueueAsync(info, user.TwitchId, user);
 
-                var trackToAdd = info;
-                if (existingTrack != null)
-                {
-                    // Используем существующий трек
-                    trackToAdd = existingTrack;
-                }
-                else
-                {
-                    // Трек новый, сохраняем его
-                    db.SoundRequestBaseTrackInfos.Add(info);
-                    await db.SaveChangesAsync(cancellationToken);
-                }
-
-                // Устанавливаем информацию о пользователе
-                trackToAdd.RequestedByTwitchId = user?.TwitchId ?? string.Empty;
-
-                await queue.AddToQueueAsync(trackToAdd);
-
-                // Запоминаем первый трек плейлиста
-                firstTrack ??= trackToAdd;
+                // Запоминаем первый элемент плейлиста
+                firstQueueItem ??= queueItem;
             }
 
             // Если плеер был остановлен И очередь была пуста - запускаем первый трек
-            if (wasPlayerStopped && queueCountBefore == 0 && firstTrack != null)
+            if (
+                wasPlayerStopped
+                && queueCountBefore == 0
+                && firstQueueItem != null
+                && playerController is MainPlayer mainPlayer
+            )
             {
-                await playerController.PlayAsync(firstTrack, user, cancellationToken);
-                await queue.RemoveFromQueueAsync(firstTrack.Id);
+                await mainPlayer.PlayAsync(firstQueueItem, cancellationToken);
+                await queue.RemoveFromQueueAsync(firstQueueItem.Id);
                 await NotifyQueueChangedAsync();
             }
             else
@@ -331,25 +277,89 @@ public class CommandsService(
     }
 
     /// <summary>
-    /// Попытаться автоматически запустить воспроизведение трека, если плеер остановлен и очередь была пуста
+    /// Попытаться автоматически запустить воспроизведение элемента очереди, если плеер остановлен и очередь была пуста
     /// </summary>
-    private async Task TryAutoPlayTrackAsync(
+    private async Task TryAutoPlayQueueItemAsync(
         bool wasPlayerStopped,
         int queueCountBefore,
-        BaseTrackInfo track,
-        TwitchUser? user,
+        QueueItem queueItem,
         CancellationToken cancellationToken
     )
     {
-        if (wasPlayerStopped && queueCountBefore == 0)
+        if (wasPlayerStopped && queueCountBefore == 0 && playerController is MainPlayer mainPlayer)
         {
-            await playerController.PlayAsync(track, user, cancellationToken);
-            await queue.RemoveFromQueueAsync(track.Id);
+            await mainPlayer.PlayAsync(queueItem, cancellationToken);
+            await queue.RemoveFromQueueAsync(queueItem.Id);
             await NotifyQueueChangedAsync();
         }
         else
         {
             await NotifyQueueChangedAsync();
         }
+    }
+
+    /// <summary>
+    /// Извлечь VideoId из YouTube URL
+    /// </summary>
+    /// <param name="url">URL видео YouTube</param>
+    /// <returns>VideoId или null, если не удалось извлечь</returns>
+    private static string? ExtractYouTubeVideoId(string url)
+    {
+        string? result = null;
+
+        if (!string.IsNullOrWhiteSpace(url))
+        {
+            try
+            {
+                var uri = new Uri(url);
+
+                // youtube.com/watch?v=VIDEO_ID
+                if (
+                    uri.Host.Contains("youtube.com", StringComparison.OrdinalIgnoreCase)
+                    && uri.AbsolutePath.Contains("/watch", StringComparison.OrdinalIgnoreCase)
+                )
+                {
+                    // Парсим query string вручную
+                    var query = uri.Query.TrimStart('?');
+                    var parameters = query.Split('&');
+                    foreach (var param in parameters)
+                    {
+                        var keyValue = param.Split('=');
+                        if (keyValue.Length == 2 && keyValue[0] == "v")
+                        {
+                            result = keyValue[1];
+                            break;
+                        }
+                    }
+                }
+                // youtu.be/VIDEO_ID
+                else if (uri.Host.Contains("youtu.be", StringComparison.OrdinalIgnoreCase))
+                {
+                    result = uri.AbsolutePath.TrimStart('/').Split('/')[0];
+                }
+                // youtube.com/embed/VIDEO_ID
+                else if (
+                    uri.Host.Contains("youtube.com", StringComparison.OrdinalIgnoreCase)
+                    && uri.AbsolutePath.Contains("/embed/", StringComparison.OrdinalIgnoreCase)
+                )
+                {
+                    result = uri.AbsolutePath.Split('/').LastOrDefault();
+                }
+                // youtube.com/v/VIDEO_ID
+                else if (
+                    uri.Host.Contains("youtube.com", StringComparison.OrdinalIgnoreCase)
+                    && uri.AbsolutePath.Contains("/v/", StringComparison.OrdinalIgnoreCase)
+                )
+                {
+                    result = uri.AbsolutePath.Split('/').LastOrDefault();
+                }
+            }
+            catch
+            {
+                // Игнорируем ошибки парсинга URL
+            }
+        }
+
+        return result;
     }
 }

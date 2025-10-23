@@ -1,4 +1,5 @@
 ﻿using MARS.Server.Services.SoundRequest.Entities;
+using MARS.Server.Services.Twitch.Entitys;
 
 namespace MARS.Server.Services.SoundRequest.Queue;
 
@@ -12,108 +13,182 @@ public class SoundRequestUserQueue(
     /// <summary>
     /// Добавить трек в очередь
     /// </summary>
-    public async Task<BaseTrackInfo> AddToQueueAsync(BaseTrackInfo track)
+    public async Task<QueueItem> AddToQueueAsync(
+        BaseTrackInfo track,
+        string requestedByTwitchId,
+        TwitchUser requestedByTwitchUser
+    )
     {
+        QueueItem result = null!;
+
         await using var dbContext = await contextFactory.CreateDbContextAsync(_cancellationToken);
 
-        // Получаем максимальный порядок в очереди
-        var maxOrder =
-            await dbContext
-                .SoundRequestBaseTrackInfos.AsNoTracking()
-                .Where(t => t.QueueOrder != null)
-                .MaxAsync(t => (int?)t.QueueOrder, cancellationToken: _cancellationToken) ?? -1;
+        if (!string.IsNullOrWhiteSpace(requestedByTwitchId))
+        {
+            // Сначала убедимся, что трек существует в базе, или создадим новый
+            // Проверяем сначала по VideoId (если есть), затем по URL
+            BaseTrackInfo? existingTrack = null;
 
-        track.QueueOrder = maxOrder + 1;
-        track.IsDeleted = false;
+            if (!string.IsNullOrWhiteSpace(track.VideoId))
+            {
+                existingTrack = await dbContext
+                    .SoundRequestBaseTrackInfos.AsNoTracking()
+                    .FirstOrDefaultAsync(
+                        t => t.VideoId == track.VideoId && !t.IsDeleted,
+                        cancellationToken: _cancellationToken
+                    );
+            }
 
-        dbContext.SoundRequestBaseTrackInfos.Add(track);
-        await dbContext.SaveChangesAsync(_cancellationToken);
+            // Если не нашли по VideoId, проверяем по URL
+            if (existingTrack == null)
+            {
+                existingTrack = await dbContext
+                    .SoundRequestBaseTrackInfos.AsNoTracking()
+                    .FirstOrDefaultAsync(
+                        t => t.Url == track.Url && !t.IsDeleted,
+                        cancellationToken: _cancellationToken
+                    );
+            }
 
-        return track;
+            Guid trackId;
+            if (existingTrack != null)
+            {
+                trackId = existingTrack.Id;
+                // Обновляем данные существующего трека
+                existingTrack.TrackName = track.TrackName;
+                existingTrack.Authors = track.Authors;
+                existingTrack.Duration = track.Duration;
+                existingTrack.ArtworkUrl = track.ArtworkUrl;
+                existingTrack.VideoId = track.VideoId;
+                existingTrack.UpdatedAt = DateTime.UtcNow;
+                dbContext.SoundRequestBaseTrackInfos.Update(existingTrack);
+            }
+            else
+            {
+                // Создаем новый трек
+                track.IsDeleted = false;
+                dbContext.SoundRequestBaseTrackInfos.Add(track);
+                await dbContext.SaveChangesAsync(_cancellationToken);
+                trackId = track.Id;
+            }
+
+            // Получаем максимальный порядок в очереди
+            var maxOrder =
+                await dbContext
+                    .SoundRequestQueueItems.AsNoTracking()
+                    .Where(qi => qi.QueueOrder != null)
+                    .MaxAsync(qi => (int?)qi.QueueOrder, cancellationToken: _cancellationToken)
+                ?? -1;
+
+            // Создаем элемент очереди
+            var queueItem = new QueueItem
+            {
+                TrackId = trackId,
+                Track = existingTrack ?? track,
+                QueueOrder = maxOrder + 1,
+                RequestedByTwitchId = requestedByTwitchId,
+                RequestedAt = DateTime.UtcNow,
+                IsDeleted = false,
+            };
+
+            dbContext.SoundRequestQueueItems.Add(queueItem);
+            await dbContext.SaveChangesAsync(_cancellationToken);
+
+            result = queueItem;
+        }
+
+        return result;
     }
 
     /// <summary>
-    /// Удалить трек из очереди (помечает как удаленный)
+    /// Удалить элемент из очереди (помечает как удаленный)
     /// </summary>
-    public async Task RemoveFromQueueAsync(Guid id)
+    public async Task RemoveFromQueueAsync(Guid queueItemId)
     {
         await using var dbContext = await contextFactory.CreateDbContextAsync(_cancellationToken);
 
-        var trackToRemove = await dbContext.SoundRequestBaseTrackInfos.FindAsync(
-            [id],
+        var queueItemToRemove = await dbContext.SoundRequestQueueItems.FindAsync(
+            [queueItemId],
             cancellationToken: _cancellationToken
         );
 
-        if (trackToRemove == null)
+        if (queueItemToRemove != null)
         {
-            return;
+            var removedOrder = queueItemToRemove.QueueOrder;
+
+            // Помечаем как удаленный
+            queueItemToRemove.IsDeleted = true;
+            queueItemToRemove.QueueOrder = null;
+            dbContext.SoundRequestQueueItems.Update(queueItemToRemove);
+
+            // Обновляем порядок остальных элементов в очереди
+            if (removedOrder.HasValue)
+            {
+                await dbContext
+                    .SoundRequestQueueItems.Where(qi =>
+                        qi.QueueOrder > removedOrder.Value && !qi.IsDeleted
+                    )
+                    .ExecuteUpdateAsync(
+                        e => e.SetProperty(qi => qi.QueueOrder, qi => qi.QueueOrder - 1),
+                        cancellationToken: _cancellationToken
+                    );
+            }
+
+            await dbContext.SaveChangesAsync(_cancellationToken);
         }
-
-        var removedOrder = trackToRemove.QueueOrder;
-
-        // Помечаем как удаленный
-        trackToRemove.IsDeleted = true;
-        trackToRemove.QueueOrder = null;
-        dbContext.SoundRequestBaseTrackInfos.Update(trackToRemove);
-
-        // Обновляем порядок остальных треков в очереди
-        if (removedOrder.HasValue)
-        {
-            await dbContext
-                .SoundRequestBaseTrackInfos.Where(t =>
-                    t.QueueOrder > removedOrder.Value && !t.IsDeleted
-                )
-                .ExecuteUpdateAsync(
-                    e => e.SetProperty(t => t.QueueOrder, t => t.QueueOrder - 1),
-                    cancellationToken: _cancellationToken
-                );
-        }
-
-        await dbContext.SaveChangesAsync(_cancellationToken);
     }
 
     /// <summary>
-    /// Получить очередь треков (только не удаленные)
+    /// Получить очередь элементов (только не удаленные)
     /// </summary>
-    public async Task<List<BaseTrackInfo>> GetQueueAsync()
+    public async Task<List<QueueItem>> GetQueueAsync()
     {
-        await using var dbContext = await contextFactory.CreateDbContextAsync(_cancellationToken);
-
-        return await dbContext
-            .SoundRequestBaseTrackInfos.AsNoTracking()
-            .Include(e => e.RequestedByTwitchUser)
-            .Where(t => !t.IsDeleted && t.QueueOrder != null)
-            .OrderBy(t => t.QueueOrder)
-            .ToListAsync(cancellationToken: _cancellationToken);
-    }
-
-    /// <summary>
-    /// Получить следующий трек из очереди
-    /// </summary>
-    public async Task<BaseTrackInfo?> GetNextTrackAsync()
-    {
-        BaseTrackInfo? result = null;
+        List<QueueItem> result = [];
 
         await using var dbContext = await contextFactory.CreateDbContextAsync(_cancellationToken);
 
         result = await dbContext
-            .SoundRequestBaseTrackInfos.AsNoTracking()
-            .Where(t => !t.IsDeleted && t.QueueOrder != null)
-            .OrderBy(t => t.QueueOrder)
+            .SoundRequestQueueItems.AsNoTracking()
+            .Include(qi => qi.Track)
+            .Include(qi => qi.RequestedByTwitchUser)
+            .Where(qi => !qi.IsDeleted && qi.QueueOrder != null)
+            .OrderBy(qi => qi.QueueOrder)
+            .ToListAsync(cancellationToken: _cancellationToken);
+
+        return result;
+    }
+
+    /// <summary>
+    /// Получить следующий элемент из очереди
+    /// </summary>
+    public async Task<QueueItem?> GetNextQueueItemAsync()
+    {
+        QueueItem? result = null;
+
+        await using var dbContext = await contextFactory.CreateDbContextAsync(_cancellationToken);
+
+        result = await dbContext
+            .SoundRequestQueueItems.AsNoTracking()
+            .Include(qi => qi.Track)
+            .Include(qi => qi.RequestedByTwitchUser)
+            .Where(qi => !qi.IsDeleted && qi.QueueOrder != null)
+            .OrderBy(qi => qi.QueueOrder)
             .FirstOrDefaultAsync(cancellationToken: _cancellationToken);
 
         return result;
     }
 
     /// <summary>
-    /// Получить количество треков в очереди
+    /// Получить количество элементов в очереди
     /// </summary>
     public async Task<int> GetQueueCountAsync()
     {
+        var result = 0;
+
         await using var dbContext = await contextFactory.CreateDbContextAsync(_cancellationToken);
 
-        var result = await dbContext.SoundRequestBaseTrackInfos.CountAsync(
-            t => !t.IsDeleted && t.QueueOrder != null,
+        result = await dbContext.SoundRequestQueueItems.CountAsync(
+            qi => !qi.IsDeleted && qi.QueueOrder != null,
             cancellationToken: _cancellationToken
         );
 
@@ -121,31 +196,44 @@ public class SoundRequestUserQueue(
     }
 
     /// <summary>
-    /// Получить трек по ID
+    /// Получить элемент очереди по ID
     /// </summary>
-    public async Task<BaseTrackInfo?> GetTrackByIdAsync(Guid id)
+    public async Task<QueueItem?> GetQueueItemByIdAsync(Guid queueItemId)
     {
+        QueueItem? result = null;
+
         await using var dbContext = await contextFactory.CreateDbContextAsync(_cancellationToken);
 
-        BaseTrackInfo? result = await dbContext
-            .SoundRequestBaseTrackInfos.AsNoTracking()
-            .FirstOrDefaultAsync(t => t.Id == id, cancellationToken: _cancellationToken);
+        result = await dbContext
+            .SoundRequestQueueItems.AsNoTracking()
+            .Include(qi => qi.Track)
+            .Include(qi => qi.RequestedByTwitchUser)
+            .FirstOrDefaultAsync(qi => qi.Id == queueItemId, cancellationToken: _cancellationToken);
 
         return result;
     }
 
     /// <summary>
-    /// Получить треки пользователя из очереди
+    /// Получить элементы очереди пользователя
     /// </summary>
-    public async Task<List<BaseTrackInfo>> GetUserTracksAsync(string twitchId)
+    public async Task<List<QueueItem>> GetUserQueueItemsAsync(string twitchId)
     {
+        List<QueueItem> result = [];
+
         await using var dbContext = await contextFactory.CreateDbContextAsync(_cancellationToken);
 
-        List<BaseTrackInfo> result = await dbContext
-            .SoundRequestBaseTrackInfos.AsNoTracking()
-            .Where(t => !t.IsDeleted && t.QueueOrder != null && t.RequestedByTwitchId == twitchId)
-            .OrderBy(t => t.QueueOrder)
-            .ToListAsync(cancellationToken: _cancellationToken);
+        if (!string.IsNullOrWhiteSpace(twitchId))
+        {
+            result = await dbContext
+                .SoundRequestQueueItems.AsNoTracking()
+                .Include(qi => qi.Track)
+                .Include(qi => qi.RequestedByTwitchUser)
+                .Where(qi =>
+                    !qi.IsDeleted && qi.QueueOrder != null && qi.RequestedByTwitchId == twitchId
+                )
+                .OrderBy(qi => qi.QueueOrder)
+                .ToListAsync(cancellationToken: _cancellationToken);
+        }
 
         return result;
     }

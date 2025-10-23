@@ -1,4 +1,5 @@
-﻿using MARS.Server.Services.SoundRequest;
+﻿using System.Configuration;
+using MARS.Server.Services.SoundRequest;
 using MARS.Server.Services.SoundRequest.Entities;
 using SignalRSwaggerGen.Attributes;
 using SignalRSwaggerGen.Enums;
@@ -74,8 +75,9 @@ public class SoundRequestHub(OutSignalRHubService service, StateManager stateMan
         return stateManager.SetVolumeAsync(volume);
     }
 
-    public Task TrackProgress(TimeSpan span)
+    public Task TrackProgress(long seconds)
     {
+        var span = TimeSpan.FromSeconds(seconds);
         return stateManager.UpdateStateAsync(e => e.CurrentTrackProgress = span);
     }
 

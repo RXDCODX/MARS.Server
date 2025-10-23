@@ -1,6 +1,4 @@
-﻿using MARS.Server.Services.Twitch.Entitys;
-
-namespace MARS.Server.Services.SoundRequest.Entities;
+﻿namespace MARS.Server.Services.SoundRequest.Entities;
 
 public class PlayerState
 {
@@ -9,14 +7,14 @@ public class PlayerState
     public Guid Id { get; set; }
 
     /// <summary>
-    /// ID текущего трека (foreign key)
+    /// ID текущего элемента очереди (foreign key)
     /// </summary>
-    public Guid? CurrentTrackId { get; set; }
+    public Guid? CurrentQueueItemId { get; set; }
 
     /// <summary>
-    /// ID следующего трека (foreign key)
+    /// ID следующего элемента очереди (foreign key)
     /// </summary>
-    public Guid? NextTrackId { get; set; }
+    public Guid? NextQueueItemId { get; set; }
 
     public TimeSpan? CurrentTrackProgress { get; set; }
 
@@ -33,20 +31,14 @@ public class PlayerState
     public float Volume { get; set; } = 100f;
 
     /// <summary>
-    /// Twitch ID пользователя, заказавшего текущий трек
+    /// Ссылка на текущий элемент очереди
     /// </summary>
-    [MaxLength(50)]
-    public string? CurrentTrackRequestedBy { get; set; }
+    [ForeignKey(nameof(CurrentQueueItemId))]
+    public QueueItem? CurrentQueueItem { get; set; }
 
     /// <summary>
-    /// Ссылка на пользователя Twitch, заказавшего текущий трек
+    /// Ссылка на следующий элемент очереди
     /// </summary>
-    [ForeignKey(nameof(CurrentTrackRequestedBy))]
-    public TwitchUser? CurrentTrackRequestedByTwitchUser { get; set; }
-
-    [ForeignKey(nameof(CurrentTrackId))]
-    public BaseTrackInfo? CurrentTrack { get; set; }
-
-    [ForeignKey(nameof(NextTrackId))]
-    public BaseTrackInfo? NextTrack { get; set; }
+    [ForeignKey(nameof(NextQueueItemId))]
+    public QueueItem? NextQueueItem { get; set; }
 }

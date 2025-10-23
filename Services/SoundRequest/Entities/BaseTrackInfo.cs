@@ -9,6 +9,7 @@ public class BaseTrackInfo
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     public Guid Id { get; set; }
 
+    [MaxLength(300)]
     public required string TrackName { get; set; }
 
     public string[]? Authors { get; set; }
@@ -19,28 +20,15 @@ public class BaseTrackInfo
 
     public DateTime LastTimePlays { get; set; } = DateTime.UnixEpoch;
 
-    public string? ArtworkUrl { get; set; }
+    public Uri? ArtworkUrl { get; set; }
 
     public string? VideoId { get; set; }
 
     public bool IsDeleted { get; set; } = false;
 
-    /// <summary>
-    /// Порядок в очереди (0 = текущий трек, null = не в очереди)
-    /// </summary>
-    public int? QueueOrder { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-    /// <summary>
-    /// Twitch ID пользователя, заказавшего трек
-    /// </summary>
-    [MaxLength(50)]
-    public string? RequestedByTwitchId { get; set; }
-
-    /// <summary>
-    /// Ссылка на пользователя Twitch, заказавшего трек
-    /// </summary>
-    [ForeignKey(nameof(RequestedByTwitchId))]
-    public TwitchUser? RequestedByTwitchUser { get; set; }
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
     [NotMapped]
     public string Title

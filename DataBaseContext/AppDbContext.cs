@@ -71,8 +71,12 @@ public sealed class AppDbContext : DbContext
     public DbSet<TelegramUpdateReceiverOffset> TelegramUpdateReceiverOffset { get; set; } = null!;
     public DbSet<WTelegramAlloweedChannel> WTelegramAlloweedChannels { get; set; } = null!;
     public DbSet<RootState> ApplicationState { get; set; } = null!;
+
+    // SoundRequest - новая структура
     public DbSet<BaseTrackInfo> SoundRequestBaseTrackInfos { get; set; } = null!;
+    public DbSet<QueueItem> SoundRequestQueueItems { get; set; } = null!;
     public DbSet<PlayerState> SoundRequestPlayerState { get; set; } = null!;
+
     public DbSet<ServiceState> ServiceStates { get; set; } = null!;
     public DbSet<ScoreboardState> ScoreboardStates { get; set; } = null!;
     public DbSet<ScoreboardPlayer> ScoreboardPlayers { get; set; } = null!;
@@ -138,19 +142,36 @@ public sealed class AppDbContext : DbContext
                 ]
             );
 
-        // Конфигурация для PlayerState - foreign keys для треков
+        // Конфигурация для SoundRequest - новая структура
+
+        // BaseTrackInfo: уникальный индекс на URL
+        modelBuilder.Entity<BaseTrackInfo>().HasIndex(t => t.Url).IsUnique();
+
+        // QueueItem: индекс на QueueOrder
+        modelBuilder.Entity<QueueItem>().HasIndex(qi => qi.QueueOrder);
+
+        // QueueItem: связь с TwitchUser
         modelBuilder
-            .Entity<PlayerState>()
-            .HasOne<BaseTrackInfo>()
+            .Entity<QueueItem>()
+            .HasOne(qi => qi.RequestedByTwitchUser)
             .WithMany()
-            .HasForeignKey(ps => ps.CurrentTrackId)
+            .HasForeignKey(qi => qi.RequestedByTwitchId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        // PlayerState: связь с текущим QueueItem
         modelBuilder
             .Entity<PlayerState>()
-            .HasOne<BaseTrackInfo>()
+            .HasOne(ps => ps.CurrentQueueItem)
             .WithMany()
-            .HasForeignKey(ps => ps.NextTrackId)
+            .HasForeignKey(ps => ps.CurrentQueueItemId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // PlayerState: связь с следующим QueueItem
+        modelBuilder
+            .Entity<PlayerState>()
+            .HasOne(ps => ps.NextQueueItem)
+            .WithMany()
+            .HasForeignKey(ps => ps.NextQueueItemId)
             .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<MediaInfo>(entity =>
@@ -322,19 +343,20 @@ public sealed class AppDbContext : DbContext
             .HasForeignKey<FollowerInfo>(fi => fi.UserId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        modelBuilder
-            .Entity<PlayerState>()
-            .HasOne(ps => ps.CurrentTrack)
-            .WithOne()
-            .HasForeignKey<PlayerState>(ps => ps.CurrentTrackId)
-            .OnDelete(DeleteBehavior.Restrict);
+        // Старая конфигурация PlayerState закомментирована - используется новая выше
+        // modelBuilder
+        //     .Entity<PlayerState>()
+        //     .HasOne(ps => ps.CurrentTrack)
+        //     .WithOne()
+        //     .HasForeignKey<PlayerState>(ps => ps.CurrentTrackId)
+        //     .OnDelete(DeleteBehavior.Restrict);
 
-        modelBuilder
-            .Entity<PlayerState>()
-            .HasOne(ps => ps.NextTrack)
-            .WithOne()
-            .HasForeignKey<PlayerState>(ps => ps.NextTrackId)
-            .OnDelete(DeleteBehavior.Restrict);
+        // modelBuilder
+        //     .Entity<PlayerState>()
+        //     .HasOne(ps => ps.NextTrack)
+        //     .WithOne()
+        //     .HasForeignKey<PlayerState>(ps => ps.NextTrackId)
+        //     .OnDelete(DeleteBehavior.Restrict);
     }
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)

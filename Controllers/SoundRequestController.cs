@@ -12,7 +12,7 @@ namespace MARS.Server.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 public class SoundRequestController(
-    SoundRequestManager manager,
+    MainPlayer player,
     CommandsService service,
     ILogger<SoundRequestController> logger,
     IDbContextFactory<AppDbContext> factory
@@ -28,12 +28,12 @@ public class SoundRequestController(
 
         try
         {
-            var state = manager.GetState();
+            var state = player.GetState();
             logger.LogInformation(
-                "[GetPlayerState] Состояние плеера: State={State}, CurrentTrack={CurrentTrack}, NextTrack={NextTrack}, Volume={Volume}",
+                "[GetPlayerState] Состояние плеера: State={State}, CurrentQueueItem={CurrentQueueItem}, NextQueueItem={NextQueueItem}, Volume={Volume}",
                 state.State,
-                state.CurrentTrack?.TrackName ?? "null",
-                state.NextTrack?.TrackName ?? "null",
+                state.CurrentQueueItem?.Track?.TrackName ?? "null",
+                state.NextQueueItem?.Track?.TrackName ?? "null",
                 state.Volume
             );
 
@@ -54,26 +54,24 @@ public class SoundRequestController(
     }
 
     /// <summary>
-    /// Получить очередь треков
+    /// Получить очередь элементов
     /// </summary>
     [HttpGet("queue")]
-    public async Task<ActionResult<OperationResult<List<BaseTrackInfo>>>> GetQueue(
+    public async Task<ActionResult<OperationResult<List<QueueItem>>>> GetQueue(
         CancellationToken cancellationToken = default
     )
     {
-        ActionResult<OperationResult<List<BaseTrackInfo>>> result;
+        ActionResult<OperationResult<List<QueueItem>>> result;
 
         try
         {
-            var queue = await manager.GetQueueAsync();
-            result = Ok(OperationResult<List<BaseTrackInfo>>.Ok("Очередь получена", queue));
+            var queue = await player.GetQueueAsync();
+            result = Ok(OperationResult<List<QueueItem>>.Ok("Очередь получена", queue));
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при получении очереди");
-            result = Ok(
-                OperationResult<List<BaseTrackInfo>>.Bad("Ошибка при получении очереди", [])
-            );
+            result = Ok(OperationResult<List<QueueItem>>.Bad("Ошибка при получении очереди", []));
         }
 
         return result;
@@ -92,7 +90,7 @@ public class SoundRequestController(
 
         try
         {
-            var history = await manager.GetHistoryAsync(count);
+            var history = await player.GetHistoryAsync(count);
             result = Ok(OperationResult<List<BaseTrackInfo>>.Ok("История получена", history));
         }
         catch (Exception ex)
@@ -107,58 +105,10 @@ public class SoundRequestController(
     }
 
     /// <summary>
-    /// Воспроизвести плеер (Resume или начать воспроизведение следующего трека)
-    /// </summary>
-    [HttpPost("play")]
-    public async Task<ActionResult<OperationResult>> Play(
-        CancellationToken cancellationToken = default
-    )
-    {
-        ActionResult<OperationResult> result;
-
-        try
-        {
-            await manager.PlayAsync();
-            result = Ok(OperationResult.Ok("Плеер запущен"));
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Ошибка при запуске плеера");
-            result = Ok(OperationResult.Bad("Ошибка при запуске плеера"));
-        }
-
-        return result;
-    }
-
-    /// <summary>
-    /// Поставить на паузу
-    /// </summary>
-    [HttpPost("pause")]
-    public async Task<ActionResult<OperationResult>> Pause(
-        CancellationToken cancellationToken = default
-    )
-    {
-        ActionResult<OperationResult> result;
-
-        try
-        {
-            await manager.PauseAsync();
-            result = Ok(OperationResult.Ok("Плеер поставлен на паузу"));
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Ошибка при постановке на паузу");
-            result = Ok(OperationResult.Bad("Ошибка при постановке на паузу"));
-        }
-
-        return result;
-    }
-
-    /// <summary>
     /// Переключить воспроизведение (Play/Pause)
     /// </summary>
     [HttpPost("toggle-play-pause")]
-    public async Task<ActionResult<OperationResult>> TogglePlayPause(
+    public async Task<ActionResult<OperationResult>> PlayOrPause(
         CancellationToken cancellationToken = default
     )
     {
@@ -166,10 +116,11 @@ public class SoundRequestController(
 
         try
         {
-            var state = manager.GetState();
-            await manager.TogglePlayPauseAsync();
+            var state = player.GetState();
+            await player.TogglePlayPauseAsync();
 
-            var message = state.State == PlaybackState.Paused ? "Плеер запущен" : "Плеер поставлен на паузу";
+            var message =
+                state.State == PlaybackState.Paused ? "Плеер запущен" : "Плеер поставлен на паузу";
             result = Ok(OperationResult.Ok(message));
         }
         catch (Exception ex)
@@ -193,7 +144,7 @@ public class SoundRequestController(
 
         try
         {
-            await manager.StopAsync();
+            await player.StopAsync(cancellationToken);
             result = Ok(OperationResult.Ok("Плеер остановлен"));
         }
         catch (Exception ex)
@@ -217,7 +168,7 @@ public class SoundRequestController(
 
         try
         {
-            await manager.SkipAsync();
+            await player.SkipAsync(cancellationToken);
             result = Ok(OperationResult.Ok("Трек пропущен"));
         }
         catch (Exception ex)
@@ -241,7 +192,7 @@ public class SoundRequestController(
 
         try
         {
-            await manager.PlayNextFromQueueAsync();
+            await player.PlayNextFromQueueAsync();
             result = Ok(OperationResult.Ok("Следующий трек начал воспроизведение"));
         }
         catch (Exception ex)
@@ -254,11 +205,11 @@ public class SoundRequestController(
     }
 
     /// <summary>
-    /// Воспроизвести конкретный трек из очереди
+    /// Воспроизвести конкретный элемент из очереди
     /// </summary>
-    [HttpPost("play-track/{trackId:guid}")]
+    [HttpPost("play-track/{queueItemId:guid}")]
     public async Task<ActionResult<OperationResult>> PlayTrack(
-        [FromRoute] Guid trackId,
+        [FromRoute] Guid queueItemId,
         CancellationToken cancellationToken = default
     )
     {
@@ -266,45 +217,17 @@ public class SoundRequestController(
 
         try
         {
-            await manager.PlayTrackFromQueueAsync(trackId);
+            await player.PlayQueueItemAsync(queueItemId);
             result = Ok(OperationResult.Ok("Трек начал воспроизведение"));
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Ошибка при воспроизведении трека {TrackId}", trackId);
+            logger.LogError(
+                ex,
+                "Ошибка при воспроизведении элемента очереди {QueueItemId}",
+                queueItemId
+            );
             result = Ok(OperationResult.Bad("Ошибка при воспроизведении трека"));
-        }
-
-        return result;
-    }
-
-    /// <summary>
-    /// Установить громкость плеера (0.0 - 100.0)
-    /// </summary>
-    [HttpPost("volume/{volume:float}")]
-    public async Task<ActionResult<OperationResult>> SetVolume(
-        [FromRoute] float volume,
-        CancellationToken cancellationToken = default
-    )
-    {
-        ActionResult<OperationResult> result;
-
-        if (volume is >= 0f and <= 100f)
-        {
-            try
-            {
-                await manager.SetVolume(volume);
-                result = Ok(OperationResult.Ok($"Громкость установлена на {volume:F1}%"));
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Ошибка при установке громкости");
-                result = Ok(OperationResult.Bad("Ошибка при установке громкости"));
-            }
-        }
-        else
-        {
-            result = Ok(OperationResult.Bad("Громкость должна быть от 0.0 до 100.0"));
         }
 
         return result;
@@ -325,12 +248,12 @@ public class SoundRequestController(
         {
             if (muted)
             {
-                await manager.MuteAsync();
+                await player.MuteAsync(cancellationToken);
                 result = Ok(OperationResult.Ok("Звук выключен"));
             }
             else
             {
-                await manager.UnmuteAsync();
+                await player.UnmuteAsync(cancellationToken);
                 result = Ok(OperationResult.Ok("Звук включен"));
             }
         }
@@ -338,33 +261,6 @@ public class SoundRequestController(
         {
             logger.LogError(ex, "Ошибка при изменении звука");
             result = Ok(OperationResult.Bad("Ошибка при изменении звука"));
-        }
-
-        return result;
-    }
-
-    /// <summary>
-    /// Переключить звук (Mute/Unmute)
-    /// </summary>
-    [HttpPost("toggle-mute")]
-    public async Task<ActionResult<OperationResult>> ToggleMute(
-        CancellationToken cancellationToken = default
-    )
-    {
-        ActionResult<OperationResult> result;
-
-        try
-        {
-            var state = manager.GetState();
-            await manager.ToggleMuteAsync();
-
-            var message = state.IsMuted ? "Звук включен" : "Звук выключен";
-            result = Ok(OperationResult.Ok(message));
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Ошибка при переключении звука");
-            result = Ok(OperationResult.Bad("Ошибка при переключении звука"));
         }
 
         return result;
@@ -473,11 +369,11 @@ public class SoundRequestController(
     }
 
     /// <summary>
-    /// Удалить трек из очереди
+    /// Удалить элемент из очереди
     /// </summary>
-    [HttpDelete("queue/{trackId:guid}")]
+    [HttpDelete("queue/{queueItemId:guid}")]
     public async Task<ActionResult<OperationResult>> RemoveTrack(
-        [FromRoute] Guid trackId,
+        [FromRoute] Guid queueItemId,
         CancellationToken cancellationToken = default
     )
     {
@@ -485,12 +381,12 @@ public class SoundRequestController(
 
         try
         {
-            await manager.RemoveTrack(trackId);
+            await player.RemoveQueueItemAsync(queueItemId);
             result = Ok(OperationResult.Ok("Трек удален из очереди"));
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Ошибка при удалении трека {TrackId}", trackId);
+            logger.LogError(ex, "Ошибка при удалении элемента очереди {QueueItemId}", queueItemId);
             result = Ok(OperationResult.Bad("Ошибка при удалении трека"));
         }
 
@@ -518,51 +414,6 @@ public class SoundRequestController(
             result = Ok(
                 OperationResult<string>.Bad("Ошибка при получении текущей песни", string.Empty)
             );
-        }
-
-        return result;
-    }
-
-    /// <summary>
-    /// Получить позицию пользователя в очереди
-    /// </summary>
-    [HttpGet("user-position/{userId}")]
-    public async Task<ActionResult<OperationResult<string>>> GetUserPosition(
-        [FromRoute] string userId,
-        CancellationToken cancellationToken = default
-    )
-    {
-        ActionResult<OperationResult<string>> result;
-
-        if (!string.IsNullOrWhiteSpace(userId))
-        {
-            try
-            {
-                await using var dbContext = await factory.CreateDbContextAsync(cancellationToken);
-                var user = await dbContext
-                    .TwitchUsers.AsNoTracking()
-                    .FirstOrDefaultAsync(
-                        e => e.TwitchId == TwitchExstension.ChannelId,
-                        cancellationToken: cancellationToken
-                    );
-
-                var message = await service.GetUserQueuePositionAsync(user);
-                result = Ok(OperationResult<string>.Ok(message, message));
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Ошибка при получении позиции пользователя");
-                result = Ok(
-                    OperationResult<string>.Bad(
-                        "Ошибка при получении позиции пользователя",
-                        string.Empty
-                    )
-                );
-            }
-        }
-        else
-        {
-            result = Ok(OperationResult<string>.Bad("ID пользователя не указан", string.Empty));
         }
 
         return result;

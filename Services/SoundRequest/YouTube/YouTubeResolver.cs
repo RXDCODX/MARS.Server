@@ -20,6 +20,11 @@ public class YouTubeResolver(ILogger<YouTubeResolver> logger)
 
                 await foreach (var video in searchResults)
                 {
+                    var thumbnailUrl = video
+                        .Thumbnails.OrderByDescending(t => t.Resolution.Area)
+                        .FirstOrDefault()
+                        ?.Url;
+
                     result = new BaseTrackInfo
                     {
                         Id = Guid.NewGuid(),
@@ -28,10 +33,9 @@ public class YouTubeResolver(ILogger<YouTubeResolver> logger)
                         TrackName = video.Title,
                         Authors = [video.Author.ChannelTitle],
                         Duration = video.Duration ?? TimeSpan.Zero,
-                        ArtworkUrl = video
-                            .Thumbnails.OrderByDescending(t => t.Resolution.Area)
-                            .FirstOrDefault()
-                            ?.Url,
+                        ArtworkUrl = !string.IsNullOrWhiteSpace(thumbnailUrl) 
+                            ? new Uri(thumbnailUrl) 
+                            : null,
                     };
 
                     return result;
@@ -57,6 +61,11 @@ public class YouTubeResolver(ILogger<YouTubeResolver> logger)
                 // YoutubeExplode может парсить URL напрямую
                 var video = await _youtubeClient.Videos.GetAsync(url, ct);
 
+                var thumbnailUrl = video
+                    .Thumbnails.OrderByDescending(t => t.Resolution.Area)
+                    .FirstOrDefault()
+                    ?.Url;
+
                 result = new BaseTrackInfo
                 {
                     Id = Guid.NewGuid(),
@@ -65,10 +74,9 @@ public class YouTubeResolver(ILogger<YouTubeResolver> logger)
                     TrackName = video.Title,
                     Authors = [video.Author.ChannelTitle],
                     Duration = video.Duration ?? TimeSpan.Zero,
-                    ArtworkUrl = video
-                        .Thumbnails.OrderByDescending(t => t.Resolution.Area)
-                        .FirstOrDefault()
-                        ?.Url,
+                    ArtworkUrl = !string.IsNullOrWhiteSpace(thumbnailUrl) 
+                        ? new Uri(thumbnailUrl) 
+                        : null,
                 };
             }
             catch (Exception ex)
@@ -102,6 +110,11 @@ public class YouTubeResolver(ILogger<YouTubeResolver> logger)
                         break;
                     }
 
+                    var thumbnailUrl = video
+                        .Thumbnails.OrderByDescending(t => t.Resolution.Area)
+                        .FirstOrDefault()
+                        ?.Url;
+
                     videos.Add(
                         new BaseTrackInfo
                         {
@@ -111,10 +124,9 @@ public class YouTubeResolver(ILogger<YouTubeResolver> logger)
                             TrackName = video.Title,
                             Authors = [video.Author.ChannelTitle],
                             Duration = video.Duration ?? TimeSpan.Zero,
-                            ArtworkUrl = video
-                                .Thumbnails.OrderByDescending(t => t.Resolution.Area)
-                                .FirstOrDefault()
-                                ?.Url,
+                            ArtworkUrl = !string.IsNullOrWhiteSpace(thumbnailUrl) 
+                                ? new Uri(thumbnailUrl) 
+                                : null,
                         }
                     );
 

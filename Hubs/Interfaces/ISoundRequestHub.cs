@@ -16,5 +16,5 @@ public interface ISoundRequestHub
     /// <summary>
     /// Уведомление клиентов об изменении очереди
     /// </summary>
-    Task QueueChanged(List<BaseTrackInfo> queue);
+    Task QueueChanged(List<QueueItem> queue);
 }

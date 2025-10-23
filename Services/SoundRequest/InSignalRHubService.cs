@@ -19,8 +19,8 @@ public class InSignalRHubService(IHubContext<SoundRequestHub, ISoundRequestHub> 
     /// <summary>
     /// Уведомить клиентов об изменении очереди
     /// </summary>
-    /// <param name="queue">Текущая очередь треков</param>
-    public async Task NotifyQueueChangedAsync(List<BaseTrackInfo> queue)
+    /// <param name="queue">Текущая очередь элементов</param>
+    public async Task NotifyQueueChangedAsync(List<QueueItem> queue)
     {
         await hubContext.Clients.Group(SoundRequestHub.AllPlayers).QueueChanged(queue);
     }
@@ -36,7 +36,7 @@ public class InSignalRHubService(IHubContext<SoundRequestHub, ISoundRequestHub> 
     /// <summary>
     /// Уведомить всех клиентов об изменении очереди
     /// </summary>
-    public async Task NotifyAllQueueChangedAsync(List<BaseTrackInfo> queue)
+    public async Task NotifyAllQueueChangedAsync(List<QueueItem> queue)
     {
         await hubContext.Clients.All.QueueChanged(queue);
     }

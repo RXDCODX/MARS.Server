@@ -53,11 +53,14 @@ public class StateManager(
             // Пытаемся загрузить существующее состояние из БД
             var dbState = await db
                 .SoundRequestPlayerState.AsNoTracking()
-                .Include(s => s.CurrentTrack)
-                .ThenInclude(s => s!.RequestedByTwitchUser)
-                .Include(s => s.NextTrack)
-                .ThenInclude(s => s!.RequestedByTwitchUser)
-                .Include(s => s.CurrentTrackRequestedByTwitchUser)
+                .Include(s => s.CurrentQueueItem)
+                .ThenInclude(qi => qi!.Track)
+                .Include(s => s.CurrentQueueItem)
+                .ThenInclude(qi => qi!.RequestedByTwitchUser)
+                .Include(s => s.NextQueueItem)
+                .ThenInclude(qi => qi!.Track)
+                .Include(s => s.NextQueueItem)
+                .ThenInclude(qi => qi!.RequestedByTwitchUser)
                 .FirstOrDefaultAsync(_cancellationToken);
 
             if (dbState != null)
@@ -70,14 +73,14 @@ public class StateManager(
                 }
 
                 logger.LogInformation(
-                    "Загружено состояние плеера из БД: ID={StateId}, State={State}, Volume={Volume}, CurrentTrack={CurrentTrack}, NextTrack={NextTrack}, CurrentTrackId={CurrentTrackId}, NextTrackId={NextTrackId}",
+                    "Загружено состояние плеера из БД: ID={StateId}, State={State}, Volume={Volume}, CurrentQueueItem={CurrentQueueItem}, NextQueueItem={NextQueueItem}, CurrentQueueItemId={CurrentQueueItemId}, NextQueueItemId={NextQueueItemId}",
                     dbState.Id,
                     dbState.State,
                     dbState.Volume,
-                    dbState.CurrentTrack?.TrackName ?? "null",
-                    dbState.NextTrack?.TrackName ?? "null",
-                    dbState.CurrentTrackId?.ToString() ?? "null",
-                    dbState.NextTrackId?.ToString() ?? "null"
+                    dbState.CurrentQueueItem?.Track?.TrackName ?? "null",
+                    dbState.NextQueueItem?.Track?.TrackName ?? "null",
+                    dbState.CurrentQueueItemId?.ToString() ?? "null",
+                    dbState.NextQueueItemId?.ToString() ?? "null"
                 );
                 _currentState = dbState;
             }
@@ -117,16 +120,14 @@ public class StateManager(
             return new PlayerState
             {
                 Id = _currentState.Id,
-                CurrentTrackId = _currentState.CurrentTrackId,
-                NextTrackId = _currentState.NextTrackId,
-                CurrentTrack = _currentState.CurrentTrack,
-                NextTrack = _currentState.NextTrack,
+                CurrentQueueItemId = _currentState.CurrentQueueItemId,
+                NextQueueItemId = _currentState.NextQueueItemId,
+                CurrentQueueItem = _currentState.CurrentQueueItem,
+                NextQueueItem = _currentState.NextQueueItem,
                 CurrentTrackProgress = _currentState.CurrentTrackProgress,
                 State = _currentState.State,
                 IsMuted = _currentState.IsMuted,
                 Volume = _currentState.Volume,
-                CurrentTrackRequestedBy = _currentState.CurrentTrackRequestedBy,
-                CurrentTrackRequestedByTwitchUser = _currentState.CurrentTrackRequestedByTwitchUser,
             };
         }
         finally
@@ -146,16 +147,14 @@ public class StateManager(
             return new PlayerState
             {
                 Id = _currentState.Id,
-                CurrentTrackId = _currentState.CurrentTrackId,
-                NextTrackId = _currentState.NextTrackId,
-                CurrentTrack = _currentState.CurrentTrack,
-                NextTrack = _currentState.NextTrack,
+                CurrentQueueItemId = _currentState.CurrentQueueItemId,
+                NextQueueItemId = _currentState.NextQueueItemId,
+                CurrentQueueItem = _currentState.CurrentQueueItem,
+                NextQueueItem = _currentState.NextQueueItem,
                 CurrentTrackProgress = _currentState.CurrentTrackProgress,
                 State = _currentState.State,
                 IsMuted = _currentState.IsMuted,
                 Volume = _currentState.Volume,
-                CurrentTrackRequestedBy = _currentState.CurrentTrackRequestedBy,
-                CurrentTrackRequestedByTwitchUser = _currentState.CurrentTrackRequestedByTwitchUser,
             };
         }
         finally
@@ -182,13 +181,12 @@ public class StateManager(
             if (existingState != null)
             {
                 // Обновляем существующую запись
-                existingState.CurrentTrackId = _currentState.CurrentTrackId;
-                existingState.NextTrackId = _currentState.NextTrackId;
+                existingState.CurrentQueueItemId = _currentState.CurrentQueueItemId;
+                existingState.NextQueueItemId = _currentState.NextQueueItemId;
                 existingState.CurrentTrackProgress = _currentState.CurrentTrackProgress;
                 existingState.State = _currentState.State;
                 existingState.IsMuted = _currentState.IsMuted;
                 existingState.Volume = _currentState.Volume;
-                existingState.CurrentTrackRequestedBy = _currentState.CurrentTrackRequestedBy;
 
                 db.SoundRequestPlayerState.Update(existingState);
             }
@@ -234,17 +232,14 @@ public class StateManager(
                 stateToNotify = new PlayerState
                 {
                     Id = _currentState.Id,
-                    CurrentTrackId = _currentState.CurrentTrackId,
-                    NextTrackId = _currentState.NextTrackId,
-                    CurrentTrack = _currentState.CurrentTrack,
-                    NextTrack = _currentState.NextTrack,
+                    CurrentQueueItemId = _currentState.CurrentQueueItemId,
+                    NextQueueItemId = _currentState.NextQueueItemId,
+                    CurrentQueueItem = _currentState.CurrentQueueItem,
+                    NextQueueItem = _currentState.NextQueueItem,
                     CurrentTrackProgress = _currentState.CurrentTrackProgress,
                     State = _currentState.State,
                     IsMuted = _currentState.IsMuted,
                     Volume = _currentState.Volume,
-                    CurrentTrackRequestedBy = _currentState.CurrentTrackRequestedBy,
-                    CurrentTrackRequestedByTwitchUser =
-                        _currentState.CurrentTrackRequestedByTwitchUser,
                 };
             }
         }
@@ -264,53 +259,32 @@ public class StateManager(
     }
 
     /// <summary>
-    /// Установить текущий трек
+    /// Установить текущий элемент очереди
     /// </summary>
-    public async Task SetCurrentTrackAsync(BaseTrackInfo? track, bool notify = true)
+    public async Task SetCurrentQueueItemAsync(QueueItem? queueItem, bool notify = true)
     {
         await UpdateStateAsync(
             state =>
             {
-                state.CurrentTrackId = track?.Id;
-                state.CurrentTrack = track;
-                state.State = track == null ? PlaybackState.Stopped : PlaybackState.WaitingForTrack;
+                state.CurrentQueueItemId = queueItem?.Id;
+                state.CurrentQueueItem = queueItem;
+                state.State =
+                    queueItem == null ? PlaybackState.Stopped : PlaybackState.WaitingForTrack;
             },
             notify
         );
     }
 
     /// <summary>
-    /// Установить текущий трек с информацией о пользователе, заказавшем трек
+    /// Установить следующий элемент очереди
     /// </summary>
-    public async Task SetCurrentTrackAsync(
-        BaseTrackInfo? track,
-        TwitchUser? user,
-        bool notify = true
-    )
+    public async Task SetNextQueueItemAsync(QueueItem? queueItem, bool notify = true)
     {
         await UpdateStateAsync(
             state =>
             {
-                state.CurrentTrackId = track?.Id;
-                state.CurrentTrack = track;
-                state.State = track == null ? PlaybackState.Stopped : PlaybackState.WaitingForTrack;
-                state.CurrentTrackRequestedBy = user?.TwitchId;
-                state.CurrentTrackRequestedByTwitchUser = user;
-            },
-            notify
-        );
-    }
-
-    /// <summary>
-    /// Установить следующий трек
-    /// </summary>
-    public async Task SetNextTrackAsync(BaseTrackInfo? track, bool notify = true)
-    {
-        await UpdateStateAsync(
-            state =>
-            {
-                state.NextTrackId = track?.Id;
-                state.NextTrack = track;
+                state.NextQueueItemId = queueItem?.Id;
+                state.NextQueueItem = queueItem;
             },
             notify
         );
@@ -327,7 +301,7 @@ public class StateManager(
                 state.State = playbackState;
                 if (playbackState == PlaybackState.Stopped)
                 {
-                    state.CurrentTrack = null;
+                    state.CurrentQueueItem = null;
                     state.CurrentTrackProgress = null;
                 }
             },
@@ -344,21 +318,6 @@ public class StateManager(
             isPaused ? PlaybackState.Paused : PlaybackState.Playing,
             notify
         );
-    }
-
-    /// <summary>
-    /// Установить состояние остановки
-    /// </summary>
-    public async Task SetStoppedAsync(bool isStopped, bool notify = true)
-    {
-        if (isStopped)
-        {
-            await SetPlaybackStateAsync(PlaybackState.Stopped, notify);
-        }
-        else
-        {
-            await SetPlaybackStateAsync(PlaybackState.Playing, notify);
-        }
     }
 
     /// <summary>
@@ -384,18 +343,16 @@ public class StateManager(
     }
 
     /// <summary>
-    /// Начать воспроизведение трека с информацией о пользователе, заказавшем трек
+    /// Начать воспроизведение элемента очереди
     /// </summary>
-    public async Task StartPlayingAsync(BaseTrackInfo track, TwitchUser? user, bool notify = true)
+    public async Task StartPlayingAsync(QueueItem queueItem, bool notify = true)
     {
         await UpdateStateAsync(
             state =>
             {
-                state.CurrentTrackId = track.Id;
-                state.CurrentTrack = track;
+                state.CurrentQueueItemId = queueItem.Id;
+                state.CurrentQueueItem = queueItem;
                 state.State = PlaybackState.Playing;
-                state.CurrentTrackRequestedBy = user?.TwitchId;
-                state.CurrentTrackRequestedByTwitchUser = user;
             },
             notify
         );
@@ -409,14 +366,12 @@ public class StateManager(
         await UpdateStateAsync(
             state =>
             {
-                state.CurrentTrackId = null;
-                state.NextTrackId = null;
-                state.CurrentTrack = null;
-                state.NextTrack = null;
+                state.CurrentQueueItemId = null;
+                state.NextQueueItemId = null;
+                state.CurrentQueueItem = null;
+                state.NextQueueItem = null;
                 state.CurrentTrackProgress = null;
                 state.State = PlaybackState.Stopped;
-                state.CurrentTrackRequestedBy = null;
-                state.CurrentTrackRequestedByTwitchUser = null;
             },
             notify
         );

@@ -8,7 +8,7 @@ namespace MARS.Server.Services.SoundRequest;
 /// <summary>
 /// Основной контроллер аудиоплеера с интеграцией всех сервисов
 /// </summary>
-public class MainPlayer : IPlayerController, IDisposable
+public class MainPlayer : IPlayerController, IHostedService, IDisposable
 {
     private readonly CancellationToken _cancellationToken;
     private bool _disposed;
@@ -42,6 +42,20 @@ public class MainPlayer : IPlayerController, IDisposable
         outSignalRHubService.OnStarted += OutSignalRHubServiceOnStarted;
         outSignalRHubService.OnError += OutSignalRHubServiceOnError;
     }
+
+    #region IHostedService Implementation
+
+    async Task IHostedService.StartAsync(CancellationToken cancellationToken)
+    {
+        await InitializeAsync();
+    }
+
+    Task IHostedService.StopAsync(CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
+    }
+
+    #endregion
 
     #region SignalREventsHandlers
 
@@ -105,35 +119,37 @@ public class MainPlayer : IPlayerController, IDisposable
             await _inSignalRHubService.NotifyPlayerStateChangedAsync(state);
         };
 
-        // Загружаем следующий трек из очереди, если он еще не загружен
+        // Загружаем следующий элемент очереди, если он еще не загружен
         var currentState = await _stateManager.GetStateAsync();
         var queueCount = (await _queue.GetQueueAsync()).Count;
 
         _logger.LogInformation(
-            "[InitializeAsync] Текущее состояние: State={State}, CurrentTrack={CurrentTrack}, NextTrack={NextTrack}, QueueCount={QueueCount}",
+            "[InitializeAsync] Текущее состояние: State={State}, CurrentQueueItem={CurrentQueueItem}, NextQueueItem={NextQueueItem}, QueueCount={QueueCount}",
             currentState.State,
-            currentState.CurrentTrack?.TrackName ?? "null",
-            currentState.NextTrack?.TrackName ?? "null",
+            currentState.CurrentQueueItem?.Track?.TrackName ?? "null",
+            currentState.NextQueueItem?.Track?.TrackName ?? "null",
             queueCount
         );
 
-        if (currentState.NextTrack == null && queueCount > 0)
+        if (currentState.NextQueueItem == null && queueCount > 0)
         {
             _logger.LogInformation(
-                "[InitializeAsync] Следующий трек не установлен, но в очереди есть {QueueCount} треков, загружаем...",
+                "[InitializeAsync] Следующий элемент очереди не установлен, но в очереди есть {QueueCount} элементов, загружаем...",
                 queueCount
             );
-            await LoadNextTrackAsync();
+            await LoadNextQueueItemAsync();
 
             var updatedState = await _stateManager.GetStateAsync();
             _logger.LogInformation(
-                "[InitializeAsync] После загрузки: NextTrack={NextTrack}",
-                updatedState.NextTrack?.TrackName ?? "null"
+                "[InitializeAsync] После загрузки: NextQueueItem={NextQueueItem}",
+                updatedState.NextQueueItem?.Track?.TrackName ?? "null"
             );
         }
         else if (queueCount == 0)
         {
-            _logger.LogInformation("[InitializeAsync] Очередь пуста, следующий трек не загружается");
+            _logger.LogInformation(
+                "[InitializeAsync] Очередь пуста, следующий элемент не загружается"
+            );
         }
     }
 
@@ -142,37 +158,66 @@ public class MainPlayer : IPlayerController, IDisposable
     #region IPlayerController Implementation
 
     /// <summary>
-    /// Начать воспроизведение трека с информацией о пользователе, заказавшем трек
+    /// Начать воспроизведение элемента очереди
     /// </summary>
-    public async Task PlayAsync(BaseTrackInfo track, TwitchUser? user, CancellationToken ct)
+    public async Task PlayAsync(QueueItem queueItem, CancellationToken ct)
     {
         try
         {
             _logger.LogInformation(
                 "Начинаем воспроизведение трека: {TrackName}, URL: {Url}",
-                track.TrackName,
-                track.Url
+                queueItem.Track!.TrackName,
+                queueItem.Track.Url
             );
 
             // Обновляем состояние - начинаем воспроизведение
-            await _stateManager.StartPlayingAsync(track, user, notify: true);
+            await _stateManager.StartPlayingAsync(queueItem, notify: true);
 
             _logger.LogDebug("Состояние обновлено, уведомление отправлено");
 
             // Обновляем время последнего воспроизведения в БД
-            await UpdateTrackLastPlayedAsync(track);
+            await UpdateQueueItemLastPlayedAsync(queueItem);
 
-            // Загружаем следующий трек из очереди
-            await LoadNextTrackAsync();
+            // Загружаем следующий элемент из очереди
+            await LoadNextQueueItemAsync();
 
-            _logger.LogInformation("Трек успешно запущен: {TrackName}", track.TrackName);
+            _logger.LogInformation("Трек успешно запущен: {TrackName}", queueItem.Track.TrackName);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Ошибка при воспроизведении трека: {TrackName}", track.TrackName);
+            _logger.LogError(
+                ex,
+                "Ошибка при воспроизведении трека: {TrackName}",
+                queueItem.Track!.TrackName
+            );
             // При ошибке вызываем событие ошибки
-            await OutSignalRHubServiceOnError(track);
+            await OutSignalRHubServiceOnError(queueItem.Track);
         }
+    }
+
+    /// <summary>
+    /// Начать воспроизведение трека (устаревший метод для обратной совместимости)
+    /// </summary>
+    [Obsolete("Используйте PlayAsync(QueueItem)")]
+    public async Task PlayAsync(BaseTrackInfo track, TwitchUser? user, CancellationToken ct)
+    {
+        // Создаем временный QueueItem для обратной совместимости
+        var queueItem = new QueueItem
+        {
+            TrackId = track.Id,
+            Track = track,
+            RequestedByTwitchId = user?.TwitchId ?? string.Empty,
+            RequestedByTwitchUser =
+                user
+                ?? new TwitchUser
+                {
+                    TwitchId = string.Empty,
+                    UserLogin = string.Empty,
+                    DisplayName = string.Empty,
+                },
+        };
+
+        await PlayAsync(queueItem, ct);
     }
 
     /// <summary>
@@ -247,36 +292,36 @@ public class MainPlayer : IPlayerController, IDisposable
     #region Queue Management
 
     /// <summary>
-    /// Воспроизвести следующий трек из очереди
+    /// Воспроизвести следующий элемент из очереди
     /// </summary>
     public async Task PlayNextFromQueueAsync()
     {
-        var nextTrack = await _queue.GetNextTrackAsync();
+        var nextQueueItem = await _queue.GetNextQueueItemAsync();
 
         _logger.LogDebug(
-            "Следующий трек из очереди: {TrackName}",
-            nextTrack != null ? nextTrack.TrackName : "null"
+            "Следующий элемент очереди: {TrackName}",
+            nextQueueItem != null ? nextQueueItem.Track!.TrackName : "null"
         );
 
-        if (nextTrack != null)
+        if (nextQueueItem != null)
         {
             _logger.LogInformation(
                 "Начинаем воспроизведение следующего трека: {TrackName}",
-                nextTrack.TrackName
+                nextQueueItem.Track!.TrackName
             );
 
-            // Воспроизводим трек с информацией о пользователе
-            await PlayAsync(nextTrack, nextTrack.RequestedByTwitchUser, _cancellationToken);
+            // Воспроизводим трек
+            await PlayAsync(nextQueueItem, _cancellationToken);
 
             // Удаляем из очереди
-            await _queue.RemoveFromQueueAsync(nextTrack.Id);
+            await _queue.RemoveFromQueueAsync(nextQueueItem.Id);
 
             // Уведомляем об изменении очереди
             await NotifyQueueChangedAsync();
 
             _logger.LogInformation(
                 "Трек из очереди успешно запущен: {TrackName}",
-                nextTrack.TrackName
+                nextQueueItem.Track.TrackName
             );
         }
         else
@@ -288,12 +333,12 @@ public class MainPlayer : IPlayerController, IDisposable
     }
 
     /// <summary>
-    /// Загрузить информацию о следующем треке в состояние
+    /// Загрузить информацию о следующем элементе очереди в состояние
     /// </summary>
-    private async Task LoadNextTrackAsync()
+    private async Task LoadNextQueueItemAsync()
     {
-        var nextTrack = await _queue.GetNextTrackAsync();
-        await _stateManager.SetNextTrackAsync(nextTrack, notify: true);
+        var nextQueueItem = await _queue.GetNextQueueItemAsync();
+        await _stateManager.SetNextQueueItemAsync(nextQueueItem, notify: true);
     }
 
     /// <summary>
@@ -342,8 +387,7 @@ public class MainPlayer : IPlayerController, IDisposable
             track.Id
         );
 
-        // Обновляем время последнего воспроизведения в БД
-        await UpdateTrackLastPlayedAsync(track);
+        // Обновление времени последнего воспроизведения теперь происходит в PlayAsync → UpdateQueueItemLastPlayedAsync
 
         // Уведомляем клиентов об обновлении состояния
         await _stateManager.NotifyStateChangedAsync();
@@ -370,30 +414,155 @@ public class MainPlayer : IPlayerController, IDisposable
     #region Database Operations
 
     /// <summary>
-    /// Обновить время последнего воспроизведения трека в базе данных
+    /// Обновить время последнего воспроизведения элемента очереди в базе данных
     /// </summary>
-    private async Task UpdateTrackLastPlayedAsync(BaseTrackInfo track)
+    private async Task UpdateQueueItemLastPlayedAsync(QueueItem queueItem)
     {
         try
         {
             await using var db = await _dbFactory.CreateDbContextAsync(_cancellationToken);
 
-            var dbTrack = await db.SoundRequestBaseTrackInfos.FirstOrDefaultAsync(
-                t => t.Id == track.Id,
+            var dbQueueItem = await db.SoundRequestQueueItems.FirstOrDefaultAsync(
+                qi => qi.Id == queueItem.Id,
                 _cancellationToken
             );
 
-            if (dbTrack != null)
+            if (dbQueueItem != null)
             {
-                dbTrack.LastTimePlays = DateTime.UtcNow;
-                db.SoundRequestBaseTrackInfos.Update(dbTrack);
-                await db.SaveChangesAsync(_cancellationToken);
+                // Обновляем время последнего воспроизведения в треке
+                var dbTrack = await db.SoundRequestBaseTrackInfos.FirstOrDefaultAsync(
+                    t => t.Id == queueItem.TrackId,
+                    _cancellationToken
+                );
+
+                if (dbTrack != null)
+                {
+                    dbTrack.LastTimePlays = DateTime.UtcNow;
+                    db.SoundRequestBaseTrackInfos.Update(dbTrack);
+                    await db.SaveChangesAsync(_cancellationToken);
+                }
             }
         }
         catch (Exception)
         {
             // Игнорируем ошибки обновления БД, это не критично
         }
+    }
+
+    #endregion
+
+    #region Extended Player Control Methods (из SoundRequestManager)
+
+    /// <summary>
+    /// Воспроизвести плеер (Resume или начать воспроизведение следующего трека)
+    /// </summary>
+    public async Task PlayAsync()
+    {
+        PlayerState? state = null;
+        var queueCount = 0;
+
+        state = GetState();
+        queueCount = (await _queue.GetQueueAsync()).Count;
+
+        _logger.LogDebug(
+            "[PlayAsync] State: State={State}, HasCurrentQueueItem={HasCurrentQueueItem}, QueueCount={QueueCount}",
+            state.State,
+            state.CurrentQueueItem != null,
+            queueCount
+        );
+
+        // Если плеер остановлен или нет текущего элемента очереди, начинаем воспроизведение следующего
+        if (state.State == PlaybackState.Stopped || state.CurrentQueueItem == null)
+        {
+            _logger.LogDebug("[PlayAsync] Вызываем PlayNextFromQueueAsync");
+            await PlayNextFromQueueAsync();
+        }
+        else
+        {
+            // Иначе просто снимаем паузу
+            _logger.LogDebug("[PlayAsync] Вызываем ResumeAsync");
+            await ResumeAsync(_cancellationToken);
+        }
+    }
+
+    /// <summary>
+    /// Переключить воспроизведение (Play/Pause)
+    /// </summary>
+    public async Task TogglePlayPauseAsync()
+    {
+        var state = GetState();
+
+        if (state.State == PlaybackState.Paused)
+        {
+            await PlayAsync();
+        }
+        else
+        {
+            await PauseAsync(_cancellationToken);
+        }
+    }
+
+    #endregion
+
+    #region Extended Queue Management Methods (из SoundRequestManager)
+
+    /// <summary>
+    /// Получить очередь элементов
+    /// </summary>
+    public async Task<List<QueueItem>> GetQueueAsync()
+    {
+        return await _queue.GetQueueAsync();
+    }
+
+    /// <summary>
+    /// Воспроизвести конкретный элемент из очереди
+    /// </summary>
+    public async Task PlayQueueItemAsync(Guid queueItemId)
+    {
+        var queueItem = await _queue.GetQueueItemByIdAsync(queueItemId);
+
+        if (queueItem != null)
+        {
+            // Воспроизводим выбранный элемент
+            await PlayAsync(queueItem, _cancellationToken);
+
+            // Удаляем из очереди
+            await _queue.RemoveFromQueueAsync(queueItemId);
+
+            // Уведомляем об изменении очереди
+            await NotifyQueueChangedAsync();
+        }
+    }
+
+    /// <summary>
+    /// Удалить элемент из очереди
+    /// </summary>
+    public async Task RemoveQueueItemAsync(Guid queueItemId)
+    {
+        await _queue.RemoveFromQueueAsync(queueItemId);
+    }
+
+    #endregion
+
+    #region History Management (из SoundRequestManager)
+
+    /// <summary>
+    /// Получить историю воспроизведенных треков
+    /// </summary>
+    public async Task<List<BaseTrackInfo>> GetHistoryAsync(int count = 20)
+    {
+        List<BaseTrackInfo> result = [];
+
+        await using var db = await _dbFactory.CreateDbContextAsync(_cancellationToken);
+
+        result = await db
+            .SoundRequestBaseTrackInfos.AsNoTracking()
+            .Where(t => t.LastTimePlays != DateTime.UnixEpoch)
+            .OrderByDescending(t => t.LastTimePlays)
+            .Take(count)
+            .ToListAsync(_cancellationToken);
+
+        return result;
     }
 
     #endregion

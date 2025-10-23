@@ -427,12 +427,10 @@ public static class StartupEstensions
         services.AddSingleton<SoundRequestUserQueue>();
         services.AddSingleton<YouTubeResolver>();
 
-        // Регистрируем плеер
-        services.AddSingleton<IPlayerController, MainPlayer>();
-
-        // Регистрируем менеджер и CommandsService
-        services.AddSingleton<SoundRequestManager>();
-        services.AddHostedService(sp => sp.GetRequiredService<SoundRequestManager>());
+        // Регистрируем плеер и CommandsService
+        services.AddSingleton<MainPlayer>();
+        services.AddSingleton<IPlayerController>(sp => sp.GetRequiredService<MainPlayer>());
+        services.AddHostedService(sp => sp.GetRequiredService<MainPlayer>());
         services.AddSingleton<CommandsService>();
 
         return services;
