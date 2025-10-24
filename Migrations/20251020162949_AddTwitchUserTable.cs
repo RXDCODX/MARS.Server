@@ -663,6 +663,18 @@ public partial class AddTwitchUserTable : Migration
                 '2025-10-21 17:51:50'
             ),
             (
+                '548278008',
+                'jadelung_',
+                'jadelung_',
+                'https://static-cdn.jtvnw.net/user-default-pictures-uv/ebe4cd89-b4f4-4cd9-adac-2f30151b4209-profile_image-300x300.png',
+                '#008000',
+                false,
+                false,
+                NULL,
+                '2025-10-21 17:51:50',
+                '2025-10-21 17:51:50'
+            ),
+            (
                 '512425796',
                 'motabon',
                 'モタボン',
