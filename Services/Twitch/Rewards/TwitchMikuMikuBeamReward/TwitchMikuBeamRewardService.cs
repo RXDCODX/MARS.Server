@@ -11,7 +11,7 @@ namespace MARS.Server.Services.Twitch.Rewards.TwitchMikuMikuBeamReward;
 
 /// <summary>
 /// Сервис для обработки награды "MIKU MIKU BEAM" на Twitch
-/// Хранит ID последних 100 сообщений из чата с никнеймами пользователей
+/// Хранит ID последних 100 сообщений из чата и ID пользователей
 /// </summary>
 public class TwitchMikuBeamRewardService(
     IHubContext<TelegramusHub, ITelegramusHub> hubContext,
@@ -28,7 +28,8 @@ public class TwitchMikuBeamRewardService(
     public int Cost { get; init; } = 1580;
 
     private readonly ConcurrentQueue<string> _messageIdsToDelete = new(); // ID сообщений для удаления
-    private readonly ConcurrentQueue<string> _allUsernames = new(); // Все логины для отображения (включая модераторов)
+    private readonly HashSet<string> _allUserIds = new(); // Все ID пользователей для отображения (включая модераторов)
+    private readonly SemaphoreSlim _semaphoreSlim = new(1);
     private DateTimeOffset _lastActivation = DateTimeOffset.MinValue;
     private const int MaxStoredMessages = 100;
     private const int CooldownSeconds = 60;
@@ -78,18 +79,21 @@ public class TwitchMikuBeamRewardService(
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(e.ChatMessage.Username))
+        if (string.IsNullOrWhiteSpace(e.ChatMessage.UserId))
         {
             return;
         }
 
-        // Логин добавляем всегда (включая модераторов и стримера)
-        _allUsernames.Enqueue(e.ChatMessage.Username);
+        // ID пользователя добавляем всегда (включая модераторов и стримера)
+        _semaphoreSlim.Wait();
+        _allUserIds.Add(e.ChatMessage.UserId);
 
-        while (_allUsernames.Count > MaxStoredMessages)
+        while (_allUserIds.Count > MaxStoredMessages)
         {
-            _allUsernames.TryDequeue(out _);
+            _allUserIds.Remove(e.ChatMessage.UserId);
         }
+
+        _semaphoreSlim.Release();
 
         // ID сообщения сохраняем только для обычных пользователей (не модераторов и не стримера)
         var isModeratorOrBroadcaster = e.ChatMessage.IsModerator || e.ChatMessage.IsBroadcaster;
@@ -153,38 +157,38 @@ public class TwitchMikuBeamRewardService(
                 twEvent.Reward.Cost
             );
 
-            // Используем все логины (включая модераторов) для отображения
-            var allUsernamesCopy = _allUsernames.ToList();
-            var uniqueUsernames = allUsernamesCopy.Distinct().ToList();
+            // Используем все ID пользователей (включая модераторов) для отображения
+            _semaphoreSlim.Wait();
+            var uniqueUserIds = _allUserIds.ToList();
+            _semaphoreSlim.Release();
 
             var messageIdsCopy = _messageIdsToDelete.ToList();
 
             logger.LogInformation(
                 "MIKU MIKU BEAM: сохранено {MessagesCount} сообщений для удаления и {UsersCount} уникальных пользователей для отображения",
                 messageIdsCopy.Count,
-                uniqueUsernames.Count
+                uniqueUserIds.Count
             );
 
             // Обновляем время последней активации
             _lastActivation = now;
 
-            // Получаем информацию о пользователях из базы данных
+            // Получаем информацию о пользователях из базы данных по их ID
             List<TwitchUser> twitchUsers = [];
 
-            if (uniqueUsernames.Count > 0)
+            if (uniqueUserIds.Count > 0)
             {
                 await using var dbContext = await factory.CreateDbContextAsync();
 
                 twitchUsers = await dbContext
                     .TwitchUsers.AsNoTracking()
-                    .Where(u => uniqueUsernames.Contains(u.UserLogin))
-                    .Distinct()
+                    .Where(u => uniqueUserIds.Contains(u.TwitchId))
                     .ToListAsync();
 
                 logger.LogInformation(
                     "MIKU MIKU BEAM: найдено {Count} пользователей в базе данных из {Total}",
                     twitchUsers.Count,
-                    uniqueUsernames.Count
+                    uniqueUserIds.Count
                 );
             }
 
