@@ -38,6 +38,7 @@ using MARS.Server.Services.Twitch.Rewards.TwitchCredits;
 using MARS.Server.Services.Twitch.Rewards.TwitchGaoAlert;
 using MARS.Server.Services.Twitch.Rewards.TwitchHighlitedMessage;
 using MARS.Server.Services.Twitch.Rewards.TwitchMichaelJacksonReward;
+using MARS.Server.Services.Twitch.Rewards.TwitchMikuMikuBeamReward;
 using MARS.Server.Services.Twitch.Rewards.TwitchRandomArt;
 using MARS.Server.Services.Twitch.Rewards.TwitchRandomMeme;
 using MARS.Server.Services.Twitch.Rewards.TwitchRefundService;
@@ -329,6 +330,9 @@ public static class StartupEstensions
 
         services.AddSingleton<TwitchMichaelJacksonRewardService>();
         services.AddHostedService(sp => sp.GetRequiredService<TwitchMichaelJacksonRewardService>());
+
+        services.AddSingleton<TwitchMikuBeamRewardService>();
+        services.AddHostedService(sp => sp.GetRequiredService<TwitchMikuBeamRewardService>());
 
         services.AddHostedService<TwitchRefundService>();
 

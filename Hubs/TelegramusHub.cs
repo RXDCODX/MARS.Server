@@ -1,4 +1,5 @@
-﻿using MARS.Server.Services.Twitch.SoundBarService;
+﻿using MARS.Server.Services.Twitch.Rewards.TwitchMikuMikuBeamReward;
+using MARS.Server.Services.Twitch.SoundBarService;
 using MARS.Server.Services.WaifuRoll;
 using SignalRSwaggerGen.Attributes;
 using SignalRSwaggerGen.Enums;
@@ -21,7 +22,8 @@ public class TelegramusHub(
     IOptions<TwitchConfiguration> twitchConfiguration,
     ITwitchClient twitchClient,
     SoundBarFactory soundBarFactory,
-    WaifuPrizesService waifuPrizesService
+    WaifuPrizesService waifuPrizesService,
+    IServiceProvider serviceProvider
 ) : Hub<ITelegramusHub>
 {
     private readonly TwitchConfiguration _twitchConfiguration =
@@ -54,6 +56,13 @@ public class TelegramusHub(
     public Task MuteAll(params string[] args)
     {
         return soundBarFactory.CreateSoundBar().Mute(args);
+    }
+
+    [SignalRMethod]
+    public Task MikuMikuDeleteTwitchMessages()
+    {
+        var mikuBeamService = serviceProvider.GetRequiredService<TwitchMikuBeamRewardService>();
+        return mikuBeamService.DeleteMessagesAsync();
     }
 
     [SignalRMethod]

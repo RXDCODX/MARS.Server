@@ -73,7 +73,7 @@ public class TwitchUserSyncService(
             logger.LogError(
                 ex,
                 "Ошибка при обработке пользователя {UserId} ({UserName})",
-                e.ChatMessage.Id,
+                e.ChatMessage.UserId,
                 e.ChatMessage.Username
             );
         }

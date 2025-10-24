@@ -25,7 +25,22 @@ public class TwitchUser
     [Required]
     [MaxLength(50)]
     [DatabaseGenerated(DatabaseGeneratedOption.None)]
-    public required string TwitchId { get; init; }
+    [Column(nameof(TwitchId))]
+    public required string TwitchId
+    {
+        get { return _twitchId; }
+        init
+        {
+            if (!IsValidTwitchId(value))
+            {
+                throw new ArgumentException("TwitchId was not valid");
+            }
+            _twitchId = value;
+        }
+    }
+
+    [NotMapped]
+    private readonly string _twitchId = string.Empty;
 
     /// <summary>
     /// Логин пользователя
@@ -99,24 +114,12 @@ public class TwitchUser
         return TwitchId.GetHashCode();
     }
 
-    public static explicit operator TwitchUser(ChatMessage chatMessage) =>
-        CreateTwitchUser(chatMessage);
-
-    public static TwitchUser FromTwitchApi(ChatMessage chatMessage) =>
-        CreateTwitchUser(chatMessage);
-
-    private static TwitchUser CreateTwitchUser(ChatMessage chatMessage)
+    /// <summary>
+    /// Проверяет, является ли TwitchId валидным (должен быть числовым)
+    /// </summary>
+    private static bool IsValidTwitchId(string twitchId)
     {
-        return new TwitchUser()
-        {
-            DisplayName = chatMessage.DisplayName,
-            TwitchId = chatMessage.Id,
-            UserLogin = chatMessage.Username,
-            IsModerator = chatMessage.IsModerator,
-            IsVip = chatMessage.IsVip,
-            ChatColor = chatMessage.ColorHex,
-            CreatedAt = DateTime.Now,
-            LastUpdated = DateTime.Now,
-        };
+        // TwitchId должен быть числовым (не GUID или другая строка)
+        return !string.IsNullOrWhiteSpace(twitchId) && long.TryParse(twitchId, out _);
     }
 }

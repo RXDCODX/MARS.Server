@@ -1,5 +1,6 @@
 ﻿using MARS.Server.Services.Twitch.ClientMessages.AutoMessages.Entitys;
 using TwitchLib.Client.Events;
+using TwitchLib.Client.Extensions;
 
 namespace MARS.Server.Services.Twitch.ClientMessages.AutoMessages;
 

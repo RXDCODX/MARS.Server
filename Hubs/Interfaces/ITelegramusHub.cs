@@ -1,4 +1,5 @@
 ﻿using MARS.Server.Services.AutoArts_OBSOLETE.Entitys;
+using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Rewards.TwitchGaoAlert.Entitys;
 using MARS.Server.Services.Twitch.Rewards.TwitchScreenParticles.Entitys;
 using SignalRSwaggerGen.Attributes;
@@ -74,4 +75,7 @@ public interface ITelegramusHub
 
     [SignalRMethod]
     Task MichaelJackson();
+
+    [SignalRMethod]
+    Task MikuMikuBeam(List<TwitchUser> users);
 }

@@ -64,6 +64,15 @@ public class TwitchUserEnsureService(
     }
 
     /// <summary>
+    /// Проверяет, является ли TwitchId валидным (должен быть числовым)
+    /// </summary>
+    private static bool IsValidTwitchId(string twitchId)
+    {
+        // TwitchId должен быть числовым (не GUID или другая строка)
+        return !string.IsNullOrWhiteSpace(twitchId) && long.TryParse(twitchId, out _);
+    }
+
+    /// <summary>
     /// Создает нового пользователя из ChatMessage
     /// </summary>
     private async Task<TwitchUser> CreateUserAsync(
