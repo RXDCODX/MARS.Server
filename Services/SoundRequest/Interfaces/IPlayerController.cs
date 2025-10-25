@@ -13,6 +13,7 @@ public interface IPlayerController
     Task SetVolumeAsync(float volume, CancellationToken ct);
     Task MuteAsync(CancellationToken ct);
     Task UnmuteAsync(CancellationToken ct);
+    Task SetVideoDisplayAsync(VideoDisplay videoDisplay, CancellationToken ct);
 
     PlayerState GetState();
 }

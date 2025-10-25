@@ -280,6 +280,14 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
     }
 
     /// <summary>
+    /// Установить режим отображения видео
+    /// </summary>
+    public async Task SetVideoDisplayAsync(VideoDisplay videoDisplay, CancellationToken ct)
+    {
+        await _stateManager.SetVideoDisplayAsync(videoDisplay, notify: true);
+    }
+
+    /// <summary>
     /// Получить текущее состояние плеера
     /// </summary>
     public PlayerState GetState()

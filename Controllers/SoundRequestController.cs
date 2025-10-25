@@ -267,6 +267,40 @@ public class SoundRequestController(
     }
 
     /// <summary>
+    /// Установить режим отображения видео
+    /// </summary>
+    [HttpPost("video-display/{displayMode}")]
+    public async Task<ActionResult<OperationResult>> SetVideoDisplay(
+        [FromRoute] VideoDisplay displayMode,
+        CancellationToken cancellationToken = default
+    )
+    {
+        ActionResult<OperationResult> result;
+
+        try
+        {
+            await player.SetVideoDisplayAsync(displayMode, cancellationToken);
+
+            var message = displayMode switch
+            {
+                VideoDisplay.Video => "Режим: воспроизведение с видео",
+                VideoDisplay.NoVideo => "Режим: воспроизведение без видео",
+                VideoDisplay.AudioOnly => "Режим: только аудио",
+                _ => "Режим отображения изменен",
+            };
+
+            result = Ok(OperationResult.Ok(message));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при изменении режима отображения видео");
+            result = Ok(OperationResult.Bad("Ошибка при изменении режима отображения видео"));
+        }
+
+        return result;
+    }
+
+    /// <summary>
     /// Добавить трек в очередь по URL или поисковому запросу
     /// </summary>
     [HttpPost("add-track")]

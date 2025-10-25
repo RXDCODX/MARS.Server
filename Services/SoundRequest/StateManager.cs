@@ -126,6 +126,7 @@ public class StateManager(
                 NextQueueItem = _currentState.NextQueueItem,
                 CurrentTrackProgress = _currentState.CurrentTrackProgress,
                 State = _currentState.State,
+                VideoState = _currentState.VideoState,
                 IsMuted = _currentState.IsMuted,
                 Volume = _currentState.Volume,
             };
@@ -153,6 +154,7 @@ public class StateManager(
                 NextQueueItem = _currentState.NextQueueItem,
                 CurrentTrackProgress = _currentState.CurrentTrackProgress,
                 State = _currentState.State,
+                VideoState = _currentState.VideoState,
                 IsMuted = _currentState.IsMuted,
                 Volume = _currentState.Volume,
             };
@@ -185,6 +187,7 @@ public class StateManager(
                 existingState.NextQueueItemId = _currentState.NextQueueItemId;
                 existingState.CurrentTrackProgress = _currentState.CurrentTrackProgress;
                 existingState.State = _currentState.State;
+                existingState.VideoState = _currentState.VideoState;
                 existingState.IsMuted = _currentState.IsMuted;
                 existingState.Volume = _currentState.Volume;
 
@@ -238,6 +241,7 @@ public class StateManager(
                     NextQueueItem = _currentState.NextQueueItem,
                     CurrentTrackProgress = _currentState.CurrentTrackProgress,
                     State = _currentState.State,
+                    VideoState = _currentState.VideoState,
                     IsMuted = _currentState.IsMuted,
                     Volume = _currentState.Volume,
                 };
@@ -340,6 +344,14 @@ public class StateManager(
             },
             notify
         );
+    }
+
+    /// <summary>
+    /// Установить режим отображения видео
+    /// </summary>
+    public async Task SetVideoDisplayAsync(VideoDisplay videoDisplay, bool notify = true)
+    {
+        await UpdateStateAsync(state => state.VideoState = videoDisplay, notify);
     }
 
     /// <summary>

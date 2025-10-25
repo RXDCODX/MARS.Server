@@ -1,4 +1,4 @@
-namespace MARS.Server.Services.SoundRequest.Entities;
+﻿namespace MARS.Server.Services.SoundRequest.Entities;
 
 /// <summary>
 /// Состояния воспроизведения плеера
@@ -28,6 +28,5 @@ public enum PlaybackState
     /// <summary>
     /// Ожидание добавления трека в очередь
     /// </summary>
-    WaitingForTrack = 4
+    WaitingForTrack = 4,
 }
-
