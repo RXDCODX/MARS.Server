@@ -5,7 +5,6 @@ namespace MARS.Server.Services.SoundRequest.Interfaces;
 
 public interface IPlayerController
 {
-    Task PlayAsync(BaseTrackInfo track, TwitchUser? user, CancellationToken ct);
     Task PauseAsync(CancellationToken ct);
     Task ResumeAsync(CancellationToken ct);
     Task StopAsync(CancellationToken ct);

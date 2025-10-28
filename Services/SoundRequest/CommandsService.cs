@@ -48,7 +48,7 @@ public class CommandsService(
                     info = await db
                         .SoundRequestBaseTrackInfos.AsNoTracking()
                         .FirstOrDefaultAsync(
-                            t => t.VideoId == videoId && !t.IsDeleted,
+                            t => t.VideoId == videoId,
                             cancellationToken
                         );
                 }
@@ -91,7 +91,14 @@ public class CommandsService(
                         ? $"{(int)duration.TotalMinutes:D2}:{duration.Seconds:D2}"
                         : "??:??";
 
-                result = $"Добавлено: {info.Title} [{durationText}]";
+                // Рассчитываем примерное время ожидания
+                var waitTime = await CalculateWaitTimeAsync(
+                    queueItem.QueueOrder,
+                    cancellationToken
+                );
+                var waitTimeText = FormatWaitTime(waitTime);
+
+                result = $"Добавлено: {info.Title} [{durationText}]{waitTimeText}";
             }
             else
             {
@@ -177,11 +184,7 @@ public class CommandsService(
 
             var lastQueueItem = await db
                 .SoundRequestQueueItems.Include(qi => qi.Track)
-                .Where(qi =>
-                    !qi.IsDeleted
-                    && qi.QueueOrder != null
-                    && qi.RequestedByTwitchId == user.TwitchId
-                )
+                .Where(qi => qi.RequestedByTwitchId == user.TwitchId && qi.QueueOrder >= 0)
                 .OrderByDescending(qi => qi.QueueOrder)
                 .FirstOrDefaultAsync(cancellationToken);
 
@@ -257,7 +260,18 @@ public class CommandsService(
                 await NotifyQueueChangedAsync();
             }
 
-            result = $"Добавлено треков: {items.Length}";
+            // Рассчитываем время ожидания для первого трека плейлиста
+            var waitTime = TimeSpan.Zero;
+            if (firstQueueItem != null)
+            {
+                waitTime = await CalculateWaitTimeAsync(
+                    firstQueueItem.QueueOrder,
+                    cancellationToken
+                );
+            }
+            var waitTimeText = FormatWaitTime(waitTime);
+
+            result = $"Добавлено треков: {items.Length}{waitTimeText}";
         }
         else
         {
@@ -296,6 +310,112 @@ public class CommandsService(
         {
             await NotifyQueueChangedAsync();
         }
+    }
+
+    /// <summary>
+    /// Рассчитать примерное время ожидания до воспроизведения трека
+    /// </summary>
+    /// <param name="queueOrder">Позиция трека в очереди</param>
+    /// <param name="cancellationToken">Токен отмены</param>
+    /// <returns>Время ожидания в секундах</returns>
+    private async Task<TimeSpan> CalculateWaitTimeAsync(
+        int queueOrder,
+        CancellationToken cancellationToken = default
+    )
+    {
+        var result = TimeSpan.Zero;
+
+        if (queueOrder > 0)
+        {
+            // Получаем текущее состояние плеера
+            var currentState = await stateManager.GetStateAsync();
+
+            // Если что-то играет, добавляем оставшееся время текущего трека
+            if (currentState is { State: PlaybackState.Playing, CurrentQueueItem.Track: not null })
+            {
+                var currentTrack = currentState.CurrentQueueItem.Track;
+                var progress = currentState.CurrentTrackProgress ?? TimeSpan.Zero;
+                var remaining = currentTrack.Duration - progress;
+
+                if (remaining > TimeSpan.Zero)
+                {
+                    result += remaining;
+                }
+            }
+
+            // Получаем все треки в очереди до нашего трека
+            var queueList = await queue.GetQueueAsync();
+            var tracksBeforeCurrent = queueList.Where(qi =>
+                qi.QueueOrder < queueOrder && qi.Track != null
+            );
+
+            // Суммируем длительность всех треков в очереди
+            foreach (var queueItem in tracksBeforeCurrent)
+            {
+                if (queueItem.Track?.Duration > TimeSpan.Zero)
+                {
+                    result += queueItem.Track.Duration;
+                }
+            }
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Форматировать время ожидания в читаемый текст
+    /// </summary>
+    /// <param name="waitTime">Время ожидания</param>
+    /// <returns>Отформатированная строка</returns>
+    private static string FormatWaitTime(TimeSpan waitTime)
+    {
+        var result = string.Empty;
+
+        if (waitTime > TimeSpan.Zero)
+        {
+            var totalMinutes = (int)waitTime.TotalMinutes;
+            var seconds = waitTime.Seconds;
+
+            if (totalMinutes < 1)
+            {
+                result = seconds > 0 ? $" через ~ {seconds} сек" : " (меньше секунды)";
+            }
+            else if (totalMinutes == 1)
+            {
+                result = seconds > 0 ? $" через ~ 1 мин {seconds} сек" : " через ~ минута";
+            }
+            else if (totalMinutes < 60)
+            {
+                result =
+                    seconds > 0
+                        ? $" через ~ {totalMinutes} мин {seconds} сек"
+                        : $" через ~ {totalMinutes} мин";
+            }
+            else
+            {
+                var hours = totalMinutes / 60;
+                var minutes = totalMinutes % 60;
+
+                if (minutes > 0 && seconds > 0)
+                {
+                    result = $" через ~ {hours} ч {minutes} мин {seconds} сек";
+                }
+                else if (minutes > 0)
+                {
+                    result = $" через ~ {hours} ч {minutes} мин";
+                }
+                else if (seconds > 0)
+                {
+                    result = $" через ~ {hours} ч {seconds} сек";
+                }
+                else
+                {
+                    result = $" через ~ {hours} ч";
+                }
+            }
+        }
+
+        return result;
     }
 
     /// <summary>

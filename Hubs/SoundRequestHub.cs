@@ -14,36 +14,9 @@ public class SoundRequestHub(OutSignalRHubService service, StateManager stateMan
     /// <summary>
     /// Имя группы для клиентов плеера
     /// </summary>
-    public const string MainPlayerName = "mainplayer";
-    public const string FramePlayerGroupName = "frameplayer";
-    public const string ApiPlayerGroupName = "apiplayer";
-    public const string AllPlayers = "all";
-
-    public static readonly List<string> SoundRequestGroups =
-    [
-        MainPlayerName,
-        FramePlayerGroupName,
-        ApiPlayerGroupName,
-    ];
-
     public override Task OnConnectedAsync()
     {
         return Clients.Caller.PlayerStateChange(stateManager.GetState());
-    }
-
-    public Task Join(string groupName)
-    {
-        var name = SoundRequestGroups.Find(e =>
-            e.Equals(groupName, StringComparison.OrdinalIgnoreCase)
-        );
-
-        if (name is not null)
-        {
-            Groups.AddToGroupAsync(Context.ConnectionId, name);
-            Groups.AddToGroupAsync(Context.ConnectionId, AllPlayers);
-        }
-
-        return Task.CompletedTask;
     }
 
     /// <summary>
@@ -75,19 +48,13 @@ public class SoundRequestHub(OutSignalRHubService service, StateManager stateMan
         return stateManager.SetVolumeAsync(volume);
     }
 
+    /// <summary>
+    /// Вызывается фронтендом для обновления прогресса воспроизведения трека
+    /// </summary>
+    /// <param name="seconds">Текущая позиция воспроизведения в секундах</param>
     public Task TrackProgress(long seconds)
     {
         var span = TimeSpan.FromSeconds(seconds);
-        return stateManager.UpdateStateAsync(e => e.CurrentTrackProgress = span);
-    }
-
-    public override Task OnDisconnectedAsync(Exception? exception)
-    {
-        foreach (var group in SoundRequestGroups)
-        {
-            Groups.RemoveFromGroupAsync(Context.ConnectionId, group);
-        }
-
-        return Task.CompletedTask;
+        return stateManager.UpdateCurrentTrackProgressAsync(span, notify: false);
     }
 }

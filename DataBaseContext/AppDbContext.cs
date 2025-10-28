@@ -332,6 +332,6 @@ public sealed partial class AppDbContext : DbContext
     public sealed class DateTimeToDateTimeUtc()
         : ValueConverter<DateTime, DateTime>(
             c => DateTime.SpecifyKind(c, DateTimeKind.Utc),
-            c => c
+            c => c.ToLocalTime().AddHours(-4)
         );
 }

@@ -355,6 +355,23 @@ public class StateManager(
     }
 
     /// <summary>
+    /// Обновить текущий прогресс воспроизведения трека
+    /// </summary>
+    public async Task UpdateCurrentTrackProgressAsync(TimeSpan progress, bool notify = false)
+    {
+        await UpdateStateAsync(
+            state =>
+            {
+                if (state.CurrentQueueItem != null)
+                {
+                    state.CurrentTrackProgress = progress;
+                }
+            },
+            notify
+        );
+    }
+
+    /// <summary>
     /// Начать воспроизведение элемента очереди
     /// </summary>
     public async Task StartPlayingAsync(QueueItem queueItem, bool notify = true)
@@ -365,6 +382,7 @@ public class StateManager(
                 state.CurrentQueueItemId = queueItem.Id;
                 state.CurrentQueueItem = queueItem;
                 state.State = PlaybackState.Playing;
+                state.CurrentTrackProgress = TimeSpan.Zero;
             },
             notify
         );

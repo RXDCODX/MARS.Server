@@ -205,6 +205,30 @@ public class SoundRequestController(
     }
 
     /// <summary>
+    /// Воспроизвести предыдущий трек из истории
+    /// </summary>
+    [HttpPost("play-previous")]
+    public async Task<ActionResult<OperationResult>> PlayPrevious(
+        CancellationToken cancellationToken = default
+    )
+    {
+        ActionResult<OperationResult> result;
+
+        try
+        {
+            await player.PlayPreviousFromHistoryAsync();
+            result = Ok(OperationResult.Ok("Предыдущий трек начал воспроизведение"));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при воспроизведении предыдущего трека");
+            result = Ok(OperationResult.Bad("Ошибка при воспроизведении предыдущего трека"));
+        }
+
+        return result;
+    }
+
+    /// <summary>
     /// Воспроизвести конкретный элемент из очереди
     /// </summary>
     [HttpPost("play-track/{queueItemId:guid}")]

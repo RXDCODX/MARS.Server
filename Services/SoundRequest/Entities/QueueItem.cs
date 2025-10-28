@@ -1,4 +1,5 @@
 ﻿using MARS.Server.Services.Twitch.Entitys;
+using TL;
 
 namespace MARS.Server.Services.SoundRequest.Entities;
 
@@ -25,9 +26,14 @@ public class QueueItem
     public BaseTrackInfo? Track { get; set; }
 
     /// <summary>
-    /// Порядок в очереди (0 = текущий трек, null = не в очереди)
+    /// Порядок в очереди (уникальное значение):
+    /// 0 - текущий трек, который будет проигран при следующем сдвиге
+    /// > 0 - треки в очереди (1, 2, 3...), новые треки добавляются с максимальным значением + 1
+    /// &lt; 0 - проигранные треки/история (-1, -2, -3..., где -1 = последний проигранный)
+    /// При начале воспроизведения вся очередь сдвигается на -1
     /// </summary>
-    public int? QueueOrder { get; set; }
+    [Required]
+    public required int QueueOrder { get; set; }
 
     /// <summary>
     /// Twitch ID пользователя, заказавшего трек
@@ -46,9 +52,4 @@ public class QueueItem
     /// Дата и время заказа трека
     /// </summary>
     public DateTime RequestedAt { get; set; } = DateTime.UtcNow;
-
-    /// <summary>
-    /// Элемент помечен как удаленный (soft delete)
-    /// </summary>
-    public bool IsDeleted { get; set; } = false;
 }

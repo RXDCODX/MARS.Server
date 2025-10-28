@@ -196,31 +196,6 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
     }
 
     /// <summary>
-    /// Начать воспроизведение трека (устаревший метод для обратной совместимости)
-    /// </summary>
-    [Obsolete("Используйте PlayAsync(QueueItem)")]
-    public async Task PlayAsync(BaseTrackInfo track, TwitchUser? user, CancellationToken ct)
-    {
-        // Создаем временный QueueItem для обратной совместимости
-        var queueItem = new QueueItem
-        {
-            TrackId = track.Id,
-            Track = track,
-            RequestedByTwitchId = user?.TwitchId ?? string.Empty,
-            RequestedByTwitchUser =
-                user
-                ?? new TwitchUser
-                {
-                    TwitchId = string.Empty,
-                    UserLogin = string.Empty,
-                    DisplayName = string.Empty,
-                },
-        };
-
-        await PlayAsync(queueItem, ct);
-    }
-
-    /// <summary>
     /// Приостановить воспроизведение
     /// </summary>
     public async Task PauseAsync(CancellationToken ct)
@@ -301,35 +276,37 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
 
     /// <summary>
     /// Воспроизвести следующий элемент из очереди
+    /// Сдвигает всю очередь на -1 и берет элемент с QueueOrder = 0 для воспроизведения
     /// </summary>
     public async Task PlayNextFromQueueAsync()
     {
-        var nextQueueItem = await _queue.GetNextQueueItemAsync();
+        // Сдвигаем очередь и получаем элемент для воспроизведения
+        var currentQueueItem = await _queue.ShiftQueueAndGetCurrentAsync();
 
         _logger.LogDebug(
-            "Следующий элемент очереди: {TrackName}",
-            nextQueueItem != null ? nextQueueItem.Track!.TrackName : "null"
+            "Элемент для воспроизведения после сдвига очереди: {TrackName}",
+            currentQueueItem != null ? currentQueueItem.Track!.TrackName : "null"
         );
 
-        if (nextQueueItem != null)
+        if (currentQueueItem != null)
         {
             _logger.LogInformation(
-                "Начинаем воспроизведение следующего трека: {TrackName}",
-                nextQueueItem.Track!.TrackName
+                "Начинаем воспроизведение трека: {TrackName}",
+                currentQueueItem.Track!.TrackName
             );
 
-            // Воспроизводим трек
-            await PlayAsync(nextQueueItem, _cancellationToken);
+            // Очищаем старую историю
+            await CleanupOldHistoryAsync();
 
-            // Удаляем из очереди
-            await _queue.RemoveFromQueueAsync(nextQueueItem.Id);
+            // Воспроизводим трек
+            await PlayAsync(currentQueueItem, _cancellationToken);
 
             // Уведомляем об изменении очереди
             await NotifyQueueChangedAsync();
 
             _logger.LogInformation(
-                "Трек из очереди успешно запущен: {TrackName}",
-                nextQueueItem.Track.TrackName
+                "Трек успешно запущен: {TrackName}",
+                currentQueueItem.Track.TrackName
             );
         }
         else
@@ -337,6 +314,58 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
             _logger.LogInformation("Очередь пуста - останавливаем плеер");
             // Очередь пуста - останавливаем воспроизведение
             await StopAsync(_cancellationToken);
+        }
+    }
+
+    /// <summary>
+    /// Воспроизвести предыдущий трек из истории
+    /// </summary>
+    public async Task PlayPreviousFromHistoryAsync()
+    {
+        var currentState = GetState();
+        await using var db = await _dbFactory.CreateDbContextAsync(_cancellationToken);
+
+        _logger.LogInformation("Запрошено воспроизведение предыдущего трека.");
+
+        // Определяем, какой QueueOrder искать для предыдущего трека
+        var targetQueueOrder = -1;
+
+        _logger.LogInformation("Ищем трек с QueueOrder = {TargetQueueOrder}", targetQueueOrder);
+
+        // Ищем трек с нужным QueueOrder
+        var previousQueueItem = await db
+            .SoundRequestQueueItems.AsNoTracking()
+            .Include(qi => qi.Track)
+            .Include(qi => qi.RequestedByTwitchUser)
+            .Where(qi => qi.QueueOrder == targetQueueOrder)
+            .FirstOrDefaultAsync(_cancellationToken);
+
+        if (previousQueueItem != null)
+        {
+            _logger.LogInformation(
+                "Воспроизводим предыдущий трек: {TrackName} (QueueOrder: {QueueOrder}), заказал: {User}",
+                previousQueueItem.Track?.TrackName,
+                previousQueueItem.QueueOrder,
+                previousQueueItem.RequestedByTwitchUser?.DisplayName
+            );
+
+            previousQueueItem.QueueOrder = 0;
+            await db.SoundRequestQueueItems.ExecuteUpdateAsync(
+                e => e.SetProperty(t => t.QueueOrder, t => t.QueueOrder + 1),
+                cancellationToken: _cancellationToken
+            );
+
+            await PlayAsync(previousQueueItem, _cancellationToken);
+
+            // Загружаем следующий элемент из очереди
+            await LoadNextQueueItemAsync();
+        }
+        else
+        {
+            _logger.LogWarning(
+                "Не найден трек с QueueOrder = {TargetQueueOrder}. Достигнут конец истории.",
+                targetQueueOrder
+            );
         }
     }
 
@@ -356,6 +385,38 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
     {
         var currentQueue = await _queue.GetQueueAsync();
         await _inSignalRHubService.NotifyQueueChangedAsync(currentQueue);
+    }
+
+    /// <summary>
+    /// Очистить старую историю (элементы с QueueOrder &lt; 0 старше 30 дней)
+    /// </summary>
+    private async Task CleanupOldHistoryAsync()
+    {
+        try
+        {
+            await using var db = await _dbFactory.CreateDbContextAsync(_cancellationToken);
+
+            var thirtyDaysAgo = DateTime.UtcNow.AddDays(-30);
+
+            // Удаляем очень старую историю (старше 30 дней)
+            var oldHistoryCount = await db
+                .SoundRequestQueueItems.Where(qi =>
+                    qi.QueueOrder < 0 && qi.RequestedAt < thirtyDaysAgo
+                )
+                .ExecuteDeleteAsync(_cancellationToken);
+
+            if (oldHistoryCount > 0)
+            {
+                _logger.LogInformation(
+                    "Очистка истории: удалено {HistoryCount} старых элементов (старше 30 дней)",
+                    oldHistoryCount
+                );
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Ошибка при очистке истории");
+        }
     }
 
     #endregion
@@ -563,10 +624,37 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
 
         await using var db = await _dbFactory.CreateDbContextAsync(_cancellationToken);
 
+        // Берем историю из QueueItem с QueueOrder < 0
+        // -1 = последний проигранный, -2 = предыдущий и т.д.
+        var historyItems = await db
+            .SoundRequestQueueItems.AsNoTracking()
+            .Include(qi => qi.Track)
+            .Include(qi => qi.RequestedByTwitchUser)
+            .Where(qi => qi.QueueOrder < 0)
+            .OrderByDescending(qi => qi.QueueOrder) // -1, -2, -3...
+            .Take(count)
+            .ToListAsync(_cancellationToken);
+
+        result = historyItems.Where(qi => qi.Track != null).Select(qi => qi.Track!).ToList();
+
+        return result;
+    }
+
+    /// <summary>
+    /// Получить историю воспроизведенных треков как QueueItem
+    /// </summary>
+    public async Task<List<QueueItem>> GetHistoryQueueItemsAsync(int count = 20)
+    {
+        List<QueueItem> result = [];
+
+        await using var db = await _dbFactory.CreateDbContextAsync(_cancellationToken);
+
         result = await db
-            .SoundRequestBaseTrackInfos.AsNoTracking()
-            .Where(t => t.LastTimePlays != DateTime.UnixEpoch)
-            .OrderByDescending(t => t.LastTimePlays)
+            .SoundRequestQueueItems.AsNoTracking()
+            .Include(qi => qi.Track)
+            .Include(qi => qi.RequestedByTwitchUser)
+            .Where(qi => qi.QueueOrder < 0)
+            .OrderByDescending(qi => qi.QueueOrder) // -1, -2, -3...
             .Take(count)
             .ToListAsync(_cancellationToken);
 

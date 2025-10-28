@@ -13,7 +13,7 @@ public class InSignalRHubService(IHubContext<SoundRequestHub, ISoundRequestHub> 
     /// <param name="playerState">Текущее состояние плеера</param>
     public async Task NotifyPlayerStateChangedAsync(PlayerState playerState)
     {
-        await hubContext.Clients.Group(SoundRequestHub.AllPlayers).PlayerStateChange(playerState);
+        await hubContext.Clients.All.PlayerStateChange(playerState);
     }
 
     /// <summary>
@@ -22,7 +22,7 @@ public class InSignalRHubService(IHubContext<SoundRequestHub, ISoundRequestHub> 
     /// <param name="queue">Текущая очередь элементов</param>
     public async Task NotifyQueueChangedAsync(List<QueueItem> queue)
     {
-        await hubContext.Clients.Group(SoundRequestHub.AllPlayers).QueueChanged(queue);
+        await hubContext.Clients.All.QueueChanged(queue);
     }
 
     /// <summary>
