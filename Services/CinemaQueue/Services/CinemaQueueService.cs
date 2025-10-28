@@ -1,12 +1,13 @@
 ﻿using MARS.Server.Services.CinemaQueue.Entitys;
 using MARS.Server.Services.CinemaQueue.Interfaces;
+using MARS.Server.Services.Twitch;
 
 namespace MARS.Server.Services.CinemaQueue.Services;
 
 public class CinemaQueueService(
     ICinemaQueueRepository repository,
     ILogger<CinemaQueueService> logger,
-    IDbContextFactory<AppDbContext> dbFactory
+    TwitchUserEnsureService twitchUserEnsureService
 ) : ICinemaQueueService
 {
     public async Task<IEnumerable<CinemaMediaItemDto>> GetAllMediaItemsAsync(
@@ -111,19 +112,23 @@ public class CinemaQueueService(
         {
             try
             {
-                // Проверяем, существует ли пользователь в базе данных, если указан TwitchUserId
+                // Гарантируем наличие пользователя в TwitchUsers, если указан TwitchUserId
                 var validTwitchUserId = request.TwitchUserId;
                 if (!string.IsNullOrWhiteSpace(request.TwitchUserId))
                 {
-                    await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
-                    var userExists = await db
-                        .TwitchUsers.AsNoTracking()
-                        .AnyAsync(u => u.TwitchId == request.TwitchUserId, cancellationToken);
-
-                    if (!userExists)
+                    try
+                    {
+                        await twitchUserEnsureService.EnsureUserExistsAsync(
+                            request.TwitchUserId,
+                            cancellationToken: cancellationToken
+                        );
+                        validTwitchUserId = request.TwitchUserId;
+                    }
+                    catch (Exception ex)
                     {
                         logger.LogWarning(
-                            "Twitch user {UserId} not found in database, clearing TwitchUserId",
+                            ex,
+                            "Failed to ensure Twitch user {UserId} exists, clearing TwitchUserId",
                             request.TwitchUserId
                         );
                         validTwitchUserId = null;

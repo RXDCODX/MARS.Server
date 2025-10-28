@@ -1,11 +1,13 @@
 ﻿using MARS.Server.Services.SoundRequest.Entities;
+using MARS.Server.Services.Twitch;
 using MARS.Server.Services.Twitch.Entitys;
 
 namespace MARS.Server.Services.SoundRequest.Queue;
 
 public class SoundRequestUserQueue(
     IDbContextFactory<AppDbContext> contextFactory,
-    IHostApplicationLifetime lifetime
+    IHostApplicationLifetime lifetime,
+    TwitchUserEnsureService twitchUserEnsureService
 )
 {
     private readonly CancellationToken _cancellationToken = lifetime.ApplicationStopping;
@@ -71,6 +73,14 @@ public class SoundRequestUserQueue(
                 await dbContext.SaveChangesAsync(_cancellationToken);
                 trackId = track.Id;
             }
+
+            // Гарантируем наличие пользователя в TwitchUsers перед созданием QueueItem
+            await twitchUserEnsureService.EnsureUserExistsAsync(
+                requestedByTwitchId,
+                requestedByTwitchUser?.UserLogin,
+                requestedByTwitchUser?.DisplayName,
+                _cancellationToken
+            );
 
             // Получаем максимальный порядок в очереди
             var maxOrder =

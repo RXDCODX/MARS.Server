@@ -1,4 +1,5 @@
-﻿using MARS.Server.Services.Twitch.Rewards;
+﻿using MARS.Server.Services.Twitch;
+using MARS.Server.Services.Twitch.Rewards;
 using MARS.Server.Services.WaifuRoll.helpers;
 using MARS.Server.Services.WaifuRoll.Interfaces;
 using MARS.Server.Services.WaifuRoll.Models;
@@ -9,7 +10,8 @@ namespace MARS.Server.Services.WaifuRoll;
 public class WaifuRollService(
     IOptions<ShikimoriClientOptions> options,
     IDbContextFactory<AppDbContext> factory,
-    WaifuRollEnsurenceService waifuDbHelper
+    WaifuRollEnsurenceService waifuDbHelper,
+    TwitchUserEnsureService twitchUserEnsureService
 ) : BackgroundService, IWaifuRollService
 {
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
@@ -69,6 +71,9 @@ public class WaifuRollService(
             }
             else
             {
+                // Гарантируем наличие пользователя в TwitchUsers перед созданием Host
+                await twitchUserEnsureService.EnsureUserExistsAsync(id, displayName, displayName);
+
                 cd = new HostCoolDown { HostId = id };
 
                 host = new Host

@@ -1,11 +1,13 @@
-﻿using MARS.Server.Services.WaifuRoll.Entitys.Interfaces;
+﻿using MARS.Server.Services.Twitch;
+using MARS.Server.Services.WaifuRoll.Entitys.Interfaces;
 using MARS.Server.Services.WaifuRoll.Models;
 
 namespace MARS.Server.Services.WaifuRoll;
 
 public class WaifuRollGuaranteeService(
     IDbContextFactory<AppDbContext> dbContextFactory,
-    ILogger<WaifuRollGuaranteeService> logger
+    ILogger<WaifuRollGuaranteeService> logger,
+    TwitchUserEnsureService twitchUserEnsureService
 ) : IWaifuRollGuaranteeService
 {
     // Константы для настройки системы гарантов
@@ -126,6 +128,9 @@ public class WaifuRollGuaranteeService(
 
                 if (guarantee == null)
                 {
+                    // Гарантируем наличие пользователя в TwitchUsers перед созданием WaifuRollGuarantee
+                    await twitchUserEnsureService.EnsureUserExistsAsync(twitchId);
+
                     // Создаем новую запись для пользователя
                     guarantee = new WaifuRollGuarantee
                     {

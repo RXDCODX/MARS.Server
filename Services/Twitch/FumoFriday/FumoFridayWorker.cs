@@ -13,7 +13,8 @@ public class FumoFridayWorker(
     IHostApplicationLifetime hostApplicationLifetime,
     ITwitchClient twitchClient,
     ITwitchAPI twitchApi,
-    EventSubWebsocketClient wsClient
+    EventSubWebsocketClient wsClient,
+    TwitchUserEnsureService twitchUserEnsureService
 ) : BackgroundService, ITwitchReward
 {
     public bool IsServiceActive { get; set; } = true;
@@ -37,7 +38,9 @@ public class FumoFridayWorker(
         }
 
         var name = e.ChatMessage.DisplayName;
+        var userName = e.ChatMessage.Username;
         var id = e.ChatMessage.UserId;
+        var colorHex = e.ChatMessage.ColorHex;
         var now = DateTimeOffset.Now;
 
         if (!_users.Contains(id) && e.ChatMessage.Channel == TwitchExstension.Channel)
@@ -57,9 +60,9 @@ public class FumoFridayWorker(
                         && now.DayOfWeek == DayOfWeek.Friday
                     )
                     {
-                        var color = string.IsNullOrWhiteSpace(e.ChatMessage.ColorHex)
-                            ? (await GetColor(e.ChatMessage.UserId))
-                            : e.ChatMessage.ColorHex;
+                        var color = string.IsNullOrWhiteSpace(colorHex)
+                            ? (await GetColor(id))
+                            : colorHex;
                         await alertsHub.Clients.All.FumoFriday(name, color);
                         _users.Add(id);
 
@@ -93,6 +96,7 @@ public class FumoFridayWorker(
                 if (args.Payload.Event.Reward.Cost == Cost)
                 {
                     var name = args.Payload.Event.UserName;
+                    var userLogin = args.Payload.Event.UserLogin;
                     var id = args.Payload.Event.UserId;
 
                     if (_users.Contains(name))
@@ -118,6 +122,14 @@ public class FumoFridayWorker(
 
                         if (!isExists)
                         {
+                            // Гарантируем наличие пользователя в TwitchUsers перед созданием FumoUser
+                            await twitchUserEnsureService.EnsureUserExistsAsync(
+                                id,
+                                userLogin,
+                                name,
+                                _cancellationToken
+                            );
+
                             var host = new FumoUser()
                             {
                                 TwitchId = id,

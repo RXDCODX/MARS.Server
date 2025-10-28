@@ -6,7 +6,8 @@ namespace MARS.Server.Services.Twitch.MiniGamesStats;
 public class TekkenVictorinaLeaderbord(
     IDbContextFactory<AppDbContext> factory,
     IHostApplicationLifetime lifetime,
-    ITwitchClient client
+    ITwitchClient client,
+    TwitchUserEnsureService twitchUserEnsureService
 ) : BackgroundService
 {
     private readonly CancellationToken _cancellationToken = lifetime.ApplicationStopping;
@@ -93,6 +94,12 @@ public class TekkenVictorinaLeaderbord(
         }
         else
         {
+            // Гарантируем наличие пользователя в TwitchUsers перед созданием TwitchLeaderboardUser
+            await twitchUserEnsureService.EnsureUserExistsAsync(
+                twitchId,
+                cancellationToken: _cancellationToken
+            );
+
             var newUser = new TwitchLeaderboardUser()
             {
                 TwitchId = twitchId,

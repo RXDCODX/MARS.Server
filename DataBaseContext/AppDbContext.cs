@@ -1,28 +1,21 @@
 ﻿using MARS.Server.ApplicationState;
 using MARS.Server.Services._365Genius.Entitys;
-using MARS.Server.Services.CinemaQueue.Entitys;
 using MARS.Server.Services.Framedata.Entitys;
 using MARS.Server.Services.Framedata.Entitys.Pending;
-using MARS.Server.Services.Honkai.Entitys;
 using MARS.Server.Services.RandomMem.Entity;
 using MARS.Server.Services.Scoreboard.Entitys;
 using MARS.Server.Services.ServiceManager.Entitys;
 using MARS.Server.Services.SoundRequest.Entities;
 using MARS.Server.Services.StreamAcrhive_UNUSED.Entitys;
 using MARS.Server.Services.Twitch.ClientMessages.AutoMessages.Entitys;
-using MARS.Server.Services.Twitch.Entitys;
-using MARS.Server.Services.Twitch.FumoFriday.Entitys;
 using MARS.Server.Services.Twitch.HelloVideos.Entitys;
 using MARS.Server.Services.Twitch.Management.Entitys;
-using MARS.Server.Services.Twitch.MiniGamesStats.Entitys;
 using MARS.Server.Services.Twitch.Rewards.ChannelRewards.Entities;
-using MARS.Server.Services.Twitch.TwitchFollowers.Entitys;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using WaifuRollGuarantee = MARS.Server.Services.WaifuRoll.Entitys.WaifuRollGuarantee;
 
 namespace MARS.Server.DataBaseContext;
 
-public sealed class AppDbContext : DbContext
+public sealed partial class AppDbContext : DbContext
 {
     private static readonly Lock Locker = new();
     private static bool _isMigrated;
@@ -49,67 +42,50 @@ public sealed class AppDbContext : DbContext
         }
     }
 
-    public DbSet<TwitchUser> TwitchUsers { get; set; } = null!;
-    public DbSet<Host> Hosts { get; set; } = null!;
+    // Таблицы Twitch Users вынесены в TwitchUsersDbContext.cs
+
     public DbSet<Waifu> Waifus { get; set; } = null!;
     public DbSet<TelegramUser> TelegramUsers { get; set; } = null!;
     public DbSet<MediaInfo> Alerts { get; set; } = null!;
-    public DbSet<HostCoolDown> HostsCoolDowns { get; set; } = null!;
-    public DbSet<HostAutoHello> HostsGreetings { get; set; } = null!;
     public DbSet<AutoMessage> AutoMessages { get; set; } = null!;
     public DbSet<TokenInfo> TwitchToken { get; set; } = null!;
     public DbSet<MemeOrder> RandomMemeOrder { get; set; } = null!;
     public DbSet<MemeType> RandomMemeType { get; set; } = null!;
-    public DbSet<FumoUser> FumoUsers { get; set; } = null!;
-    public DbSet<HelloVideosUsers> HelloVideosUsers { get; set; } = null!;
     public DbSet<Video365> Videos365 { get; set; } = null!;
     public DbSet<TekkenCharacter> TekkenCharacters { get; set; } = null!;
     public DbSet<Move> TekkenMoves { get; set; } = null!;
     public DbSet<TekkenCharacterPending> TekkenCharactersPending { get; set; } = null!;
     public DbSet<MovePending> TekkenMovesPending { get; set; } = null!;
-    public DbSet<TwitchLeaderboardUser> TwitchLeaderboardUsers { get; set; } = null!;
     public DbSet<TelegramUpdateReceiverOffset> TelegramUpdateReceiverOffset { get; set; } = null!;
     public DbSet<WTelegramAlloweedChannel> WTelegramAlloweedChannels { get; set; } = null!;
     public DbSet<RootState> ApplicationState { get; set; } = null!;
 
     // SoundRequest - новая структура
     public DbSet<BaseTrackInfo> SoundRequestBaseTrackInfos { get; set; } = null!;
-    public DbSet<QueueItem> SoundRequestQueueItems { get; set; } = null!;
     public DbSet<PlayerState> SoundRequestPlayerState { get; set; } = null!;
 
     public DbSet<ServiceState> ServiceStates { get; set; } = null!;
     public DbSet<ScoreboardState> ScoreboardStates { get; set; } = null!;
     public DbSet<ScoreboardPlayer> ScoreboardPlayers { get; set; } = null!;
     public DbSet<ScoreboardLayout> ScoreboardLayouts { get; set; } = null!;
-    public DbSet<DailyAutoMarkupUser> HonkaiMarkupUser { get; set; } = null!;
-    public DbSet<WaifuRollGuarantee> WaifuRollGuarantees { get; set; } = null!;
-    public DbSet<CinemaMediaItem> CinemaQueue { get; set; } = null!;
-    public DbSet<FollowerInfo> FollowersEntitys { get; set; } = null!;
     public DbSet<StreamArchiveConfig> StreamArchiveConfigs { get; set; } = null!;
     public DbSet<StreamArchiveFile> StreamArchiveFiles { get; set; } = null!;
     public DbSet<StreamArchiveFileChunk> StreamArchiveFileChunks { get; set; } = null!;
     public DbSet<ChannelRewardRecord> ChannelRewards { get; set; } = null!;
 
+    /// <summary>
+    /// Partial метод для конфигурации таблиц, связанных с TwitchUser (реализован в TwitchUsersDbContext.cs)
+    /// </summary>
+    partial void OnModelCreatingTwitchUsersPartial(ModelBuilder modelBuilder);
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
 
-        modelBuilder
-            .Entity<Host>()
-            .UseTpcMappingStrategy()
-            .HasOne(h => h.HostGreetings)
-            .WithOne(hg => hg.Host)
-            .HasForeignKey<HostAutoHello>(e => e.HostId)
-            .OnDelete(DeleteBehavior.NoAction);
+        // Конфигурации для таблиц, связанных с TwitchUser
+        OnModelCreatingTwitchUsersPartial(modelBuilder);
 
-        modelBuilder
-            .Entity<Host>()
-            .UseTpcMappingStrategy()
-            .HasOne(h => h.HostCoolDown)
-            .WithOne(hcd => hcd.Host)
-            .HasForeignKey<HostCoolDown>(e => e.HostId)
-            .OnDelete(DeleteBehavior.NoAction);
-
+        // Конфигурация HelloVideosUsers -> MediaInfo (остальное в TwitchUsersDbContext)
         modelBuilder
             .Entity<HelloVideosUsers>()
             .HasOne(e => e.MediaInfo)
@@ -147,16 +123,8 @@ public sealed class AppDbContext : DbContext
         // BaseTrackInfo: уникальный индекс на URL
         modelBuilder.Entity<BaseTrackInfo>().HasIndex(t => t.Url).IsUnique();
 
-        // QueueItem: индекс на QueueOrder
+        // QueueItem: индекс на QueueOrder (связь с TwitchUser в TwitchUsersDbContext)
         modelBuilder.Entity<QueueItem>().HasIndex(qi => qi.QueueOrder);
-
-        // QueueItem: связь с TwitchUser
-        modelBuilder
-            .Entity<QueueItem>()
-            .HasOne(qi => qi.RequestedByTwitchUser)
-            .WithMany()
-            .HasForeignKey(qi => qi.RequestedByTwitchId)
-            .OnDelete(DeleteBehavior.Restrict);
 
         // PlayerState: связь с текущим QueueItem
         modelBuilder
@@ -326,22 +294,7 @@ public sealed class AppDbContext : DbContext
             .HasIndex(f => new { f.ConfigId, f.OriginalFilePath })
             .IsUnique();
 
-        // Конфигурация связей с TwitchUser
-        // Host -> TwitchUser (многие к одному)
-        modelBuilder
-            .Entity<Host>()
-            .HasOne(h => h.TwitchUser)
-            .WithMany()
-            .HasForeignKey(h => h.TwitchId)
-            .OnDelete(DeleteBehavior.Restrict);
-
-        // FollowerInfo -> TwitchUser (один к одному)
-        modelBuilder
-            .Entity<FollowerInfo>()
-            .HasOne(fi => fi.TwitchUser)
-            .WithOne()
-            .HasForeignKey<FollowerInfo>(fi => fi.UserId)
-            .OnDelete(DeleteBehavior.Restrict);
+        // Конфигурация связей с TwitchUser вынесена в TwitchUsersDbContext
 
         // Старая конфигурация PlayerState закомментирована - используется новая выше
         // modelBuilder

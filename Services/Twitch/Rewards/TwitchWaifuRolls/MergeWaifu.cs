@@ -19,7 +19,8 @@ public class MergeWaifu(
     IHostApplicationLifetime lifetime,
     WaifuRollEnsurenceService waifuDbHelper,
     IOptions<ShikimoriClientOptions> options,
-    EventSubWebsocketClient wsClient
+    EventSubWebsocketClient wsClient,
+    TwitchUserEnsureService twitchUserEnsureService
 ) : BackgroundService, ITwitchReward
 {
     private readonly CancellationToken _cancellationToken = lifetime.ApplicationStopping;
@@ -254,6 +255,14 @@ public class MergeWaifu(
                         return;
                     }
                 }
+
+                // Гарантируем наличие пользователя в TwitchUsers перед созданием Host
+                await twitchUserEnsureService.EnsureUserExistsAsync(
+                    twEvent.UserId,
+                    twEvent.UserLogin,
+                    twEvent.UserName,
+                    _cancellationToken
+                );
 
                 host = new Host
                 {
