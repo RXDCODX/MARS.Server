@@ -1,4 +1,5 @@
-﻿using MARS.Server.Services.Twitch.Management;
+﻿using System.Timers;
+using MARS.Server.Services.Twitch.Management;
 
 namespace MARS.Server.Services.Twitch.AutoInfoFetch;
 
@@ -8,55 +9,85 @@ public class AutoRewardInfoFetcher(
     TokenService tokenService
 ) : BackgroundService
 {
+    private Timer? _timer;
+    private CancellationToken _stoppingToken;
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        await Task.Factory.StartNew(
-            async () =>
-            {
-                while (!stoppingToken.IsCancellationRequested)
+        _stoppingToken = stoppingToken;
+
+        if (!stoppingToken.IsCancellationRequested)
+        {
+            await FetchRewardInfoAsync();
+
+            // Настройка таймера на 30 минут
+            _timer = new Timer(TimeSpan.FromMinutes(30).TotalMilliseconds);
+            _timer.Elapsed += OnTimerElapsed;
+            _timer.AutoReset = true;
+            _timer.Start();
+        }
+
+        // Ожидание отмены
+        await Task.CompletedTask;
+    }
+
+    private async void OnTimerElapsed(object? sender, ElapsedEventArgs e)
+    {
+        if (!_stoppingToken.IsCancellationRequested)
+        {
+            await FetchRewardInfoAsync();
+        }
+    }
+
+    private async Task FetchRewardInfoAsync()
+    {
+        try
+        {
+            await using var dbcontext = await factory.CreateDbContextAsync(_stoppingToken);
+
+            var emptyAlerts = dbcontext
+                .Alerts.AsNoTracking()
+                .AsEnumerable()
+                .Where(e =>
                 {
-                    await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
+                    var guid = e.MetaInfo.TwitchGuid;
 
-                    await using var dbcontext = await factory.CreateDbContextAsync(stoppingToken);
+                    return !guid.HasValue || guid == Guid.Empty || e.MetaInfo.TwitchPointsCost <= 0;
+                })
+                .ToList();
 
-                    var emptyAlerts = dbcontext
-                        .Alerts.AsNoTracking()
-                        .AsEnumerable()
-                        .Where(e =>
-                        {
-                            var guid = e.MetaInfo.TwitchGuid;
+            var twitchAlerts = await api.Helix.ChannelPoints.GetCustomRewardAsync(
+                TwitchExstension.ChannelId,
+                null,
+                false,
+                tokenService.Token?.AccessToken
+            );
 
-                            return !guid.HasValue
-                                || guid == Guid.Empty
-                                || e.MetaInfo.TwitchPointsCost <= 0;
-                        })
-                        .ToList();
-                    var twitchAlerts = await api.Helix.ChannelPoints.GetCustomRewardAsync(
-                        TwitchExstension.ChannelId,
-                        null,
-                        false,
-                        tokenService.Token?.AccessToken
-                    );
+            foreach (var info in emptyAlerts)
+            {
+                var firstAlert = twitchAlerts.Data.FirstOrDefault(e =>
+                    e.Cost == info.MetaInfo.TwitchPointsCost
+                );
 
-                    foreach (var info in emptyAlerts)
-                    {
-                        var firstAlert = twitchAlerts.Data.FirstOrDefault(e =>
-                            e.Cost == info.MetaInfo.TwitchPointsCost
-                        );
-
-                        if (firstAlert != default)
-                        {
-                            info.MetaInfo.TwitchGuid = Guid.Parse(firstAlert.Id);
-                            dbcontext.Alerts.Update(info);
-                        }
-                    }
-
-                    await dbcontext.SaveChangesAsync(stoppingToken);
-
-                    await Task.Delay(TimeSpan.FromMinutes(30), stoppingToken);
+                if (firstAlert != null)
+                {
+                    info.MetaInfo.TwitchGuid = Guid.Parse(firstAlert.Id);
+                    dbcontext.Alerts.Update(info);
                 }
-            },
-            TaskCreationOptions.LongRunning
-        );
+            }
+
+            await dbcontext.SaveChangesAsync(_stoppingToken);
+        }
+        catch (Exception)
+        {
+            // Игнорируем ошибки при отмене или других проблемах
+        }
+    }
+
+    public override void Dispose()
+    {
+        _timer?.Stop();
+        _timer?.Dispose();
+        base.Dispose();
     }
 }
