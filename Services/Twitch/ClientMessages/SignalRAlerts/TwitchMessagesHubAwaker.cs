@@ -52,16 +52,17 @@ public class TwitchMessagesHubAwaker(
                         .Where(info =>
                         {
                             var message = e.ChatMessage.Message.Trim();
-                            var words = info.TextInfo.TriggerWord?.Trim().SplitWithQuotes(); // Ваш метод для разделения с учетом кавычек
-                            var chatMessageWords = message.Split(
-                                ' ',
-                                StringSplitOptions.RemoveEmptyEntries
-                            );
-
+                            var words = info.TextInfo.TriggerWord?.Trim().SplitWithQuotes();
                             if (words is null || words.Length == 0)
                             {
                                 return false;
                             }
+
+                            // Ваш метод для разделения с учетом кавычек
+                            var chatMessageWords = message.Split(
+                                ' ',
+                                StringSplitOptions.RemoveEmptyEntries
+                            );
 
                             // Проверяем отдельные слова (обычный случай)
                             var singleWordMatch = chatMessageWords.Any(t =>

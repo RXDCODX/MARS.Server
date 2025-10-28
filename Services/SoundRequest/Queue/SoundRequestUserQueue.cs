@@ -77,9 +77,7 @@ public class SoundRequestUserQueue(
             // Гарантируем наличие пользователя в TwitchUsers перед созданием QueueItem
             await twitchUserEnsureService.EnsureUserExistsAsync(
                 requestedByTwitchId,
-                requestedByTwitchUser?.UserLogin,
-                requestedByTwitchUser?.DisplayName,
-                _cancellationToken
+                cancellationToken: _cancellationToken
             );
 
             // Получаем максимальный порядок в очереди

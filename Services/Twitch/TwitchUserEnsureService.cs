@@ -1,7 +1,9 @@
 ﻿using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.Twitch.TwitchFollowers;
+using TwitchLib.Client.Events;
 using TwitchLib.Client.Models;
+using TwitchLib.EventSub.Core.EventArgs.Channel;
 using User = TwitchLib.Api.Helix.Models.Users.GetUsers.User;
 
 namespace MARS.Server.Services.Twitch;
@@ -18,8 +20,7 @@ public class TwitchUserEnsureService(
 )
 {
     /// <summary>
-    /// Гарантирует наличие пользователя в БД. Если пользователя нет - создает его.
-    /// Этот метод является thread-safe и идемпотентным.
+    /// Гарантирует наличие пользователя в БД из ChatMessage.
     /// </summary>
     /// <param name="chatMessage">Сообщение из чата с информацией о пользователе</param>
     /// <param name="cancellationToken">Токен отмены</param>
@@ -29,38 +30,13 @@ public class TwitchUserEnsureService(
         CancellationToken cancellationToken = default
     )
     {
-        TwitchUser? result = null;
-
-        if (!string.IsNullOrWhiteSpace(chatMessage.UserId))
+        var twitchUser = TwitchUser.FromChatMessage(chatMessage);
+        if (twitchUser == null)
         {
-            try
-            {
-                await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
-
-                // Пытаемся найти существующего пользователя
-                var existingUser = await db.TwitchUsers.FindAsync(
-                    [chatMessage.UserId],
-                    cancellationToken: cancellationToken
-                );
-
-                if (existingUser != null)
-                {
-                    result = existingUser;
-                }
-                else
-                {
-                    // Создаем нового пользователя
-                    var newUser = await CreateUserAsync(db, chatMessage, cancellationToken);
-                    result = newUser;
-                }
-            }
-            catch (Exception ex)
-            {
-                logger.LogException(ex);
-            }
+            throw new ArgumentException("Invalid ChatMessage data", nameof(chatMessage));
         }
 
-        return result!;
+        return await EnsureUserExistsAsync(twitchUser, cancellationToken);
     }
 
     /// <summary>
@@ -79,9 +55,123 @@ public class TwitchUserEnsureService(
         CancellationToken cancellationToken = default
     )
     {
-        TwitchUser? result = null;
+        var twitchUser = TwitchUser.FromId(twitchId, userName, displayName);
+        if (twitchUser == null)
+        {
+            throw new ArgumentException("Invalid TwitchId", nameof(twitchId));
+        }
 
-        if (!string.IsNullOrWhiteSpace(twitchId) && IsValidTwitchId(twitchId))
+        return await EnsureUserExistsAsync(twitchUser, cancellationToken);
+    }
+
+    /// <summary>
+    /// Обогащает данные пользователя информацией из Twitch API
+    /// </summary>
+    private async Task<TwitchUser> EnrichUserDataFromApiAsync(
+        TwitchUser twitchUser,
+        CancellationToken cancellationToken = default
+    )
+    {
+        if (tokenService.Token?.AccessToken != null)
+        {
+            try
+            {
+                var userInfoTask = userInfoService.GetUserInfoAsync(twitchUser.TwitchId);
+                var chatColorTask = userInfoService.GetUserChatColorAsync(twitchUser.TwitchId);
+
+                await Task.WhenAll(userInfoTask, chatColorTask);
+
+                var apiUser = await userInfoTask;
+                var chatColor = await chatColorTask;
+
+                // Обогащаем данные из API, если они не были установлены
+                twitchUser.ProfileImageUrl ??= apiUser?.ProfileImageUrl;
+                twitchUser.ChatColor ??= chatColor;
+
+                if (apiUser != null)
+                {
+                    // Обновляем логин и имя из API, если они были дефолтными
+                    if (twitchUser.UserLogin.StartsWith("user_"))
+                    {
+                        twitchUser.UserLogin = apiUser.Login ?? twitchUser.UserLogin;
+                    }
+                    if (twitchUser.DisplayName.StartsWith("User"))
+                    {
+                        twitchUser.DisplayName = apiUser.DisplayName ?? twitchUser.DisplayName;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(
+                    ex,
+                    "Не удалось обогатить данные из API для пользователя {TwitchId}",
+                    twitchUser.TwitchId
+                );
+            }
+        }
+
+        return twitchUser;
+    }
+
+    /// <summary>
+    /// Гарантирует наличие пользователя в БД из OnMessageReceivedArgs.
+    /// </summary>
+    /// <param name="args">Аргументы события получения сообщения</param>
+    /// <param name="cancellationToken">Токен отмены</param>
+    /// <returns>TwitchUser из БД</returns>
+    public async Task<TwitchUser> EnsureUserExistsAsync(
+        OnMessageReceivedArgs args,
+        CancellationToken cancellationToken = default
+    )
+    {
+        var twitchUser = TwitchUser.FromOnMessageReceivedArgs(args);
+        if (twitchUser == null)
+        {
+            throw new ArgumentException("Invalid OnMessageReceivedArgs data", nameof(args));
+        }
+
+        return await EnsureUserExistsAsync(twitchUser, cancellationToken);
+    }
+
+    /// <summary>
+    /// Гарантирует наличие пользователя в БД из ChannelPointsCustomRewardRedemptionArgs.
+    /// </summary>
+    /// <param name="args">Аргументы события использования награды за баллы канала</param>
+    /// <param name="cancellationToken">Токен отмены</param>
+    /// <returns>TwitchUser из БД</returns>
+    public async Task<TwitchUser> EnsureUserExistsAsync(
+        ChannelPointsCustomRewardRedemptionArgs args,
+        CancellationToken cancellationToken = default
+    )
+    {
+        var twitchUser = TwitchUser.FromChannelPointsCustomRewardRedemptionArgs(args);
+        if (twitchUser == null)
+        {
+            throw new ArgumentException(
+                "Invalid ChannelPointsCustomRewardRedemptionArgs data",
+                nameof(args)
+            );
+        }
+
+        return await EnsureUserExistsAsync(twitchUser, cancellationToken);
+    }
+
+    /// <summary>
+    /// Гарантирует наличие пользователя в БД из готовой сущности TwitchUser.
+    /// Если пользователь уже существует - обновляет его данные, иначе создает нового.
+    /// </summary>
+    /// <param name="twitchUser">Готовая сущность TwitchUser</param>
+    /// <param name="cancellationToken">Токен отмены</param>
+    /// <returns>TwitchUser из БД</returns>
+    public async Task<TwitchUser> EnsureUserExistsAsync(
+        TwitchUser? twitchUser,
+        CancellationToken cancellationToken = default
+    )
+    {
+        TwitchUser? result = null!;
+
+        if (twitchUser != null && !string.IsNullOrWhiteSpace(twitchUser.TwitchId))
         {
             try
             {
@@ -89,195 +179,63 @@ public class TwitchUserEnsureService(
 
                 // Пытаемся найти существующего пользователя
                 var existingUser = await db.TwitchUsers.FindAsync(
-                    [twitchId],
+                    [twitchUser.TwitchId],
                     cancellationToken: cancellationToken
                 );
 
                 if (existingUser != null)
                 {
+                    // Обновляем существующего пользователя
+                    existingUser.UserLogin = twitchUser.UserLogin;
+                    existingUser.DisplayName = twitchUser.DisplayName;
+                    existingUser.ProfileImageUrl =
+                        twitchUser.ProfileImageUrl ?? existingUser.ProfileImageUrl;
+                    existingUser.ChatColor = twitchUser.ChatColor ?? existingUser.ChatColor;
+                    existingUser.IsModerator = twitchUser.IsModerator;
+                    existingUser.IsVip = twitchUser.IsVip;
+                    existingUser.LastUpdated = DateTime.UtcNow;
+
+                    await db.SaveChangesAsync(cancellationToken);
+
+                    logger.LogInformation(
+                        "Обновлен пользователь Twitch: {UserName} (ID: {UserId})",
+                        existingUser.UserLogin,
+                        existingUser.TwitchId
+                    );
+
                     result = existingUser;
                 }
                 else
                 {
-                    // Создаем нового пользователя
-                    var newUser = await CreateUserByIdAsync(
-                        db,
-                        twitchId,
-                        userName,
-                        displayName,
+                    // Обогащаем данные из API перед созданием
+                    var enrichedUser = await EnrichUserDataFromApiAsync(
+                        twitchUser,
                         cancellationToken
                     );
-                    result = newUser;
+
+                    logger.LogInformation(
+                        "Создание нового пользователя Twitch: {UserName} (ID: {UserId})",
+                        enrichedUser.UserLogin,
+                        enrichedUser.TwitchId
+                    );
+
+                    db.TwitchUsers.Add(enrichedUser);
+                    await db.SaveChangesAsync(cancellationToken);
+
+                    logger.LogInformation(
+                        "Создан новый пользователь Twitch: {UserName} (ID: {UserId}), Avatar: {Avatar}",
+                        enrichedUser.UserLogin,
+                        enrichedUser.TwitchId,
+                        enrichedUser.ProfileImageUrl ?? "null"
+                    );
+
+                    result = enrichedUser;
                 }
             }
             catch (Exception ex)
             {
                 logger.LogException(ex);
             }
-        }
-
-        return result!;
-    }
-
-    /// <summary>
-    /// Проверяет, является ли TwitchId валидным (должен быть числовым)
-    /// </summary>
-    private static bool IsValidTwitchId(string twitchId)
-    {
-        // TwitchId должен быть числовым (не GUID или другая строка)
-        return !string.IsNullOrWhiteSpace(twitchId) && long.TryParse(twitchId, out _);
-    }
-
-    /// <summary>
-    /// Создает нового пользователя из ChatMessage
-    /// </summary>
-    private async Task<TwitchUser> CreateUserAsync(
-        AppDbContext db,
-        ChatMessage chatMessage,
-        CancellationToken cancellationToken = default
-    )
-    {
-        TwitchUser result = null!;
-
-        if (!string.IsNullOrWhiteSpace(chatMessage.UserId))
-        {
-            var userId = chatMessage.UserId;
-            var userName = chatMessage.Username;
-            var displayName = chatMessage.DisplayName;
-
-            logger.LogInformation(
-                "Создание нового пользователя Twitch: {UserName} (ID: {UserId})",
-                userName,
-                userId
-            );
-
-            // Получаем дополнительную информацию из API
-            User? apiUser = null;
-            string? chatColor = null;
-
-            if (tokenService.Token?.AccessToken != null)
-            {
-                try
-                {
-                    var userInfoTask = userInfoService.GetUserInfoAsync(userId);
-                    var chatColorTask = userInfoService.GetUserChatColorAsync(userId);
-
-                    await Task.WhenAll(userInfoTask, chatColorTask);
-
-                    apiUser = await userInfoTask;
-                    chatColor = await chatColorTask;
-                }
-                catch (Exception ex)
-                {
-                    logger.LogWarning(
-                        ex,
-                        "Не удалось получить информацию из API для пользователя {UserId}",
-                        userId
-                    );
-                }
-            }
-
-            // Создаем пользователя
-            var newUser = new TwitchUser
-            {
-                TwitchId = userId,
-                UserLogin = userName,
-                DisplayName = displayName,
-                IsModerator = chatMessage.IsModerator,
-                IsVip = chatMessage.IsVip,
-                ChatColor = chatColor ?? chatMessage.ColorHex,
-                ProfileImageUrl = apiUser?.ProfileImageUrl,
-                CreatedAt = DateTime.UtcNow,
-                LastUpdated = DateTime.UtcNow,
-            };
-
-            db.TwitchUsers.Add(newUser);
-            await db.SaveChangesAsync(cancellationToken);
-
-            logger.LogInformation(
-                "Пользователь Twitch создан: {UserName} (ID: {UserId}), Avatar: {Avatar}",
-                userName,
-                userId,
-                apiUser?.ProfileImageUrl ?? "null"
-            );
-
-            result = newUser;
-        }
-
-        return result;
-    }
-
-    /// <summary>
-    /// Создает нового пользователя только по TwitchId с попыткой получения данных из API
-    /// </summary>
-    private async Task<TwitchUser> CreateUserByIdAsync(
-        AppDbContext db,
-        string twitchId,
-        string? userName = null,
-        string? displayName = null,
-        CancellationToken cancellationToken = default
-    )
-    {
-        TwitchUser result = null!;
-
-        if (!string.IsNullOrWhiteSpace(twitchId))
-        {
-            logger.LogInformation(
-                "Создание нового пользователя Twitch по ID: {TwitchId}",
-                twitchId
-            );
-
-            // Пытаемся получить информацию из API
-            User? apiUser = null;
-            string? chatColor = null;
-
-            if (tokenService.Token?.AccessToken != null)
-            {
-                try
-                {
-                    var userInfoTask = userInfoService.GetUserInfoAsync(twitchId);
-                    var chatColorTask = userInfoService.GetUserChatColorAsync(twitchId);
-
-                    await Task.WhenAll(userInfoTask, chatColorTask);
-
-                    apiUser = await userInfoTask;
-                    chatColor = await chatColorTask;
-                }
-                catch (Exception ex)
-                {
-                    logger.LogWarning(
-                        ex,
-                        "Не удалось получить информацию из API для пользователя {TwitchId}",
-                        twitchId
-                    );
-                }
-            }
-
-            // Создаем пользователя с доступными данными
-            var newUser = new TwitchUser
-            {
-                TwitchId = twitchId,
-                UserLogin = userName ?? apiUser?.Login ?? $"user_{twitchId}",
-                DisplayName = displayName ?? apiUser?.DisplayName ?? $"User{twitchId}",
-                IsModerator = false,
-                IsVip = false,
-                ChatColor = chatColor,
-                ProfileImageUrl = apiUser?.ProfileImageUrl,
-                CreatedAt = DateTime.UtcNow,
-                LastUpdated = DateTime.UtcNow,
-            };
-
-            db.TwitchUsers.Add(newUser);
-            await db.SaveChangesAsync(cancellationToken);
-
-            logger.LogInformation(
-                "Пользователь Twitch создан: {UserLogin} (ID: {TwitchId}), Avatar: {Avatar}",
-                newUser.UserLogin,
-                twitchId,
-                apiUser?.ProfileImageUrl ?? "null"
-            );
-
-            result = newUser;
         }
 
         return result;

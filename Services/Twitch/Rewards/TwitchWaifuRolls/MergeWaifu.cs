@@ -257,12 +257,7 @@ public class MergeWaifu(
                 }
 
                 // Гарантируем наличие пользователя в TwitchUsers перед созданием Host
-                await twitchUserEnsureService.EnsureUserExistsAsync(
-                    twEvent.UserId,
-                    twEvent.UserLogin,
-                    twEvent.UserName,
-                    _cancellationToken
-                );
+                await twitchUserEnsureService.EnsureUserExistsAsync(args, _cancellationToken);
 
                 host = new Host
                 {
@@ -319,6 +314,12 @@ public class MergeWaifu(
                 {
                     dbContext.Waifus.Update(waifu);
                     dbContext.Hosts.Update(host);
+                    await twitchUserEnsureService.EnsureUserExistsAsync(
+                        host.TwitchId,
+                        host.TwitchUser?.UserLogin,
+                        host.TwitchUser?.DisplayName,
+                        _cancellationToken
+                    );
                 }
 
                 await dbContext.SaveChangesAsync(_cancellationToken);

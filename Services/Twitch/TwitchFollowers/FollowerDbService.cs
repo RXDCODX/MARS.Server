@@ -7,6 +7,7 @@ namespace MARS.Server.Services.Twitch.TwitchFollowers;
 /// </summary>
 public class FollowerDbService(
     IDbContextFactory<AppDbContext> factory,
+    TwitchUserEnsureService ensureService,
     ILogger<FollowerDbService> logger
 )
 {
@@ -88,6 +89,12 @@ public class FollowerDbService(
                 context.FollowersEntitys.Add(followerInfo);
             }
 
+            await ensureService.EnsureUserExistsAsync(
+                followerInfo.UserId,
+                followerInfo.TwitchUser?.UserLogin,
+                followerInfo.TwitchUser?.DisplayName
+            );
+
             await context.SaveChangesAsync();
             return true;
         }
@@ -140,6 +147,12 @@ public class FollowerDbService(
                 {
                     context.FollowersEntitys.Add(followerInfo);
                 }
+
+                await ensureService.EnsureUserExistsAsync(
+                    followerInfo.UserId,
+                    followerInfo.TwitchUser?.UserLogin,
+                    followerInfo.TwitchUser?.DisplayName
+                );
             }
 
             savedCount = await context.SaveChangesAsync();

@@ -355,7 +355,8 @@ public static class StartupEstensions
         services.AddAutoMessagesService();
 
         // Регистрируем сервисы для работы с пользователями Twitch
-        services.AddScoped<TwitchUserEnsureService>();
+        // Singleton безопасен, т.к. сервис использует IDbContextFactory и не хранит состояние
+        services.AddSingleton<TwitchUserEnsureService>();
 
         return services;
     }

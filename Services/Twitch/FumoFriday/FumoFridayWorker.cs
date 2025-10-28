@@ -38,7 +38,6 @@ public class FumoFridayWorker(
         }
 
         var name = e.ChatMessage.DisplayName;
-        var userName = e.ChatMessage.Username;
         var id = e.ChatMessage.UserId;
         var colorHex = e.ChatMessage.ColorHex;
         var now = DateTimeOffset.Now;
@@ -96,7 +95,6 @@ public class FumoFridayWorker(
                 if (args.Payload.Event.Reward.Cost == Cost)
                 {
                     var name = args.Payload.Event.UserName;
-                    var userLogin = args.Payload.Event.UserLogin;
                     var id = args.Payload.Event.UserId;
 
                     if (_users.Contains(name))
@@ -124,9 +122,7 @@ public class FumoFridayWorker(
                         {
                             // Гарантируем наличие пользователя в TwitchUsers перед созданием FumoUser
                             await twitchUserEnsureService.EnsureUserExistsAsync(
-                                id,
-                                userLogin,
-                                name,
+                                args,
                                 _cancellationToken
                             );
 
