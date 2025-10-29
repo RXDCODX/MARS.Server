@@ -76,16 +76,20 @@ public class SoundRequestUserQueue(
             // Гарантируем наличие пользователя в TwitchUsers перед созданием QueueItem
             await twitchUserEnsureService.EnsureUserExistsAsync(
                 requestedByTwitchId,
-                requestedByTwitchUser.UserLogin,
-                requestedByTwitchUser.DisplayName,
                 cancellationToken: _cancellationToken
             );
 
             // Получаем максимальный QueueOrder среди элементов очереди (>= 0)
-            var maxOrder = await dbContext
+            var isQueueItemsExists = await dbContext
                 .SoundRequestQueueItems.AsNoTracking()
-                .Where(e => e.QueueOrder >= 0)
-                .MaxAsync(e => e.QueueOrder, cancellationToken: _cancellationToken);
+                .AnyAsync(cancellationToken: _cancellationToken);
+
+            var maxOrder = isQueueItemsExists
+                ? await dbContext
+                    .SoundRequestQueueItems.AsNoTracking()
+                    .Where(e => e.QueueOrder >= 0)
+                    .MaxAsync(e => e.QueueOrder, cancellationToken: _cancellationToken)
+                : -1;
 
             // Создаем элемент очереди с QueueOrder = maxOrder + 1
             var queueItem = new QueueItem
@@ -282,8 +286,6 @@ public class SoundRequestUserQueue(
             // Гарантируем наличие пользователя в TwitchUsers
             await twitchUserEnsureService.EnsureUserExistsAsync(
                 requestedByTwitchId,
-                requestedByTwitchUser.UserLogin,
-                requestedByTwitchUser.DisplayName,
                 cancellationToken: _cancellationToken
             );
 

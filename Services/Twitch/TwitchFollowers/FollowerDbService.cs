@@ -1,4 +1,5 @@
 ﻿using MARS.Server.Services.Twitch.TwitchFollowers.Entitys;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace MARS.Server.Services.Twitch.TwitchFollowers;
 
@@ -20,7 +21,10 @@ public class FollowerDbService(
         try
         {
             await using var context = await factory.CreateDbContextAsync();
-            var dbEntities = await context.FollowersEntitys.AsNoTracking().ToListAsync();
+            var dbEntities = await context
+                .FollowersEntitys.Include(e => e.TwitchUser)
+                .AsNoTracking()
+                .ToListAsync();
 
             return [.. dbEntities];
         }
@@ -47,7 +51,8 @@ public class FollowerDbService(
         {
             await using var context = await factory.CreateDbContextAsync();
             var dbEntity = await context
-                .FollowersEntitys.AsNoTracking()
+                .FollowersEntitys.Include(e => e.TwitchUser)
+                .AsNoTracking()
                 .FirstOrDefaultAsync(f => f.UserId == userId);
 
             return dbEntity;
@@ -89,11 +94,7 @@ public class FollowerDbService(
                 context.FollowersEntitys.Add(followerInfo);
             }
 
-            await ensureService.EnsureUserExistsAsync(
-                followerInfo.UserId,
-                followerInfo.TwitchUser?.UserLogin,
-                followerInfo.TwitchUser?.DisplayName
-            );
+            await ensureService.EnsureUserExistsAsync(followerInfo.UserId);
 
             await context.SaveChangesAsync();
             return true;
@@ -127,6 +128,15 @@ public class FollowerDbService(
         {
             await using var context = await factory.CreateDbContextAsync();
             var userIds = followersInfo.Select(f => f.UserId).ToList();
+            var usersWithoutTwitchUserEntity = followersInfo
+                .Where(e => e.TwitchUser == null)
+                .Select(e => e.UserId)
+                .Distinct()
+                .ToList();
+            var usersWithEntity = followersInfo.ExceptBy(
+                usersWithoutTwitchUserEntity,
+                info => info.UserId
+            );
             var existingEntities = await context
                 .FollowersEntitys.AsNoTracking()
                 .Where(f => userIds.Contains(f.UserId))
@@ -147,12 +157,12 @@ public class FollowerDbService(
                 {
                     context.FollowersEntitys.Add(followerInfo);
                 }
+            }
 
-                await ensureService.EnsureUserExistsAsync(
-                    followerInfo.UserId,
-                    followerInfo.TwitchUser?.UserLogin,
-                    followerInfo.TwitchUser?.DisplayName
-                );
+            await ensureService.EnsureUsersExistsAsync(usersWithoutTwitchUserEntity);
+            foreach (FollowerInfo followerInfo in usersWithEntity)
+            {
+                await ensureService.EnsureUserExistsAsync(followerInfo.TwitchUser);
             }
 
             savedCount = await context.SaveChangesAsync();

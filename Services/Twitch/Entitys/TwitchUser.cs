@@ -5,11 +5,14 @@ using MARS.Server.Services.SoundRequest.Entities;
 using MARS.Server.Services.Twitch.FumoFriday.Entitys;
 using MARS.Server.Services.Twitch.HelloVideos.Entitys;
 using MARS.Server.Services.Twitch.MiniGamesStats.Entitys;
+using TwitchLib.Api.Helix.Models.Channels.GetChannelVIPs;
+using TwitchLib.Api.Helix.Models.Moderation.GetModerators;
 using TwitchLib.Client.Events;
 using TwitchLib.Client.Models;
 using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Core.Models.Chat;
 using ChatMessage = TwitchLib.Client.Models.ChatMessage;
+using User = TwitchLib.Api.Helix.Models.Users.GetUsers.User;
 
 namespace MARS.Server.Services.Twitch.Entitys;
 
@@ -202,34 +205,47 @@ public class TwitchUser
     /// <summary>
     /// Создает объект TwitchUser по минимальным данным (только ID и опционально логин/имя)
     /// </summary>
-    /// <param name="twitchId">ID пользователя Twitch</param>
-    /// <param name="userLogin">Логин пользователя (опционально)</param>
-    /// <param name="displayName">Отображаемое имя (опционально)</param>
+    /// <param name="user"></param>
     /// <returns>Объект TwitchUser или null, если TwitchId невалиден</returns>
-    public static TwitchUser? FromId(
-        string twitchId,
-        string? userLogin = null,
-        string? displayName = null
-    )
+    public static TwitchUser? FromUser(User user)
     {
-        TwitchUser? result = null;
-
-        if (!string.IsNullOrWhiteSpace(twitchId) && IsValidTwitchId(twitchId))
+        return new TwitchUser
         {
-            result = new TwitchUser
-            {
-                TwitchId = twitchId,
-                UserLogin = userLogin ?? $"user_{twitchId}",
-                DisplayName = displayName ?? userLogin ?? $"User{twitchId}",
-                IsModerator = false,
-                IsVip = false,
-                CreatedAt = DateTime.UtcNow,
-                LastUpdated = DateTime.UtcNow,
-            };
-        }
-
-        return result;
+            TwitchId = user.Id,
+            UserLogin = user.Login ?? $"user_{user.Id}",
+            DisplayName = user.DisplayName ?? user.Login ?? $"User{user.Id}",
+            ProfileImageUrl = user.ProfileImageUrl,
+            IsModerator = false,
+            IsVip = false,
+            CreatedAt = DateTime.UtcNow,
+            LastUpdated = DateTime.UtcNow,
+        };
     }
 
+    public static TwitchUser FromModerator(Moderator mod)
+    {
+        return new TwitchUser()
+        {
+            TwitchId = mod.UserId,
+            UserLogin = mod.UserLogin,
+            DisplayName = mod.UserName,
+            CreatedAt = DateTime.Now,
+            LastUpdated = DateTime.Now,
+            IsModerator = true,
+        };
+    }
+
+    public static TwitchUser? FromVip(ChannelVIPsResponseModel vip)
+    {
+        return new TwitchUser()
+        {
+            DisplayName = vip.UserName,
+            TwitchId = vip.UserId,
+            UserLogin = vip.UserLogin,
+            LastUpdated = DateTime.Now,
+            CreatedAt = DateTime.Now,
+            IsVip = true,
+        };
+    }
     #endregion
 }

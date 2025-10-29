@@ -96,12 +96,10 @@ public class AddNewWaifu(
                 }
 
                 var operationResult = await waifuRollService.AddNewWaifu(character);
-                var waifu = operationResult.Data.Waifu;
-                var isException = operationResult.Data.HasError;
 
-                if (waifu is null && !isException)
+                if (!operationResult.Success)
                 {
-                    const string template = "@{user}, такой персонаж уже есть! :-(";
+                    var template = $"@{{user}}, {operationResult.Message}";
                     var message = AnswersForTwitchRewards.ReplaceKeywordsInAnswer(
                         userName,
                         template
@@ -110,6 +108,8 @@ public class AddNewWaifu(
                     await client.SendMessageToMainTwitchAsync(message, logger);
                     return;
                 }
+
+                var waifu = operationResult.Data.Waifu;
 
                 if (waifu != null)
                 {
@@ -131,7 +131,7 @@ public class AddNewWaifu(
                         // Проверяем, выпал ли VIP статус
                         var vipDropped = await guaranteeService.CheckVipDropAsync(userId);
 
-                        if (vipDropped)
+                        if (vipDropped.Data.IsVipDropped)
                         {
                             if (tokenService.Token == null)
                             {

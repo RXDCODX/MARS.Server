@@ -16,6 +16,7 @@ public class TwitchUserEnsureService(
     IDbContextFactory<AppDbContext> dbFactory,
     TwitchUserInfoService userInfoService,
     TokenService tokenService,
+    ITwitchAPI api,
     ILogger<TwitchUserEnsureService> logger
 )
 {
@@ -44,24 +45,91 @@ public class TwitchUserEnsureService(
     /// Если пользователя нет - создает минимальную запись и пытается получить данные из API.
     /// </summary>
     /// <param name="twitchId">ID пользователя Twitch</param>
-    /// <param name="userName">Логин пользователя (опционально)</param>
-    /// <param name="displayName">Отображаемое имя (опционально)</param>
     /// <param name="cancellationToken">Токен отмены</param>
     /// <returns>TwitchUser из БД</returns>
     public async Task<TwitchUser> EnsureUserExistsAsync(
         string twitchId,
-        string? userName = null,
-        string? displayName = null,
         CancellationToken cancellationToken = default
     )
     {
-        var twitchUser = TwitchUser.FromId(twitchId, userName, displayName);
-        if (twitchUser == null)
+        var usersResponse = await api.Helix.Users.GetUsersAsync(
+            [twitchId],
+            null,
+            tokenService.Token?.AccessToken
+        );
+
+        if (usersResponse is { Users: { Length: > 0 } })
         {
-            throw new ArgumentException("Invalid TwitchId", nameof(twitchId));
+            var userInfo = usersResponse.Users.First();
+            var twitchUser = TwitchUser.FromUser(userInfo);
+            if (twitchUser == null)
+            {
+                throw new ArgumentException("Invalid TwitchId", nameof(twitchId));
+            }
+
+            return await EnsureUserExistsAsync(twitchUser, cancellationToken);
         }
 
-        return await EnsureUserExistsAsync(twitchUser, cancellationToken);
+        throw new ArgumentException();
+    }
+
+    /// <summary>
+    /// Гарантирует наличие пользователей в БД по TwitchId и опциональным данным.
+    /// Если пользователя нет - создает минимальную запись и пытается получить данные из API.
+    /// Разбивает список на чанки по 100 ID для соблюдения ограничений API.
+    /// </summary>
+    /// <param name="twitchIds">ID пользователей Twitch</param>
+    /// <param name="cancellationToken">Токен отмены</param>
+    /// <returns>OperationResult с результатом операции</returns>
+    public async Task<OperationResult> EnsureUsersExistsAsync(
+        List<string> twitchIds,
+        CancellationToken cancellationToken = default
+    )
+    {
+        var result = OperationResult.Ok();
+
+        if (twitchIds is { Count: > 0 })
+        {
+            var chunks = twitchIds.Chunk(100);
+
+            foreach (var chunk in chunks)
+            {
+                try
+                {
+                    var usersResponse = await api.Helix.Users.GetUsersAsync(
+                        chunk.ToList(),
+                        null,
+                        tokenService.Token?.AccessToken
+                    );
+
+                    if (usersResponse is { Users: { Length: > 0 } })
+                    {
+                        foreach (var user in usersResponse.Users)
+                        {
+                            var twitchUser = TwitchUser.FromUser(user);
+                            await EnsureUserExistsAsync(twitchUser, cancellationToken);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(
+                        ex,
+                        "Ошибка при обработке чанка пользователей Twitch (размер: {ChunkSize})",
+                        chunk.Length
+                    );
+                    result = OperationResult.Bad(
+                        $"Ошибка при обработке пользователей: {ex.Message}"
+                    );
+                }
+            }
+        }
+        else
+        {
+            result = OperationResult.Bad("Список ID пользователей пуст");
+        }
+
+        return result;
     }
 
     /// <summary>

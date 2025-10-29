@@ -1,4 +1,5 @@
 ﻿using System.Collections;
+using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.Twitch.TwitchFollowers.Entitys;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
@@ -207,7 +208,11 @@ public class RxdcodxViewersService(
                 tokenService.Token.AccessToken
             );
 
-            var moderators = result2.Data.Select(mod => new FollowerInfo { UserId = mod.UserId });
+            var moderators = result2.Data.Select(mod => new FollowerInfo
+            {
+                UserId = mod.UserId,
+                TwitchUser = TwitchUser.FromModerator(mod),
+            });
 
             foreach (FollowerInfo followerInfo in moderators)
             {
@@ -222,7 +227,11 @@ public class RxdcodxViewersService(
                 tokenService.Token.AccessToken
             );
 
-            var vips = result3.Data.Select(vip => new FollowerInfo { UserId = vip.UserId });
+            var vips = result3.Data.Select(vip => new FollowerInfo
+            {
+                UserId = vip.UserId,
+                TwitchUser = TwitchUser.FromVip(vip),
+            });
 
             foreach (FollowerInfo followerInfo in vips)
             {
@@ -241,32 +250,13 @@ public class RxdcodxViewersService(
                 );
 
                 pagination = result.Pagination?.Cursor ?? string.Empty;
-                var isSameInfo = false;
                 var followers = result.Data.Select(follower => new FollowerInfo
                 {
                     UserId = follower.UserId,
                 });
                 foreach (FollowerInfo followerInfo in followers)
                 {
-                    var isHaveSameInfo = list.Add(followerInfo);
-
-                    if (!isHaveSameInfo)
-                    {
-                        var userInfo = list.First(e => e.UserId == followerInfo.UserId);
-
-                        // Обновление TwitchUser выполняется отдельным сервисом
-                        // Просто проверяем наличие пользователя в списке
-                        if (userInfo.TwitchUser?.IsSimpleUser ?? true)
-                        {
-                            isSameInfo = true;
-                            break;
-                        }
-                    }
-                }
-
-                if (isSameInfo)
-                {
-                    break;
+                    list.Add(followerInfo);
                 }
             }
 

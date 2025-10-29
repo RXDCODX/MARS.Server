@@ -50,10 +50,7 @@ public class CommandsService(
                     await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
                     info = await db
                         .SoundRequestBaseTrackInfos.AsNoTracking()
-                        .FirstOrDefaultAsync(
-                            t => t.VideoId == videoId,
-                            cancellationToken
-                        );
+                        .FirstOrDefaultAsync(t => t.VideoId == videoId, cancellationToken);
                 }
 
                 // Если в БД не нашли, обращаемся к YouTube API
@@ -101,11 +98,12 @@ public class CommandsService(
                 );
                 var waitTimeText = FormatWaitTime(waitTime);
 
-                result = $"Добавлено: {info.Title} [{durationText}]{waitTimeText}";
+                result =
+                    $"@{user.DisplayName}, добавлено: {info.Title} [{durationText}]{waitTimeText}";
             }
             else
             {
-                result = "Не удалось распознать видео по ссылке";
+                result = $"не удалось распознать видео по ссылке";
             }
         }
         else

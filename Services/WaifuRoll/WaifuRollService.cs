@@ -72,7 +72,7 @@ public class WaifuRollService(
             else
             {
                 // Гарантируем наличие пользователя в TwitchUsers перед созданием Host
-                await twitchUserEnsureService.EnsureUserExistsAsync(id, displayName, displayName);
+                await twitchUserEnsureService.EnsureUserExistsAsync(id);
 
                 cd = new HostCoolDown { HostId = id };
 
@@ -146,15 +146,20 @@ public class WaifuRollService(
             {
                 await using var dbContext = await factory.CreateDbContextAsync();
 
-                var host = await dbContext.Hosts
-                    .Include(e => e.TwitchUser)
+                var host = await dbContext
+                    .Hosts.Include(e => e.TwitchUser)
                     .FirstOrDefaultAsync(e =>
-                        e.TwitchUser != null && EF.Functions.Like(e.TwitchUser.DisplayName, $"%{name}%")
+                        e.TwitchUser != null
+                        && EF.Functions.Like(e.TwitchUser.DisplayName, $"%{name}%")
                     );
 
                 if (host is not null)
                 {
-                    var waifu = await RollTheWaifu(host.TwitchId, host.TwitchUser?.DisplayName ?? string.Empty, true);
+                    var waifu = await RollTheWaifu(
+                        host.TwitchId,
+                        host.TwitchUser?.DisplayName ?? string.Empty,
+                        true
+                    );
 
                     var response = new TelegramRollWaifuResponse
                     {
@@ -200,7 +205,9 @@ public class WaifuRollService(
 
     public async Task<OperationResult<AddNewWaifuResponse>> AddNewWaifu(FullCharacter? character)
     {
-        var result = OperationResult<AddNewWaifuResponse>.Bad("Ошибка при добавлении новой вайфу");
+        var result = OperationResult<AddNewWaifuResponse>.Bad(
+            "ошибка при добавлении нового персонажа"
+        );
 
         if (character != null)
         {
@@ -211,7 +218,7 @@ public class WaifuRollService(
                 if (dbContext.Waifus.Any(e => e.ShikiId == character.Id.ToString()))
                 {
                     result = OperationResult<AddNewWaifuResponse>.Bad(
-                        "Вайфу уже существует в базе данных"
+                        "персонаж уже существует в базе данных"
                     );
                 }
                 else
@@ -238,7 +245,7 @@ public class WaifuRollService(
                     var response = new AddNewWaifuResponse { Waifu = waifu, HasError = false };
 
                     result = OperationResult<AddNewWaifuResponse>.Ok(
-                        "Вайфу успешно добавлена",
+                        "вайфу успешно добавлена",
                         response
                     );
                 }
@@ -248,14 +255,14 @@ public class WaifuRollService(
                 var response = new AddNewWaifuResponse { Waifu = null, HasError = true };
 
                 result = OperationResult<AddNewWaifuResponse>.Bad(
-                    $"Ошибка при добавлении вайфу: {ex.Message}",
+                    $"ошибка при добавлении вайфу: {ex.Message}",
                     response
                 );
             }
         }
         else
         {
-            result = OperationResult<AddNewWaifuResponse>.Bad("Персонаж не может быть null");
+            result = OperationResult<AddNewWaifuResponse>.Bad("персонаж не может быть null");
         }
 
         return result;
@@ -401,7 +408,10 @@ public class WaifuRollService(
                     .Where(e => !e.IsPrivated)
                     .ElementAtAsync(Random.Shared.Next(count));
 
-                var replace = message.Replace("{randomHost}", host.TwitchUser?.DisplayName ?? "Unknown");
+                var replace = message.Replace(
+                    "{randomHost}",
+                    host.TwitchUser?.DisplayName ?? "Unknown"
+                );
                 result = string.Concat(
                     "@{user}, твой супруг прислал(-а) тебе сообщение: ",
                     replace

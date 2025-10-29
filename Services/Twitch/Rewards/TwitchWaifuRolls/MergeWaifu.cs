@@ -46,7 +46,13 @@ public class MergeWaifu(
                 await using AppDbContext dbContext = await factory.CreateDbContextAsync(
                     _cancellationToken
                 );
-                var host = await dbContext.Hosts.FindAsync(twEvent.UserId, _cancellationToken);
+                
+                // Загружаем Host с TwitchUser
+                var host = await dbContext
+                    .Hosts
+                    .Include(h => h.TwitchUser)
+                    .FirstOrDefaultAsync(h => h.TwitchId == twEvent.UserId, _cancellationToken);
+                
                 if (host is not null)
                 {
                     host.TwitchId = twEvent.UserId;
@@ -88,16 +94,21 @@ public class MergeWaifu(
                                 waifu.IsMerged = true;
                                 waifu.ImageUrl = options.Value.ShikimoriSite + waifu.ImageUrl;
 
+                                // Проверяем что TwitchUser загружен
+                                if (host.TwitchUser == null)
+                                {
+                                    throw new InvalidOperationException($"TwitchUser не найден для Host {twEvent.UserId}");
+                                }
+
                                 var color = await api.Helix.Chat.GetUserChatColorAsync(
                                     [twEvent.UserId]
                                 );
-                                var avatarUrl = await api.Helix.Users.GetUsersAsync(
-                                    [twEvent.UserId]
-                                );
+                                
+                                // Используем аватарку из TwitchUser вместо отдельного запроса к API
                                 await hubContext.Clients.All.MergeWaifu(
                                     waifu,
                                     host,
-                                    avatarUrl.Users[0]?.ProfileImageUrl,
+                                    host.TwitchUser.ProfileImageUrl,
                                     color.Data[0]?.Color
                                 );
 
@@ -316,8 +327,6 @@ public class MergeWaifu(
                     dbContext.Hosts.Update(host);
                     await twitchUserEnsureService.EnsureUserExistsAsync(
                         host.TwitchId,
-                        host.TwitchUser?.UserLogin,
-                        host.TwitchUser?.DisplayName,
                         _cancellationToken
                     );
                 }
