@@ -66,6 +66,10 @@ public static class Program
             else
             {
                 loggingBuilder.AddConsole();
+                if (OperatingSystem.IsWindows())
+                {
+                    loggingBuilder.AddEventLog();
+                }
                 loggingBuilder.SetMinimumLevel(LogLevel.Information);
             }
 
