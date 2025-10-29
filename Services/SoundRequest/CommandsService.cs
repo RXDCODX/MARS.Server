@@ -34,12 +34,15 @@ public class CommandsService(
 
         if (!string.IsNullOrWhiteSpace(query))
         {
+            // Нормализуем URL - добавляем схему если её нет
+            var normalizedQuery = NormalizeUrl(query);
+
             // Проверяем, является ли запрос URL
             BaseTrackInfo? info = null;
-            if (Uri.TryCreate(query, UriKind.Absolute, out _))
+            if (Uri.TryCreate(normalizedQuery, UriKind.Absolute, out _))
             {
                 // Пытаемся извлечь VideoId из URL
-                var videoId = ExtractYouTubeVideoId(query);
+                var videoId = ExtractYouTubeVideoId(normalizedQuery);
 
                 // Если удалось извлечь VideoId, проверяем БД
                 if (!string.IsNullOrWhiteSpace(videoId))
@@ -56,7 +59,7 @@ public class CommandsService(
                 // Если в БД не нашли, обращаемся к YouTube API
                 if (info == null)
                 {
-                    info = await ytResolver.ResolveVideoAsync(query, cancellationToken);
+                    info = await ytResolver.ResolveVideoAsync(normalizedQuery, cancellationToken);
                 }
             }
             else
@@ -477,6 +480,47 @@ public class CommandsService(
             catch
             {
                 // Игнорируем ошибки парсинга URL
+            }
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Нормализовать URL - добавить схему если её нет
+    /// </summary>
+    /// <param name="url">URL или поисковый запрос</param>
+    /// <returns>Нормализованный URL</returns>
+    private static string NormalizeUrl(string url)
+    {
+        var result = url;
+
+        if (!string.IsNullOrWhiteSpace(url))
+        {
+            var trimmedUrl = url.Trim();
+
+            // Проверяем, начинается ли строка с протокола
+            var hasScheme =
+                trimmedUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+                || trimmedUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase);
+
+            // Если протокола нет, но строка похожа на URL (содержит точку и не содержит пробелов)
+            if (
+                !hasScheme
+                && trimmedUrl.Contains('.')
+                && !trimmedUrl.Contains(' ')
+                && (
+                    trimmedUrl.StartsWith("www.", StringComparison.OrdinalIgnoreCase)
+                    || trimmedUrl.Contains("youtube.com", StringComparison.OrdinalIgnoreCase)
+                    || trimmedUrl.Contains("youtu.be", StringComparison.OrdinalIgnoreCase)
+                )
+            )
+            {
+                result = $"https://{trimmedUrl}";
+            }
+            else
+            {
+                result = trimmedUrl;
             }
         }
 
