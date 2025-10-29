@@ -1,5 +1,4 @@
-﻿using System.Configuration;
-using MARS.Server.Services.SoundRequest;
+﻿using MARS.Server.Services.SoundRequest;
 using MARS.Server.Services.SoundRequest.Entities;
 using SignalRSwaggerGen.Attributes;
 using SignalRSwaggerGen.Enums;
@@ -43,9 +42,22 @@ public class SoundRequestHub(OutSignalRHubService service, StateManager stateMan
         return service.OnErrorInvoke(info);
     }
 
-    public Task VolumeChange(float volume)
+    /// <summary>
+    /// Вызывается фронтендом при изменении состояния плеера (включая громкость, паузу, воспроизведение и т.д.)
+    /// Рассылает новое состояние всем клиентам кроме отправителя
+    /// </summary>
+    /// <param name="newState">Новое состояние плеера от фронтенда</param>
+    public async Task FrontStateChange(PlayerState newState)
     {
-        return stateManager.SetVolumeAsync(volume);
+        // Обновляем состояние на сервере
+        await stateManager.UpdateStateAsync(state =>
+        {
+            state.State = newState.State;
+            state.IsMuted = newState.IsMuted;
+            state.Volume = newState.Volume;
+            state.VideoState = newState.VideoState;
+            state.CurrentTrackProgress = newState.CurrentTrackProgress;
+        });
     }
 
     /// <summary>
@@ -55,6 +67,10 @@ public class SoundRequestHub(OutSignalRHubService service, StateManager stateMan
     public Task TrackProgress(long seconds)
     {
         var span = TimeSpan.FromSeconds(seconds);
-        return stateManager.UpdateCurrentTrackProgressAsync(span, notify: false);
+        return stateManager.UpdateCurrentTrackProgressAsync(
+            span,
+            notify: false,
+            excludeConnectionId: Context.ConnectionId
+        );
     }
 }

@@ -6,11 +6,18 @@
 public class PlayerState
 {
     /// <summary>
-    /// Уникальный идентификатор состояния плеера
+    /// Уникальный идентификатор состояния плеера (ключ БД)
     /// </summary>
     [Key]
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     public Guid Id { get; set; }
+
+    /// <summary>
+    /// Версия состояния - меняется при каждом изменении состояния плеера.
+    /// Используется для синхронизации между клиентами и предотвращения применения устаревших состояний
+    /// </summary>
+    [NotMapped]
+    public Guid StateVersion { get; set; } = Guid.CreateVersion7(DateTimeOffset.Now);
 
     /// <summary>
     /// ID текущего элемента очереди (foreign key)

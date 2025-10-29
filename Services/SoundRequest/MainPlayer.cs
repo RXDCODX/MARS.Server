@@ -114,9 +114,9 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
         await _stateManager.InitializeAsync();
 
         // Подписываемся на изменения состояния для отправки через SignalR
-        _stateManager.StateChanged += async (state) =>
+        _stateManager.StateChanged += async (state, excludeConnectionId) =>
         {
-            await _inSignalRHubService.NotifyPlayerStateChangedAsync(state);
+            await _inSignalRHubService.NotifyPlayerStateChangedAsync(state, excludeConnectionId);
         };
 
         // Загружаем следующий элемент очереди, если он еще не загружен

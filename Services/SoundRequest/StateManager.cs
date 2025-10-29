@@ -28,7 +28,11 @@ public class StateManager(
     /// <summary>
     /// Событие изменения состояния плеера
     /// </summary>
-    public event Func<PlayerState, Task>? StateChanged;
+    /// <remarks>
+    /// Параметры: (PlayerState state, string? excludeConnectionId)
+    /// excludeConnectionId - ID соединения, которое нужно исключить из рассылки уведомлений
+    /// </remarks>
+    public event Func<PlayerState, string?, Task>? StateChanged;
 
     /// <summary>
     /// Инициализация состояния из БД (вызывается один раз при старте)
@@ -120,6 +124,7 @@ public class StateManager(
             return new PlayerState
             {
                 Id = _currentState.Id,
+                StateVersion = _currentState.StateVersion,
                 CurrentQueueItemId = _currentState.CurrentQueueItemId,
                 NextQueueItemId = _currentState.NextQueueItemId,
                 CurrentQueueItem = _currentState.CurrentQueueItem,
@@ -148,6 +153,7 @@ public class StateManager(
             return new PlayerState
             {
                 Id = _currentState.Id,
+                StateVersion = _currentState.StateVersion,
                 CurrentQueueItemId = _currentState.CurrentQueueItemId,
                 NextQueueItemId = _currentState.NextQueueItemId,
                 CurrentQueueItem = _currentState.CurrentQueueItem,
@@ -218,9 +224,11 @@ public class StateManager(
     /// </summary>
     /// <param name="updateAction">Действие для обновления состояния</param>
     /// <param name="notifyStateChanged">Уведомлять ли подписчиков об изменении</param>
+    /// <param name="excludeConnectionId">ID соединения, которое нужно исключить из рассылки уведомлений</param>
     public async Task UpdateStateAsync(
         Action<PlayerState> updateAction,
-        bool notifyStateChanged = true
+        bool notifyStateChanged = true,
+        string? excludeConnectionId = null
     )
     {
         PlayerState? stateToNotify = null;
@@ -229,12 +237,16 @@ public class StateManager(
         try
         {
             updateAction(_currentState);
+            
+            // Генерируем новую версию состояния при каждом изменении
+            _currentState.StateVersion = Guid.NewGuid();
 
             if (notifyStateChanged)
             {
                 stateToNotify = new PlayerState
                 {
                     Id = _currentState.Id,
+                    StateVersion = _currentState.StateVersion,
                     CurrentQueueItemId = _currentState.CurrentQueueItemId,
                     NextQueueItemId = _currentState.NextQueueItemId,
                     CurrentQueueItem = _currentState.CurrentQueueItem,
@@ -258,14 +270,14 @@ public class StateManager(
         // Уведомляем подписчиков за пределами блокировки
         if (stateToNotify != null && StateChanged != null)
         {
-            await StateChanged.Invoke(stateToNotify);
+            await StateChanged.Invoke(stateToNotify, excludeConnectionId);
         }
     }
 
     /// <summary>
     /// Установить текущий элемент очереди
     /// </summary>
-    public async Task SetCurrentQueueItemAsync(QueueItem? queueItem, bool notify = true)
+    public async Task SetCurrentQueueItemAsync(QueueItem? queueItem, bool notify = true, string? excludeConnectionId = null)
     {
         await UpdateStateAsync(
             state =>
@@ -275,14 +287,15 @@ public class StateManager(
                 state.State =
                     queueItem == null ? PlaybackState.Stopped : PlaybackState.WaitingForTrack;
             },
-            notify
+            notify,
+            excludeConnectionId
         );
     }
 
     /// <summary>
     /// Установить следующий элемент очереди
     /// </summary>
-    public async Task SetNextQueueItemAsync(QueueItem? queueItem, bool notify = true)
+    public async Task SetNextQueueItemAsync(QueueItem? queueItem, bool notify = true, string? excludeConnectionId = null)
     {
         await UpdateStateAsync(
             state =>
@@ -290,14 +303,15 @@ public class StateManager(
                 state.NextQueueItemId = queueItem?.Id;
                 state.NextQueueItem = queueItem;
             },
-            notify
+            notify,
+            excludeConnectionId
         );
     }
 
     /// <summary>
     /// Установить состояние воспроизведения
     /// </summary>
-    public async Task SetPlaybackStateAsync(PlaybackState playbackState, bool notify = true)
+    public async Task SetPlaybackStateAsync(PlaybackState playbackState, bool notify = true, string? excludeConnectionId = null)
     {
         await UpdateStateAsync(
             state =>
@@ -309,55 +323,58 @@ public class StateManager(
                     state.CurrentTrackProgress = null;
                 }
             },
-            notify
+            notify,
+            excludeConnectionId
         );
     }
 
     /// <summary>
     /// Установить состояние паузы
     /// </summary>
-    public async Task SetPausedAsync(bool isPaused, bool notify = true)
+    public async Task SetPausedAsync(bool isPaused, bool notify = true, string? excludeConnectionId = null)
     {
         await SetPlaybackStateAsync(
             isPaused ? PlaybackState.Paused : PlaybackState.Playing,
-            notify
+            notify,
+            excludeConnectionId
         );
     }
 
     /// <summary>
     /// Установить состояние отключения звука
     /// </summary>
-    public async Task SetMutedAsync(bool isMuted, bool notify = true)
+    public async Task SetMutedAsync(bool isMuted, bool notify = true, string? excludeConnectionId = null)
     {
-        await UpdateStateAsync(state => state.IsMuted = isMuted, notify);
+        await UpdateStateAsync(state => state.IsMuted = isMuted, notify, excludeConnectionId);
     }
 
     /// <summary>
     /// Установить громкость (0.0 - 100.0)
     /// </summary>
-    public async Task SetVolumeAsync(float volume, bool notify = true)
+    public async Task SetVolumeAsync(float volume, bool notify = true, string? excludeConnectionId = null)
     {
         await UpdateStateAsync(
             state =>
             {
                 state.Volume = Math.Clamp(volume, 0f, 100f);
             },
-            notify
+            notify,
+            excludeConnectionId
         );
     }
 
     /// <summary>
     /// Установить режим отображения видео
     /// </summary>
-    public async Task SetVideoDisplayAsync(VideoDisplay videoDisplay, bool notify = true)
+    public async Task SetVideoDisplayAsync(VideoDisplay videoDisplay, bool notify = true, string? excludeConnectionId = null)
     {
-        await UpdateStateAsync(state => state.VideoState = videoDisplay, notify);
+        await UpdateStateAsync(state => state.VideoState = videoDisplay, notify, excludeConnectionId);
     }
 
     /// <summary>
     /// Обновить текущий прогресс воспроизведения трека
     /// </summary>
-    public async Task UpdateCurrentTrackProgressAsync(TimeSpan progress, bool notify = false)
+    public async Task UpdateCurrentTrackProgressAsync(TimeSpan progress, bool notify = false, string? excludeConnectionId = null)
     {
         await UpdateStateAsync(
             state =>
@@ -367,14 +384,15 @@ public class StateManager(
                     state.CurrentTrackProgress = progress;
                 }
             },
-            notify
+            notify,
+            excludeConnectionId
         );
     }
 
     /// <summary>
     /// Начать воспроизведение элемента очереди
     /// </summary>
-    public async Task StartPlayingAsync(QueueItem queueItem, bool notify = true)
+    public async Task StartPlayingAsync(QueueItem queueItem, bool notify = true, string? excludeConnectionId = null)
     {
         await UpdateStateAsync(
             state =>
@@ -384,14 +402,15 @@ public class StateManager(
                 state.State = PlaybackState.Playing;
                 state.CurrentTrackProgress = TimeSpan.Zero;
             },
-            notify
+            notify,
+            excludeConnectionId
         );
     }
 
     /// <summary>
     /// Остановить воспроизведение и очистить состояние
     /// </summary>
-    public async Task StopPlaybackAsync(bool notify = true)
+    public async Task StopPlaybackAsync(bool notify = true, string? excludeConnectionId = null)
     {
         await UpdateStateAsync(
             state =>
@@ -403,19 +422,21 @@ public class StateManager(
                 state.CurrentTrackProgress = null;
                 state.State = PlaybackState.Stopped;
             },
-            notify
+            notify,
+            excludeConnectionId
         );
     }
 
     /// <summary>
     /// Уведомить подписчиков об изменении состояния вручную
     /// </summary>
-    public async Task NotifyStateChangedAsync()
+    /// <param name="excludeConnectionId">ID соединения, которое нужно исключить из рассылки</param>
+    public async Task NotifyStateChangedAsync(string? excludeConnectionId = null)
     {
         var state = await GetStateAsync();
         if (StateChanged != null)
         {
-            await StateChanged.Invoke(state);
+            await StateChanged.Invoke(state, excludeConnectionId);
         }
     }
 
