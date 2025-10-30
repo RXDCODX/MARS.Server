@@ -43,5 +43,3 @@ public class ChannelRewardRecord
     /// </summary>
     public Guid? MediaInfoId { get; set; }
 }
-
-

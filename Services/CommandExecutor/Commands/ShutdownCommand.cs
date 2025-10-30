@@ -10,7 +10,8 @@ public class ShutdownCommand(IHostApplicationLifetime appLifetime, ILogger<Shutd
     public override string Description => "Немедленно инициирует завершение работы приложения";
     public override bool IsAdminCommand => true;
 
-    public override Platform[] AvailablePlatforms => [Platform.Telegram, Platform.Api, Platform.Twitch];
+    public override Platform[] AvailablePlatforms =>
+        [Platform.Telegram, Platform.Api, Platform.Twitch];
 
     public override string[] Aliases => ["stop", "exit", "kill"];
 
@@ -24,7 +25,10 @@ public class ShutdownCommand(IHostApplicationLifetime appLifetime, ILogger<Shutd
 
         try
         {
-            logger.LogWarning("Команда завершения работы запущена. Платформа: {Platform}", platform);
+            logger.LogWarning(
+                "Команда завершения работы запущена. Платформа: {Platform}",
+                platform
+            );
             appLifetime.StopApplication();
         }
         catch (Exception ex)
@@ -36,5 +40,3 @@ public class ShutdownCommand(IHostApplicationLifetime appLifetime, ILogger<Shutd
         return Task.FromResult(result);
     }
 }
-
-

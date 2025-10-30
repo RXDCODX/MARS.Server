@@ -33,5 +33,3 @@ public class TekkenCharacterPending
     public string[]? Strengths { get; set; }
     public string[]? Weaknesess { get; set; }
 }
-
-

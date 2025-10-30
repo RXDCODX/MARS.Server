@@ -29,7 +29,7 @@ public class HonkaiApiService(ILogger<HonkaiApiService> logger, IHostEnvironment
     )
     {
         StarRailUser? result = null;
-        
+
         if (user != null && httpClient != null)
         {
             try
@@ -60,7 +60,7 @@ public class HonkaiApiService(ILogger<HonkaiApiService> logger, IHostEnvironment
                 }
             }
         }
-        
+
         return result;
     }
 
@@ -70,7 +70,7 @@ public class HonkaiApiService(ILogger<HonkaiApiService> logger, IHostEnvironment
     )
     {
         (bool Success, string? RewardName, int? Amount) result = (false, null, null);
-        
+
         if (user != null && httpClient != null)
         {
             try
@@ -101,7 +101,7 @@ public class HonkaiApiService(ILogger<HonkaiApiService> logger, IHostEnvironment
                 throw;
             }
         }
-        
+
         return result;
     }
 
@@ -111,7 +111,7 @@ public class HonkaiApiService(ILogger<HonkaiApiService> logger, IHostEnvironment
     )
     {
         StarRailDailyNote? result = null;
-        
+
         if (user != null && httpClient != null)
         {
             try
@@ -131,7 +131,7 @@ public class HonkaiApiService(ILogger<HonkaiApiService> logger, IHostEnvironment
                 }
             }
         }
-        
+
         return result;
     }
 
@@ -141,7 +141,7 @@ public class HonkaiApiService(ILogger<HonkaiApiService> logger, IHostEnvironment
     )
     {
         UserStatsData? result = null;
-        
+
         if (user != null && httpClient != null)
         {
             try
@@ -166,7 +166,7 @@ public class HonkaiApiService(ILogger<HonkaiApiService> logger, IHostEnvironment
                 }
             }
         }
-        
+
         return result;
     }
 

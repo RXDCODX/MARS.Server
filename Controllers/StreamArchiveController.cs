@@ -23,12 +23,22 @@ public class StreamArchiveController(
         {
             await using var dbContext = await dbContextFactory.CreateDbContextAsync();
             var configs = await dbContext.StreamArchiveConfigs.AsNoTracking().ToListAsync();
-            result = Ok(OperationResult<List<StreamArchiveConfig>>.Ok("Получены конфигурации архивирования", configs));
+            result = Ok(
+                OperationResult<List<StreamArchiveConfig>>.Ok(
+                    "Получены конфигурации архивирования",
+                    configs
+                )
+            );
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при получении конфигураций архивирования");
-            result = Ok(OperationResult<List<StreamArchiveConfig>>.Bad("Ошибка при получении конфигураций", []));
+            result = Ok(
+                OperationResult<List<StreamArchiveConfig>>.Bad(
+                    "Ошибка при получении конфигураций",
+                    []
+                )
+            );
         }
 
         return result;
@@ -51,17 +61,26 @@ public class StreamArchiveController(
 
             if (config != null)
             {
-                result = Ok(OperationResult<StreamArchiveConfig?>.Ok("Конфигурация найдена", config));
+                result = Ok(
+                    OperationResult<StreamArchiveConfig?>.Ok("Конфигурация найдена", config)
+                );
             }
             else
             {
-                result = Ok(OperationResult<StreamArchiveConfig?>.Bad($"Конфигурация с ID {id} не найдена", null));
+                result = Ok(
+                    OperationResult<StreamArchiveConfig?>.Bad(
+                        $"Конфигурация с ID {id} не найдена",
+                        null
+                    )
+                );
             }
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при получении конфигурации {Id}", id);
-            result = Ok(OperationResult<StreamArchiveConfig?>.Bad("Ошибка при получении конфигурации", null));
+            result = Ok(
+                OperationResult<StreamArchiveConfig?>.Bad("Ошибка при получении конфигурации", null)
+            );
         }
 
         return result;
@@ -81,11 +100,18 @@ public class StreamArchiveController(
         {
             if (!ModelState.IsValid)
             {
-                result = Ok(OperationResult<StreamArchiveConfig?>.Bad("Некорректные данные модели", null));
+                result = Ok(
+                    OperationResult<StreamArchiveConfig?>.Bad("Некорректные данные модели", null)
+                );
             }
             else if (!Directory.Exists(config.FolderPath))
             {
-                result = Ok(OperationResult<StreamArchiveConfig?>.Bad($"Папка {config.FolderPath} не существует", null));
+                result = Ok(
+                    OperationResult<StreamArchiveConfig?>.Bad(
+                        $"Папка {config.FolderPath} не существует",
+                        null
+                    )
+                );
             }
             else
             {
@@ -96,13 +122,17 @@ public class StreamArchiveController(
                 await dbContext.SaveChangesAsync();
 
                 logger.LogInformation("Создана новая конфигурация архивирования {Id}", config.Id);
-                result = Ok(OperationResult<StreamArchiveConfig?>.Ok("Конфигурация успешно создана", config));
+                result = Ok(
+                    OperationResult<StreamArchiveConfig?>.Ok("Конфигурация успешно создана", config)
+                );
             }
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при создании конфигурации архивирования");
-            result = Ok(OperationResult<StreamArchiveConfig?>.Bad("Ошибка при создании конфигурации", null));
+            result = Ok(
+                OperationResult<StreamArchiveConfig?>.Bad("Ошибка при создании конфигурации", null)
+            );
         }
 
         return result;
@@ -217,7 +247,12 @@ public class StreamArchiveController(
         {
             if (string.IsNullOrWhiteSpace(request.FolderPath))
             {
-                result = Ok(OperationResult<ValidateFolderResponse>.Bad("Путь к папке не может быть пустым", new ValidateFolderResponse()));
+                result = Ok(
+                    OperationResult<ValidateFolderResponse>.Bad(
+                        "Путь к папке не может быть пустым",
+                        new ValidateFolderResponse()
+                    )
+                );
             }
             else
             {
@@ -255,13 +290,20 @@ public class StreamArchiveController(
                     SampleFiles = files,
                 };
 
-                result = Ok(OperationResult<ValidateFolderResponse>.Ok("Папка проверена", response));
+                result = Ok(
+                    OperationResult<ValidateFolderResponse>.Ok("Папка проверена", response)
+                );
             }
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при проверке папки {FolderPath}", request.FolderPath);
-            result = Ok(OperationResult<ValidateFolderResponse>.Bad("Ошибка при проверке папки", new ValidateFolderResponse()));
+            result = Ok(
+                OperationResult<ValidateFolderResponse>.Bad(
+                    "Ошибка при проверке папки",
+                    new ValidateFolderResponse()
+                )
+            );
         }
 
         return result;
@@ -335,7 +377,9 @@ public class StreamArchiveController(
                 "Ошибка при получении статистики файлов для конфигурации {ConfigId}",
                 configId
             );
-            result = Ok(OperationResult<object>.Bad("Ошибка при получении статистики файлов", new { }));
+            result = Ok(
+                OperationResult<object>.Bad("Ошибка при получении статистики файлов", new { })
+            );
         }
 
         return result;
@@ -396,7 +440,9 @@ public class StreamArchiveController(
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при получении общей статистики");
-            result = Ok(OperationResult<object>.Bad("Ошибка при получении общей статистики", new { }));
+            result = Ok(
+                OperationResult<object>.Bad("Ошибка при получении общей статистики", new { })
+            );
         }
 
         return result;

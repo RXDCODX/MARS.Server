@@ -121,7 +121,9 @@ public class ApiCommandService : PlatformCommandServiceBase<string>
                             // Проверяем количество обязательных параметров
                             var commandInfo = command.GetParameterInfo();
                             var requiredParams = commandInfo.Where(p => p.Required).ToArray();
-                            var inputParts = string.IsNullOrWhiteSpace(input) ? [] : input.Split(' ');
+                            var inputParts = string.IsNullOrWhiteSpace(input)
+                                ? []
+                                : input.Split(' ');
 
                             if (inputParts.Length < requiredParams.Length)
                             {

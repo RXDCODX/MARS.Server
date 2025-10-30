@@ -46,13 +46,12 @@ public class MergeWaifu(
                 await using AppDbContext dbContext = await factory.CreateDbContextAsync(
                     _cancellationToken
                 );
-                
+
                 // Загружаем Host с TwitchUser
                 var host = await dbContext
-                    .Hosts
-                    .Include(h => h.TwitchUser)
+                    .Hosts.Include(h => h.TwitchUser)
                     .FirstOrDefaultAsync(h => h.TwitchId == twEvent.UserId, _cancellationToken);
-                
+
                 if (host is not null)
                 {
                     host.TwitchId = twEvent.UserId;
@@ -97,13 +96,15 @@ public class MergeWaifu(
                                 // Проверяем что TwitchUser загружен
                                 if (host.TwitchUser == null)
                                 {
-                                    throw new InvalidOperationException($"TwitchUser не найден для Host {twEvent.UserId}");
+                                    throw new InvalidOperationException(
+                                        $"TwitchUser не найден для Host {twEvent.UserId}"
+                                    );
                                 }
 
                                 var color = await api.Helix.Chat.GetUserChatColorAsync(
                                     [twEvent.UserId]
                                 );
-                                
+
                                 // Используем аватарку из TwitchUser вместо отдельного запроса к API
                                 await hubContext.Clients.All.MergeWaifu(
                                     waifu,

@@ -46,4 +46,3 @@ public class QueuePositionCommand(CommandsService commandsService) : BaseCommand
         return result;
     }
 }
-

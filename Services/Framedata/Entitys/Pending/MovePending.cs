@@ -33,5 +33,3 @@ public class MovePending
     public string? CounterHitFrame { get; set; }
     public string[]? Notes { get; set; }
 }
-
-

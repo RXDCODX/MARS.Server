@@ -21,5 +21,3 @@ public class TwitchReconnectCommand(TwitchConnectionManager manager) : BaseComma
         return ok ? "Реконнект выполнен" : "Не удалось выполнить реконнект";
     }
 }
-
-

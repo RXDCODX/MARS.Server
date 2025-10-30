@@ -39,8 +39,5 @@ public interface IAutoMessagesService
     /// <summary>
     /// Удалить автоматическое сообщение
     /// </summary>
-    Task<bool> DeleteAutoMessageAsync(
-        Guid id,
-        CancellationToken cancellationToken = default
-    );
+    Task<bool> DeleteAutoMessageAsync(Guid id, CancellationToken cancellationToken = default);
 }

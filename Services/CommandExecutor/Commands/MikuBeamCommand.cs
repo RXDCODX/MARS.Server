@@ -35,4 +35,3 @@ public class MikuBeamCommand(TwitchMikuBeamRewardService mikuBeamService) : Base
         return result;
     }
 }
-

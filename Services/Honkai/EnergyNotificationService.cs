@@ -10,7 +10,6 @@ public class EnergyNotificationService(
     IHonkaiNotificationService notificationService
 ) : BackgroundService
 {
-
     private Timer? _energyCheckTimer;
     private const int EnergyThreshold240 = 240;
     private const int EnergyThreshold300 = 300;

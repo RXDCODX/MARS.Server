@@ -146,7 +146,7 @@ public class PyroAlertsHelper(ILogger<PyroAlertsHelper> logger) : ITelegramusSer
         // ReSharper disable once ConditionIsAlwaysTrueOrFalse
         if (directories != null)
         {
-            for (var i = 1 ; i < directories.Length ; i++)
+            for (var i = 1; i < directories.Length; i++)
             {
                 currentPath += Path.DirectorySeparatorChar + directories[i];
                 if (!Directory.Exists(currentPath))

@@ -86,8 +86,8 @@ public class TwitchCinemaQueueService(
             // Проверяем, существует ли пользователь в базе данных
             string? validTwitchUserId = null;
             await using var db = await dbFactory.CreateDbContextAsync();
-            var userExists = await db.TwitchUsers
-                .AsNoTracking()
+            var userExists = await db
+                .TwitchUsers.AsNoTracking()
                 .AnyAsync(u => u.TwitchId == userId);
 
             if (userExists)

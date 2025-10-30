@@ -25,4 +25,3 @@ public class JoinedTwitchChannelsCommand(ITwitchClient client) : BaseCommand
             : Task.FromResult(string.Join(Environment.NewLine, channels.Select(e => e.Channel)));
     }
 }
-

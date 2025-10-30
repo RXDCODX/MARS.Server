@@ -12,4 +12,4 @@ public class ScoreboardPlayer
     public int Position { get; set; } // 1 или 2 для определения позиции игрока
     public int ScoreboardStateId { get; set; }
     public ScoreboardState ScoreboardState { get; set; } = null!;
-} 
+}

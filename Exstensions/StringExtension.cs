@@ -68,7 +68,7 @@ public static class StringExtension
 
         var count = 0;
 
-        for (var index = 0 ; index < splits.Length ; index++)
+        for (var index = 0; index < splits.Length; index++)
         {
             var split = splits[index];
             if (count + split.Length > maxLength)
@@ -194,7 +194,7 @@ public static class RussianToEnglishTransliteration
 
         var result = new StringBuilder(text.Length * 2); // Allocate extra space for potential multi-character transliterations
 
-        for (var i = 0 ; i < text.Length ; i++)
+        for (var i = 0; i < text.Length; i++)
         {
             var upperChar = char.ToUpper(text[i]);
 

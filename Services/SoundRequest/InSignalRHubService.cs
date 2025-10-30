@@ -12,7 +12,10 @@ public class InSignalRHubService(IHubContext<SoundRequestHub, ISoundRequestHub> 
     /// </summary>
     /// <param name="playerState">Текущее состояние плеера</param>
     /// <param name="excludeConnectionId">ID соединения, которое нужно исключить из рассылки (например, инициатор изменения)</param>
-    public async Task NotifyPlayerStateChangedAsync(PlayerState playerState, string? excludeConnectionId = null)
+    public async Task NotifyPlayerStateChangedAsync(
+        PlayerState playerState,
+        string? excludeConnectionId = null
+    )
     {
         if (!string.IsNullOrWhiteSpace(excludeConnectionId))
         {
@@ -29,7 +32,10 @@ public class InSignalRHubService(IHubContext<SoundRequestHub, ISoundRequestHub> 
     /// </summary>
     /// <param name="queue">Текущая очередь элементов</param>
     /// <param name="excludeConnectionId">ID соединения, которое нужно исключить из рассылки</param>
-    public async Task NotifyQueueChangedAsync(List<QueueItem> queue, string? excludeConnectionId = null)
+    public async Task NotifyQueueChangedAsync(
+        List<QueueItem> queue,
+        string? excludeConnectionId = null
+    )
     {
         if (!string.IsNullOrWhiteSpace(excludeConnectionId))
         {
@@ -46,7 +52,10 @@ public class InSignalRHubService(IHubContext<SoundRequestHub, ISoundRequestHub> 
     /// </summary>
     /// <param name="playerState">Текущее состояние плеера</param>
     /// <param name="excludeConnectionId">ID соединения, которое нужно исключить из рассылки</param>
-    public async Task NotifyAllPlayerStateChangedAsync(PlayerState playerState, string? excludeConnectionId = null)
+    public async Task NotifyAllPlayerStateChangedAsync(
+        PlayerState playerState,
+        string? excludeConnectionId = null
+    )
     {
         if (!string.IsNullOrWhiteSpace(excludeConnectionId))
         {
@@ -63,7 +72,10 @@ public class InSignalRHubService(IHubContext<SoundRequestHub, ISoundRequestHub> 
     /// </summary>
     /// <param name="queue">Текущая очередь элементов</param>
     /// <param name="excludeConnectionId">ID соединения, которое нужно исключить из рассылки</param>
-    public async Task NotifyAllQueueChangedAsync(List<QueueItem> queue, string? excludeConnectionId = null)
+    public async Task NotifyAllQueueChangedAsync(
+        List<QueueItem> queue,
+        string? excludeConnectionId = null
+    )
     {
         if (!string.IsNullOrWhiteSpace(excludeConnectionId))
         {

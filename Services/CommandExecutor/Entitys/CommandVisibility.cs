@@ -24,5 +24,5 @@ public enum CommandVisibility
     /// <summary>
     /// Команда отображается везде (полный и краткий список)
     /// </summary>
-    All = FullList | ShortList
+    All = FullList | ShortList,
 }

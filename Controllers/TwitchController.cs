@@ -6,14 +6,20 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace MARS.Server.Controllers;
 
-public class TwitchController(TokenService tokenService, ITwitchAPI api, IServer server, ILogger<TwitchController> logger)
-    : Controller
+public class TwitchController(
+    TokenService tokenService,
+    ITwitchAPI api,
+    IServer server,
+    ILogger<TwitchController> logger
+) : Controller
 {
     [HttpGet("/" + nameof(TwitchUserAuth))]
-    public async Task<ActionResult<OperationResult<object?>>> TwitchUserAuth([FromQuery] string code)
+    public async Task<ActionResult<OperationResult<object?>>> TwitchUserAuth(
+        [FromQuery] string code
+    )
     {
         ActionResult<OperationResult<object?>> result = null!;
-        
+
         try
         {
             if (!string.IsNullOrWhiteSpace(code))
@@ -31,8 +37,10 @@ public class TwitchController(TokenService tokenService, ITwitchAPI api, IServer
                     authToken.RefreshToken,
                     authToken.ExpiresIn
                 );
-                
-                result = Ok(OperationResult<object?>.Ok("Авторизация успешно выполнена", authToken));
+
+                result = Ok(
+                    OperationResult<object?>.Ok("Авторизация успешно выполнена", authToken)
+                );
             }
             else
             {
@@ -44,7 +52,7 @@ public class TwitchController(TokenService tokenService, ITwitchAPI api, IServer
             logger.LogError(ex, "Ошибка при авторизации Twitch пользователя");
             result = Ok(OperationResult<object?>.Bad("Ошибка при авторизации", null));
         }
-        
+
         return result;
     }
 }

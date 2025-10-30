@@ -198,7 +198,9 @@ public class UpdateHandler : IUpdateHandler
     {
         if (updateId > 0)
         {
-            await using var dbContext = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
+            await using var dbContext = await _dbContextFactory.CreateDbContextAsync(
+                cancellationToken
+            );
 
             var offset = await dbContext.TelegramUpdateReceiverOffset.SingleOrDefaultAsync(
                 cancellationToken: cancellationToken

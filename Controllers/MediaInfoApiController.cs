@@ -33,7 +33,9 @@ public class MediaInfoApiController(
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при получении алертов");
-            result = Ok(OperationResult<List<ApiMediaInfo>>.Bad("Ошибка при получении алертов", []));
+            result = Ok(
+                OperationResult<List<ApiMediaInfo>>.Bad("Ошибка при получении алертов", [])
+            );
         }
 
         return result;
@@ -57,11 +59,15 @@ public class MediaInfoApiController(
 
             if (alert != null)
             {
-                result = Ok(OperationResult<ApiMediaInfo?>.Ok("Алерт найден", new ApiMediaInfo(alert)));
+                result = Ok(
+                    OperationResult<ApiMediaInfo?>.Ok("Алерт найден", new ApiMediaInfo(alert))
+                );
             }
             else
             {
-                result = Ok(OperationResult<ApiMediaInfo?>.Bad($"Алерт с ID '{id}' не найден", null));
+                result = Ok(
+                    OperationResult<ApiMediaInfo?>.Bad($"Алерт с ID '{id}' не найден", null)
+                );
             }
         }
         catch (Exception ex)
@@ -166,7 +172,9 @@ public class MediaInfoApiController(
     /// <param name="alert">Данные алерта</param>
     /// <returns>Созданный алерт</returns>
     [HttpPost]
-    public async Task<ActionResult<OperationResult<ApiMediaInfo?>>> CreateAlert([FromBody] ApiMediaInfo alert)
+    public async Task<ActionResult<OperationResult<ApiMediaInfo?>>> CreateAlert(
+        [FromBody] ApiMediaInfo alert
+    )
     {
         ActionResult<OperationResult<ApiMediaInfo?>> result = null!;
 
@@ -178,7 +186,9 @@ public class MediaInfoApiController(
             dbContext.Alerts.Add(alert);
             await dbContext.SaveChangesAsync();
 
-            result = Ok(OperationResult<ApiMediaInfo?>.Ok("Алерт успешно создан", new ApiMediaInfo(alert)));
+            result = Ok(
+                OperationResult<ApiMediaInfo?>.Ok("Алерт успешно создан", new ApiMediaInfo(alert))
+            );
         }
         catch (Exception ex)
         {
@@ -207,7 +217,12 @@ public class MediaInfoApiController(
         {
             if (id != alert.Id)
             {
-                result = Ok(OperationResult<ApiMediaInfo?>.Bad("ID в URL не совпадает с ID в теле запроса", null));
+                result = Ok(
+                    OperationResult<ApiMediaInfo?>.Bad(
+                        "ID в URL не совпадает с ID в теле запроса",
+                        null
+                    )
+                );
             }
             else
             {
@@ -216,7 +231,9 @@ public class MediaInfoApiController(
                 var existingAlert = await dbContext.Alerts.FirstOrDefaultAsync(a => a.Id == id);
                 if (existingAlert == null)
                 {
-                    result = Ok(OperationResult<ApiMediaInfo?>.Bad($"Алерт с ID '{id}' не найден", null));
+                    result = Ok(
+                        OperationResult<ApiMediaInfo?>.Bad($"Алерт с ID '{id}' не найден", null)
+                    );
                 }
                 else
                 {
@@ -235,7 +252,12 @@ public class MediaInfoApiController(
                     dbContext.Alerts.Update(updatedAlert);
                     await dbContext.SaveChangesAsync();
 
-                    result = Ok(OperationResult<ApiMediaInfo?>.Ok("Алерт успешно обновлен", new ApiMediaInfo(updatedAlert)));
+                    result = Ok(
+                        OperationResult<ApiMediaInfo?>.Ok(
+                            "Алерт успешно обновлен",
+                            new ApiMediaInfo(updatedAlert)
+                        )
+                    );
                 }
             }
         }

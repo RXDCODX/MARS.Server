@@ -108,9 +108,7 @@ public class HonkaiNotificationService(
     {
         // Проверяем кулдаун уведомлений
         var notificationKey = $"{user.Id}_{gameUid}_{threshold}";
-        if (
-            _lastNotificationTime.TryGetValue(notificationKey, out var lastNotification)
-        )
+        if (_lastNotificationTime.TryGetValue(notificationKey, out var lastNotification))
         {
             if (DateTime.UtcNow - lastNotification < TimeSpan.FromHours(NotificationCooldownHours))
             {

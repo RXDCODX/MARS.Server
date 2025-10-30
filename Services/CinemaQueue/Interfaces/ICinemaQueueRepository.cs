@@ -30,7 +30,10 @@ public interface ICinemaQueueRepository
     /// <summary>
     /// Создать новый элемент
     /// </summary>
-    Task<CinemaMediaItem> CreateAsync(CinemaMediaItem cinemaMediaItem, CancellationToken cancellationToken = default);
+    Task<CinemaMediaItem> CreateAsync(
+        CinemaMediaItem cinemaMediaItem,
+        CancellationToken cancellationToken = default
+    );
 
     /// <summary>
     /// Обновить элемент

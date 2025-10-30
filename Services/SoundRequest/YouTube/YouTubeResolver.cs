@@ -33,8 +33,8 @@ public class YouTubeResolver(ILogger<YouTubeResolver> logger)
                         TrackName = video.Title,
                         Authors = [video.Author.ChannelTitle],
                         Duration = video.Duration ?? TimeSpan.Zero,
-                        ArtworkUrl = !string.IsNullOrWhiteSpace(thumbnailUrl) 
-                            ? new Uri(thumbnailUrl) 
+                        ArtworkUrl = !string.IsNullOrWhiteSpace(thumbnailUrl)
+                            ? new Uri(thumbnailUrl)
                             : null,
                     };
 
@@ -74,8 +74,8 @@ public class YouTubeResolver(ILogger<YouTubeResolver> logger)
                     TrackName = video.Title,
                     Authors = [video.Author.ChannelTitle],
                     Duration = video.Duration ?? TimeSpan.Zero,
-                    ArtworkUrl = !string.IsNullOrWhiteSpace(thumbnailUrl) 
-                        ? new Uri(thumbnailUrl) 
+                    ArtworkUrl = !string.IsNullOrWhiteSpace(thumbnailUrl)
+                        ? new Uri(thumbnailUrl)
                         : null,
                 };
             }
@@ -124,8 +124,8 @@ public class YouTubeResolver(ILogger<YouTubeResolver> logger)
                             TrackName = video.Title,
                             Authors = [video.Author.ChannelTitle],
                             Duration = video.Duration ?? TimeSpan.Zero,
-                            ArtworkUrl = !string.IsNullOrWhiteSpace(thumbnailUrl) 
-                                ? new Uri(thumbnailUrl) 
+                            ArtworkUrl = !string.IsNullOrWhiteSpace(thumbnailUrl)
+                                ? new Uri(thumbnailUrl)
                                 : null,
                         }
                     );

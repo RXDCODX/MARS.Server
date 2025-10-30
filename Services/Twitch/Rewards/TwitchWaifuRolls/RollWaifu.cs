@@ -49,21 +49,23 @@ public class RollWaifu(
 
                     var color = await api.Helix.Chat.GetUserChatColorAsync([twEvent.UserId]);
                     await using AppDbContext dbContext2 = await factory.CreateDbContextAsync();
-                    
+
                     // Загружаем Host с TwitchUser
-                    var husband = await dbContext2
-                        .Hosts
-                        .Include(h => h.TwitchUser)
-                        .AsNoTracking()
-                        .FirstOrDefaultAsync(h => h.TwitchId == twEvent.UserId)
+                    var husband =
+                        await dbContext2
+                            .Hosts.Include(h => h.TwitchUser)
+                            .AsNoTracking()
+                            .FirstOrDefaultAsync(h => h.TwitchId == twEvent.UserId)
                         ?? throw new NullReferenceException("Host не найден");
-                    
+
                     // Проверяем что TwitchUser загружен
                     if (husband.TwitchUser == null)
                     {
-                        throw new InvalidOperationException($"TwitchUser не найден для Host {twEvent.UserId}");
+                        throw new InvalidOperationException(
+                            $"TwitchUser не найден для Host {twEvent.UserId}"
+                        );
                     }
-                    
+
                     await hubContext.Clients.All.WaifuRoll(
                         waifu,
                         twEvent.UserName,

@@ -28,4 +28,3 @@ public class HonkaiUsersCommand(IDbContextFactory<AppDbContext> factory) : BaseC
             : string.Join(", ", players.Select(p => $"{p.UserId}({p.Name})"));
     }
 }
-

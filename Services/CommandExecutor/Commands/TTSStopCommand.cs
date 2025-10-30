@@ -10,7 +10,8 @@ public class TtsStopCommand(IVoicer syntheziaVoicer) : BaseCommand
     public override string Description => "Останавливает все текущие TTS-фразы";
     public override bool IsAdminCommand => true;
 
-    public override Platform[] AvailablePlatforms => [Platform.Telegram, Platform.Api, Platform.Twitch];
+    public override Platform[] AvailablePlatforms =>
+        [Platform.Telegram, Platform.Api, Platform.Twitch];
 
     public override async Task<string> ExecuteAsync(
         Dictionary<string, object> parameters,
@@ -22,4 +23,3 @@ public class TtsStopCommand(IVoicer syntheziaVoicer) : BaseCommand
         return "Остановил все ттс фразы!";
     }
 }
-

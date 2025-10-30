@@ -10,7 +10,6 @@ public partial class Tekken8FrameData
 {
     private readonly CancellationToken _cancellationToken = lifetime.ApplicationStopping;
 
-
     internal static readonly Dictionary<TekkenMoveTag, string[]> MoveTags = new()
     {
         {

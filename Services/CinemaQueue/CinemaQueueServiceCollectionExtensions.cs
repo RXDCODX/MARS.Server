@@ -26,7 +26,9 @@ public static class CinemaQueueServiceCollectionExtensions
     /// <summary>
     /// Добавляет сервисы CinemaQueue как Singleton
     /// </summary>
-    public static IServiceCollection AddCinemaQueueServicesAsSingleton(this IServiceCollection services)
+    public static IServiceCollection AddCinemaQueueServicesAsSingleton(
+        this IServiceCollection services
+    )
     {
         // Регистрируем репозиторий как Singleton
         services.AddSingleton<ICinemaQueueRepository, CinemaQueueRepository>();

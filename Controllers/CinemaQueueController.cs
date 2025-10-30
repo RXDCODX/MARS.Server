@@ -204,8 +204,8 @@ public class CinemaQueueController(
                 if (!string.IsNullOrWhiteSpace(request.TwitchUserId))
                 {
                     await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
-                    var userExists = await db.TwitchUsers
-                        .AsNoTracking()
+                    var userExists = await db
+                        .TwitchUsers.AsNoTracking()
                         .AnyAsync(u => u.TwitchId == request.TwitchUserId, cancellationToken);
 
                     if (!userExists)

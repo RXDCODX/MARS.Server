@@ -40,7 +40,7 @@ public class MediaMetadataService(
     )
     {
         MediaMetadata? result = null;
-        
+
         if (!string.IsNullOrWhiteSpace(url))
         {
             try
@@ -65,7 +65,7 @@ public class MediaMetadataService(
                 logger.LogError(ex, "Ошибка при получении метаданных для URL: {Url}", url);
             }
         }
-        
+
         return result;
     }
 
@@ -75,7 +75,7 @@ public class MediaMetadataService(
     )
     {
         MediaMetadata? result = null;
-        
+
         try
         {
             var movie = await kinopoiskService.GetMovieByUrlAsync(url, cancellationToken);
@@ -106,7 +106,10 @@ public class MediaMetadataService(
                 }
                 else
                 {
-                    logger.LogWarning("Не удалось получить title для фильма из Кинопоиска: {Url}", url);
+                    logger.LogWarning(
+                        "Не удалось получить title для фильма из Кинопоиска: {Url}",
+                        url
+                    );
                 }
             }
             else
@@ -118,14 +121,14 @@ public class MediaMetadataService(
         {
             logger.LogError(ex, "Ошибка при получении метаданных Кинопоиска для URL: {Url}", url);
         }
-        
+
         return result;
     }
 
     private async Task<MediaMetadata?> GetShikimoriMetadataAsync(string url)
     {
         MediaMetadata? result = null;
-        
+
         try
         {
             var match = ShikimoriUrlRegex.Match(url);
@@ -156,7 +159,7 @@ public class MediaMetadataService(
         {
             logger.LogError(ex, "Ошибка при получении метаданных Шикимори для URL: {Url}", url);
         }
-        
+
         return result;
     }
 }

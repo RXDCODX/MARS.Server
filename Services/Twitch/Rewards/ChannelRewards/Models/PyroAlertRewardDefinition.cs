@@ -10,5 +10,3 @@ public sealed class PyroAlertRewardDefinition : ChannelRewardDefinition
     /// </summary>
     public Guid? MediaInfoId { get; init; }
 }
-
-

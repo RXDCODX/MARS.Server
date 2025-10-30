@@ -71,7 +71,10 @@ public class CinemaQueueRepository(IDbContextFactory<AppDbContext> dbContextFact
     )
     {
         await using var context = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var existingItem = await context.CinemaQueue.FindAsync([cinemaMediaItem.Id], cancellationToken);
+        var existingItem = await context.CinemaQueue.FindAsync(
+            [cinemaMediaItem.Id],
+            cancellationToken
+        );
 
         if (existingItem == null)
         {

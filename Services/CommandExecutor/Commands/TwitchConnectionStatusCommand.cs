@@ -20,5 +20,3 @@ public class TwitchConnectionStatusCommand(TwitchConnectionManager manager) : Ba
         return Task.FromResult(manager.GetStatus());
     }
 }
-
-

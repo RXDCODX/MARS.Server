@@ -60,7 +60,8 @@ public class RollWaifuCommand(
 
                 await alertsHub.Clients.All.WaifuRoll(
                     waifu,
-                    resultRoll.Data.Host.TwitchUser?.DisplayName ?? throw new NullReferenceException(),
+                    resultRoll.Data.Host.TwitchUser?.DisplayName
+                        ?? throw new NullReferenceException(),
                     resultRoll.Data.Husband
                 );
 

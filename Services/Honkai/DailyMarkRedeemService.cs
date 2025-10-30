@@ -12,7 +12,6 @@ public class DailyMarkRedeemService(
     IHostEnvironment environment
 ) : BackgroundService
 {
-
     private readonly HoyolabConfiguration _configuration = options.Value;
     private Timer? _dailyTimer;
     private Timer? _errorNotificationTimer;

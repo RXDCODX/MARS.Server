@@ -207,7 +207,10 @@ public class TwitchUserInfoService(
             :
             [
                 .. followersInfo
-                    .Where(f => f.TwitchUser == null || string.IsNullOrWhiteSpace(f.TwitchUser.ProfileImageUrl))
+                    .Where(f =>
+                        f.TwitchUser == null
+                        || string.IsNullOrWhiteSpace(f.TwitchUser.ProfileImageUrl)
+                    )
                     .Select(f => f.UserId),
             ];
     }

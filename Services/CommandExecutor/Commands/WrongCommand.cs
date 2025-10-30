@@ -46,4 +46,3 @@ public class WrongCommand(CommandsService commandsService) : BaseCommand
         return result;
     }
 }
-

@@ -17,4 +17,3 @@ public class CinemaMediaItemDto
     public bool IsNext { get; set; }
     public DateTimeOffset? LastModified { get; set; }
 }
-

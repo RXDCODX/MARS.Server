@@ -17,7 +17,7 @@ public class LogsService(LoggerDbContext dbContext) : ILogsService
     )
     {
         (IEnumerable<Log> Logs, int TotalCount) result = ([], 0);
-        
+
         try
         {
             // Проверяем подключение к базе данных
@@ -29,7 +29,7 @@ public class LogsService(LoggerDbContext dbContext) : ILogsService
             Console.WriteLine($"Ошибка при проверке базы данных: {ex.Message}");
             return result;
         }
-        
+
         if (page > 0 && pageSize > 0)
         {
             var query = dbContext.Logs.AsNoTracking();
@@ -81,27 +81,27 @@ public class LogsService(LoggerDbContext dbContext) : ILogsService
 
             result = (logs, totalCount);
         }
-        
+
         return result;
     }
 
     public async Task<IEnumerable<Log>> GetLogsByLevelAsync(LogLevel logLevel)
     {
         IEnumerable<Log> result = [];
-        
+
         result = await dbContext
             .Logs.AsNoTracking()
             .Where(l => l.LogLevel == logLevel)
             .OrderByDescending(l => l.WhenLogged)
             .ToListAsync();
-        
+
         return result;
     }
 
     public async Task<IEnumerable<Log>> GetLogsByDateRangeAsync(DateTime fromDate, DateTime toDate)
     {
         IEnumerable<Log> result = [];
-        
+
         if (fromDate <= toDate)
         {
             result = await dbContext
@@ -110,14 +110,14 @@ public class LogsService(LoggerDbContext dbContext) : ILogsService
                 .OrderByDescending(l => l.WhenLogged)
                 .ToListAsync();
         }
-        
+
         return result;
     }
 
     public async Task<IEnumerable<Log>> GetRecentLogsAsync(int count = 100)
     {
         IEnumerable<Log> result = [];
-        
+
         if (count > 0)
         {
             result = await dbContext
@@ -126,14 +126,14 @@ public class LogsService(LoggerDbContext dbContext) : ILogsService
                 .Take(count)
                 .ToListAsync();
         }
-        
+
         return result;
     }
 
     public async Task<LogsStatistics> GetLogsStatisticsAsync()
     {
         LogsStatistics result = new() { TotalLogs = 0 };
-        
+
         result.TotalLogs = await dbContext.Logs.CountAsync();
 
         // Получаем статистику по уровням логирования

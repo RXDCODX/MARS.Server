@@ -18,7 +18,7 @@ public class HonkaiController(
     public async Task<ActionResult<OperationResult<List<DailyAutoMarkupUser>>>> GetUsers()
     {
         ActionResult<OperationResult<List<DailyAutoMarkupUser>>> result = null!;
-        
+
         try
         {
             await using var dbContext = await dbContextFactory.CreateDbContextAsync();
@@ -27,14 +27,24 @@ public class HonkaiController(
                 .OrderBy(u => u.CreatedAt)
                 .ToListAsync();
 
-            result = Ok(OperationResult<List<DailyAutoMarkupUser>>.Ok("Получены пользователи автоматических отметок", users));
+            result = Ok(
+                OperationResult<List<DailyAutoMarkupUser>>.Ok(
+                    "Получены пользователи автоматических отметок",
+                    users
+                )
+            );
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при получении пользователей автоматических отметок");
-            result = Ok(OperationResult<List<DailyAutoMarkupUser>>.Bad("Ошибка при получении пользователей", []));
+            result = Ok(
+                OperationResult<List<DailyAutoMarkupUser>>.Bad(
+                    "Ошибка при получении пользователей",
+                    []
+                )
+            );
         }
-        
+
         return result;
     }
 
@@ -45,7 +55,7 @@ public class HonkaiController(
     public async Task<ActionResult<OperationResult<DailyAutoMarkupUser?>>> GetUser(Guid id)
     {
         ActionResult<OperationResult<DailyAutoMarkupUser?>> result = null!;
-        
+
         try
         {
             await using var dbContext = await dbContextFactory.CreateDbContextAsync();
@@ -59,15 +69,22 @@ public class HonkaiController(
             }
             else
             {
-                result = Ok(OperationResult<DailyAutoMarkupUser?>.Bad($"Пользователь с ID {id} не найден", null));
+                result = Ok(
+                    OperationResult<DailyAutoMarkupUser?>.Bad(
+                        $"Пользователь с ID {id} не найден",
+                        null
+                    )
+                );
             }
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при получении пользователя {UserId}", id);
-            result = Ok(OperationResult<DailyAutoMarkupUser?>.Bad("Ошибка при получении пользователя", null));
+            result = Ok(
+                OperationResult<DailyAutoMarkupUser?>.Bad("Ошибка при получении пользователя", null)
+            );
         }
-        
+
         return result;
     }
 
@@ -80,7 +97,7 @@ public class HonkaiController(
     )
     {
         ActionResult<OperationResult<DailyAutoMarkupUser?>> result = null!;
-        
+
         try
         {
             if (
@@ -121,24 +138,41 @@ public class HonkaiController(
                         user.Id
                     );
 
-                    result = Ok(OperationResult<DailyAutoMarkupUser?>.Ok("Пользователь успешно создан", user));
+                    result = Ok(
+                        OperationResult<DailyAutoMarkupUser?>.Ok(
+                            "Пользователь успешно создан",
+                            user
+                        )
+                    );
                 }
                 else
                 {
-                    result = Ok(OperationResult<DailyAutoMarkupUser?>.Bad("Пользователь с такими учетными данными уже существует", null));
+                    result = Ok(
+                        OperationResult<DailyAutoMarkupUser?>.Bad(
+                            "Пользователь с такими учетными данными уже существует",
+                            null
+                        )
+                    );
                 }
             }
             else
             {
-                result = Ok(OperationResult<DailyAutoMarkupUser?>.Bad("Все обязательные поля должны быть заполнены", null));
+                result = Ok(
+                    OperationResult<DailyAutoMarkupUser?>.Bad(
+                        "Все обязательные поля должны быть заполнены",
+                        null
+                    )
+                );
             }
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при создании пользователя автоматических отметок");
-            result = Ok(OperationResult<DailyAutoMarkupUser?>.Bad("Ошибка при создании пользователя", null));
+            result = Ok(
+                OperationResult<DailyAutoMarkupUser?>.Bad("Ошибка при создании пользователя", null)
+            );
         }
-        
+
         return result;
     }
 
@@ -160,7 +194,12 @@ public class HonkaiController(
 
             if (user == null)
             {
-                result = Ok(OperationResult<DailyAutoMarkupUser?>.Bad($"Пользователь с ID {id} не найден", null));
+                result = Ok(
+                    OperationResult<DailyAutoMarkupUser?>.Bad(
+                        $"Пользователь с ID {id} не найден",
+                        null
+                    )
+                );
             }
             else
             {
@@ -197,13 +236,20 @@ public class HonkaiController(
                     user.Id
                 );
 
-                result = Ok(OperationResult<DailyAutoMarkupUser?>.Ok("Пользователь успешно обновлен", user));
+                result = Ok(
+                    OperationResult<DailyAutoMarkupUser?>.Ok("Пользователь успешно обновлен", user)
+                );
             }
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при обновлении пользователя {UserId}", id);
-            result = Ok(OperationResult<DailyAutoMarkupUser?>.Bad("Ошибка при обновлении пользователя", null));
+            result = Ok(
+                OperationResult<DailyAutoMarkupUser?>.Bad(
+                    "Ошибка при обновлении пользователя",
+                    null
+                )
+            );
         }
 
         return result;
@@ -268,9 +314,16 @@ public class HonkaiController(
                 user.LastAutoMarkup = DateTime.UtcNow.AddDays(-1);
                 await dbContext.SaveChangesAsync();
 
-                logger.LogInformation("Сброшено время последней отметки для пользователя {UserId}", id);
+                logger.LogInformation(
+                    "Сброшено время последней отметки для пользователя {UserId}",
+                    id
+                );
 
-                result = Ok(OperationResult.Ok("Время последней отметки сброшено. Отметки будут активированы при следующей проверке."));
+                result = Ok(
+                    OperationResult.Ok(
+                        "Время последней отметки сброшено. Отметки будут активированы при следующей проверке."
+                    )
+                );
             }
         }
         catch (Exception ex)

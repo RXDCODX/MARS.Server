@@ -112,7 +112,10 @@ public class HelloVideoWorker(
             .Include(e => e.MediaInfo)
             .Include(e => e.TwitchUser)
             .AsEnumerable()
-            .FirstOrDefault(e => e.TwitchUser != null && name.Equals(e.TwitchUser.DisplayName, StringComparison.OrdinalIgnoreCase));
+            .FirstOrDefault(e =>
+                e.TwitchUser != null
+                && name.Equals(e.TwitchUser.DisplayName, StringComparison.OrdinalIgnoreCase)
+            );
 
         if (user == null)
         {

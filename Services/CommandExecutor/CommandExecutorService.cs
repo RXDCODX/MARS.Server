@@ -332,7 +332,11 @@ public class CommandExecutorService(CommandFactory commandFactory)
                         var parameters = command.ParseParameters(input);
 
                         // Выполняем команду
-                        result = await command.ExecuteAsync(parameters, platform, cancellationToken);
+                        result = await command.ExecuteAsync(
+                            parameters,
+                            platform,
+                            cancellationToken
+                        );
                     }
                 }
             }

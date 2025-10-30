@@ -9,7 +9,8 @@ public class WhitelistCommand(IDbContextFactory<AppDbContext> factory) : BaseCom
     public override string Description => "Показывает список пользователей с доступом к PyroAlerts";
     public override bool IsAdminCommand => true;
 
-    public override Platform[] AvailablePlatforms => [Platform.Telegram, Platform.Api, Platform.Twitch];
+    public override Platform[] AvailablePlatforms =>
+        [Platform.Telegram, Platform.Api, Platform.Twitch];
 
     public override async Task<string> ExecuteAsync(
         Dictionary<string, object> parameters,
@@ -29,4 +30,3 @@ public class WhitelistCommand(IDbContextFactory<AppDbContext> factory) : BaseCom
             : "Пользователи с доступом к PyroAlerts:\n" + string.Join(Environment.NewLine, users);
     }
 }
-
