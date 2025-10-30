@@ -1,4 +1,5 @@
-﻿using TwitchLib.Api.Core.Enums;
+﻿using System.Diagnostics;
+using TwitchLib.Api.Core.Enums;
 using TwitchLib.Api.Core.Exceptions;
 using TwitchLib.Api.Helix.Models.EventSub;
 using TwitchLib.EventSub.Websockets;
@@ -272,6 +273,7 @@ public class EventSubService(
         return result;
     }
 
+    [DebuggerNonUserCode]
     public async Task<string> ResubscribeToEventSubAsync()
     {
         var result = string.Empty;

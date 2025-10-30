@@ -1,6 +1,7 @@
 ﻿using MARS.Server.Services;
 using MARS.Server.Services.SoundRequest;
 using MARS.Server.Services.SoundRequest.Entities;
+using MARS.Server.Services.SoundRequest.Queue;
 using MARS.Server.Services.Twitch.Entitys;
 using Microsoft.AspNetCore.Mvc;
 
@@ -14,6 +15,7 @@ namespace MARS.Server.Controllers;
 public class SoundRequestController(
     MainPlayer player,
     CommandsService service,
+    SoundRequestUserQueue queue,
     ILogger<SoundRequestController> logger
 ) : ControllerBase
 {
@@ -124,6 +126,57 @@ public class SoundRequestController(
             result = Ok(
                 OperationResult<string>.Bad("Ошибка при получении текущей песни", string.Empty)
             );
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Удалить элемент из очереди и из БД
+    /// </summary>
+    [HttpDelete("queue/{queueItemId}")]
+    public async Task<ActionResult<OperationResult>> DeleteFromQueue(
+        [FromRoute] Guid queueItemId,
+        CancellationToken cancellationToken = default
+    )
+    {
+        ActionResult<OperationResult> result;
+
+        try
+        {
+            if (queueItemId != Guid.Empty)
+            {
+                var queueItem = await queue.GetQueueItemByIdAsync(queueItemId);
+
+                if (queueItem != null)
+                {
+                    await queue.RemoveFromQueueAsync(queueItemId);
+                    logger.LogInformation(
+                        "Элемент очереди удален: Id={Id}, Track={Track}",
+                        queueItemId,
+                        queueItem.Track?.TrackName ?? "null"
+                    );
+                    result = Ok(OperationResult.Ok("Элемент успешно удален из очереди"));
+                }
+                else
+                {
+                    logger.LogWarning(
+                        "Попытка удаления несуществующего элемента: Id={Id}",
+                        queueItemId
+                    );
+                    result = Ok(OperationResult.Bad("Элемент не найден в очереди"));
+                }
+            }
+            else
+            {
+                logger.LogWarning("Попытка удаления элемента с пустым Id");
+                result = Ok(OperationResult.Bad("Некорректный идентификатор элемента"));
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при удалении элемента из очереди: Id={Id}", queueItemId);
+            result = Ok(OperationResult.Bad("Ошибка при удалении элемента из очереди"));
         }
 
         return result;

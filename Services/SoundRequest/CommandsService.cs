@@ -34,6 +34,16 @@ public class CommandsService(
 
         if (!string.IsNullOrWhiteSpace(query))
         {
+            // Проверяем состояние плеера - если остановлен и очередь не пуста, не принимаем новые реквесты
+            var playerState = await stateManager.GetStateAsync();
+            var queueCount = await queue.GetQueueCountAsync();
+
+            if (playerState.State == PlaybackState.Stopped && queueCount > 0)
+            {
+                result = "Прием реквестов приостановлен";
+                return result;
+            }
+
             // Нормализуем URL - добавляем схему если её нет
             var normalizedQuery = NormalizeUrl(query);
 
@@ -222,6 +232,16 @@ public class CommandsService(
     )
     {
         string result;
+
+        // Проверяем состояние плеера - если остановлен и очередь не пуста, не принимаем новые реквесты
+        var playerState = await stateManager.GetStateAsync();
+        var queueCount = await queue.GetQueueCountAsync();
+
+        if (playerState.State == PlaybackState.Stopped && queueCount > 0)
+        {
+            result = "Прием реквестов приостановлен - плеер остановлен";
+            return result;
+        }
 
         var items = await ytResolver.ResolvePlaylistAsync(playlistUrl);
 
