@@ -403,6 +403,67 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
     }
 
     /// <summary>
+    /// Проверить и загрузить текущий трек из очереди, если CurrentQueueItem пуст
+    /// </summary>
+    public async Task EnsureCurrentQueueItemLoadedAsync()
+    {
+        var currentState = await _stateManager.GetStateAsync();
+
+        // Проверяем, пуст ли CurrentQueueItem
+        if (currentState.CurrentQueueItem == null)
+        {
+            _logger.LogInformation(
+                "[EnsureCurrentQueueItemLoaded] CurrentQueueItem пуст, проверяем очередь на наличие трека с QueueOrder = 0"
+            );
+
+            // Получаем элемент с QueueOrder = 0 из очереди
+            var currentQueueItem = await _queue.GetCurrentQueueItemAsync();
+
+            if (currentQueueItem != null)
+            {
+                _logger.LogInformation(
+                    "[EnsureCurrentQueueItemLoaded] Найден трек с QueueOrder = 0: {TrackName}, загружаем его как текущий",
+                    currentQueueItem.Track?.TrackName ?? "null"
+                );
+
+                // Устанавливаем его как текущий
+                await _stateManager.SetCurrentQueueItemAsync(currentQueueItem, notify: true);
+
+                // Загружаем следующий элемент (QueueOrder = 1)
+                await LoadNextQueueItemAsync();
+
+                _logger.LogInformation(
+                    "[EnsureCurrentQueueItemLoaded] Текущий трек загружен: {CurrentTrack}, следующий трек: {NextTrack}",
+                    currentQueueItem.Track?.TrackName ?? "null",
+                    (await _stateManager.GetStateAsync()).NextQueueItem?.Track?.TrackName ?? "null"
+                );
+            }
+            else
+            {
+                _logger.LogInformation(
+                    "[EnsureCurrentQueueItemLoaded] Трек с QueueOrder = 0 не найден в очереди"
+                );
+            }
+        }
+        else
+        {
+            _logger.LogDebug(
+                "[EnsureCurrentQueueItemLoaded] CurrentQueueItem уже загружен: {TrackName}",
+                currentState.CurrentQueueItem.Track?.TrackName ?? "null"
+            );
+
+            // Проверяем, загружен ли NextQueueItem
+            if (currentState.NextQueueItem == null)
+            {
+                _logger.LogInformation(
+                    "[EnsureCurrentQueueItemLoaded] NextQueueItem пуст, пытаемся загрузить"
+                );
+                await LoadNextQueueItemAsync();
+            }
+        }
+    }
+
+    /// <summary>
     /// Уведомить клиентов об изменении очереди
     /// </summary>
     private async Task NotifyQueueChangedAsync()

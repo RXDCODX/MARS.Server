@@ -7,8 +7,11 @@ using StateManager = MARS.Server.Services.SoundRequest.StateManager;
 namespace MARS.Server.Hubs;
 
 [SignalRHub("/hubs/soundrequest", AutoDiscover.MethodsAndParams)]
-public class SoundRequestHub(OutSignalRHubService service, StateManager stateManager)
-    : Hub<ISoundRequestHub>
+public class SoundRequestHub(
+    OutSignalRHubService service,
+    StateManager stateManager,
+    MainPlayer mainPlayer
+) : Hub<ISoundRequestHub>
 {
     /// <summary>
     /// Имя группы для клиентов плеера
@@ -49,6 +52,13 @@ public class SoundRequestHub(OutSignalRHubService service, StateManager stateMan
     /// <param name="newState">Новое состояние плеера от фронтенда</param>
     public async Task FrontStateChange(PlayerState newState)
     {
+        // Если фронтенд пытается запустить воспроизведение (Play),
+        // проверяем, что текущий трек загружен
+        if (newState.State == PlaybackState.Playing)
+        {
+            await mainPlayer.EnsureCurrentQueueItemLoadedAsync();
+        }
+
         // Обновляем состояние на сервере
         await stateManager.UpdateStateAsync(state =>
         {
@@ -72,5 +82,21 @@ public class SoundRequestHub(OutSignalRHubService service, StateManager stateMan
             notify: false,
             excludeConnectionId: Context.ConnectionId
         );
+    }
+
+    /// <summary>
+    /// Вызывается фронтендом для переключения на следующий трек
+    /// </summary>
+    public Task SkipTrack()
+    {
+        return mainPlayer.SkipAsync(CancellationToken.None);
+    }
+
+    /// <summary>
+    /// Вызывается фронтендом для переключения на предыдущий трек из истории
+    /// </summary>
+    public Task PlayPrevious()
+    {
+        return mainPlayer.PlayPreviousFromHistoryAsync();
     }
 }

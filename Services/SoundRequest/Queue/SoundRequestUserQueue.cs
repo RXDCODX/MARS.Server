@@ -166,6 +166,25 @@ public class SoundRequestUserQueue(
     }
 
     /// <summary>
+    /// Получить текущий элемент очереди (с QueueOrder = 0)
+    /// </summary>
+    public async Task<QueueItem?> GetCurrentQueueItemAsync()
+    {
+        QueueItem? result = null;
+
+        await using var dbContext = await contextFactory.CreateDbContextAsync(_cancellationToken);
+
+        result = await dbContext
+            .SoundRequestQueueItems.AsNoTracking()
+            .Include(qi => qi.Track)
+            .Include(qi => qi.RequestedByTwitchUser)
+            .Where(qi => qi.QueueOrder == 0)
+            .FirstOrDefaultAsync(cancellationToken: _cancellationToken);
+
+        return result;
+    }
+
+    /// <summary>
     /// Получить следующий элемент из очереди (с QueueOrder = 1)
     /// </summary>
     public async Task<QueueItem?> GetNextQueueItemAsync()
