@@ -7,6 +7,7 @@ using TwitchLib.EventSub.Websockets.Core.EventArgs;
 
 namespace MARS.Server.Services.Twitch.Management;
 
+[DebuggerNonUserCode]
 public class EventSubService(
     ITwitchAPI api,
     ILogger<EventSubService> logger,
@@ -273,7 +274,6 @@ public class EventSubService(
         return result;
     }
 
-    [DebuggerNonUserCode]
     public async Task<string> ResubscribeToEventSubAsync()
     {
         var result = string.Empty;

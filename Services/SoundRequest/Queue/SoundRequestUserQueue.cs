@@ -81,7 +81,8 @@ public class SoundRequestUserQueue(
 
             // Получаем максимальный QueueOrder среди элементов очереди (>= 0)
             var isQueueItemsExists = await dbContext
-                .SoundRequestQueueItems.AsNoTracking()
+                .SoundRequestQueueItems.Where(e => e.QueueOrder >= 0)
+                .AsNoTracking()
                 .AnyAsync(cancellationToken: _cancellationToken);
 
             var maxOrder = isQueueItemsExists
