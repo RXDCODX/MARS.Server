@@ -331,6 +331,7 @@ public class StateManager(
                 state.State = playbackState;
                 if (playbackState == PlaybackState.Stopped)
                 {
+                    state.CurrentQueueItemId = null;
                     state.CurrentQueueItem = null;
                     state.CurrentTrackProgress = null;
                 }

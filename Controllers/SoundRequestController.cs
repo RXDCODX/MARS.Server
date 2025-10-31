@@ -1,7 +1,9 @@
-﻿using MARS.Server.Services;
+﻿using MARS.Server.Exstensions;
+using MARS.Server.Services;
 using MARS.Server.Services.SoundRequest;
 using MARS.Server.Services.SoundRequest.Entities;
 using MARS.Server.Services.SoundRequest.Queue;
+using MARS.Server.Services.Twitch;
 using MARS.Server.Services.Twitch.Entitys;
 using Microsoft.AspNetCore.Mvc;
 
@@ -16,6 +18,7 @@ public class SoundRequestController(
     MainPlayer player,
     CommandsService service,
     SoundRequestUserQueue queue,
+    TwitchUserEnsureService userEnsureService,
     ILogger<SoundRequestController> logger
 ) : ControllerBase
 {
@@ -177,6 +180,101 @@ public class SoundRequestController(
         {
             logger.LogError(ex, "Ошибка при удалении элемента из очереди: Id={Id}", queueItemId);
             result = Ok(OperationResult.Bad("Ошибка при удалении элемента из очереди"));
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Добавить трек в очередь
+    /// </summary>
+    /// <param name="query">URL или название трека для поиска</param>
+    /// <param name="cancellationToken">Токен отмены</param>
+    [HttpPost("add-track")]
+    public async Task<ActionResult<OperationResult<string>>> AddTrack(
+        [FromQuery] string query,
+        CancellationToken cancellationToken = default
+    )
+    {
+        ActionResult<OperationResult<string>> result;
+
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(query))
+            {
+                // Убираем префикс !sr если он есть
+                var processedQuery = query.Trim();
+                if (processedQuery.StartsWith("!sr", StringComparison.OrdinalIgnoreCase))
+                {
+                    processedQuery = processedQuery.Substring(3).TrimStart();
+                    logger.LogInformation(
+                        "Удален префикс !sr из запроса: Original={Original}, Processed={Processed}",
+                        query,
+                        processedQuery
+                    );
+                }
+
+                // Получаем или создаем пользователя по ChannelId из TwitchExtension
+                var channelUser = await userEnsureService.EnsureUserExistsAsync(
+                    TwitchExstension.ChannelId,
+                    cancellationToken
+                );
+
+                if (channelUser != null)
+                {
+                    // Добавляем трек через сервис
+                    var message = await service.AddTrackAsync(
+                        processedQuery,
+                        channelUser,
+                        cancellationToken
+                    );
+                    logger.LogInformation(
+                        "Трек добавлен в очередь: Query={Query}, User={UserDisplayName}, Message={Message}",
+                        processedQuery,
+                        channelUser.DisplayName,
+                        message
+                    );
+
+                    result = Ok(OperationResult<string>.Ok(message, message));
+                }
+                else
+                {
+                    logger.LogWarning(
+                        "Не удалось получить пользователя канала: ChannelId={ChannelId}",
+                        TwitchExstension.ChannelId
+                    );
+                    result = Ok(
+                        OperationResult<string>.Bad(
+                            "Не удалось получить информацию о пользователе",
+                            string.Empty
+                        )
+                    );
+                }
+            }
+            else
+            {
+                logger.LogWarning("Попытка добавить трек с пустым query");
+                result = Ok(
+                    OperationResult<string>.Bad(
+                        "Необходимо указать URL или название трека",
+                        string.Empty
+                    )
+                );
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(
+                ex,
+                "Ошибка при добавлении трека в очередь: Query={Query}",
+                query
+            );
+            result = Ok(
+                OperationResult<string>.Bad(
+                    "Ошибка при добавлении трека в очередь",
+                    string.Empty
+                )
+            );
         }
 
         return result;

@@ -1,4 +1,5 @@
-﻿using MARS.Server.Services.SoundRequest.Entities;
+﻿using MARS.Server.Exstensions;
+using MARS.Server.Services.SoundRequest.Entities;
 using MARS.Server.Services.SoundRequest.Interfaces;
 using MARS.Server.Services.SoundRequest.Queue;
 using MARS.Server.Services.Twitch.Entitys;
@@ -18,6 +19,8 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
     private readonly IDbContextFactory<AppDbContext> _dbFactory;
     private readonly ILogger<MainPlayer> _logger;
 
+    private readonly ITwitchClient _twitchClient;
+
     /// <summary>
     /// Основной контроллер аудиоплеера с интеграцией всех сервисов
     /// </summary>
@@ -28,6 +31,7 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
         SoundRequestUserQueue queue,
         IDbContextFactory<AppDbContext> dbFactory,
         IHostApplicationLifetime lifetime,
+        ITwitchClient twitchClient,
         ILogger<MainPlayer> logger
     )
     {
@@ -35,6 +39,7 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
         _inSignalRHubService = inSignalRHubService;
         _queue = queue;
         _dbFactory = dbFactory;
+        _twitchClient = twitchClient;
         _logger = logger;
         _cancellationToken = lifetime.ApplicationStopping;
 
@@ -224,7 +229,26 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
     /// </summary>
     public async Task SkipAsync(CancellationToken ct)
     {
-        _logger.LogInformation("Пропуск текущего трека");
+        var currentState = await _stateManager.GetStateAsync();
+        var currentTrack = currentState.CurrentQueueItem?.Track;
+
+        if (currentTrack != null)
+        {
+            _logger.LogInformation(
+                "Пропуск текущего трека: {TrackName}",
+                currentTrack.TrackName
+            );
+
+            // Отправляем сообщение в чат Твича о пропуске
+            var skipMessage = $"⏩ Трек \"{currentTrack.TrackName}\" был пропущен";
+            await _twitchClient.SendMessageToMainTwitchAsync(skipMessage, _logger);
+
+            _logger.LogInformation("Отправлено сообщение в чат Твича о пропуске трека");
+        }
+        else
+        {
+            _logger.LogInformation("Пропуск текущего трека (текущий трек не найден)");
+        }
 
         // Воспроизводим следующий трек из очереди
         await PlayNextFromQueueAsync();
@@ -440,7 +464,32 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
         // Если плеер не остановлен и не на паузе - воспроизводим следующий
         if (currentState.State == PlaybackState.Playing)
         {
-            await PlayNextFromQueueAsync();
+            // Проверяем, есть ли будущие треки в очереди (QueueOrder > 0)
+            // Текущий трек имеет QueueOrder = 0, поэтому проверяем только > 0
+            await using var db = await _dbFactory.CreateDbContextAsync(_cancellationToken);
+            var hasNextTracks = await db
+                .SoundRequestQueueItems.AsNoTracking()
+                .AnyAsync(qi => qi.QueueOrder > 0, _cancellationToken);
+
+            _logger.LogInformation(
+                "Есть ли следующие треки в очереди: {HasNextTracks}",
+                hasNextTracks
+            );
+
+            // Если нет следующих треков - это был последний трек
+            if (!hasNextTracks)
+            {
+                _logger.LogInformation(
+                    "Это был последний трек в очереди, останавливаем плеер и обнуляем ссылки"
+                );
+
+                await _stateManager.StopPlaybackAsync(notify: true);
+            }
+            else
+            {
+                // Воспроизводим следующий трек из очереди
+                await PlayNextFromQueueAsync();
+            }
         }
     }
 
@@ -474,8 +523,39 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
             track.Id
         );
 
-        // Пытаемся воспроизвести следующий трек
-        await PlayNextFromQueueAsync();
+        // Отправляем сообщение в чат Твича об ошибке
+        var errorMessage =
+            $"⚠️ Трек \"{track.TrackName}\" был пропущен из-за ошибки воспроизведения";
+        await _twitchClient.SendMessageToMainTwitchAsync(errorMessage, _logger);
+
+        _logger.LogInformation("Отправлено сообщение в чат Твича об ошибке трека");
+
+        // Проверяем, есть ли будущие треки в очереди (QueueOrder > 0)
+        // Текущий трек имеет QueueOrder = 0, поэтому проверяем только > 0
+        await using var db = await _dbFactory.CreateDbContextAsync(_cancellationToken);
+        var hasNextTracks = await db
+            .SoundRequestQueueItems.AsNoTracking()
+            .AnyAsync(qi => qi.QueueOrder > 0, _cancellationToken);
+
+        _logger.LogInformation(
+            "Есть ли следующие треки в очереди после ошибки: {HasNextTracks}",
+            hasNextTracks
+        );
+
+        // Если нет следующих треков - это был последний трек
+        if (!hasNextTracks)
+        {
+            _logger.LogInformation(
+                "Это был последний трек в очереди, останавливаем плеер и обнуляем ссылки"
+            );
+
+            await _stateManager.StopPlaybackAsync(notify: true);
+        }
+        else
+        {
+            // Пытаемся воспроизвести следующий трек
+            await PlayNextFromQueueAsync();
+        }
     }
 
     #endregion

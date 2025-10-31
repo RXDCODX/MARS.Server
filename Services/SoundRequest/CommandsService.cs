@@ -77,6 +77,16 @@ public class CommandsService(
 
             if (info != null && user != null)
             {
+                // Проверяем длительность трека (максимум 12 минут)
+                var maxDuration = TimeSpan.FromMinutes(12);
+                if (info.Duration > maxDuration)
+                {
+                    var durationMinutes = Math.Round(info.Duration.TotalMinutes, 1);
+                    result =
+                        $"❌ Трек слишком длинный ({durationMinutes} мин). Максимальная длительность: 12 минут";
+                    return result;
+                }
+
                 // Проверяем состояние плеера ДО добавления в очередь
                 var currentState = await stateManager.GetStateAsync();
                 var wasPlayerStopped = currentState.State == PlaybackState.Stopped;
@@ -253,9 +263,18 @@ public class CommandsService(
             var queueCountBefore = await queue.GetQueueCountAsync();
 
             QueueItem? firstQueueItem = null;
+            var maxDuration = TimeSpan.FromMinutes(12);
+            var skippedTracksCount = 0;
 
             foreach (var info in items)
             {
+                // Проверяем длительность трека (максимум 12 минут)
+                if (info.Duration > maxDuration)
+                {
+                    skippedTracksCount++;
+                    continue; // Пропускаем слишком длинные треки
+                }
+
                 // Добавляем трек в очередь
                 var queueItem = await queue.AddToQueueAsync(info, user.TwitchId, user);
 
@@ -292,7 +311,15 @@ public class CommandsService(
             }
             var waitTimeText = FormatWaitTime(waitTime);
 
-            result = $"Добавлено треков: {items.Length}{waitTimeText}";
+            var addedCount = items.Length - skippedTracksCount;
+            result = $"Добавлено треков: {addedCount}";
+
+            if (skippedTracksCount > 0)
+            {
+                result += $" (пропущено {skippedTracksCount} треков длиннее 12 мин)";
+            }
+
+            result += waitTimeText;
         }
         else
         {
