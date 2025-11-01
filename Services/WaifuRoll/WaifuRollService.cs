@@ -56,15 +56,16 @@ public class WaifuRollService(
                         cd.HostId = host.TwitchId;
                         cd.Time = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
 
-                        await dbContext.AddAsync(cd);
+                        dbContext.HostsCoolDowns.Update(cd);
                         pass = true;
                     }
                 }
                 else
                 {
                     cd = new HostCoolDown { HostId = id };
+                    host.HostCoolDown = cd;
 
-                    await dbContext.HostsCoolDowns.AddAsync(cd);
+                    dbContext.Hosts.Update(host);
 
                     pass = true;
                 }
@@ -306,24 +307,17 @@ public class WaifuRollService(
         {
             await using AppDbContext dbContext = await factory.CreateDbContextAsync();
 
-            var host = dbContext.Hosts.Find(id);
+            var host = await dbContext
+                .Hosts.Include(e => e.HostGreetings)
+                .Include(e => e.HostCoolDown)
+                .FirstOrDefaultAsync(e => e.TwitchId == id);
 
             if (host?.IsPrivated ?? false)
             {
                 var isChecked = false;
+                var greet = host.HostGreetings;
 
-                HostAutoHello? greet = dbContext.HostsGreetings.FirstOrDefault(e => e.HostId == id);
-                if (greet is null)
-                {
-                    isChecked = true;
-
-                    greet = new HostAutoHello { HostId = id, Time = DateTimeOffset.Now };
-
-                    dbContext.Add(greet);
-
-                    await dbContext.SaveChangesAsync();
-                }
-                else if (greet.Time <= DateTimeOffset.Now.AddHours(-20))
+                if (greet.Time <= DateTimeOffset.Now.AddHours(-20))
                 {
                     isChecked = true;
                 }
@@ -336,24 +330,8 @@ public class WaifuRollService(
                         var helloMsg = await GetHelloText();
                         var fixedmsg = await ConvertFixLinksInHelloMessages(helloMsg);
 
-                        HostAutoHello? hello = dbContext.HostsGreetings.FirstOrDefault(e =>
-                            e.HostId == id
-                        );
-
-                        if (hello != default)
-                        {
-                            hello.Time = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
-                        }
-                        else
-                        {
-                            hello = new HostAutoHello
-                            {
-                                HostId = id,
-                                Time = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3)),
-                            };
-
-                            dbContext.Add(hello);
-                        }
+                        greet.Time = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
+                        dbContext.HostsGreetings.Update(greet);
 
                         await dbContext.SaveChangesAsync();
 
@@ -372,8 +350,11 @@ public class WaifuRollService(
                     }
                 }
             }
-            else if (host == default)
+            else if (host == null)
             {
+                // Гарантируем наличие пользователя в TwitchUsers перед созданием Host
+                await twitchUserEnsureService.EnsureUserExistsAsync(id);
+
                 host = new Host
                 {
                     TwitchId = id,

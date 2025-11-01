@@ -112,10 +112,7 @@ public class CommandsService(
                         : "??:??";
 
                 // Рассчитываем примерное время ожидания
-                var waitTime = await CalculateWaitTimeAsync(
-                    queueItem.QueueOrder,
-                    cancellationToken
-                );
+                var waitTime = await CalculateWaitTimeAsync(queueItem.QueueOrder);
                 var waitTimeText = FormatWaitTime(waitTime);
 
                 result =
@@ -304,10 +301,7 @@ public class CommandsService(
             var waitTime = TimeSpan.Zero;
             if (firstQueueItem != null)
             {
-                waitTime = await CalculateWaitTimeAsync(
-                    firstQueueItem.QueueOrder,
-                    cancellationToken
-                );
+                waitTime = await CalculateWaitTimeAsync(firstQueueItem.QueueOrder);
             }
             var waitTimeText = FormatWaitTime(waitTime);
 
@@ -351,7 +345,6 @@ public class CommandsService(
         if (wasPlayerStopped && queueCountBefore == 0 && playerController is MainPlayer mainPlayer)
         {
             await mainPlayer.PlayAsync(queueItem, cancellationToken);
-            await queue.RemoveFromQueueAsync(queueItem.Id);
             await NotifyQueueChangedAsync();
         }
         else
@@ -364,12 +357,8 @@ public class CommandsService(
     /// Рассчитать примерное время ожидания до воспроизведения трека
     /// </summary>
     /// <param name="queueOrder">Позиция трека в очереди</param>
-    /// <param name="cancellationToken">Токен отмены</param>
     /// <returns>Время ожидания в секундах</returns>
-    private async Task<TimeSpan> CalculateWaitTimeAsync(
-        int queueOrder,
-        CancellationToken cancellationToken = default
-    )
+    private async Task<TimeSpan> CalculateWaitTimeAsync(int queueOrder)
     {
         var result = TimeSpan.Zero;
 
