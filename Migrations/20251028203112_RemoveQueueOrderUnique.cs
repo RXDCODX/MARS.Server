@@ -35,7 +35,7 @@ public partial class RemoveQueueOrderUnique : Migration
             table: "SoundRequestQueueItems",
             column: "QueueOrder",
             unique: true,
-            descending: new bool[0]
+            descending: Array.Empty<bool>()
         );
     }
 }

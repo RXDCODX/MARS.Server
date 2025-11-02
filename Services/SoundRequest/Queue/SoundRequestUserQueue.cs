@@ -42,15 +42,12 @@ public class SoundRequestUserQueue(
             }
 
             // Если не нашли по VideoId, проверяем по URL
-            if (existingTrack == null)
-            {
-                existingTrack = await dbContext
-                    .SoundRequestBaseTrackInfos.AsNoTracking()
-                    .FirstOrDefaultAsync(
-                        t => t.Url == track.Url,
-                        cancellationToken: _cancellationToken
-                    );
-            }
+            existingTrack ??= await dbContext
+                .SoundRequestBaseTrackInfos.AsNoTracking()
+                .FirstOrDefaultAsync(
+                    t => t.Url == track.Url,
+                    cancellationToken: _cancellationToken
+                );
 
             Guid trackId;
             if (existingTrack != null)
@@ -274,15 +271,12 @@ public class SoundRequestUserQueue(
                     );
             }
 
-            if (existingTrack == null)
-            {
-                existingTrack = await dbContext
-                    .SoundRequestBaseTrackInfos.AsNoTracking()
-                    .FirstOrDefaultAsync(
-                        t => t.Url == track.Url,
-                        cancellationToken: _cancellationToken
-                    );
-            }
+            existingTrack ??= await dbContext
+                .SoundRequestBaseTrackInfos.AsNoTracking()
+                .FirstOrDefaultAsync(
+                    t => t.Url == track.Url,
+                    cancellationToken: _cancellationToken
+                );
 
             Guid trackId;
             if (existingTrack != null)

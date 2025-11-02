@@ -21,7 +21,7 @@ public class MikuBeamCommand(TwitchMikuBeamRewardService mikuBeamService) : Base
         CancellationToken cancellationToken = default
     )
     {
-        var result = string.Empty;
+        string result;
 
         try
         {

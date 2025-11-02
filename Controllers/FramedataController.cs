@@ -18,32 +18,73 @@ public class FramedataController(
 ) : ControllerBase
 {
     /// <summary>
-    /// Получить всех персонажей
+    /// Получить персонажей с пагинацией (без мувлистов)
     /// </summary>
-    /// <returns>Список всех персонажей</returns>
+    /// <param name="page">Номер страницы (начиная с 1)</param>
+    /// <param name="pageSize">Размер страницы (по умолчанию 20, максимум 100)</param>
+    /// <returns>Список персонажей</returns>
     [HttpGet("characters")]
-    public async Task<ActionResult<OperationResult<List<TekkenCharacter>>>> GetCharacters()
+    public async Task<ActionResult<OperationResult<PagedResult<TekkenCharacter>>>> GetCharacters(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20
+    )
     {
-        ActionResult<OperationResult<List<TekkenCharacter>>> result = null!;
+        ActionResult<OperationResult<PagedResult<TekkenCharacter>>> result = null!;
 
         try
         {
             await using var dbContext = await factory.CreateDbContextAsync();
 
+            if (page < 1)
+            {
+                page = 1;
+            }
+
+            if (pageSize < 1)
+            {
+                pageSize = 20;
+            }
+
+            if (pageSize > 100)
+            {
+                pageSize = 100;
+            }
+
+            var skip = (page - 1) * pageSize;
+
+            var totalCount = await dbContext.TekkenCharacters.CountAsync();
+
             var characters = await dbContext
-                .TekkenCharacters.Include(c => c.Movelist)
+                .TekkenCharacters.AsNoTracking()
                 .OrderBy(c => c.Name)
+                .Skip(skip)
+                .Take(pageSize)
                 .ToListAsync();
 
+            var pagedResult = new PagedResult<TekkenCharacter>
+            {
+                Items = characters,
+                Page = page,
+                PageSize = pageSize,
+                TotalCount = totalCount,
+                TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize),
+            };
+
             result = Ok(
-                OperationResult<List<TekkenCharacter>>.Ok("Получены все персонажи", characters)
+                OperationResult<PagedResult<TekkenCharacter>>.Ok(
+                    "Получены персонажи",
+                    pagedResult
+                )
             );
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при получении персонажей");
             result = Ok(
-                OperationResult<List<TekkenCharacter>>.Bad("Ошибка при получении персонажей", [])
+                OperationResult<PagedResult<TekkenCharacter>>.Bad(
+                    "Ошибка при получении персонажей",
+                    new PagedResult<TekkenCharacter>()
+                )
             );
         }
 
@@ -51,7 +92,7 @@ public class FramedataController(
     }
 
     /// <summary>
-    /// Получить персонажа по имени
+    /// Получить персонажа по имени (без мувлиста)
     /// </summary>
     /// <param name="name">Имя персонажа</param>
     /// <returns>Персонаж</returns>
@@ -65,7 +106,7 @@ public class FramedataController(
             await using var dbContext = await factory.CreateDbContextAsync();
 
             var character = await dbContext
-                .TekkenCharacters.Include(c => c.Movelist)
+                .TekkenCharacters.AsNoTracking()
                 .FirstOrDefaultAsync(c => c.Name == name);
 
             if (character != null)
@@ -236,26 +277,67 @@ public class FramedataController(
     }
 
     /// <summary>
-    /// Получить движения персонажа
+    /// Получить движения персонажа с пагинацией
     /// </summary>
     /// <param name="characterName">Имя персонажа</param>
+    /// <param name="page">Номер страницы (начиная с 1)</param>
+    /// <param name="pageSize">Размер страницы (по умолчанию 50, максимум 200)</param>
     /// <returns>Список движений</returns>
     [HttpGet("characters/{characterName}/moves")]
-    public async Task<ActionResult<OperationResult<List<Move>>>> GetCharacterMoves(
-        string characterName
+    public async Task<ActionResult<OperationResult<PagedResult<Move>>>> GetCharacterMoves(
+        string characterName,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 50
     )
     {
-        ActionResult<OperationResult<List<Move>>> result = null!;
+        ActionResult<OperationResult<PagedResult<Move>>> result = null!;
 
         try
         {
             await using var dbContext = await factory.CreateDbContextAsync();
+
+            if (page < 1)
+            {
+                page = 1;
+            }
+
+            if (pageSize < 1)
+            {
+                pageSize = 50;
+            }
+
+            if (pageSize > 200)
+            {
+                pageSize = 200;
+            }
+
+            var skip = (page - 1) * pageSize;
+
+            var totalCount = await dbContext
+                .TekkenMoves.AsNoTracking()
+                .Where(m => m.CharacterName == characterName)
+                .CountAsync();
+
             var moves = await dbContext
-                .TekkenMoves.Where(m => m.CharacterName == characterName)
+                .TekkenMoves.AsNoTracking()
+                .Where(m => m.CharacterName == characterName)
                 .OrderBy(m => m.Command)
+                .Skip(skip)
+                .Take(pageSize)
                 .ToListAsync();
 
-            result = Ok(OperationResult<List<Move>>.Ok("Получены движения персонажа", moves));
+            var pagedResult = new PagedResult<Move>
+            {
+                Items = moves,
+                Page = page,
+                PageSize = pageSize,
+                TotalCount = totalCount,
+                TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize),
+            };
+
+            result = Ok(
+                OperationResult<PagedResult<Move>>.Ok("Получены движения персонажа", pagedResult)
+            );
         }
         catch (Exception ex)
         {
@@ -265,7 +347,10 @@ public class FramedataController(
                 characterName
             );
             result = Ok(
-                OperationResult<List<Move>>.Bad("Ошибка при получении движений персонажа", [])
+                OperationResult<PagedResult<Move>>.Bad(
+                    "Ошибка при получении движений персонажа",
+                    new PagedResult<Move>()
+                )
             );
         }
 
@@ -509,31 +594,35 @@ public class FramedataController(
     }
 
     /// <summary>
-    /// Поиск движений по фильтрам
+    /// Поиск движений по фильтрам с пагинацией
     /// </summary>
     /// <param name="characterName">Имя персонажа (опционально)</param>
     /// <param name="stanceCode">Код стойки (опционально)</param>
     /// <param name="heatEngage">Требует ли Heat Engage (опционально)</param>
     /// <param name="powerCrush">Является ли Power Crush (опционально)</param>
-    /// <param name="throw">Является ли броском (опционально)</param>
+    /// <param name="isThrow">Является ли броском (опционально)</param>
     /// <param name="homing">Является ли Homing (опционально)</param>
+    /// <param name="page">Номер страницы (начиная с 1)</param>
+    /// <param name="pageSize">Размер страницы (по умолчанию 50, максимум 200)</param>
     /// <returns>Отфильтрованные движения</returns>
     [HttpGet("moves/search")]
-    public async Task<ActionResult<OperationResult<List<Move>>>> SearchMoves(
+    public async Task<ActionResult<OperationResult<PagedResult<Move>>>> SearchMoves(
         [FromQuery] string? characterName = null,
         [FromQuery] string? stanceCode = null,
         [FromQuery] bool? heatEngage = null,
         [FromQuery] bool? powerCrush = null,
         [FromQuery] bool? isThrow = null,
-        [FromQuery] bool? homing = null
+        [FromQuery] bool? homing = null,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 50
     )
     {
-        ActionResult<OperationResult<List<Move>>> result = null!;
+        ActionResult<OperationResult<PagedResult<Move>>> result = null!;
 
         try
         {
             await using var dbContext = await factory.CreateDbContextAsync();
-            var query = dbContext.TekkenMoves.AsQueryable();
+            var query = dbContext.TekkenMoves.AsNoTracking().AsQueryable();
 
             if (!string.IsNullOrEmpty(characterName))
             {
@@ -565,17 +654,52 @@ public class FramedataController(
                 query = query.Where(m => m.Homing == homing.Value);
             }
 
+            if (page < 1)
+            {
+                page = 1;
+            }
+
+            if (pageSize < 1)
+            {
+                pageSize = 50;
+            }
+
+            if (pageSize > 200)
+            {
+                pageSize = 200;
+            }
+
+            var skip = (page - 1) * pageSize;
+
+            var totalCount = await query.CountAsync();
+
             var moves = await query
                 .OrderBy(m => m.CharacterName)
                 .ThenBy(m => m.Command)
+                .Skip(skip)
+                .Take(pageSize)
                 .ToListAsync();
 
-            result = Ok(OperationResult<List<Move>>.Ok("Движения найдены", moves));
+            var pagedResult = new PagedResult<Move>
+            {
+                Items = moves,
+                Page = page,
+                PageSize = pageSize,
+                TotalCount = totalCount,
+                TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize),
+            };
+
+            result = Ok(OperationResult<PagedResult<Move>>.Ok("Движения найдены", pagedResult));
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при поиске движений");
-            result = Ok(OperationResult<List<Move>>.Bad("Ошибка при поиске движений", []));
+            result = Ok(
+                OperationResult<PagedResult<Move>>.Bad(
+                    "Ошибка при поиске движений",
+                    new PagedResult<Move>()
+                )
+            );
         }
 
         return result;
@@ -1069,4 +1193,45 @@ public class ParseResult
     /// Сообщение о результате
     /// </summary>
     public string Message { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Результат с пагинацией
+/// </summary>
+public class PagedResult<T>
+{
+    /// <summary>
+    /// Элементы текущей страницы
+    /// </summary>
+    public List<T> Items { get; set; } = [];
+
+    /// <summary>
+    /// Текущая страница
+    /// </summary>
+    public int Page { get; set; }
+
+    /// <summary>
+    /// Размер страницы
+    /// </summary>
+    public int PageSize { get; set; }
+
+    /// <summary>
+    /// Общее количество элементов
+    /// </summary>
+    public int TotalCount { get; set; }
+
+    /// <summary>
+    /// Общее количество страниц
+    /// </summary>
+    public int TotalPages { get; set; }
+
+    /// <summary>
+    /// Есть ли следующая страница
+    /// </summary>
+    public bool HasNextPage => Page < TotalPages;
+
+    /// <summary>
+    /// Есть ли предыдущая страница
+    /// </summary>
+    public bool HasPreviousPage => Page > 1;
 }

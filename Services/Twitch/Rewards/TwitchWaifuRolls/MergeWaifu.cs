@@ -472,5 +472,6 @@ public class MergeWaifu(
         }
         _hostSemaphores.Clear();
         base.Dispose();
+        GC.SuppressFinalize(this);
     }
 }

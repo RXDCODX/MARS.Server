@@ -327,18 +327,21 @@ public partial class Tekken8FrameData(
             stoppingToken.Value
         );
 
-        var stancesAndMoves = (
-            await dbContext
-                .TekkenMoves.AsNoTracking()
-                .Where(e =>
-                    e.CharacterName == character.Name
-                    && e.StanceName != null
-                    && e.StanceCode != string.Empty
-                )
-                .ToListAsync(stoppingToken.Value)
-        )
-            .Distinct(StancesComparer)
-            .ToDictionary(e => e.StanceCode, e => e.StanceName ?? string.Empty);
+        // Получаем только уникальные комбинации StanceCode и StanceName через группировку на уровне БД
+        var stancesAndMoves = await dbContext
+            .TekkenMoves.AsNoTracking()
+            .Where(e =>
+                e.CharacterName == character.Name
+                && e.StanceName != null
+                && e.StanceCode != string.Empty
+            )
+            .GroupBy(e => new { e.StanceCode, e.StanceName })
+            .Select(g => new { g.Key.StanceCode, g.Key.StanceName })
+            .ToDictionaryAsync(
+                e => e.StanceCode,
+                e => e.StanceName ?? string.Empty,
+                stoppingToken.Value
+            );
 
         return stancesAndMoves;
     }
@@ -366,15 +369,24 @@ public partial class Tekken8FrameData(
         await using AppDbContext dbContext = await dbContextFactory.CreateDbContextAsync(
             _cancellationToken
         );
-        var character = await dbContext
-            .TekkenCharacters.Include(e => e.Movelist)
-            .AsNoTracking()
-            .FirstOrDefaultAsync(
-                e => e.Name.Equals(charname),
-                cancellationToken: _cancellationToken
-            );
 
-        return character?.Movelist?.ToArray();
+        // Проверяем существование персонажа
+        var characterExists = await dbContext
+            .TekkenCharacters.AsNoTracking()
+            .AnyAsync(e => e.Name.Equals(charname), cancellationToken: _cancellationToken);
+
+        if (!characterExists)
+        {
+            return null;
+        }
+
+        // Загружаем только мувы без персонажа
+        var moves = await dbContext
+            .TekkenMoves.AsNoTracking()
+            .Where(m => m.CharacterName.Equals(charname))
+            .ToArrayAsync(_cancellationToken);
+
+        return moves.Length > 0 ? moves : null;
     }
 
     public async Task<Move?> GetMoveAsync(string[]? command)
@@ -403,10 +415,10 @@ public partial class Tekken8FrameData(
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(_cancellationToken);
 
+        // Загружаем мувы без Include, Character будем подставлять вручную
         var movelist = await dbContext
             .TekkenMoves.AsNoTracking()
-            .Where(e => e.Character == charnameOut)
-            .Include(e => e.Character)
+            .Where(e => e.CharacterName == charnameOut.Name)
             .ToListAsync(_cancellationToken);
 
         if (movelist is { Count: > 0 })
@@ -414,6 +426,12 @@ public partial class Tekken8FrameData(
             var move =
                 await GetMoveFromMovelistByCommandAsync(input, movelist)
                 ?? (await GetMoveFromMovelistByTagAsync(input, movelist)).move;
+
+            if (move != null)
+            {
+                // Подставляем персонажа вручную, чтобы избежать дополнительного запроса
+                move.Character = charnameOut;
+            }
 
             return move;
         }
@@ -620,24 +638,49 @@ public partial class Tekken8FrameData(
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(_cancellationToken);
 
-        var allMoves = dbContext
-            .TekkenMoves.Include(e => e.Character)
-            .AsNoTracking()
-            .AsAsyncEnumerable();
+        // Используем батчинг для обработки мувов порциями
+        const int batchSize = 1000;
         var list = new List<Move>();
-        await foreach (var move in allMoves)
+        var totalProcessed = 0;
+
+        while (true)
         {
-            if (int.TryParse(move.BlockFrame, out var frame))
+            var batch = await dbContext
+                .TekkenMoves.AsNoTracking()
+                .Include(e => e.Character)
+                .OrderBy(m => m.CharacterName)
+                .ThenBy(m => m.Command)
+                .Skip(totalProcessed)
+                .Take(batchSize)
+                .ToListAsync(_cancellationToken);
+
+            if (batch.Count == 0)
             {
-                list.Add(move);
+                break;
             }
-            else if (move.BlockFrame?.Contains('~') ?? false)
+
+            foreach (var move in batch)
             {
-                var split = move.BlockFrame.Split('~');
-                if (split.All(e => int.TryParse(e, out var _)))
+                if (int.TryParse(move.BlockFrame, out var frame))
                 {
                     list.Add(move);
                 }
+                else if (move.BlockFrame?.Contains('~') ?? false)
+                {
+                    var split = move.BlockFrame.Split('~');
+                    if (split.All(e => int.TryParse(e, out var _)))
+                    {
+                        list.Add(move);
+                    }
+                }
+            }
+
+            totalProcessed += batch.Count;
+
+            // Если батч меньше размера - это последний батч
+            if (batch.Count < batchSize)
+            {
+                break;
             }
         }
 

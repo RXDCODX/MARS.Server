@@ -76,7 +76,7 @@ public sealed partial class AppDbContext : DbContext
     /// <summary>
     /// Partial метод для конфигурации таблиц, связанных с TwitchUser (реализован в TwitchUsersDbContext.cs)
     /// </summary>
-    partial void OnModelCreatingTwitchUsersPartial(ModelBuilder modelBuilder);
+    public partial void OnModelCreatingTwitchUsersPartial(ModelBuilder modelBuilder);
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

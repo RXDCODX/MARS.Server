@@ -49,7 +49,7 @@ public class TekkenVictorinaLeaderbord(
 
     public async Task AddOrUpdateUserLeaderBoard(
         string twitchId,
-        string name,
+        string _,
         bool isWaifuWin = false
     )
     {

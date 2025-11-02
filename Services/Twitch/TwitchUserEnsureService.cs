@@ -30,11 +30,9 @@ public class TwitchUserEnsureService(
         CancellationToken cancellationToken = default
     )
     {
-        var twitchUser = TwitchUser.FromChatMessage(chatMessage);
-        if (twitchUser == null)
-        {
-            throw new ArgumentException("Invalid ChatMessage data", nameof(chatMessage));
-        }
+        var twitchUser =
+            TwitchUser.FromChatMessage(chatMessage)
+            ?? throw new ArgumentException("Invalid ChatMessage data", nameof(chatMessage));
 
         return await EnsureUserExistsAsync(twitchUser, cancellationToken);
     }
@@ -57,19 +55,17 @@ public class TwitchUserEnsureService(
             tokenService.Token?.AccessToken
         );
 
-        if (usersResponse is { Users: { Length: > 0 } })
+        if (usersResponse is { Users.Length: > 0 })
         {
             var userInfo = usersResponse.Users.First();
-            var twitchUser = TwitchUser.FromUser(userInfo);
-            if (twitchUser == null)
-            {
-                throw new ArgumentException("Invalid TwitchId", nameof(twitchId));
-            }
+            var twitchUser =
+                TwitchUser.FromUser(userInfo)
+                ?? throw new ArgumentException("Invalid TwitchId", nameof(twitchId));
 
             return await EnsureUserExistsAsync(twitchUser, cancellationToken);
         }
 
-        throw new ArgumentException();
+        throw new ArgumentException("User not found", nameof(twitchId));
     }
 
     /// <summary>
@@ -101,7 +97,7 @@ public class TwitchUserEnsureService(
                         tokenService.Token?.AccessToken
                     );
 
-                    if (usersResponse is { Users: { Length: > 0 } })
+                    if (usersResponse is { Users.Length: > 0 })
                     {
                         foreach (var user in usersResponse.Users)
                         {
@@ -134,10 +130,7 @@ public class TwitchUserEnsureService(
     /// <summary>
     /// Обогащает данные пользователя информацией из Twitch API
     /// </summary>
-    private async Task<TwitchUser> EnrichUserDataFromApiAsync(
-        TwitchUser twitchUser,
-        CancellationToken cancellationToken = default
-    )
+    private async Task<TwitchUser> EnrichUserDataFromApiAsync(TwitchUser twitchUser)
     {
         if (tokenService.Token?.AccessToken != null)
         {
@@ -192,11 +185,9 @@ public class TwitchUserEnsureService(
         CancellationToken cancellationToken = default
     )
     {
-        var twitchUser = TwitchUser.FromOnMessageReceivedArgs(args);
-        if (twitchUser == null)
-        {
-            throw new ArgumentException("Invalid OnMessageReceivedArgs data", nameof(args));
-        }
+        var twitchUser =
+            TwitchUser.FromOnMessageReceivedArgs(args)
+            ?? throw new ArgumentException("Invalid OnMessageReceivedArgs data", nameof(args));
 
         return await EnsureUserExistsAsync(twitchUser, cancellationToken);
     }
@@ -213,13 +204,7 @@ public class TwitchUserEnsureService(
     )
     {
         var twitchUser = TwitchUser.FromChannelPointsCustomRewardRedemptionArgs(args);
-        if (twitchUser == null)
-        {
-            throw new ArgumentException(
-                "Invalid ChannelPointsCustomRewardRedemptionArgs data",
-                nameof(args)
-            );
-        }
+        ArgumentNullException.ThrowIfNull(twitchUser);
 
         return await EnsureUserExistsAsync(twitchUser, cancellationToken);
     }
@@ -275,10 +260,7 @@ public class TwitchUserEnsureService(
                 else
                 {
                     // Обогащаем данные из API перед созданием
-                    var enrichedUser = await EnrichUserDataFromApiAsync(
-                        twitchUser,
-                        cancellationToken
-                    );
+                    var enrichedUser = await EnrichUserDataFromApiAsync(twitchUser);
 
                     logger.LogInformation(
                         "Создание нового пользователя Twitch: {UserName} (ID: {UserId})",

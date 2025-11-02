@@ -64,10 +64,7 @@ public class CommandsService(
                 }
 
                 // Если в БД не нашли, обращаемся к YouTube API
-                if (info == null)
-                {
-                    info = await ytResolver.ResolveVideoAsync(normalizedQuery, cancellationToken);
-                }
+                info ??= await ytResolver.ResolveVideoAsync(normalizedQuery, cancellationToken);
             }
             else
             {

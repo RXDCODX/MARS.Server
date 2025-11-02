@@ -62,7 +62,7 @@ public class SoundRequestController(
     /// </summary>
     [HttpGet("queue")]
     public async Task<ActionResult<OperationResult<List<QueueItem>>>> GetQueue(
-        CancellationToken cancellationToken = default
+        CancellationToken _ = default
     )
     {
         ActionResult<OperationResult<List<QueueItem>>> result;
@@ -87,7 +87,7 @@ public class SoundRequestController(
     [HttpGet("history")]
     public async Task<ActionResult<OperationResult<List<BaseTrackInfo>>>> GetHistory(
         [FromQuery] int count = 20,
-        CancellationToken cancellationToken = default
+        CancellationToken _ = default
     )
     {
         ActionResult<OperationResult<List<BaseTrackInfo>>> result;
@@ -140,7 +140,7 @@ public class SoundRequestController(
     [HttpDelete("queue/{queueItemId}")]
     public async Task<ActionResult<OperationResult>> DeleteFromQueue(
         [FromRoute] Guid queueItemId,
-        CancellationToken cancellationToken = default
+        CancellationToken _ = default
     )
     {
         ActionResult<OperationResult> result;

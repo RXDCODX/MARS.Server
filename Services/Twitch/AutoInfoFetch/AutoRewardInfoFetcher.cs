@@ -89,5 +89,6 @@ public class AutoRewardInfoFetcher(
         _timer?.Stop();
         _timer?.Dispose();
         base.Dispose();
+        GC.SuppressFinalize(this);
     }
 }

@@ -279,45 +279,95 @@ public class FramedataStagingService(
     public async Task ApproveAll()
     {
         await using var db = await dbContextFactory.CreateDbContextAsync(_cancellationToken);
-        var pendingChars = await db.TekkenCharactersPending.ToListAsync(_cancellationToken);
-        foreach (var pc in pendingChars)
+
+        const int batchSize = 100;
+
+        // Обрабатываем персонажей батчами
+        var totalCharactersProcessed = 0;
+        while (true)
         {
-            var existing = await db.TekkenCharacters.FirstOrDefaultAsync(
-                c => c.Name == pc.Name,
-                _cancellationToken
-            );
-            if (existing == null)
+            var pendingCharsBatch = await db
+                .TekkenCharactersPending.OrderBy(c => c.Name)
+                .Skip(totalCharactersProcessed)
+                .Take(batchSize)
+                .ToListAsync(_cancellationToken);
+
+            if (pendingCharsBatch.Count == 0)
             {
-                await db.TekkenCharacters.AddAsync(MapFromPending(pc), _cancellationToken);
+                break;
             }
-            else
+
+            foreach (var pc in pendingCharsBatch)
             {
-                db.Entry(existing).CurrentValues.SetValues(MapFromPending(pc));
+                var existing = await db.TekkenCharacters.FirstOrDefaultAsync(
+                    c => c.Name == pc.Name,
+                    _cancellationToken
+                );
+                if (existing == null)
+                {
+                    await db.TekkenCharacters.AddAsync(MapFromPending(pc), _cancellationToken);
+                }
+                else
+                {
+                    db.Entry(existing).CurrentValues.SetValues(MapFromPending(pc));
+                }
+            }
+
+            await db.SaveChangesAsync(_cancellationToken);
+            totalCharactersProcessed += pendingCharsBatch.Count;
+
+            if (pendingCharsBatch.Count < batchSize)
+            {
+                break;
             }
         }
 
-        var pendingMoves = await db.TekkenMovesPending.ToListAsync(_cancellationToken);
-        foreach (var pm in pendingMoves)
+        // Обрабатываем мувы батчами
+        var totalMovesProcessed = 0;
+        while (true)
         {
-            var existing = await db.TekkenMoves.FirstOrDefaultAsync(
-                m => m.CharacterName == pm.CharacterName && m.Command == pm.Command,
-                _cancellationToken
-            );
-            if (existing == null)
+            var pendingMovesBatch = await db
+                .TekkenMovesPending.OrderBy(m => m.CharacterName)
+                .ThenBy(m => m.Command)
+                .Skip(totalMovesProcessed)
+                .Take(batchSize)
+                .ToListAsync(_cancellationToken);
+
+            if (pendingMovesBatch.Count == 0)
             {
-                await db.TekkenMoves.AddAsync(MapFromPending(pm), _cancellationToken);
+                break;
             }
-            else
+
+            foreach (var pm in pendingMovesBatch)
             {
-                db.Entry(existing).CurrentValues.SetValues(MapFromPending(pm));
+                var existing = await db.TekkenMoves.FirstOrDefaultAsync(
+                    m => m.CharacterName == pm.CharacterName && m.Command == pm.Command,
+                    _cancellationToken
+                );
+                if (existing == null)
+                {
+                    await db.TekkenMoves.AddAsync(MapFromPending(pm), _cancellationToken);
+                }
+                else
+                {
+                    db.Entry(existing).CurrentValues.SetValues(MapFromPending(pm));
+                }
+            }
+
+            await db.SaveChangesAsync(_cancellationToken);
+            totalMovesProcessed += pendingMovesBatch.Count;
+
+            if (pendingMovesBatch.Count < batchSize)
+            {
+                break;
             }
         }
 
+        // Удаляем все pending записи батчами
         // Сначала удаляем pending moves, затем pending characters
         // чтобы избежать нарушения ограничения внешнего ключа
-        db.TekkenMovesPending.RemoveRange(pendingMoves);
-        db.TekkenCharactersPending.RemoveRange(pendingChars);
-        await db.SaveChangesAsync(_cancellationToken);
+        await db.TekkenMovesPending.ExecuteDeleteAsync(cancellationToken: _cancellationToken);
+        await db.TekkenCharactersPending.ExecuteDeleteAsync(cancellationToken: _cancellationToken);
     }
 
     public async Task RejectAll()

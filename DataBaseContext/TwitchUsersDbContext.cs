@@ -36,7 +36,7 @@ public sealed partial class AppDbContext
     /// <summary>
     /// Конфигурация моделей для таблиц, связанных с TwitchUser
     /// </summary>
-    partial void OnModelCreatingTwitchUsersPartial(ModelBuilder modelBuilder)
+    public partial void OnModelCreatingTwitchUsersPartial(ModelBuilder modelBuilder)
     {
         // Конфигурация Host
         modelBuilder

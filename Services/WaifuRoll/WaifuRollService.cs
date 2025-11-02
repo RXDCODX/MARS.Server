@@ -76,6 +76,7 @@ public class WaifuRollService(
         }
         _hostSemaphores.Clear();
         base.Dispose();
+        GC.SuppressFinalize(this);
     }
 
     public async Task<Waifu?> RollTheWaifu(

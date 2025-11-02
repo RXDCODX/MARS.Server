@@ -61,7 +61,7 @@ public partial class QueueOrderUnique : Migration
             table: "SoundRequestQueueItems",
             column: "QueueOrder",
             unique: true,
-            descending: new bool[0]
+            descending: Array.Empty<bool>()
         );
 
         migrationBuilder.AddForeignKey(

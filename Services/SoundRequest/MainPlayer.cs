@@ -165,7 +165,7 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
     /// <summary>
     /// Начать воспроизведение элемента очереди
     /// </summary>
-    public async Task PlayAsync(QueueItem queueItem, CancellationToken ct)
+    public async Task PlayAsync(QueueItem queueItem, CancellationToken _)
     {
         try
         {
@@ -678,11 +678,8 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
     /// </summary>
     public async Task PlayAsync()
     {
-        PlayerState? state = null;
-        var queueCount = 0;
-
-        state = GetState();
-        queueCount = (await _queue.GetQueueAsync()).Count;
+        var state = GetState();
+        var queueCount = (await _queue.GetQueueAsync()).Count;
 
         _logger.LogDebug(
             "[PlayAsync] State: State={State}, HasCurrentQueueItem={HasCurrentQueueItem}, QueueCount={QueueCount}",
