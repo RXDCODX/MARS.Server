@@ -71,43 +71,56 @@ public class FollowerDbService(
     /// <returns>True если операция успешна</returns>
     public async Task<bool> SaveOrUpdateFollowerAsync(FollowerInfo? followerInfo)
     {
-        if (followerInfo == null || string.IsNullOrWhiteSpace(followerInfo.UserId))
-        {
-            return false;
-        }
+        var result = false;
 
-        try
+        if (!string.IsNullOrWhiteSpace(followerInfo?.UserId))
         {
-            await using var context = await factory.CreateDbContextAsync();
-            var existingEntity = await context
-                .FollowersEntitys.AsNoTracking()
-                .FirstOrDefaultAsync(f => f.UserId == followerInfo.UserId);
-
-            if (existingEntity != null)
+            try
             {
-                // Обновляем существующую запись
-                context.FollowersEntitys.Update(followerInfo);
+                // ВАЖНО: Сначала обеспечиваем наличие TwitchUser в БД
+                if (followerInfo.TwitchUser != null)
+                {
+                    await ensureService.EnsureUserExistsAsync(followerInfo.TwitchUser);
+                }
+                else
+                {
+                    await ensureService.EnsureUserExistsAsync(followerInfo.UserId);
+                }
+
+                // Теперь работаем с FollowerInfo
+                await using var context = await factory.CreateDbContextAsync();
+                var existingEntity = await context
+                    .FollowersEntitys.AsNoTracking()
+                    .FirstOrDefaultAsync(f => f.UserId == followerInfo.UserId);
+
+                // Обнуляем навигационное свойство, чтобы EF не пытался добавить TwitchUser
+                followerInfo.TwitchUser = null;
+
+                if (existingEntity != null)
+                {
+                    // Обновляем существующую запись
+                    context.FollowersEntitys.Update(followerInfo);
+                }
+                else
+                {
+                    // Создаем новую запись
+                    context.FollowersEntitys.Add(followerInfo);
+                }
+
+                await context.SaveChangesAsync();
+                result = true;
             }
-            else
+            catch (Exception ex)
             {
-                // Создаем новую запись
-                context.FollowersEntitys.Add(followerInfo);
+                logger.LogError(
+                    ex,
+                    "Ошибка при сохранении фоловера {UserId} в базу данных",
+                    followerInfo.UserId
+                );
             }
-
-            await ensureService.EnsureUserExistsAsync(followerInfo.UserId);
-
-            await context.SaveChangesAsync();
-            return true;
         }
-        catch (Exception ex)
-        {
-            logger.LogError(
-                ex,
-                "Ошибка при сохранении фоловера {UserId} в базу данных",
-                followerInfo.UserId
-            );
-            return false;
-        }
+
+        return result;
     }
 
     /// <summary>
@@ -117,60 +130,67 @@ public class FollowerDbService(
     /// <returns>Количество сохраненных записей</returns>
     public async Task<int> SaveOrUpdateFollowersAsync(ICollection<FollowerInfo>? followersInfo)
     {
-        if (followersInfo is not { Count: > 0 })
-        {
-            return 0;
-        }
-
         var savedCount = 0;
 
-        try
+        if (followersInfo is { Count: > 0 })
         {
-            await using var context = await factory.CreateDbContextAsync();
-            var userIds = followersInfo.Select(f => f.UserId).ToList();
-            var usersWithoutTwitchUserEntity = followersInfo
-                .Where(e => e.TwitchUser == null)
-                .Select(e => e.UserId)
-                .Distinct()
-                .ToList();
-            var usersWithEntity = followersInfo.ExceptBy(
-                usersWithoutTwitchUserEntity,
-                info => info.UserId
-            );
-            var existingEntities = await context
-                .FollowersEntitys.AsNoTracking()
-                .Where(f => userIds.Contains(f.UserId))
-                .Include(followerInfo => followerInfo.TwitchUser)
-                .ToListAsync();
-
-            foreach (var followerInfo in followersInfo)
+            try
             {
-                var existingEntity = existingEntities.FirstOrDefault(e =>
-                    e.UserId == followerInfo.UserId
-                );
+                // Подготавливаем списки пользователей для обработки
+                var userIds = followersInfo.Select(f => f.UserId).ToList();
+                var usersWithoutTwitchUserEntity = followersInfo
+                    .Where(e => e.TwitchUser == null)
+                    .Select(e => e.UserId)
+                    .Distinct()
+                    .ToList();
+                var usersWithEntity = followersInfo
+                    .Where(e => e.TwitchUser != null)
+                    .Select(e => e.TwitchUser!)
+                    .ToList();
 
-                if (existingEntity is { TwitchUser: not null })
+                // ВАЖНО: Сначала обеспечиваем наличие всех TwitchUser в БД
+                // Это нужно сделать ДО создания контекста для работы с FollowerInfo
+                await ensureService.EnsureUsersExistsAsync(usersWithoutTwitchUserEntity);
+                foreach (var twitchUser in usersWithEntity)
                 {
-                    context.FollowersEntitys.Update(followerInfo);
+                    await ensureService.EnsureUserExistsAsync(twitchUser);
                 }
-                else
+
+                // Теперь работаем с FollowerInfo
+                await using var context = await factory.CreateDbContextAsync();
+
+                var existingEntities = await context
+                    .FollowersEntitys.AsNoTracking()
+                    .Where(f => userIds.Contains(f.UserId))
+                    .ToListAsync();
+
+                foreach (var followerInfo in followersInfo)
                 {
-                    context.FollowersEntitys.Add(followerInfo);
+                    var existingEntity = existingEntities.FirstOrDefault(e =>
+                        e.UserId == followerInfo.UserId
+                    );
+
+                    // Обнуляем навигационное свойство, чтобы EF не пытался добавить TwitchUser
+                    // Связь по UserId (FK) будет работать автоматически
+                    followerInfo.TwitchUser = null;
+
+                    if (existingEntity != null)
+                    {
+                        context.FollowersEntitys.Update(followerInfo);
+                    }
+                    else
+                    {
+                        context.FollowersEntitys.Add(followerInfo);
+                    }
                 }
+
+                savedCount = await context.SaveChangesAsync();
+                logger.LogInformation("Сохранено {Count} фоловеров в базу данных", savedCount);
             }
-
-            await ensureService.EnsureUsersExistsAsync(usersWithoutTwitchUserEntity);
-            foreach (FollowerInfo followerInfo in usersWithEntity)
+            catch (Exception ex)
             {
-                await ensureService.EnsureUserExistsAsync(followerInfo.TwitchUser);
+                logger.LogError(ex, "Ошибка при массовом сохранении фоловеров в базу данных");
             }
-
-            savedCount = await context.SaveChangesAsync();
-            logger.LogInformation("Сохранено {Count} фоловеров в базу данных", savedCount);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Ошибка при массовом сохранении фоловеров в базу данных");
         }
 
         return savedCount;

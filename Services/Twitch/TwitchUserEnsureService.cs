@@ -4,7 +4,6 @@ using MARS.Server.Services.Twitch.TwitchFollowers;
 using TwitchLib.Client.Events;
 using TwitchLib.Client.Models;
 using TwitchLib.EventSub.Core.EventArgs.Channel;
-using User = TwitchLib.Api.Helix.Models.Users.GetUsers.User;
 
 namespace MARS.Server.Services.Twitch;
 

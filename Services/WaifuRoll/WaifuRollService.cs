@@ -1,4 +1,5 @@
-﻿using MARS.Server.Services.Twitch;
+﻿using System.Collections.Concurrent;
+using MARS.Server.Services.Twitch;
 using MARS.Server.Services.Twitch.Rewards;
 using MARS.Server.Services.WaifuRoll.helpers;
 using MARS.Server.Services.WaifuRoll.Interfaces;
@@ -14,9 +15,67 @@ public class WaifuRollService(
     TwitchUserEnsureService twitchUserEnsureService
 ) : BackgroundService, IWaifuRollService
 {
+    /// <summary>
+    /// Обертка семафора с подсчетом использований
+    /// </summary>
+    private class SemaphoreWrapper
+    {
+        public SemaphoreSlim Semaphore { get; } = new(1, 1);
+        public int UseCount = 0;
+    }
+
+    /// <summary>
+    /// Словарь семафоров для синхронизации операций по TwitchId
+    /// Предотвращает race condition при создании Host
+    /// </summary>
+    private readonly ConcurrentDictionary<string, SemaphoreWrapper> _hostSemaphores = new();
+
+    /// <summary>
+    /// Получить или создать семафор для конкретного TwitchId
+    /// </summary>
+    private SemaphoreSlim GetOrCreateSemaphore(string twitchId)
+    {
+        var wrapper = _hostSemaphores.GetOrAdd(twitchId, _ => new SemaphoreWrapper());
+        Interlocked.Increment(ref wrapper.UseCount);
+        return wrapper.Semaphore;
+    }
+
+    /// <summary>
+    /// Освободить семафор после использования и удалить если больше не используется
+    /// </summary>
+    private void ReleaseSemaphore(string twitchId, SemaphoreSlim semaphore)
+    {
+        semaphore.Release();
+
+        if (_hostSemaphores.TryGetValue(twitchId, out var wrapper))
+        {
+            var count = Interlocked.Decrement(ref wrapper.UseCount);
+
+            // Если семафор больше не используется - удаляем и диспозим
+            if (count == 0)
+            {
+                if (_hostSemaphores.TryRemove(twitchId, out var removedWrapper))
+                {
+                    removedWrapper.Semaphore.Dispose();
+                }
+            }
+        }
+    }
+
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
         return Task.CompletedTask;
+    }
+
+    public override void Dispose()
+    {
+        // Освобождаем все семафоры при уничтожении сервиса
+        foreach (var wrapper in _hostSemaphores.Values)
+        {
+            wrapper?.Semaphore.Dispose();
+        }
+        _hostSemaphores.Clear();
+        base.Dispose();
     }
 
     public async Task<Waifu?> RollTheWaifu(
@@ -29,106 +88,116 @@ public class WaifuRollService(
 
         if (!string.IsNullOrWhiteSpace(id))
         {
-            var pass = false;
+            var semaphore = GetOrCreateSemaphore(id);
+            await semaphore.WaitAsync();
 
-            await using AppDbContext dbContext = await factory.CreateDbContextAsync();
-            var host = dbContext
-                .Hosts.Include(e => e.HostCoolDown)
-                .FirstOrDefault(e => e.TwitchId == id);
-            var cd = host?.HostCoolDown;
-            if (host != null)
+            try
             {
-                if (cd is not null)
-                {
-                    if (cd.HostId == host.TwitchId)
-                    {
-                        var now = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
-                        var cdTime = cd.Time.ToOffset(TimeSpan.FromHours(3));
+                var pass = false;
 
-                        var isCDed = now - cdTime >= TimeSpan.FromHours(1);
-                        if (isCDed)
+                await using AppDbContext dbContext = await factory.CreateDbContextAsync();
+                var host = dbContext
+                    .Hosts.Include(e => e.HostCoolDown)
+                    .FirstOrDefault(e => e.TwitchId == id);
+                var cd = host?.HostCoolDown;
+                if (host != null)
+                {
+                    if (cd is not null)
+                    {
+                        if (cd.HostId == host.TwitchId)
                         {
+                            var now = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
+                            var cdTime = cd.Time.ToOffset(TimeSpan.FromHours(3));
+
+                            var isCDed = now - cdTime >= TimeSpan.FromHours(1);
+                            if (isCDed)
+                            {
+                                pass = true;
+                            }
+                        }
+                        else
+                        {
+                            cd.HostId = host.TwitchId;
+                            cd.Time = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
+
+                            dbContext.HostsCoolDowns.Update(cd);
                             pass = true;
                         }
                     }
                     else
                     {
-                        cd.HostId = host.TwitchId;
-                        cd.Time = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
+                        cd = new HostCoolDown { HostId = id };
+                        host.HostCoolDown = cd;
 
-                        dbContext.HostsCoolDowns.Update(cd);
+                        dbContext.Hosts.Update(host);
+
                         pass = true;
                     }
                 }
                 else
                 {
-                    cd = new HostCoolDown { HostId = id };
-                    host.HostCoolDown = cd;
+                    // Гарантируем наличие пользователя в TwitchUsers перед созданием Host
+                    await twitchUserEnsureService.EnsureUserExistsAsync(id);
 
-                    dbContext.Hosts.Update(host);
+                    cd = new HostCoolDown { HostId = id };
+
+                    host = new Host
+                    {
+                        TwitchId = id,
+                        HostGreetings = new HostAutoHello { HostId = id },
+                        HostCoolDown = cd,
+                    };
+
+                    await dbContext.Hosts.AddAsync(host);
 
                     pass = true;
                 }
-            }
-            else
-            {
-                // Гарантируем наличие пользователя в TwitchUsers перед созданием Host
-                await twitchUserEnsureService.EnsureUserExistsAsync(id);
 
-                cd = new HostCoolDown { HostId = id };
+                await dbContext.SaveChangesAsync();
 
-                host = new Host
+                if (id == TwitchExstension.ChannelId || forcePass)
                 {
-                    TwitchId = id,
-                    HostGreetings = new HostAutoHello { HostId = id },
-                    HostCoolDown = cd,
-                };
-
-                await dbContext.Hosts.AddAsync(host);
-
-                pass = true;
-            }
-
-            await dbContext.SaveChangesAsync();
-
-            if (id == TwitchExstension.ChannelId || forcePass)
-            {
-                pass = true;
-            }
-
-            if (pass)
-            {
-                var waifu = await dbContext
-                    .Waifus.Where(e => !e.IsPrivated)
-                    .OrderBy(e => e.LastOrder)
-                    .FirstOrDefaultAsync();
-
-                if (waifu != null)
-                {
-                    host.WaifuRollId = waifu.ShikiId;
-                    host.WhenOrdered = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
-                    host.OrderCount++;
-                    host.HostCoolDown.Time = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
-
-                    waifu.LastOrder = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
-                    waifu.OrderCount++;
-
-                    if (string.IsNullOrWhiteSpace(waifu.ImageUrl))
-                    {
-                        waifu = await waifuDbHelper.EnsureWaifuHaveImageIrl(waifu);
-                    }
-
-                    // Убеждаемся, что поля аниме и манги заполнены
-                    waifu = await waifuDbHelper.EnsureMangaAndAnimeTitleExists(waifu);
-                    dbContext.Waifus.Update(waifu);
-
-                    cd.Time = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
-                    await dbContext.SaveChangesAsync();
-
-                    waifu.ImageUrl = options.Value.ShikimoriSite + waifu.ImageUrl;
-
-                    result = waifu;
+                    pass = true;
                 }
+
+                if (pass)
+                {
+                    var waifu = await dbContext
+                        .Waifus.Where(e => !e.IsPrivated)
+                        .OrderBy(e => e.LastOrder)
+                        .FirstOrDefaultAsync();
+
+                    if (waifu != null)
+                    {
+                        host.WaifuRollId = waifu.ShikiId;
+                        host.WhenOrdered = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
+                        host.OrderCount++;
+                        host.HostCoolDown.Time = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
+
+                        waifu.LastOrder = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
+                        waifu.OrderCount++;
+
+                        if (string.IsNullOrWhiteSpace(waifu.ImageUrl))
+                        {
+                            waifu = await waifuDbHelper.EnsureWaifuHaveImageIrl(waifu);
+                        }
+
+                        // Убеждаемся, что поля аниме и манги заполнены
+                        waifu = await waifuDbHelper.EnsureMangaAndAnimeTitleExists(waifu);
+                        dbContext.Waifus.Update(waifu);
+
+                        cd.Time = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
+                        await dbContext.SaveChangesAsync();
+
+                        waifu.ImageUrl = options.Value.ShikimoriSite + waifu.ImageUrl;
+
+                        result = waifu;
+                    }
+                }
+            }
+            finally
+            {
+                ReleaseSemaphore(id, semaphore);
             }
         }
 
@@ -305,65 +374,78 @@ public class WaifuRollService(
 
         if (!string.IsNullOrWhiteSpace(id) && !string.IsNullOrWhiteSpace(displayName))
         {
-            await using AppDbContext dbContext = await factory.CreateDbContextAsync();
+            var semaphore = GetOrCreateSemaphore(id);
+            await semaphore.WaitAsync();
 
-            var host = await dbContext
-                .Hosts.Include(e => e.HostGreetings)
-                .Include(e => e.HostCoolDown)
-                .FirstOrDefaultAsync(e => e.TwitchId == id);
-
-            if (host?.IsPrivated ?? false)
+            try
             {
-                var isChecked = false;
-                var greet = host.HostGreetings;
+                await using AppDbContext dbContext = await factory.CreateDbContextAsync();
 
-                if (greet.Time <= DateTimeOffset.Now.AddHours(-20))
-                {
-                    isChecked = true;
-                }
+                var host = await dbContext
+                    .Hosts.Include(e => e.HostGreetings)
+                    .Include(e => e.HostCoolDown)
+                    .FirstOrDefaultAsync(e => e.TwitchId == id);
 
-                if (isChecked)
+                if (host?.IsPrivated ?? false)
                 {
-                    if (host.WaifuBrideId != null)
+                    var isChecked = false;
+                    var greet = host.HostGreetings;
+
+                    if (greet.Time <= DateTimeOffset.Now.AddHours(-20))
                     {
-                        Waifu? waifu = await dbContext.Waifus.FindAsync(host.WaifuBrideId);
-                        var helloMsg = await GetHelloText();
-                        var fixedmsg = await ConvertFixLinksInHelloMessages(helloMsg);
+                        isChecked = true;
+                    }
 
-                        greet.Time = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
-                        dbContext.HostsGreetings.Update(greet);
+                    if (isChecked)
+                    {
+                        if (host.WaifuBrideId != null)
+                        {
+                            Waifu? waifu = await dbContext.Waifus.FindAsync(host.WaifuBrideId);
+                            var helloMsg = await GetHelloText();
+                            var fixedmsg = await ConvertFixLinksInHelloMessages(helloMsg);
 
-                        await dbContext.SaveChangesAsync();
+                            greet.Time = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
+                            dbContext.HostsGreetings.Update(greet);
 
-                        var message = string.Concat(
-                            "@{user}, твой супруг, {waifuName} , оставил(-а) тебе сообщение: \"",
-                            fixedmsg,
-                            " \""
-                        );
-                        message = AnswersForTwitchRewards.ReplaceKeywordsInAnswer(
-                            displayName,
-                            message,
-                            waifu: waifu
-                        );
+                            await dbContext.SaveChangesAsync();
 
-                        result = message;
+                            var message = string.Concat(
+                                "@{user}, твой супруг, {waifuName} , оставил(-а) тебе сообщение: \"",
+                                fixedmsg,
+                                " \""
+                            );
+                            message = AnswersForTwitchRewards.ReplaceKeywordsInAnswer(
+                                displayName,
+                                message,
+                                waifu: waifu
+                            );
+
+                            result = message;
+                        }
                     }
                 }
-            }
-            else if (host == null)
-            {
-                // Гарантируем наличие пользователя в TwitchUsers перед созданием Host
-                await twitchUserEnsureService.EnsureUserExistsAsync(id);
-
-                host = new Host
+                else if (host == null)
                 {
-                    TwitchId = id,
-                    HostCoolDown = new HostCoolDown { HostId = id },
-                    HostGreetings = new HostAutoHello { HostId = id },
-                };
+                    // Гарантируем наличие пользователя в TwitchUsers перед созданием Host
+                    await twitchUserEnsureService.EnsureUserExistsAsync(id);
 
-                await dbContext.AddAsync(host);
-                await dbContext.SaveChangesAsync();
+                    host = new Host
+                    {
+                        TwitchId = id,
+                        HostCoolDown = new HostCoolDown { HostId = id },
+                        HostGreetings = new HostAutoHello { HostId = id },
+                    };
+
+                    host.HostCoolDown.Host = null;
+                    host.HostGreetings.Host = null;
+
+                    await dbContext.AddAsync(host);
+                    await dbContext.SaveChangesAsync();
+                }
+            }
+            finally
+            {
+                ReleaseSemaphore(id, semaphore);
             }
         }
 
