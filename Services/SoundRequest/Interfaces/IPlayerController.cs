@@ -1,5 +1,4 @@
 ﻿using MARS.Server.Services.SoundRequest.Entities;
-using MARS.Server.Services.Twitch.Entitys;
 
 namespace MARS.Server.Services.SoundRequest.Interfaces;
 

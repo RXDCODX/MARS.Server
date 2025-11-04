@@ -1,9 +1,4 @@
-﻿using System.Globalization;
-using MARS.Server.Services.Twitch.Entitys;
-using Newtonsoft.Json;
-using TwitchLib.Api.Helix.Models.Channels.GetChannelFollowers;
-using TwitchLib.Api.Helix.Models.Channels.GetChannelVIPs;
-using TwitchLib.Api.Helix.Models.Moderation.GetModerators;
+﻿using MARS.Server.Services.Twitch.Entitys;
 
 namespace MARS.Server.Services.Twitch.TwitchFollowers.Entitys;
 

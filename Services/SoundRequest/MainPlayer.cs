@@ -1,8 +1,6 @@
-﻿using MARS.Server.Exstensions;
-using MARS.Server.Services.SoundRequest.Entities;
+﻿using MARS.Server.Services.SoundRequest.Entities;
 using MARS.Server.Services.SoundRequest.Interfaces;
 using MARS.Server.Services.SoundRequest.Queue;
-using MARS.Server.Services.Twitch.Entitys;
 
 namespace MARS.Server.Services.SoundRequest;
 
@@ -234,10 +232,7 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
 
         if (currentTrack != null)
         {
-            _logger.LogInformation(
-                "Пропуск текущего трека: {TrackName}",
-                currentTrack.TrackName
-            );
+            _logger.LogInformation("Пропуск текущего трека: {TrackName}", currentTrack.TrackName);
 
             // Отправляем сообщение в чат Твича о пропуске
             var skipMessage = $"⏩ Трек \"{currentTrack.TrackName}\" был пропущен";
@@ -546,13 +541,13 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
 
                 // Сдвигаем текущий трек в историю (QueueOrder = 0 -> -1)
                 await _queue.ShiftQueueAndGetCurrentAsync();
-                
+
                 // Очищаем старую историю
                 await CleanupOldHistoryAsync();
-                
+
                 // Останавливаем плеер и обнуляем ссылки
                 await _stateManager.StopPlaybackAsync(notify: true);
-                
+
                 // Уведомляем об изменении очереди (она теперь пуста)
                 await NotifyQueueChangedAsync();
             }

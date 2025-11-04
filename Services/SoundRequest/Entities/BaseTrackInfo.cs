@@ -1,6 +1,4 @@
-﻿using MARS.Server.Services.Twitch.Entitys;
-
-namespace MARS.Server.Services.SoundRequest.Entities;
+﻿namespace MARS.Server.Services.SoundRequest.Entities;
 
 /// <summary>
 /// Базовая информация о треке (песня, видео)

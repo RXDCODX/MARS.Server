@@ -6,7 +6,6 @@ using MARS.Server.Services.Twitch.FumoFriday.Entitys;
 using MARS.Server.Services.Twitch.HelloVideos.Entitys;
 using MARS.Server.Services.Twitch.MiniGamesStats.Entitys;
 using MARS.Server.Services.Twitch.TwitchFollowers.Entitys;
-using MARS.Server.Services.WaifuRoll.Entitys;
 
 namespace MARS.Server.DataBaseContext;
 

@@ -1,5 +1,4 @@
-﻿using System.Collections;
-using MARS.Server.Services.Twitch.Entitys;
+﻿using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.Twitch.TwitchFollowers.Entitys;
 using Microsoft.EntityFrameworkCore.ChangeTracking;

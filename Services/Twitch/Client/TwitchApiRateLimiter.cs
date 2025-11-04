@@ -1,5 +1,4 @@
 ﻿using System.Diagnostics;
-using MARS.Server.Services.Twitch.Management;
 using TwitchLib.Api.Core.Interfaces;
 
 namespace MARS.Server.Services.Twitch.Client;

@@ -1,5 +1,4 @@
 ﻿using MARS.Server.Services.Twitch.TwitchFollowers.Entitys;
-using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace MARS.Server.Services.Twitch.TwitchFollowers;
 

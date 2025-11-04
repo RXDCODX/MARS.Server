@@ -1,8 +1,6 @@
 ﻿using MARS.Server.Services.CommandExecutor.Entitys;
 using MARS.Server.Services.CommandExecutor.Entitys.Commands;
 using MARS.Server.Services.Twitch;
-using MARS.Server.Services.Twitch.Entitys;
-using Microsoft.Kiota.Abstractions.Extensions;
 using TwitchLib.Client.Events;
 
 namespace MARS.Server.Services.CommandExecutor.Adapters;

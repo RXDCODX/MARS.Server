@@ -1,10 +1,8 @@
-﻿using MARS.Server.Exstensions;
-using MARS.Server.Services;
+﻿using MARS.Server.Services;
 using MARS.Server.Services.SoundRequest;
 using MARS.Server.Services.SoundRequest.Entities;
 using MARS.Server.Services.SoundRequest.Queue;
 using MARS.Server.Services.Twitch;
-using MARS.Server.Services.Twitch.Entitys;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MARS.Server.Controllers;
@@ -220,36 +218,20 @@ public class SoundRequestController(
                     cancellationToken
                 );
 
-                if (channelUser != null)
-                {
-                    // Добавляем трек через сервис
-                    var message = await service.AddTrackAsync(
-                        processedQuery,
-                        channelUser,
-                        cancellationToken
-                    );
-                    logger.LogInformation(
-                        "Трек добавлен в очередь: Query={Query}, User={UserDisplayName}, Message={Message}",
-                        processedQuery,
-                        channelUser.DisplayName,
-                        message
-                    );
+                // Добавляем трек через сервис
+                var message = await service.AddTrackAsync(
+                    processedQuery,
+                    channelUser,
+                    cancellationToken
+                );
+                logger.LogInformation(
+                    "Трек добавлен в очередь: Query={Query}, User={UserDisplayName}, Message={Message}",
+                    processedQuery,
+                    channelUser.DisplayName,
+                    message
+                );
 
-                    result = Ok(OperationResult<string>.Ok(message, message));
-                }
-                else
-                {
-                    logger.LogWarning(
-                        "Не удалось получить пользователя канала: ChannelId={ChannelId}",
-                        TwitchExstension.ChannelId
-                    );
-                    result = Ok(
-                        OperationResult<string>.Bad(
-                            "Не удалось получить информацию о пользователе",
-                            string.Empty
-                        )
-                    );
-                }
+                result = Ok(OperationResult<string>.Ok(message, message));
             }
             else
             {
@@ -264,16 +246,9 @@ public class SoundRequestController(
         }
         catch (Exception ex)
         {
-            logger.LogError(
-                ex,
-                "Ошибка при добавлении трека в очередь: Query={Query}",
-                query
-            );
+            logger.LogError(ex, "Ошибка при добавлении трека в очередь: Query={Query}", query);
             result = Ok(
-                OperationResult<string>.Bad(
-                    "Ошибка при добавлении трека в очередь",
-                    string.Empty
-                )
+                OperationResult<string>.Bad("Ошибка при добавлении трека в очередь", string.Empty)
             );
         }
 
