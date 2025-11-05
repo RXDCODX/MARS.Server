@@ -110,7 +110,7 @@ public class WaifuRollService(
                             var now = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
                             var cdTime = cd.Time.ToOffset(TimeSpan.FromHours(3));
 
-                            var isCDed = now - cdTime >= TimeSpan.FromHours(1);
+                            var isCDed = now - cdTime >= TimeSpan.FromMinutes(15);
                             if (isCDed)
                             {
                                 pass = true;
@@ -385,9 +385,10 @@ public class WaifuRollService(
                 var host = await dbContext
                     .Hosts.Include(e => e.HostGreetings)
                     .Include(e => e.HostCoolDown)
+                    .AsNoTracking()
                     .FirstOrDefaultAsync(e => e.TwitchId == id);
 
-                if (host?.IsPrivated ?? false)
+                if (host is { IsPrivated: true })
                 {
                     var isChecked = false;
                     var greet = host.HostGreetings;

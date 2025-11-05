@@ -11,6 +11,7 @@ using MARS.Server.Services.Twitch.ClientMessages.AutoMessages.Entitys;
 using MARS.Server.Services.Twitch.HelloVideos.Entitys;
 using MARS.Server.Services.Twitch.Management.Entitys;
 using MARS.Server.Services.Twitch.Rewards.ChannelRewards.Entities;
+using MARS.Server.Services.Twitch.Rewards.TwitchMikuMondayReward.Entities;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace MARS.Server.DataBaseContext;
@@ -72,6 +73,8 @@ public sealed partial class AppDbContext : DbContext
     public DbSet<StreamArchiveFile> StreamArchiveFiles { get; set; } = null!;
     public DbSet<StreamArchiveFileChunk> StreamArchiveFileChunks { get; set; } = null!;
     public DbSet<ChannelRewardRecord> ChannelRewards { get; set; } = null!;
+    public DbSet<MikuMondayTrack> MikuMondayTracks { get; set; } = null!;
+    public DbSet<MikuMondayActivation> MikuMondayActivations { get; set; } = null!;
 
     /// <summary>
     /// Partial метод для конфигурации таблиц, связанных с TwitchUser (реализован в TwitchUsersDbContext.cs)
@@ -292,6 +295,28 @@ public sealed partial class AppDbContext : DbContext
         modelBuilder
             .Entity<StreamArchiveFile>()
             .HasIndex(f => new { f.ConfigId, f.OriginalFilePath })
+            .IsUnique();
+
+        // Конфигурация для MikuMonday
+        modelBuilder.Entity<MikuMondayTrack>().HasIndex(t => t.Number).IsUnique();
+
+        modelBuilder
+            .Entity<MikuMondayTrack>()
+            .HasOne(mt => mt.BaseTrackInfo)
+            .WithMany()
+            .HasForeignKey(mt => mt.BaseTrackInfoId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder
+            .Entity<MikuMondayActivation>()
+            .HasOne(a => a.MikuMondayTrack)
+            .WithMany()
+            .HasForeignKey(a => a.MikuMondayTrackId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder
+            .Entity<MikuMondayActivation>()
+            .HasIndex(a => new { a.TwitchUserId, a.Year, a.WeekOfYear })
             .IsUnique();
 
         // Конфигурация связей с TwitchUser вынесена в TwitchUsersDbContext

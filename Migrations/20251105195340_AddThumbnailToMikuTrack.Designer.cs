@@ -3,6 +3,7 @@ using System;
 using MARS.Server.DataBaseContext;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MARS.Server.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251105195340_AddThumbnailToMikuTrack")]
+    partial class AddThumbnailToMikuTrack
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1198,7 +1201,7 @@ namespace MARS.Server.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<int>("MikuMondayTrackId")
+                    b.Property<int>("MikuTrackId")
                         .HasColumnType("integer");
 
                     b.Property<string>("TwitchUserId")
@@ -1213,7 +1216,7 @@ namespace MARS.Server.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("MikuMondayTrackId");
+                    b.HasIndex("MikuTrackId");
 
                     b.HasIndex("TwitchUserId", "Year", "WeekOfYear")
                         .IsUnique();
@@ -1221,7 +1224,7 @@ namespace MARS.Server.Migrations
                     b.ToTable("MikuMondayActivations");
                 });
 
-            modelBuilder.Entity("MARS.Server.Services.Twitch.Rewards.TwitchMikuMondayReward.Entities.MikuMondayTrack", b =>
+            modelBuilder.Entity("MARS.Server.Services.Twitch.Rewards.TwitchMikuMondayReward.Entities.MikuTrack", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -1229,8 +1232,9 @@ namespace MARS.Server.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<Guid>("BaseTrackInfoId")
-                        .HasColumnType("uuid");
+                    b.Property<string>("Artist")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -1238,14 +1242,23 @@ namespace MARS.Server.Migrations
                     b.Property<int>("Number")
                         .HasColumnType("integer");
 
-                    b.HasKey("Id");
+                    b.Property<string>("ThumbnailUrl")
+                        .HasColumnType("text");
 
-                    b.HasIndex("BaseTrackInfoId");
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Url")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
 
                     b.HasIndex("Number")
                         .IsUnique();
 
-                    b.ToTable("MikuMondayTracks");
+                    b.ToTable("MikuTracks");
                 });
 
             modelBuilder.Entity("MARS.Server.Services.Twitch.TwitchFollowers.Entitys.FollowerInfo", b =>
@@ -1828,24 +1841,13 @@ namespace MARS.Server.Migrations
 
             modelBuilder.Entity("MARS.Server.Services.Twitch.Rewards.TwitchMikuMondayReward.Entities.MikuMondayActivation", b =>
                 {
-                    b.HasOne("MARS.Server.Services.Twitch.Rewards.TwitchMikuMondayReward.Entities.MikuMondayTrack", "MikuMondayTrack")
+                    b.HasOne("MARS.Server.Services.Twitch.Rewards.TwitchMikuMondayReward.Entities.MikuTrack", "MikuTrack")
                         .WithMany()
-                        .HasForeignKey("MikuMondayTrackId")
+                        .HasForeignKey("MikuTrackId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.Navigation("MikuMondayTrack");
-                });
-
-            modelBuilder.Entity("MARS.Server.Services.Twitch.Rewards.TwitchMikuMondayReward.Entities.MikuMondayTrack", b =>
-                {
-                    b.HasOne("MARS.Server.Services.SoundRequest.Entities.BaseTrackInfo", "BaseTrackInfo")
-                        .WithMany()
-                        .HasForeignKey("BaseTrackInfoId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("BaseTrackInfo");
+                    b.Navigation("MikuTrack");
                 });
 
             modelBuilder.Entity("MARS.Server.Services.Twitch.TwitchFollowers.Entitys.FollowerInfo", b =>
