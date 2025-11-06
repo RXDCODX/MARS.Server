@@ -79,7 +79,7 @@ public partial class MikuMondayTables : Migration
         migrationBuilder.CreateIndex(
             name: "IX_MikuMondayActivations_TwitchUserId_Year_WeekOfYear",
             table: "MikuMondayActivations",
-            columns: new[] { "TwitchUserId", "Year", "WeekOfYear" },
+            columns: ["TwitchUserId", "Year", "WeekOfYear"],
             unique: true
         );
 

@@ -309,6 +309,7 @@ public class EventSubService(
                         wsClient.SessionId,
                         null,
                         null,
+                        null,
                         api.Settings.ClientId,
                         tokenService.Token!.AccessToken
                     );
@@ -327,6 +328,7 @@ public class EventSubService(
                             condition,
                             EventSubTransportMethod.Websocket,
                             wsClient.SessionId,
+                            null,
                             null,
                             null,
                             api.Settings.ClientId,
@@ -358,6 +360,7 @@ public class EventSubService(
                         wsClient.SessionId,
                         null,
                         null,
+                        null,
                         api.Settings.ClientId,
                         tokenService.Token!.AccessToken
                     );
@@ -376,6 +379,7 @@ public class EventSubService(
                             condition,
                             EventSubTransportMethod.Websocket,
                             wsClient.SessionId,
+                            null,
                             null,
                             null,
                             api.Settings.ClientId,
@@ -405,6 +409,7 @@ public class EventSubService(
                         wsClient.SessionId,
                         null,
                         null,
+                        null,
                         api.Settings.ClientId,
                         tokenService.Token!.AccessToken
                     );
@@ -423,6 +428,7 @@ public class EventSubService(
                             condition,
                             EventSubTransportMethod.Websocket,
                             wsClient.SessionId,
+                            null,
                             null,
                             null,
                             api.Settings.ClientId,
@@ -452,6 +458,7 @@ public class EventSubService(
                         wsClient.SessionId,
                         null,
                         null,
+                        null,
                         api.Settings.ClientId,
                         tokenService.Token!.AccessToken
                     );
@@ -470,6 +477,7 @@ public class EventSubService(
                             condition,
                             EventSubTransportMethod.Websocket,
                             wsClient.SessionId,
+                            null,
                             null,
                             null,
                             api.Settings.ClientId,
@@ -500,6 +508,7 @@ public class EventSubService(
                         wsClient.SessionId,
                         null,
                         null,
+                        null,
                         api.Settings.ClientId,
                         tokenService.Token!.AccessToken
                     );
@@ -518,6 +527,7 @@ public class EventSubService(
                             condition,
                             EventSubTransportMethod.Websocket,
                             wsClient.SessionId,
+                            null,
                             null,
                             null,
                             api.Settings.ClientId,
@@ -548,6 +558,7 @@ public class EventSubService(
                         wsClient.SessionId,
                         null,
                         null,
+                        null,
                         api.Settings.ClientId,
                         tokenService.Token!.AccessToken
                     );
@@ -566,6 +577,7 @@ public class EventSubService(
                             condition,
                             EventSubTransportMethod.Websocket,
                             wsClient.SessionId,
+                            null,
                             null,
                             null,
                             api.Settings.ClientId,
@@ -596,6 +608,7 @@ public class EventSubService(
                         wsClient.SessionId,
                         null,
                         null,
+                        null,
                         api.Settings.ClientId,
                         tokenService.Token!.AccessToken
                     );
@@ -614,6 +627,7 @@ public class EventSubService(
                             condition,
                             EventSubTransportMethod.Websocket,
                             wsClient.SessionId,
+                            null,
                             null,
                             null,
                             api.Settings.ClientId,
@@ -638,8 +652,9 @@ public class EventSubService(
                 {
                     response = await api
                         .Helix.EventSub.GetEventSubSubscriptionsAsync(
-                            clientId: api.Settings.ClientId,
-                            accessToken: tokenService.Token!.AccessToken
+                            new GetEventSubSubscriptionsRequest(),
+                            api.Settings.ClientId,
+                            tokenService.Token!.AccessToken
                         )
                         .ConfigureAwait(false);
                 }
@@ -653,8 +668,9 @@ public class EventSubService(
                     {
                         response = await api
                             .Helix.EventSub.GetEventSubSubscriptionsAsync(
-                                clientId: api.Settings.ClientId,
-                                accessToken: tokenService.Token!.AccessToken
+                                new GetEventSubSubscriptionsRequest(),
+                                api.Settings.ClientId,
+                                tokenService.Token!.AccessToken
                             )
                             .ConfigureAwait(false);
                     }
@@ -717,8 +733,9 @@ public class EventSubService(
             if (tokenService.Token != null)
             {
                 result = await api.Helix.EventSub.GetEventSubSubscriptionsAsync(
-                    clientId: api.Settings.ClientId,
-                    accessToken: tokenService.Token.AccessToken
+                    new GetEventSubSubscriptionsRequest(),
+                    api.Settings.ClientId,
+                    tokenService.Token.AccessToken
                 );
             }
         }
@@ -735,8 +752,9 @@ public class EventSubService(
                 {
                     logger.LogInformation("Токен успешно обновлен, повторяем запрос...");
                     result = await api.Helix.EventSub.GetEventSubSubscriptionsAsync(
-                        clientId: api.Settings.ClientId,
-                        accessToken: tokenService.Token?.AccessToken
+                        new GetEventSubSubscriptionsRequest(),
+                        api.Settings.ClientId,
+                        tokenService.Token?.AccessToken
                     );
                 }
                 else

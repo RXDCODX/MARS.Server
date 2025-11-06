@@ -30,14 +30,6 @@ public class MikuMondayTracksService(
             {
                 return;
             }
-        }
-
-        lock (Lock)
-        {
-            if (_isInitialized)
-            {
-                return;
-            }
 
             _isInitialized = true;
         }
@@ -68,7 +60,10 @@ public class MikuMondayTracksService(
             }
 
             var jsonContent = await File.ReadAllTextAsync(jsonPath);
-            var tracks = JsonSerializer.Deserialize<List<MikuTrackJson>>(jsonContent);
+            var tracks = JsonSerializer.Deserialize<List<MikuTrackJson>>(
+                jsonContent,
+                JsonSerializerOptions.Web
+            );
 
             if (tracks == null || tracks.Count == 0)
             {
@@ -175,7 +170,7 @@ public class MikuMondayTracksService(
             if (allTracks.Count == 0)
             {
                 result.Error = "Треки Miku не найдены в базе данных";
-                logger.LogError(result.Error);
+                logger.LogError(message: "{Error}", result.Error);
                 return result;
             }
 

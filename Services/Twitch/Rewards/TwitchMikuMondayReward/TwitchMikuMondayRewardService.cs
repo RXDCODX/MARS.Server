@@ -1,6 +1,4 @@
-﻿using System.Drawing;
-using MARS.Server.Services.Twitch.Entitys;
-using MARS.Server.Services.Twitch.Management;
+﻿using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
 using MARS.Server.Services.Twitch.Rewards.TwitchMikuMondayReward.Entities;
 using TwitchLib.EventSub.Core.EventArgs.Channel;
@@ -18,8 +16,9 @@ public class TwitchMikuMondayRewardService(
     IHostApplicationLifetime lifetime,
     IHubContext<TelegramusHub, ITelegramusHub> hubContext,
     MikuMondayTracksService tracksService,
-    ITwitchClient twitchClient
-) : TemporaryReward(channelRewardsService, logger)
+    ITwitchClient twitchClient,
+    IHostEnvironment environment
+) : TemporaryReward(channelRewardsService, logger, environment)
 {
     public override string AlertDisplayName { get; set; } = "🎤 Miku Monday";
 

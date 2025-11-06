@@ -26,7 +26,7 @@ public static class TwitchExstension
     public static Task SendMessageToMainTwitchAsync<T>(
         this ITwitchClient client,
         string message,
-        ILogger<T>? logger = default
+        ILogger<T>? logger = null
     )
         where T : class
     {

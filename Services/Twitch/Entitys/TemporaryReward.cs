@@ -7,7 +7,8 @@ namespace MARS.Server.Services.Twitch.Entitys;
 
 public abstract class TemporaryReward(
     ChannelRewardsService channelRewardsService,
-    ILogger<TemporaryReward> logger
+    ILogger<TemporaryReward> logger,
+    IHostEnvironment environment
 ) : IHostedService, ITwitchReward
 {
     private Timer? _timer;
@@ -52,21 +53,26 @@ public abstract class TemporaryReward(
 
     private async void OnTimerElapsed(object? state, ElapsedEventArgs elapsedEventArgs)
     {
+        if (!environment.IsProduction())
+        {
+            return;
+        }
+
         await _semaphore.WaitAsync();
 
         try
         {
-            var now = DateTime.Now;
+            var now = elapsedEventArgs.SignalTime;
             var shouldBeEnabled = IsRewardEnabled(now);
 
-            if (shouldBeEnabled && string.IsNullOrWhiteSpace(_rewardId))
+            if (shouldBeEnabled)
             {
-                // Награда должна быть доступна, но её нет - создаём
-                await CreateRewardAsync();
+                // Награда должна быть доступна - проверяем через API и при необходимости создаём
+                await EnsureRewardExistsAsync();
             }
-            else if (!shouldBeEnabled && !string.IsNullOrWhiteSpace(_rewardId))
+            else
             {
-                // Награда не должна быть доступна, но она есть - удаляем
+                // Награда не должна быть доступна - удаляем если существует
                 await RemoveRewardIfExistsAsync();
             }
         }
@@ -80,52 +86,80 @@ public abstract class TemporaryReward(
         }
     }
 
-    private async Task CreateRewardAsync()
+    /// <summary>
+    /// Убеждаемся, что награда существует. Если _rewardId есть - проверяем через API, иначе ищем/создаём
+    /// </summary>
+    private async Task EnsureRewardExistsAsync()
     {
+        // Если _rewardId есть, проверяем что награда действительно существует
         if (!string.IsNullOrWhiteSpace(_rewardId))
         {
+            var existingReward = await channelRewardsService.GetRewardByIdAsync(_rewardId);
+
+            if (existingReward != null)
+            {
+                // Награда существует, всё хорошо
+                return;
+            }
+
+            // Награда не найдена - очищаем кэш и ищем заново
             logger.LogWarning(
-                "Попытка создать награду {AlertName}, но она уже существует с Id: {RewardId}",
+                "Награда {AlertName} с Id: {RewardId} не найдена на сервере. Ищем заново.",
                 AlertDisplayName,
                 _rewardId
+            );
+            _rewardId = null;
+        }
+
+        // Проверяем через API, не существует ли уже такая награда
+        var existingRewards = await channelRewardsService.GetRewardsAsync();
+
+        var duplicateReward = existingRewards?.FirstOrDefault(r =>
+            r.Title.Equals(AlertDisplayName, StringComparison.OrdinalIgnoreCase) && r.Cost == Cost
+        );
+
+        if (duplicateReward != null)
+        {
+            logger.LogInformation(
+                "Найдена существующая награда {AlertName} с Id: {RewardId}. Используем её.",
+                AlertDisplayName,
+                duplicateReward.Id
+            );
+            _rewardId = duplicateReward.Id;
+            return;
+        }
+
+        // Награды нет - создаём
+        logger.LogInformation("Создание временной награды: {AlertName}", AlertDisplayName);
+
+        var request = new CreateCustomRewardsRequest
+        {
+            Title = AlertDisplayName,
+            Prompt = AlertDescription,
+            Cost = Cost,
+            BackgroundColor = ColorToHex(Color),
+            IsEnabled = true,
+            IsUserInputRequired = false,
+            IsMaxPerStreamEnabled = false,
+            IsMaxPerUserPerStreamEnabled = false,
+            IsGlobalCooldownEnabled = false,
+            ShouldRedemptionsSkipRequestQueue = false,
+        };
+
+        var rewardId = await channelRewardsService.CreateRewardAsync(request);
+
+        if (!string.IsNullOrWhiteSpace(rewardId))
+        {
+            _rewardId = rewardId;
+            logger.LogInformation(
+                "Временная награда {AlertName} успешно создана с Id: {RewardId}",
+                AlertDisplayName,
+                rewardId
             );
         }
         else
         {
-            logger.LogInformation("Создание временной награды: {AlertName}", AlertDisplayName);
-
-            var request = new CreateCustomRewardsRequest
-            {
-                Title = AlertDisplayName,
-                Prompt = AlertDescription,
-                Cost = Cost,
-                BackgroundColor = ColorToHex(Color),
-                IsEnabled = true,
-                IsUserInputRequired = false,
-                IsMaxPerStreamEnabled = false,
-                IsMaxPerUserPerStreamEnabled = false,
-                IsGlobalCooldownEnabled = false,
-                ShouldRedemptionsSkipRequestQueue = false,
-            };
-
-            var rewardId = await channelRewardsService.CreateRewardAsync(request);
-
-            if (!string.IsNullOrWhiteSpace(rewardId))
-            {
-                _rewardId = rewardId;
-                logger.LogInformation(
-                    "Временная награда {AlertName} успешно создана с Id: {RewardId}",
-                    AlertDisplayName,
-                    rewardId
-                );
-            }
-            else
-            {
-                logger.LogError(
-                    "Не удалось создать временную награду: {AlertName}",
-                    AlertDisplayName
-                );
-            }
+            logger.LogError("Не удалось создать временную награду: {AlertName}", AlertDisplayName);
         }
     }
 
@@ -135,30 +169,46 @@ public abstract class TemporaryReward(
 
         if (!string.IsNullOrWhiteSpace(_rewardId))
         {
-            logger.LogInformation(
-                "Удаление временной награды: {AlertName} (Id: {RewardId})",
-                AlertDisplayName,
-                _rewardId
-            );
+            // Проверяем через API, существует ли награда на сервере Twitch
+            var existingReward = await channelRewardsService.GetRewardByIdAsync(_rewardId);
 
-            var deleted = await channelRewardsService.DeleteRewardAsync(_rewardId);
-
-            if (deleted)
+            if (existingReward == null)
             {
-                logger.LogInformation(
-                    "Временная награда {AlertName} успешно удалена",
-                    AlertDisplayName
+                logger.LogWarning(
+                    "Награда {AlertName} с Id: {RewardId} не найдена на сервере Twitch. Возможно, она уже была удалена.",
+                    AlertDisplayName,
+                    _rewardId
                 );
                 _rewardId = null;
                 result = true;
             }
             else
             {
-                logger.LogError(
-                    "Не удалось удалить временную награду {AlertName} с Id: {RewardId}",
+                logger.LogInformation(
+                    "Удаление временной награды: {AlertName} (Id: {RewardId})",
                     AlertDisplayName,
                     _rewardId
                 );
+
+                var deleted = await channelRewardsService.DeleteRewardAsync(_rewardId);
+
+                if (deleted)
+                {
+                    logger.LogInformation(
+                        "Временная награда {AlertName} успешно удалена",
+                        AlertDisplayName
+                    );
+                    _rewardId = null;
+                    result = true;
+                }
+                else
+                {
+                    logger.LogError(
+                        "Не удалось удалить временную награду {AlertName} с Id: {RewardId}",
+                        AlertDisplayName,
+                        _rewardId
+                    );
+                }
             }
         }
 
