@@ -1,4 +1,5 @@
-using System;
+﻿using System;
+using MARS.Server.Services.Twitch.Entitys;
 
 namespace MARS.Server.Services.Twitch.Rewards.TwitchMikuMondayReward.Entities;
 
@@ -15,10 +16,10 @@ public class MikuMondayDto
     /// <summary>
     /// Отображаемое имя пользователя
     /// </summary>
-    public required string DisplayName { get; set; }
+    public required TwitchUser TwitchUser { get; set; }
 
     /// <summary>
-    /// Трек который выпал пользователю
+    /// Трек, который выпал пользователю
     /// </summary>
     public required MikuTrackDto SelectedTrack { get; set; }
 
@@ -28,7 +29,7 @@ public class MikuMondayDto
     public required List<MikuTrackDto> AvailableTracks { get; set; }
 
     /// <summary>
-    /// Флаг, указывающий что трек не должен списываться из очереди
+    /// Флаг, указывающий, что трек не должен списываться из очереди
     /// </summary>
     public bool SkipAvailableTracksUpdate { get; set; }
 }
@@ -38,10 +39,10 @@ public class MikuMondayDto
 /// </summary>
 public class MikuTrackDto
 {
+    public required Guid Id { get; set; }
     public int Number { get; set; }
     public required string Artist { get; set; }
     public required string Title { get; set; }
     public required string Url { get; set; }
     public string? ThumbnailUrl { get; set; }
 }
-

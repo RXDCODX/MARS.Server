@@ -11,6 +11,7 @@ namespace MARS.Server.Services.Twitch.Rewards.TwitchMikuMondayReward;
 /// </summary>
 public class TwitchMikuMondayRewardService(
     ChannelRewardsService channelRewardsService,
+    TwitchUserEnsureService twitchUserEnsureService,
     ILogger<TwitchMikuMondayRewardService> logger,
     EventSubWebsocketClient wsClient,
     IHostApplicationLifetime lifetime,
@@ -107,10 +108,7 @@ public class TwitchMikuMondayRewardService(
             // Получаем случайный трек
             var trackResult = isStreamer
                 ? await tracksService.GetRandomTrackForStreamerAsync()
-                : await tracksService.GetRandomTrackForUserAsync(
-                    twEvent.UserId,
-                    twEvent.UserName
-                );
+                : await tracksService.GetRandomTrackForUserAsync(twEvent.UserId, twEvent.UserName);
 
             // Если есть ошибка - отправляем сообщение в чат
             if (!string.IsNullOrWhiteSpace(trackResult.Error))
@@ -165,6 +163,7 @@ public class TwitchMikuMondayRewardService(
             // Конвертируем в DTO
             var selectedTrackDto = new MikuTrackDto
             {
+                Id = trackResult.Track.BaseTrackInfoId,
                 Number = trackResult.Track.Number,
                 Artist =
                     trackResult.Track.BaseTrackInfo?.Authors?.FirstOrDefault() ?? "Unknown Artist",
@@ -176,6 +175,7 @@ public class TwitchMikuMondayRewardService(
             var availableTracksDto = trackResult
                 .AvailableTracks.Select(t => new MikuTrackDto
                 {
+                    Id = t.BaseTrackInfoId,
                     Number = t.Number,
                     Artist = t.BaseTrackInfo?.Authors?.FirstOrDefault() ?? "Unknown Artist",
                     Title = t.BaseTrackInfo?.TrackName ?? "Unknown Title",
@@ -184,10 +184,14 @@ public class TwitchMikuMondayRewardService(
                 })
                 .ToList();
 
+            var twUser = TwitchUser.FromChannelPointsCustomRewardRedemptionArgs(args);
+
+            twUser = await twitchUserEnsureService.EnsureUserExistsAsync(twUser);
+
             var mikuMondayData = new MikuMondayDto
             {
                 Id = Guid.NewGuid(),
-                DisplayName = twEvent.UserName,
+                TwitchUser = twUser,
                 SelectedTrack = selectedTrackDto,
                 AvailableTracks = availableTracksDto,
                 SkipAvailableTracksUpdate = isStreamer,
