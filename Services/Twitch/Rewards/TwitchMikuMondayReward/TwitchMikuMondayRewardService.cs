@@ -98,38 +98,67 @@ public class TwitchMikuMondayRewardService(
                 twEvent.Reward.Cost
             );
 
-            // Получаем случайный трек для пользователя
-            var trackResult = await tracksService.GetRandomTrackForUserAsync(
+            var isStreamer = string.Equals(
                 twEvent.UserId,
-                twEvent.UserName
+                twEvent.BroadcasterUserId,
+                StringComparison.Ordinal
             );
+
+            // Получаем случайный трек
+            var trackResult = isStreamer
+                ? await tracksService.GetRandomTrackForStreamerAsync()
+                : await tracksService.GetRandomTrackForUserAsync(
+                    twEvent.UserId,
+                    twEvent.UserName
+                );
 
             // Если есть ошибка - отправляем сообщение в чат
             if (!string.IsNullOrWhiteSpace(trackResult.Error))
             {
-                await twitchClient.SendMessageToMainTwitchAsync(
-                    $"@{twEvent.UserName}, {trackResult.Error}",
-                    logger
-                );
-                logger.LogWarning(
-                    "Miku Monday: ошибка для пользователя {UserName}: {Error}",
-                    twEvent.UserName,
-                    trackResult.Error
-                );
+                if (isStreamer)
+                {
+                    logger.LogWarning(
+                        "Miku Monday: ошибка активации стримером {UserName}: {Error}",
+                        twEvent.UserName,
+                        trackResult.Error
+                    );
+                }
+                else
+                {
+                    await twitchClient.SendMessageToMainTwitchAsync(
+                        $"@{twEvent.UserName}, {trackResult.Error}",
+                        logger
+                    );
+                    logger.LogWarning(
+                        "Miku Monday: ошибка для пользователя {UserName}: {Error}",
+                        twEvent.UserName,
+                        trackResult.Error
+                    );
+                }
                 return;
             }
 
             // Если трек не получен
             if (trackResult.Track == null)
             {
-                await twitchClient.SendMessageToMainTwitchAsync(
-                    $"@{twEvent.UserName}, не удалось попросить Мику о благославлении! Попробуйте позже.",
-                    logger
-                );
-                logger.LogError(
-                    "Miku Monday: не удалось получить трек для пользователя {UserName}",
-                    twEvent.UserName
-                );
+                if (isStreamer)
+                {
+                    logger.LogError(
+                        "Miku Monday: не удалось получить трек для стримера {UserName}",
+                        twEvent.UserName
+                    );
+                }
+                else
+                {
+                    await twitchClient.SendMessageToMainTwitchAsync(
+                        $"@{twEvent.UserName}, не удалось попросить Мику о благославлении! Попробуйте позже.",
+                        logger
+                    );
+                    logger.LogError(
+                        "Miku Monday: не удалось получить трек для пользователя {UserName}",
+                        twEvent.UserName
+                    );
+                }
                 return;
             }
 
@@ -160,6 +189,7 @@ public class TwitchMikuMondayRewardService(
                 DisplayName = twEvent.UserName,
                 SelectedTrack = selectedTrackDto,
                 AvailableTracks = availableTracksDto,
+                SkipAvailableTracksUpdate = isStreamer,
             };
 
             // Отправляем данные на фронт
@@ -176,7 +206,8 @@ public class TwitchMikuMondayRewardService(
             //);
 
             logger.LogInformation(
-                "Miku Monday эффект активирован для пользователя {UserName}, трек: #{Number} {Artist} - {Title}",
+                "Miku Monday эффект активирован для {UserType} {UserName}, трек: #{Number} {Artist} - {Title}",
+                isStreamer ? "стримера" : "пользователя",
                 twEvent.UserName,
                 trackResult.Track.Number,
                 trackArtist,

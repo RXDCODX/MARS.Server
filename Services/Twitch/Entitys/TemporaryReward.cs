@@ -21,7 +21,7 @@ public abstract class TemporaryReward(
     public abstract int Cost { get; init; }
     public abstract Func<DateTime, bool> IsRewardEnabled { get; set; }
 
-    public virtual async Task StartAsync(CancellationToken cancellationToken)
+    public virtual Task StartAsync(CancellationToken cancellationToken)
     {
         logger.LogInformation(
             "Запуск временной награды: {AlertName} (Cost: {Cost})",
@@ -31,9 +31,10 @@ public abstract class TemporaryReward(
 
         // Инициализация таймера с периодичностью 5 минут
         _timer = new Timer(TimeSpan.FromMinutes(5));
+        OnTimerElapsed(this, new ElapsedEventArgs(DateTime.Now));
         _timer.Elapsed += OnTimerElapsed;
 
-        await Task.CompletedTask;
+        return Task.CompletedTask;
     }
 
     public virtual async Task StopAsync(CancellationToken cancelToken)
@@ -53,17 +54,12 @@ public abstract class TemporaryReward(
 
     private async void OnTimerElapsed(object? state, ElapsedEventArgs elapsedEventArgs)
     {
-        if (!environment.IsProduction())
-        {
-            return;
-        }
-
         await _semaphore.WaitAsync();
 
         try
         {
             var now = elapsedEventArgs.SignalTime;
-            var shouldBeEnabled = IsRewardEnabled(now);
+            var shouldBeEnabled = IsRewardEnabled(now) || environment.IsDevelopment();
 
             if (shouldBeEnabled)
             {

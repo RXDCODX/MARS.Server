@@ -229,6 +229,57 @@ public class MikuMondayTracksService(
     }
 
     /// <summary>
+    /// Получает случайный трек для стримера без списания из очереди
+    /// </summary>
+    public async Task<MikuMondayResult> GetRandomTrackForStreamerAsync()
+    {
+        var result = new MikuMondayResult();
+
+        try
+        {
+            await using var db = await dbContextFactory.CreateDbContextAsync();
+
+            var allTracks = await db
+                .MikuMondayTracks.AsNoTracking()
+                .Include(mt => mt.BaseTrackInfo)
+                .OrderBy(t => t.Number)
+                .ToListAsync();
+
+            if (allTracks.Count > 0)
+            {
+                var weekInfo = GetCurrentWeekOfYear();
+                var usedTrackIds = await db
+                    .MikuMondayActivations.AsNoTracking()
+                    .Where(a => a.Year == weekInfo.Year && a.WeekOfYear == weekInfo.WeekOfYear)
+                    .Select(a => a.MikuMondayTrackId)
+                    .ToListAsync();
+
+                var preferredTracks = allTracks.Where(t => !usedTrackIds.Contains(t.Id)).ToList();
+                var randomPool = preferredTracks.Count > 0 ? preferredTracks : allTracks;
+                var random = new Random();
+                var selectedTrack = randomPool[random.Next(randomPool.Count)];
+
+                result.Track = selectedTrack;
+                result.AvailableTracks = preferredTracks.Count > 0
+                    ? preferredTracks.Where(t => t.Id != selectedTrack.Id).ToList()
+                    : allTracks.Where(t => t.Id != selectedTrack.Id).ToList();
+            }
+            else
+            {
+                result.Error = "Треки Miku не найдены в базе данных";
+                logger.LogError(message: "{Error}", result.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogException(ex);
+            result.Error = "Произошла ошибка при получении трека";
+        }
+
+        return result;
+    }
+
+    /// <summary>
     /// Получает список доступных треков для текущего понедельника
     /// </summary>
     public async Task<List<MikuMondayTrack>> GetAvailableTracksAsync()

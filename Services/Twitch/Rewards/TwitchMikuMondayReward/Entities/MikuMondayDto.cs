@@ -19,6 +19,11 @@ public class MikuMondayDto
     /// Список оставшихся свободных треков
     /// </summary>
     public required List<MikuTrackDto> AvailableTracks { get; set; }
+
+    /// <summary>
+    /// Флаг, указывающий что трек не должен списываться из очереди
+    /// </summary>
+    public bool SkipAvailableTracksUpdate { get; set; }
 }
 
 /// <summary>

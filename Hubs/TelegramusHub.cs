@@ -1,4 +1,5 @@
 ﻿using MARS.Server.Services.Twitch.Rewards.TwitchMikuMikuBeamReward;
+using MARS.Server.Services.Twitch.Rewards.TwitchMikuMondayReward;
 using MARS.Server.Services.Twitch.SoundBarService;
 using MARS.Server.Services.WaifuRoll;
 using SignalRSwaggerGen.Attributes;
@@ -23,7 +24,8 @@ public class TelegramusHub(
     ITwitchClient twitchClient,
     SoundBarFactory soundBarFactory,
     WaifuPrizesService waifuPrizesService,
-    IServiceProvider serviceProvider
+    IServiceProvider serviceProvider,
+    MikuMondayTracksService mikuMondayTracksService
 ) : Hub<ITelegramusHub>
 {
     private readonly TwitchConfiguration _twitchConfiguration =
@@ -69,5 +71,11 @@ public class TelegramusHub(
     public Task ExplosionGo()
     {
         return Clients.All.Explosion();
+    }
+
+    [SignalRMethod]
+    public Task MikuMondayTracks()
+    {
+        return mikuMondayTracksService.GetAvailableTracksAsync();
     }
 }
