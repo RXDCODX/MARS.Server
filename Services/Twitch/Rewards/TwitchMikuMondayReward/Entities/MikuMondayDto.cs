@@ -1,3 +1,5 @@
+using System;
+
 namespace MARS.Server.Services.Twitch.Rewards.TwitchMikuMondayReward.Entities;
 
 /// <summary>
@@ -5,6 +7,11 @@ namespace MARS.Server.Services.Twitch.Rewards.TwitchMikuMondayReward.Entities;
 /// </summary>
 public class MikuMondayDto
 {
+    /// <summary>
+    /// Уникальный идентификатор награды
+    /// </summary>
+    public Guid Id { get; set; }
+
     /// <summary>
     /// Отображаемое имя пользователя
     /// </summary>

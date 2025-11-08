@@ -186,6 +186,7 @@ public class TwitchMikuMondayRewardService(
 
             var mikuMondayData = new MikuMondayDto
             {
+                Id = Guid.NewGuid(),
                 DisplayName = twEvent.UserName,
                 SelectedTrack = selectedTrackDto,
                 AvailableTracks = availableTracksDto,

@@ -110,9 +110,11 @@ Task MikuMonday(MikuMondayDto mikuMondayData);
 ```csharp
 public class MikuMondayDto
 {
+    public Guid Id { get; set; }
     public string DisplayName { get; set; }
     public MikuTrackDto SelectedTrack { get; set; }
     public List<MikuTrackDto> AvailableTracks { get; set; }
+    public bool SkipAvailableTracksUpdate { get; set; }
 }
 
 public class MikuTrackDto
