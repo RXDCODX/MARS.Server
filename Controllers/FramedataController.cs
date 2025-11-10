@@ -71,10 +71,7 @@ public class FramedataController(
             };
 
             result = Ok(
-                OperationResult<PagedResult<TekkenCharacter>>.Ok(
-                    "Получены персонажи",
-                    pagedResult
-                )
+                OperationResult<PagedResult<TekkenCharacter>>.Ok("Получены персонажи", pagedResult)
             );
         }
         catch (Exception ex)

@@ -260,9 +260,10 @@ public class MikuMondayTracksService(
                 var selectedTrack = randomPool[random.Next(randomPool.Count)];
 
                 result.Track = selectedTrack;
-                result.AvailableTracks = preferredTracks.Count > 0
-                    ? preferredTracks.Where(t => t.Id != selectedTrack.Id).ToList()
-                    : allTracks.Where(t => t.Id != selectedTrack.Id).ToList();
+                result.AvailableTracks =
+                    preferredTracks.Count > 0
+                        ? preferredTracks.Where(t => t.Id != selectedTrack.Id).ToList()
+                        : allTracks.Where(t => t.Id != selectedTrack.Id).ToList();
             }
             else
             {

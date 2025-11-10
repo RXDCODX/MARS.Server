@@ -1,4 +1,5 @@
 ﻿using MARS.Server.Services.CommandExecutor.Entitys;
+using MARS.Server.Services.CommandExecutor.Entitys.Commands;
 using Telegram.Bot.Types.Enums;
 
 namespace MARS.Server.Services.CommandExecutor.Adapters;
@@ -138,7 +139,7 @@ public class TelegramCommandService(
                                         .ToArray();
                                     var inputParts = string.IsNullOrWhiteSpace(input)
                                         ? []
-                                        : input.Split(' ');
+                                        : BaseCommand.ParseParametersWithQuotes(input);
 
                                     if (inputParts.Length >= requiredParams.Length)
                                     {

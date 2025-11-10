@@ -47,11 +47,7 @@ public class TekkenVictorinaLeaderbord(
         return null;
     }
 
-    public async Task AddOrUpdateUserLeaderBoard(
-        string twitchId,
-        string _,
-        bool isWaifuWin = false
-    )
+    public async Task AddOrUpdateUserLeaderBoard(string twitchId, string _, bool isWaifuWin = false)
     {
         await using var dbContext = await factory.CreateDbContextAsync(_cancellationToken);
         var isExists = await dbContext.TwitchLeaderboardUsers.AnyAsync(

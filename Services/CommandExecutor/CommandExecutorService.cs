@@ -318,7 +318,9 @@ public class CommandExecutorService(CommandFactory commandFactory)
                     // Проверяем количество обязательных параметров
                     var commandInfo = command.GetParameterInfo();
                     var requiredParams = commandInfo.Where(p => p.Required).ToArray();
-                    var inputParts = string.IsNullOrWhiteSpace(input) ? [] : input.Split(' ');
+                    var inputParts = string.IsNullOrWhiteSpace(input)
+                        ? []
+                        : BaseCommand.ParseParametersWithQuotes(input);
 
                     if (inputParts.Length < requiredParams.Length)
                     {

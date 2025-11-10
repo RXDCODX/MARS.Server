@@ -1,5 +1,6 @@
 ﻿using MARS.Server.ApplicationState;
 using MARS.Server.Services._365Genius.Entitys;
+using MARS.Server.Services.EnvironmentVariable.Entitys;
 using MARS.Server.Services.Framedata.Entitys;
 using MARS.Server.Services.Framedata.Entitys.Pending;
 using MARS.Server.Services.RandomMem.Entity;
@@ -75,6 +76,7 @@ public sealed partial class AppDbContext : DbContext
     public DbSet<ChannelRewardRecord> ChannelRewards { get; set; } = null!;
     public DbSet<MikuMondayTrack> MikuMondayTracks { get; set; } = null!;
     public DbSet<MikuMondayActivation> MikuMondayActivations { get; set; } = null!;
+    public DbSet<EnvironmentVariable> EnvironmentVariables { get; set; } = null!;
 
     /// <summary>
     /// Partial метод для конфигурации таблиц, связанных с TwitchUser (реализован в TwitchUsersDbContext.cs)
@@ -316,8 +318,16 @@ public sealed partial class AppDbContext : DbContext
 
         modelBuilder
             .Entity<MikuMondayActivation>()
-            .HasIndex(a => new { a.TwitchUserId, a.Year, a.WeekOfYear })
+            .HasIndex(a => new
+            {
+                a.TwitchUserId,
+                a.Year,
+                a.WeekOfYear,
+            })
             .IsUnique();
+
+        // Конфигурация для EnvironmentVariable
+        modelBuilder.Entity<EnvironmentVariable>().HasIndex(e => e.Key).IsUnique();
 
         // Конфигурация связей с TwitchUser вынесена в TwitchUsersDbContext
 

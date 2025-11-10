@@ -123,7 +123,7 @@ public class ApiCommandService : PlatformCommandServiceBase<string>
                             var requiredParams = commandInfo.Where(p => p.Required).ToArray();
                             var inputParts = string.IsNullOrWhiteSpace(input)
                                 ? []
-                                : input.Split(' ');
+                                : BaseCommand.ParseParametersWithQuotes(input);
 
                             if (inputParts.Length < requiredParams.Length)
                             {

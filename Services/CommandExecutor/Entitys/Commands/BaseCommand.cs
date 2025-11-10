@@ -64,7 +64,7 @@ public abstract class BaseCommand
             return parameters;
         }
 
-        var parts = input.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var parts = ParseParametersWithQuotes(input);
         var currentIndex = 0;
 
         foreach (var param in commandParameters)
@@ -82,8 +82,14 @@ public abstract class BaseCommand
                 continue;
             }
 
-            // Если это последний параметр и он может содержать пробелы, берем все оставшиеся части
-            if (param.Type == "string" && param == commandParameters.Last())
+            // Если это последний параметр типа string и он последний в списке,
+            // и мы еще не использовали все части, то берем все оставшиеся части
+            // (это позволяет передавать параметры с пробелами без кавычек, если это последний параметр)
+            if (
+                param.Type == "string"
+                && param == commandParameters.Last()
+                && currentIndex < parts.Length - 1
+            )
             {
                 var remainingParts = parts.Skip(currentIndex);
                 parameters[param.Name] = string.Join(" ", remainingParts);
@@ -95,6 +101,96 @@ public abstract class BaseCommand
         }
 
         return parameters;
+    }
+
+    /// <summary>
+    /// Разбирает строку на параметры с поддержкой кавычек
+    /// Текст в кавычках (одинарных или двойных) воспринимается как один параметр
+    /// </summary>
+    /// <param name="input">Входная строка</param>
+    /// <returns>Массив параметров</returns>
+    public static string[] ParseParametersWithQuotes(string input)
+    {
+        var result = new List<string>();
+        var currentPart = new System.Text.StringBuilder();
+        var inQuotes = false;
+        char? quoteChar = null;
+        var i = 0;
+
+        while (i < input.Length)
+        {
+            var currentChar = input[i];
+
+            if (!inQuotes)
+            {
+                if (currentChar == '"' || currentChar == '\'')
+                {
+                    inQuotes = true;
+                    quoteChar = currentChar;
+                }
+                else if (char.IsWhiteSpace(currentChar))
+                {
+                    if (currentPart.Length > 0)
+                    {
+                        result.Add(currentPart.ToString());
+                        currentPart.Clear();
+                    }
+                }
+                else
+                {
+                    currentPart.Append(currentChar);
+                }
+            }
+            else
+            {
+                if (currentChar == quoteChar)
+                {
+                    // Проверяем, не экранирована ли кавычка
+                    if (i + 1 < input.Length && input[i + 1] == quoteChar)
+                    {
+                        // Экранированная кавычка (двойная кавычка внутри кавычек)
+                        currentPart.Append(quoteChar);
+                        i++; // Пропускаем следующую кавычку
+                    }
+                    else
+                    {
+                        // Закрывающая кавычка
+                        inQuotes = false;
+                        quoteChar = null;
+                        result.Add(currentPart.ToString());
+                        currentPart.Clear();
+                    }
+                }
+                else if (currentChar == '\\' && i + 1 < input.Length)
+                {
+                    // Обработка escape-последовательностей
+                    var nextChar = input[i + 1];
+                    if (nextChar == '\\' || nextChar == '"' || nextChar == '\'')
+                    {
+                        currentPart.Append(nextChar);
+                        i++; // Пропускаем следующий символ
+                    }
+                    else
+                    {
+                        currentPart.Append(currentChar);
+                    }
+                }
+                else
+                {
+                    currentPart.Append(currentChar);
+                }
+            }
+
+            i++;
+        }
+
+        // Добавляем последний параметр, если он есть
+        if (currentPart.Length > 0)
+        {
+            result.Add(currentPart.ToString());
+        }
+
+        return result.ToArray();
     }
 
     /// <summary>

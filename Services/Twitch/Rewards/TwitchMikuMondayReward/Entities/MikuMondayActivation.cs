@@ -45,4 +45,3 @@ public class MikuMondayActivation
     /// </summary>
     public int Year { get; set; }
 }
-
