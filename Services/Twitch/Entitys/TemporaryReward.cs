@@ -54,12 +54,16 @@ public abstract class TemporaryReward(
 
     private async void OnTimerElapsed(object? state, ElapsedEventArgs elapsedEventArgs)
     {
+        if (environment.IsDevelopment())
+        {
+            return;
+        }
         await _semaphore.WaitAsync();
 
         try
         {
             var now = elapsedEventArgs.SignalTime;
-            var shouldBeEnabled = IsRewardEnabled(now) || environment.IsDevelopment();
+            var shouldBeEnabled = IsRewardEnabled(now);
 
             if (shouldBeEnabled)
             {
