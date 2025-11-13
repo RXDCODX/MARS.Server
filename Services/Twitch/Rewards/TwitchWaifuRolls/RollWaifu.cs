@@ -85,8 +85,9 @@ public class RollWaifu(
                 if (time != null)
                 {
                     DateTimeOffset notNullTime = time.Value;
+                    var cooldown = await waifuRollService.GetWaifuRollCoolDownAsync();
                     TimeSpan wasteTime =
-                        notNullTime.AddHours(1)
+                        notNullTime.Add(cooldown)
                         - DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
 
                     var culture = CultureInfo.GetCultureInfo("ru-RU");

@@ -332,9 +332,9 @@ public static class StartupEstensions
         services.AddSingleton<TwitchMichaelJacksonRewardService>();
         services.AddHostedService(sp => sp.GetRequiredService<TwitchMichaelJacksonRewardService>());
 
-        services.AddSingleton<MikuMondayTracksService>();
-        services.AddSingleton<TwitchMikuMondayRewardService>();
-        services.AddHostedService(sp => sp.GetRequiredService<TwitchMikuMondayRewardService>());
+        //services.AddSingleton<MikuMondayTracksService>();
+        //services.AddSingleton<TwitchMikuMondayRewardService>();
+        //services.AddHostedService(sp => sp.GetRequiredService<TwitchMikuMondayRewardService>());
 
         services.AddSingleton<TwitchMikuBeamRewardService>();
         services.AddHostedService(sp => sp.GetRequiredService<TwitchMikuBeamRewardService>());

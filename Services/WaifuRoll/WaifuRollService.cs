@@ -1,4 +1,6 @@
-﻿using System.Collections.Concurrent;
+﻿using System;
+using System.Collections.Concurrent;
+using MARS.Server.Services.EnvironmentVariable;
 using MARS.Server.Services.Twitch;
 using MARS.Server.Services.Twitch.Rewards;
 using MARS.Server.Services.WaifuRoll.helpers;
@@ -12,7 +14,8 @@ public class WaifuRollService(
     IOptions<ShikimoriClientOptions> options,
     IDbContextFactory<AppDbContext> factory,
     WaifuRollEnsurenceService waifuDbHelper,
-    TwitchUserEnsureService twitchUserEnsureService
+    TwitchUserEnsureService twitchUserEnsureService,
+    EnvironmentVariableService environmentVariableService
 ) : BackgroundService, IWaifuRollService
 {
     /// <summary>
@@ -110,7 +113,9 @@ public class WaifuRollService(
                             var now = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
                             var cdTime = cd.Time.ToOffset(TimeSpan.FromHours(3));
 
-                            var isCDed = now - cdTime >= TimeSpan.FromMinutes(15);
+                            var cdFromEnv = await GetWaifuRollCoolDownAsync();
+
+                            var isCDed = now - cdTime >= cdFromEnv;
                             if (isCDed)
                             {
                                 pass = true;
@@ -172,11 +177,28 @@ public class WaifuRollService(
                     {
                         host.WaifuRollId = waifu.ShikiId;
                         host.WhenOrdered = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
-                        host.OrderCount++;
+
+                        var shouldIncrementGuarantee = !forcePass
+                            && !string.Equals(
+                                id,
+                                TwitchExstension.ChannelId,
+                                StringComparison.OrdinalIgnoreCase
+                            );
+
+                        if (shouldIncrementGuarantee)
+                        {
+                            host.OrderCount++;
+                            waifu.OrderCount++;
+                        }
+                        else
+                        {
+                            host.OrderCount = host.OrderCount;
+                            waifu.OrderCount = waifu.OrderCount;
+                        }
+
                         host.HostCoolDown.Time = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
 
                         waifu.LastOrder = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
-                        waifu.OrderCount++;
 
                         if (string.IsNullOrWhiteSpace(waifu.ImageUrl))
                         {
@@ -495,5 +517,16 @@ public class WaifuRollService(
         var index = Random.Shared.Next(lines.Length);
 
         return ValueTask.FromResult(lines[index]);
+    }
+
+    public async Task<TimeSpan> GetWaifuRollCoolDownAsync()
+    {
+        var waifurollMinutes = await environmentVariableService.GetVariableAsync(
+            "waifurollMinutes"
+        );
+        var defaultValue = TimeSpan.FromMinutes(20);
+        var isGet = long.TryParse(waifurollMinutes?.Value, out var minutes);
+
+        return isGet ? TimeSpan.FromMinutes(minutes) : defaultValue;
     }
 }

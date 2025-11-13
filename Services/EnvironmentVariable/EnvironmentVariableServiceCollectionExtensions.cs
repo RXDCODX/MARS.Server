@@ -1,6 +1,4 @@
-using Microsoft.Extensions.DependencyInjection;
-
-namespace MARS.Server.Services.EnvironmentVariable;
+﻿namespace MARS.Server.Services.EnvironmentVariable;
 
 /// <summary>
 /// Расширения для регистрации сервиса переменных окружения

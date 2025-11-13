@@ -1,4 +1,4 @@
-namespace MARS.Server.Services.EnvironmentVariable.Entitys;
+﻿namespace MARS.Server.Services.EnvironmentVariable.Entitys;
 
 /// <summary>
 /// Переменная окружения, хранимая в базе данных
@@ -6,19 +6,15 @@ namespace MARS.Server.Services.EnvironmentVariable.Entitys;
 public class EnvironmentVariable
 {
     /// <summary>
-    /// Идентификатор
-    /// </summary>
-    public int Id { get; set; }
-
-    /// <summary>
     /// Ключ переменной окружения
     /// </summary>
-    public string Key { get; set; } = string.Empty;
+    [Key]
+    public required string Key { get; set; }
 
     /// <summary>
     /// Значение переменной окружения
     /// </summary>
-    public string Value { get; set; } = string.Empty;
+    public string? Value { get; set; }
 
     /// <summary>
     /// Описание переменной
