@@ -63,7 +63,10 @@ public class AddNewWaifu(
                 var userName = onMessageReceivedArgs.ChatMessage.DisplayName;
                 var userInput = onMessageReceivedArgs.ChatMessage.Message;
                 var userId = onMessageReceivedArgs.ChatMessage.UserId;
-                var isVip = onMessageReceivedArgs.ChatMessage.IsVip;
+                var isVip =
+                    onMessageReceivedArgs.ChatMessage.IsVip
+                    || onMessageReceivedArgs.ChatMessage.IsModerator
+                    || onMessageReceivedArgs.ChatMessage.IsBroadcaster;
 
                 var id = await GetShikimoriCharacterIdFromLink(userInput);
 

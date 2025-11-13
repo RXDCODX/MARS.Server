@@ -1,5 +1,4 @@
-using System.ComponentModel.DataAnnotations;
-using MARS.Server.Services.SoundRequest.Entities;
+﻿using MARS.Server.Services.SoundRequest.Entities;
 
 namespace MARS.Server.Services.Twitch.Rewards.TwitchMikuMondayReward.Entities;
 

@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using MARS.Server.Services.EnvironmentVariable;
 using MARS.Server.Services.Twitch;
 using MARS.Server.Services.Twitch.Rewards;
@@ -178,7 +177,8 @@ public class WaifuRollService(
                         host.WaifuRollId = waifu.ShikiId;
                         host.WhenOrdered = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
 
-                        var shouldIncrementGuarantee = !forcePass
+                        var shouldIncrementGuarantee =
+                            !forcePass
                             && !string.Equals(
                                 id,
                                 TwitchExstension.ChannelId,

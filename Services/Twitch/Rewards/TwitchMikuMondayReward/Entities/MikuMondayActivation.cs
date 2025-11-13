@@ -1,6 +1,4 @@
-using System.ComponentModel.DataAnnotations;
-
-namespace MARS.Server.Services.Twitch.Rewards.TwitchMikuMondayReward.Entities;
+﻿namespace MARS.Server.Services.Twitch.Rewards.TwitchMikuMondayReward.Entities;
 
 /// <summary>
 /// Запись об активации награды Miku Monday

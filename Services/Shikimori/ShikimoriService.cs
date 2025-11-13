@@ -135,7 +135,8 @@ public class ShikimoriService : ITelegramusService
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Ошибка при получении персонажа по ID: {Id}", id);
+                var exception = new Exception($"Ошибка при получении персонажа по ID: {id}", ex);
+                _logger.LogException(exception);
             }
         }
 

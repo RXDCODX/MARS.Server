@@ -1,5 +1,4 @@
-﻿using System.Collections.Concurrent;
-using MARS.Server.Services.Twitch.Entitys;
+﻿using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.Twitch.Management.Entitys;
 using TwitchLib.Client.Events;
