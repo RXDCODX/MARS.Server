@@ -175,7 +175,7 @@ public class TwitchRussianRoulete(
             await Task.Factory.StartNew(
                 async () =>
                     await client.SendMessageToMainTwitchAsync(
-                        $"@{userName} присоединился к русской рулетке! Игроков в игре: {_listOfPlayers.Count}",
+                        $"@{userName} присоединился к русской рулетке! Игроков в игре: {_listOfPlayers.Count + 1}",
                         logger
                     )
             );

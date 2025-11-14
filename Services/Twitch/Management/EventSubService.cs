@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Timers;
 using TwitchLib.Api.Core.Enums;
 using TwitchLib.Api.Core.Exceptions;
 using TwitchLib.Api.Helix.Models.EventSub;
@@ -17,8 +18,13 @@ public class EventSubService(
     EventSubWebsocketClient wsClient
 ) : BackgroundService
 {
+    private static readonly Timer EventTimer = new Timer(TimeSpan.FromMinutes(5))
+    {
+        AutoReset = true,
+    };
     private static readonly SemaphoreSlim SemaphoreSlim = new(1);
     private static readonly SemaphoreSlim WebsocketSemaphoreSlim = new(1);
+
     private readonly CancellationToken _cancellationToken = lifetime.ApplicationStopping;
     private volatile bool _firstActivation = true;
 
@@ -801,7 +807,25 @@ public class EventSubService(
                 },
                 stoppingToken
             );
+            EventTimer.Elapsed += EventTimerOnElapsed;
+            EventTimer.Start();
         });
         return result;
+    }
+
+    private async void EventTimerOnElapsed(object? sender, ElapsedEventArgs e)
+    {
+        await Task.Factory.StartNew(
+            async () =>
+            {
+                var subs = await GetEventSubsAsync();
+                var isEnabled = subs?.Subscriptions.Any(t => t.Status.Equals("enabled"));
+                if (!isEnabled ?? false)
+                {
+                    await ResubscribeToEventSubAsync();
+                }
+            },
+            _cancellationToken
+        );
     }
 }
