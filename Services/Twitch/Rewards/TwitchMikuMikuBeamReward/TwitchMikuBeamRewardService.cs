@@ -1,4 +1,5 @@
-﻿using MARS.Server.Services.Twitch.Entitys;
+﻿using System.Collections.Concurrent;
+using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.Twitch.Management.Entitys;
 using TwitchLib.Client.Events;
@@ -25,6 +26,7 @@ public class TwitchMikuBeamRewardService(
     public bool IsServiceActive { get; set; } = true;
     public int Cost { get; init; } = 1580;
 
+    private readonly ConcurrentQueue<string> _messageIdsToDelete = new(); // ID сообщений для удаления
     private readonly HashSet<string> _allUserIds = new(); // Все ID пользователей для отображения (включая модераторов)
     private readonly SemaphoreSlim _semaphoreSlim = new(1);
     private DateTimeOffset _lastActivation = DateTimeOffset.MinValue;
@@ -91,6 +93,19 @@ public class TwitchMikuBeamRewardService(
         }
 
         _semaphoreSlim.Release();
+
+        // ID сообщения сохраняем только для обычных пользователей (не модераторов и не стримера)
+        var isModeratorOrBroadcaster = e.ChatMessage.IsModerator || e.ChatMessage.IsBroadcaster;
+
+        if (!isModeratorOrBroadcaster && !string.IsNullOrWhiteSpace(e.ChatMessage.Id))
+        {
+            _messageIdsToDelete.Enqueue(e.ChatMessage.Id);
+
+            while (_messageIdsToDelete.Count > MaxStoredMessages)
+            {
+                _messageIdsToDelete.TryDequeue(out _);
+            }
+        }
     }
 
     private async Task OnChannelPointsCustomRewardRedemption(
@@ -144,10 +159,14 @@ public class TwitchMikuBeamRewardService(
             // Используем все ID пользователей (включая модераторов) для отображения
             _semaphoreSlim.Wait();
             var uniqueUserIds = _allUserIds.ToList();
+            _allUserIds.Clear();
             _semaphoreSlim.Release();
 
+            var messageIdsCopy = _messageIdsToDelete.ToList();
+
             logger.LogInformation(
-                "MIKU MIKU BEAM: найдено {UsersCount} уникальных пользователей для отображения",
+                "MIKU MIKU BEAM: сохранено {MessagesCount} сообщений для удаления и {UsersCount} уникальных пользователей для отображения",
+                messageIdsCopy.Count,
                 uniqueUserIds.Count
             );
 
@@ -189,10 +208,18 @@ public class TwitchMikuBeamRewardService(
     }
 
     /// <summary>
-    /// Удаляет все сообщения в чате через Twitch API
+    /// Массово удаляет сообщения через Twitch API
     /// </summary>
     public async Task DeleteMessagesAsync()
     {
+        var messageIds = _messageIdsToDelete.ToList();
+        _messageIdsToDelete.Clear();
+
+        if (messageIds.Count == 0)
+        {
+            return;
+        }
+
         if (string.IsNullOrWhiteSpace(tokenService.Token?.AccessToken))
         {
             logger.LogWarning("MIKU MIKU BEAM: отсутствует токен доступа для удаления сообщений");
@@ -201,14 +228,14 @@ public class TwitchMikuBeamRewardService(
 
         try
         {
-            logger.LogInformation("MIKU MIKU BEAM: начинается удаление всех сообщений в чате");
-
-            await api.Helix.Moderation.DeleteChatMessagesAsync(
-                TwitchExstension.ChannelId,
-                TwitchExstension.ChannelId,
-                null,
-                tokenService.Token?.AccessToken
+            logger.LogInformation(
+                "MIKU MIKU BEAM: начинается удаление {Count} сообщений",
+                messageIds.Count
             );
+
+            var deleteTasks = messageIds.Select(DeleteSingleMessageAsync);
+
+            await Task.WhenAll(deleteTasks);
 
             logger.LogInformation("MIKU MIKU BEAM: все сообщения удалены успешно");
         }
@@ -232,6 +259,7 @@ public class TwitchMikuBeamRewardService(
             // Используем все ID пользователей (включая модераторов) для отображения
             _semaphoreSlim.Wait();
             var uniqueUserIds = _allUserIds.ToList();
+            _allUserIds.Clear();
             _semaphoreSlim.Release();
 
             logger.LogInformation(
@@ -278,5 +306,31 @@ public class TwitchMikuBeamRewardService(
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Удаляет одно сообщение через Twitch API
+    /// </summary>
+    private async Task DeleteSingleMessageAsync(string messageId)
+    {
+        try
+        {
+            await api.Helix.Moderation.DeleteChatMessagesAsync(
+                TwitchExstension.ChannelId,
+                TwitchExstension.ChannelId,
+                messageId,
+                tokenService.Token?.AccessToken
+            );
+
+            logger.LogDebug("MIKU MIKU BEAM: сообщение {MessageId} удалено", messageId);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(
+                ex,
+                "MIKU MIKU BEAM: ошибка удаления сообщения {MessageId}",
+                messageId
+            );
+        }
     }
 }
