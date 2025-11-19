@@ -45,6 +45,7 @@ using MARS.Server.Services.Twitch.Rewards.TwitchRandomMeme;
 using MARS.Server.Services.Twitch.Rewards.TwitchRefundService;
 using MARS.Server.Services.Twitch.Rewards.TwitchScreenParticles;
 using MARS.Server.Services.Twitch.Rewards.TwitchWaifuRolls;
+using MARS.Server.Services.Twitch.Rewards.WaifuRollCooldownNotification;
 using MARS.Server.Services.Twitch.SoundBarService;
 using MARS.Server.Services.Twitch.StreamBotNotifications;
 using MARS.Server.Services.Twitch.StreamManagement;
@@ -269,6 +270,8 @@ public static class StartupEstensions
         services.AddHostedService(sp => sp.GetRequiredService<MergeWaifu>());
         services.AddSingleton<RollWaifu>();
         services.AddHostedService(sp => sp.GetRequiredService<RollWaifu>());
+        services.AddSingleton<WaifuRollCooldownNotificationService>();
+        services.AddHostedService(sp => sp.GetRequiredService<WaifuRollCooldownNotificationService>());
         services.AddSingleton<RandomMeme>();
         services.AddHostedService(sp => sp.GetRequiredService<RandomMeme>());
         services.AddScoped<TwitchRussianRoulete>();
