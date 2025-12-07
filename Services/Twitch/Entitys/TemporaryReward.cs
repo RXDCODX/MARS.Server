@@ -42,11 +42,8 @@ public abstract class TemporaryReward(
         logger.LogInformation("Остановка временной награды: {AlertName}", AlertDisplayName);
 
         // Останавливаем таймер
-        if (_timer != null)
-        {
-            _timer.Dispose();
-            _timer = null;
-        }
+        _timer?.Dispose();
+        _timer = null;
 
         // Удаляем награду если она существует
         await RemoveRewardIfExistsAsync();

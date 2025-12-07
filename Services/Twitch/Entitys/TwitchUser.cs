@@ -23,21 +23,20 @@ public class TwitchUser
     [MaxLength(50)]
     [DatabaseGenerated(DatabaseGeneratedOption.None)]
     [Column(nameof(TwitchId))]
+    [field: NotMapped]
     public required string TwitchId
     {
-        get { return _twitchId; }
+        get;
         init
         {
             if (!IsValidTwitchId(value))
             {
                 throw new ArgumentException("TwitchId was not valid");
             }
-            _twitchId = value;
-        }
-    }
 
-    [NotMapped]
-    private readonly string _twitchId = string.Empty;
+            field = value;
+        }
+    } = string.Empty;
 
     /// <summary>
     /// Логин пользователя

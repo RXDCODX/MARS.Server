@@ -15,10 +15,9 @@ public class RandomMemOnline(
     IHubContext<TelegramusHub, ITelegramusHub> hubContext
 ) : BackgroundService
 {
-    private static bool _isStop = false;
     public static bool IsStop
     {
-        get { return _isStop; }
+        get;
         set
         {
             if (StaticDbContextFactory.Factory != null)
@@ -29,9 +28,9 @@ public class RandomMemOnline(
                 dbContext.SaveChanges();
             }
 
-            _isStop = value;
+            field = value;
         }
-    }
+    } = false;
 
     private readonly FrozenSet<long> _allowedIds = factory
         .CreateDbContext()

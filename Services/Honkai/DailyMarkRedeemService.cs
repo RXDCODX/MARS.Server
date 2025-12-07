@@ -3,7 +3,6 @@
 namespace MARS.Server.Services.Honkai;
 
 public class DailyMarkRedeemService(
-    IOptions<HoyolabConfiguration> options,
     ILogger<DailyMarkRedeemService> logger,
     IHonkaiApiService honkaiApiService,
     IHonkaiNotificationService notificationService,
@@ -12,7 +11,6 @@ public class DailyMarkRedeemService(
     IHostEnvironment environment
 ) : BackgroundService
 {
-    private readonly HoyolabConfiguration _configuration = options.Value;
     private Timer? _dailyTimer;
     private Timer? _errorNotificationTimer;
     private readonly TimeZoneInfo _honkaiTimeZone = TimeZoneInfo.FindSystemTimeZoneById(
@@ -248,7 +246,7 @@ public class DailyMarkRedeemService(
             );
             if (success && user.TelegramId != null)
             {
-                // Отправляем уведомление об успехе с информацией о награде
+                // Отправляем уведомление об успехе с информацией о награды
                 await notificationService.SendMarkupSuccessNotificationAsync(
                     user.TelegramId.Value,
                     rewardName ?? "награда",

@@ -4,7 +4,6 @@ using BooruSharp.Booru;
 using MARS.Server.CustomLoggers.SignalRLogger;
 using MARS.Server.Services._365Genius;
 using MARS.Server.Services.Framedata;
-using MARS.Server.Services.Honkai;
 using MARS.Server.Services.PyroAlerts;
 using MARS.Server.Services.RandomMem;
 using MARS.Server.Services.Scoreboard;
@@ -637,7 +636,7 @@ public static class StartupEstensions
     internal static IServiceCollection AddGameServices(this IServiceCollection services)
     {
         services
-            .AddHonkaiServices()
+            //.AddHonkaiServices() // Disabled: Honkai services removed from DI
             .AddWaifuRollServices()
             .AddRandomMemServices()
             .AddScoreboardServiceSingleton();
