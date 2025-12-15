@@ -64,8 +64,11 @@ public class TwitchBullsAndCows(
     {
         try
         {
-            _currentGame?.Active = false;
-            _currentGame = null;
+            if (_currentGame != null)
+            {
+                _currentGame.Active = false;
+                _currentGame = null;
+            }
         }
         finally
         {

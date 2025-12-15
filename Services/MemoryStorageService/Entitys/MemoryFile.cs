@@ -1,6 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
-
-namespace MARS.Server.Services.MemoryStorageService.Entitys;
+﻿namespace MARS.Server.Services.MemoryStorageService.Entitys;
 
 /// <summary>
 /// Represents a file stored in memory, used by the memory storage service.
@@ -9,15 +7,16 @@ public class MemoryFile
 {
     public required string FileName { get; init; }
     public ushort UseCount { get; set; }
+    private byte[]? _fileContent;
     public required MediaType MediaType { get; init; }
-
-    [field: AllowNull, MaybeNull]
     public required byte[] FileContent
     {
-        get =>
-            field is not { Length: > 0 }
+        get
+        {
+            return _fileContent is not { Length: > 0 }
                 ? throw new NullReferenceException("Trying get empty content")
-                : field;
+                : _fileContent;
+        }
         set
         {
             if (value is not { Length: > 0 })
@@ -25,14 +24,13 @@ public class MemoryFile
                 throw new NullReferenceException("Empty content is not allowed");
             }
 
-            field = value;
+            _fileContent = value;
         }
     }
-
-    [field: AllowNull, MaybeNull]
+    private string? _exstension;
     public required string Exstension
     {
-        get => string.IsNullOrWhiteSpace(field) ? string.Empty : field;
+        get { return string.IsNullOrWhiteSpace(_exstension) ? string.Empty : _exstension; }
         set
         {
             if (string.IsNullOrWhiteSpace(value))
@@ -44,7 +42,7 @@ public class MemoryFile
                 throw new InvalidDataException("Only point extension is not allowed");
             }
 
-            field = value;
+            _exstension = value;
         }
     }
 

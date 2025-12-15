@@ -29,7 +29,10 @@ public class CheckersGameManager
     /// <summary>
     /// Gets the current game board.
     /// </summary>
-    public GameBoard Board => GameBoard;
+    public GameBoard Board
+    {
+        get { return GameBoard; }
+    }
 
     /// <summary>
     /// Initializes a new game of checkers.
