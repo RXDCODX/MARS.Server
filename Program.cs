@@ -183,7 +183,7 @@ public static class Program
             .AddGameServices()
             .AddExternalApiServices()
             .AddSpecializedServices()
-            .AddSoundRequest()
+            //.AddSoundRequest()
             .AddEnvironmentVariableService();
 
         if (builder.Environment.IsProduction())
@@ -260,7 +260,7 @@ public static class Program
         app.MapHub<TunaHub>("/hubs/tuna");
         //app.MapHub<SoundBarHub>("/hubs/soundbar");
         app.MapHub<ScoreboardHub>("/hubs/scoreboard");
-        app.AddLogerHub();
+        //app.AddLogerHub();
         if (IsUseSoundRequest)
         {
             app.MapHub<SoundRequestHub>("/hubs/soundrequest");

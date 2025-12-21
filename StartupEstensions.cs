@@ -271,7 +271,9 @@ public static class StartupEstensions
         services.AddSingleton<RollWaifu>();
         services.AddHostedService(sp => sp.GetRequiredService<RollWaifu>());
         services.AddSingleton<WaifuRollCooldownNotificationService>();
-        services.AddHostedService(sp => sp.GetRequiredService<WaifuRollCooldownNotificationService>());
+        services.AddHostedService(sp =>
+            sp.GetRequiredService<WaifuRollCooldownNotificationService>()
+        );
         services.AddSingleton<RandomMeme>();
         services.AddHostedService(sp => sp.GetRequiredService<RandomMeme>());
         services.AddScoped<TwitchRussianRoulete>();
@@ -637,7 +639,7 @@ public static class StartupEstensions
     internal static IServiceCollection AddGameServices(this IServiceCollection services)
     {
         services
-            .AddHonkaiServices()
+            //.AddHonkaiServices()
             .AddWaifuRollServices()
             .AddRandomMemServices()
             .AddScoreboardServiceSingleton();

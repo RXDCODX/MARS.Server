@@ -54,10 +54,6 @@ public sealed partial class AppDbContext : DbContext
     public DbSet<MemeOrder> RandomMemeOrder { get; set; } = null!;
     public DbSet<MemeType> RandomMemeType { get; set; } = null!;
     public DbSet<Video365> Videos365 { get; set; } = null!;
-    public DbSet<TekkenCharacter> TekkenCharacters { get; set; } = null!;
-    public DbSet<Move> TekkenMoves { get; set; } = null!;
-    public DbSet<TekkenCharacterPending> TekkenCharactersPending { get; set; } = null!;
-    public DbSet<MovePending> TekkenMovesPending { get; set; } = null!;
     public DbSet<TelegramUpdateReceiverOffset> TelegramUpdateReceiverOffset { get; set; } = null!;
     public DbSet<WTelegramAlloweedChannel> WTelegramAlloweedChannels { get; set; } = null!;
     public DbSet<RootState> ApplicationState { get; set; } = null!;
