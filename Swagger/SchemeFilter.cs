@@ -13,7 +13,7 @@ public class SchemaFilter : ISchemaFilter
     public void Apply(IOpenApiSchema schema, SchemaFilterContext context)
     {
         // Cast to concrete type to access properties
-        if (!(schema is OpenApiSchema concreteSchema))
+        if (schema is not OpenApiSchema concreteSchema)
         {
             return;
         }
@@ -41,7 +41,7 @@ public class SchemaFilter : ISchemaFilter
             if (requiredJsonProp.Value is OpenApiSchema requiredSchema)
             {
                 // Ensure the schema is explicitly non-nullable by not including null in the type
-                // The Type property handles this appropriately in the OpenAPI 2.0.0 model
+                // property handles this appropriately in the OpenAPI 2.0.0 model
             }
         }
     }

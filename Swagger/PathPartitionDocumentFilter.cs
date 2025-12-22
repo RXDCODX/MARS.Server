@@ -195,14 +195,14 @@ public sealed class PathPartitionDocumentFilter : IDocumentFilter
                 }
 
                 // Handle reference type
-                if (schema is OpenApiSchemaReference schemaRef && schemaRef.Reference?.Id is { Length: > 0 } id)
+                if (schema is OpenApiSchemaReference { Reference.Id: { Length: > 0 } id })
                 {
                     referenced.Add(id);
                     return;
                 }
 
                 // Cast to concrete type to access properties
-                if (!(schema is OpenApiSchema concreteSchema))
+                if (schema is not OpenApiSchema concreteSchema)
                 {
                     return;
                 }

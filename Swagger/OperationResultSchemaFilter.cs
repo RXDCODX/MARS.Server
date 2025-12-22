@@ -41,7 +41,11 @@ public sealed class OperationResultSchemaFilter : IDocumentFilter
             Description = "Обобщенный результат операции",
             Properties = new Dictionary<string, IOpenApiSchema>
             {
-                ["success"] = new OpenApiSchema { Type = JsonSchemaType.Boolean, Description = "Флаг успешности операции" },
+                ["success"] = new OpenApiSchema
+                {
+                    Type = JsonSchemaType.Boolean,
+                    Description = "Флаг успешности операции",
+                },
                 ["message"] = new OpenApiSchema
                 {
                     Type = JsonSchemaType.String,
@@ -93,7 +97,9 @@ public sealed class OperationResultSchemaFilter : IDocumentFilter
                 // Добавляем информацию о типе данных для генераторов клиентов
                 Extensions = new Dictionary<string, IOpenApiExtension>
                 {
-                    ["x-generic-type-argument"] = new JsonValueExtension(GetDataTypeName(dataProperty)),
+                    ["x-generic-type-argument"] = new JsonValueExtension(
+                        GetDataTypeName(dataProperty)
+                    ),
                 },
             };
 
@@ -113,7 +119,7 @@ public sealed class OperationResultSchemaFilter : IDocumentFilter
             return false;
         }
 
-        if (!(schema is OpenApiSchema concreteSchema))
+        if (schema is not OpenApiSchema concreteSchema)
         {
             return false;
         }
@@ -137,12 +143,12 @@ public sealed class OperationResultSchemaFilter : IDocumentFilter
     private static string GetDataTypeName(IOpenApiSchema dataSchema)
     {
         // Check for reference
-        if (dataSchema is OpenApiSchemaReference schemaRef && schemaRef.Id != null)
+        if (dataSchema is OpenApiSchemaReference { Id: not null } schemaRef)
         {
             return schemaRef.Id;
         }
 
-        if (!(dataSchema is OpenApiSchema concreteSchema))
+        if (dataSchema is not OpenApiSchema concreteSchema)
         {
             return "unknown";
         }
@@ -151,23 +157,22 @@ public sealed class OperationResultSchemaFilter : IDocumentFilter
         if (concreteSchema.AllOf?.Count > 0)
         {
             var firstRef = concreteSchema.AllOf.FirstOrDefault(s => s is OpenApiSchemaReference);
-            if (firstRef is OpenApiSchemaReference refSchema && refSchema.Id != null)
+            if (firstRef is OpenApiSchemaReference { Id: not null } refSchema)
             {
                 return refSchema.Id;
             }
         }
 
         // Если это массив
-        if (concreteSchema.Type == JsonSchemaType.Array && concreteSchema.Items != null)
+        if (concreteSchema is { Type: JsonSchemaType.Array, Items: not null })
         {
             var itemTypeName = GetDataTypeName(concreteSchema.Items);
             return $"{itemTypeName}[]";
         }
 
         // Если это примитивный тип
-        if (concreteSchema.Type.HasValue)
-        {
-            return concreteSchema.Type.Value switch
+        return concreteSchema.Type.HasValue
+            ? concreteSchema.Type.Value switch
             {
                 JsonSchemaType.String => "string",
                 JsonSchemaType.Integer => "number",
@@ -177,10 +182,8 @@ public sealed class OperationResultSchemaFilter : IDocumentFilter
                 JsonSchemaType.Array => "array",
                 JsonSchemaType.Null => "null",
                 _ => "any",
-            };
-        }
-
-        return "any";
+            }
+            : "any";
     }
 }
 
@@ -192,7 +195,9 @@ internal class JsonValueExtension : IOpenApiExtension
     private readonly JsonNode? _value;
 
     public JsonValueExtension(string value) => _value = JsonNode.Parse($"\"{value}\"");
+
     public JsonValueExtension(bool value) => _value = JsonNode.Parse(value.ToString().ToLower());
+
     public JsonValueExtension(JsonNode value) => _value = value;
 
     public void Write(IOpenApiWriter writer, OpenApiSpecVersion specVersion)

@@ -18,10 +18,7 @@ public class EventSubService(
     EventSubWebsocketClient wsClient
 ) : BackgroundService
 {
-    private static readonly Timer EventTimer = new Timer(TimeSpan.FromMinutes(5))
-    {
-        AutoReset = true,
-    };
+    private static readonly Timer EventTimer = new(TimeSpan.FromMinutes(5)) { AutoReset = true };
     private static readonly SemaphoreSlim SemaphoreSlim = new(1);
     private static readonly SemaphoreSlim WebsocketSemaphoreSlim = new(1);
 

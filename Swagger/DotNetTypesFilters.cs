@@ -1,4 +1,6 @@
-﻿using Microsoft.OpenApi;
+﻿using System.Reflection;
+using System.Runtime.InteropServices;
+using Microsoft.OpenApi;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace MARS.Server.Swagger;
@@ -9,31 +11,31 @@ public sealed class DotNetTypesDocumentFilter : IDocumentFilter
     private static readonly HashSet<string> BlockedSchemaNames = new(StringComparer.Ordinal)
     {
         // Core reflection and system types that should not appear in public schema
-        "Exception",
-        "MethodBase",
-        "MethodInfo",
-        "ConstructorInfo",
-        "MemberInfo",
-        "PropertyInfo",
-        "FieldInfo",
-        "EventInfo",
-        "ParameterInfo",
-        "Type",
-        "TypeInfo",
-        "Assembly",
-        "Module",
-        "ModuleHandle",
-        "RuntimeMethodHandle",
-        "RuntimeFieldHandle",
-        "RuntimeTypeHandle",
-        "IntPtr",
-        "ICustomAttributeProvider",
-        "CustomAttributeData",
-        "CustomAttributeNamedArgument",
-        "CustomAttributeTypedArgument",
-        "StructLayoutAttribute",
+        nameof(Exception),
+        nameof(MethodBase),
+        nameof(MethodInfo),
+        nameof(ConstructorInfo),
+        nameof(MemberInfo),
+        nameof(PropertyInfo),
+        nameof(FieldInfo),
+        nameof(EventInfo),
+        nameof(ParameterInfo),
+        nameof(Type),
+        nameof(TypeInfo),
+        nameof(Assembly),
+        nameof(Module),
+        nameof(ModuleHandle),
+        nameof(RuntimeMethodHandle),
+        nameof(RuntimeFieldHandle),
+        nameof(RuntimeTypeHandle),
+        nameof(IntPtr),
+        nameof(ICustomAttributeProvider),
+        nameof(CustomAttributeData),
+        nameof(CustomAttributeNamedArgument),
+        nameof(CustomAttributeTypedArgument),
+        nameof(StructLayoutAttribute),
         // Frequently leaked framework models
-        "Color",
+        nameof(System.Drawing.Color),
     };
 
     public void Apply(OpenApiDocument swaggerDoc, DocumentFilterContext context)

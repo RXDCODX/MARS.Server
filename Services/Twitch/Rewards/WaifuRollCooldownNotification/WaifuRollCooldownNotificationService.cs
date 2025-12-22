@@ -153,13 +153,17 @@ public class WaifuRollCooldownNotificationService(
         {
             await _semaphore.WaitAsync();
 
-            if (!_pendingNotifications.ContainsKey(e.ChatMessage.UserId))
+            if (
+                !_pendingNotifications.TryGetValue(
+                    e.ChatMessage.UserId,
+                    out DateTimeOffset cooldownEndTime
+                )
+            )
             {
                 _semaphore.Release();
                 return;
             }
 
-            var cooldownEndTime = _pendingNotifications[e.ChatMessage.UserId];
             var now = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
 
             if (now < cooldownEndTime)
@@ -224,10 +228,10 @@ public class WaifuRollCooldownNotificationService(
         }
     }
 
-
     public override void Dispose()
     {
         _semaphore?.Dispose();
         base.Dispose();
+        GC.SuppressFinalize(this);
     }
 }
