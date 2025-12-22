@@ -23,113 +23,115 @@ public static class TwitchExstension
         "jeetbot",
     ];
 
-    public static Task SendMessageToMainTwitchAsync<T>(
-        this ITwitchClient client,
-        string message,
-        ILogger<T>? logger = null
-    )
-        where T : class
+    extension(ITwitchClient client)
     {
-        try
+        public Task SendMessageToMainTwitchAsync<T>(
+            string message,
+            ILogger<T>? logger = null
+        )
+            where T : class
         {
-            if (
-                !client.JoinedChannels.Any(e =>
-                    e.Channel.Equals(Channel, StringComparison.OrdinalIgnoreCase)
-                )
-            )
+            try
             {
-                client.JoinChannel(Channel);
+                if (
+                    !client.JoinedChannels.Any(e =>
+                        e.Channel.Equals(Channel, StringComparison.OrdinalIgnoreCase)
+                    )
+                )
+                {
+                    client.JoinChannel(Channel);
+                }
+
+                JoinedChannel? channel = client.GetJoinedChannel(Channel);
+                client.SendMessage(channel, message);
+            }
+            catch (Exception e)
+            {
+                logger?.LogException(e);
             }
 
-            JoinedChannel? channel = client.GetJoinedChannel(Channel);
-            client.SendMessage(channel, message);
-        }
-        catch (Exception e)
-        {
-            logger?.LogException(e);
+            return Task.CompletedTask;
         }
 
-        return Task.CompletedTask;
-    }
-
-    public static Task SendMessageToMainTwitchAsync(
-        this ITwitchClient client,
-        string message,
-        ILogger? logger = null
-    )
-    {
-        try
+        public Task SendMessageToMainTwitchAsync(
+            string message,
+            ILogger? logger = null
+        )
         {
-            if (
-                !client.JoinedChannels.Any(e =>
-                    e.Channel.Equals(Channel, StringComparison.OrdinalIgnoreCase)
-                )
-            )
+            try
             {
-                client.JoinChannel(Channel);
+                if (
+                    !client.JoinedChannels.Any(e =>
+                        e.Channel.Equals(Channel, StringComparison.OrdinalIgnoreCase)
+                    )
+                )
+                {
+                    client.JoinChannel(Channel);
+                }
+
+                JoinedChannel? channel = client.GetJoinedChannel(Channel);
+                client.SendMessage(channel, message);
+            }
+            catch (Exception e)
+            {
+                logger?.LogException(e);
             }
 
-            JoinedChannel? channel = client.GetJoinedChannel(Channel);
-            client.SendMessage(channel, message);
-        }
-        catch (Exception e)
-        {
-            logger?.LogException(e);
-        }
-
-        return Task.CompletedTask;
-    }
-
-    public static async Task SendAnnouncementToMainTwitch<T>(
-        this ITwitchAPI client,
-        string message,
-        TokenInfo? userToken,
-        AnnouncementColors? color = null,
-        ILogger<T>? logger = null
-    )
-        where T : class
-    {
-        color ??= AnnouncementColors.Primary;
-        try
-        {
-            await client.Helix.Chat.SendChatAnnouncementAsync(
-                ChannelId,
-                ChannelId,
-                message,
-                color,
-                userToken?.AccessToken
-            );
-        }
-        catch (Exception ex)
-        {
-            logger?.LogException(ex);
+            return Task.CompletedTask;
         }
     }
 
-    public static async Task<bool> ValidateToken<T>(
-        this ITwitchAPI api,
-        ILogger<T> logger,
-        string? token = null
-    )
-        where T : class
+    extension(ITwitchAPI client)
     {
-        try
+        public async Task SendAnnouncementToMainTwitch<T>(
+            string message,
+            TokenInfo? userToken,
+            AnnouncementColors? color = null,
+            ILogger<T>? logger = null
+        )
+            where T : class
         {
-            ValidateAccessTokenResponse? response = await api.Auth.ValidateAccessTokenAsync(
-                token ?? api.Settings.AccessToken
-            );
+            color ??= AnnouncementColors.Primary;
+            try
+            {
+                await client.Helix.Chat.SendChatAnnouncementAsync(
+                    ChannelId,
+                    ChannelId,
+                    message,
+                    color,
+                    userToken?.AccessToken
+                );
+            }
+            catch (Exception ex)
+            {
+                logger?.LogException(ex);
+            }
+        }
 
-            return response != null;
-        }
-        catch (Exception e)
-            when (e.Message.Contains("invalid access token", StringComparison.OrdinalIgnoreCase))
+        public async Task<bool> ValidateToken<T>(
+            ILogger<T> logger,
+            string? token = null
+        )
+            where T : class
         {
-            return false;
-        }
-        catch (Exception e)
-        {
-            logger.LogException(e);
-            return false;
+            try
+            {
+                ValidateAccessTokenResponse? response = await client.Auth.ValidateAccessTokenAsync(
+                    token ?? client.Settings.AccessToken
+                );
+
+                return response != null;
+            }
+            catch (Exception e)
+                when (e.Message.Contains("invalid access token", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+            catch (Exception e)
+            {
+                logger.LogException(e);
+                return false;
+            }
         }
     }
 }

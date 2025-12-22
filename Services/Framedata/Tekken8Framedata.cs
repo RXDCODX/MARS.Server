@@ -427,11 +427,8 @@ public partial class Tekken8FrameData(
                 await GetMoveFromMovelistByCommandAsync(input, movelist)
                 ?? (await GetMoveFromMovelistByTagAsync(input, movelist)).move;
 
-            if (move != null)
-            {
-                // Подставляем персонажа вручную, чтобы избежать дополнительного запроса
-                move.Character = charnameOut;
-            }
+            // Подставляем персонажа вручную, чтобы избежать дополнительного запроса
+            move?.Character = charnameOut;
 
             return move;
         }

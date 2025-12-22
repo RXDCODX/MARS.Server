@@ -5,125 +5,119 @@ namespace MARS.Server.Exstensions;
 
 public static class StringExtension
 {
-    public static ValueTask<MediaType> GetFileMediaTypeAsync(this string? exst)
+    extension(string? exst)
     {
-        return ValueTask.FromResult(GetFileMediaType(exst));
-    }
-
-    public static MediaType GetFileMediaType(this string? exst)
-    {
-        var exstension = exst?.ToLower();
-
-        return exstension switch
+        public ValueTask<MediaType> GetFileMediaTypeAsync()
         {
-            ".tgs" => MediaType.TelegramSticker,
-            ".ogg" => MediaType.Audio,
-            ".oga" => MediaType.Audio,
-            ".webm" => MediaType.Video,
-            ".mp4" => MediaType.Video,
-            ".jpg" => MediaType.Image,
-            ".jpeg" => MediaType.Image,
-            ".png" => MediaType.Image,
-            ".webp" => MediaType.Image,
-            ".gif" => MediaType.Gif,
-            ".mp3" => MediaType.Audio,
-            ".wav" => MediaType.Audio,
-            _ => MediaType.None,
-        };
-    }
-
-    public static string ReplaceTooLongWords(
-        this string input,
-        string replacement = "Слишком большое слово"
-    )
-    {
-        const string pattern = @"\b\w{20,}\b";
-
-        var result = Regex.Replace(input, pattern, replacement);
-
-        return result;
-    }
-
-    public static string ReplaceLinks(this string input, string replacement = " ссылка ")
-    {
-        const string pattern = @"\bhttps?://\S+\b";
-
-        var result = Regex.Replace(input, pattern, replacement);
-
-        return result;
-    }
-
-    public static string CutTooLongText(
-        this string input,
-        ushort maxLength = 140,
-        bool hardCut = false
-    )
-    {
-        if (hardCut)
-        {
-            return input.Length > 140 ? input[..140] : input;
+            return ValueTask.FromResult(exst.GetFileMediaType());
         }
 
-        var splits = input.Split(' ');
-
-        var count = 0;
-
-        for (var index = 0; index < splits.Length; index++)
+        public MediaType GetFileMediaType()
         {
-            var split = splits[index];
-            if (count + split.Length > maxLength)
+            var exstension = exst?.ToLower();
+
+            return exstension switch
             {
-                return string.Join(' ', splits[..index]);
+                ".tgs" => MediaType.TelegramSticker,
+                ".ogg" => MediaType.Audio,
+                ".oga" => MediaType.Audio,
+                ".webm" => MediaType.Video,
+                ".mp4" => MediaType.Video,
+                ".jpg" => MediaType.Image,
+                ".jpeg" => MediaType.Image,
+                ".png" => MediaType.Image,
+                ".webp" => MediaType.Image,
+                ".gif" => MediaType.Gif,
+                ".mp3" => MediaType.Audio,
+                ".wav" => MediaType.Audio,
+                _ => MediaType.None,
+            };
+        }
+    }
+
+    extension(string input)
+    {
+        public string ReplaceTooLongWords(string replacement = "Слишком большое слово")
+        {
+            const string pattern = @"\b\w{20,}\b";
+            var result = Regex.Replace(input, pattern, replacement);
+            return result;
+        }
+
+        public string ReplaceLinks(string replacement = " ссылка ")
+        {
+            const string pattern = @"\bhttps?://\S+\b";
+            var result = Regex.Replace(input, pattern, replacement);
+            return result;
+        }
+
+        public string CutTooLongText(ushort maxLength = 140, bool hardCut = false)
+        {
+            if (hardCut)
+            {
+                return input.Length > 140 ? input[..140] : input;
             }
 
-            count += split.Length;
-        }
+            var splits = input.Split(' ');
+            var count = 0;
 
-        return input;
-    }
-
-    public static string[] SplitWithQuotes(this string text)
-    {
-        text = Regex.Replace(text.Trim(), @"\s+", " ");
-        var list = new List<string>();
-        var sb = new StringBuilder();
-        var isQuoted = false;
-
-        foreach (var c in text)
-        {
-            if (c == ' ' && !isQuoted)
+            for (var index = 0; index < splits.Length; index++)
             {
-                if (sb.Length > 0)
+                var split = splits[index];
+                if (count + split.Length > maxLength)
                 {
-                    var word = sb.ToString();
-                    sb.Clear();
-                    list.Add(word);
+                    return string.Join(' ', splits[..index]);
                 }
 
-                continue;
+                count += split.Length;
             }
 
-            if (c == '"')
+            return input;
+        }
+
+        public string[] SplitWithQuotes()
+        {
+            var text = Regex.Replace(input.Trim(), @"\s+", " ");
+            var list = new List<string>();
+            var sb = new StringBuilder();
+            var isQuoted = false;
+
+            foreach (var c in text)
             {
-                if (isQuoted)
+                if (c == ' ' && !isQuoted)
                 {
-                    isQuoted = false;
-                    var word = sb.ToString();
-                    sb.Clear();
-                    list.Add(word);
+                    if (sb.Length > 0)
+                    {
+                        var word = sb.ToString();
+                        sb.Clear();
+                        list.Add(word);
+                    }
+
                     continue;
                 }
-                else
+
+                if (c == '"')
                 {
-                    isQuoted = true;
-                    continue;
+                    if (isQuoted)
+                    {
+                        isQuoted = false;
+                        var word = sb.ToString();
+                        sb.Clear();
+                        list.Add(word);
+                        continue;
+                    }
+                    else
+                    {
+                        isQuoted = true;
+                        continue;
+                    }
                 }
+
+                sb.Append(c);
             }
 
-            sb.Append(c);
+            return isQuoted ? throw new Exception("ты насрал в ковычках") : [.. list];
         }
-
-        return isQuoted ? throw new Exception("ты насрал в ковычках") : [.. list];
     }
 }
 
@@ -136,7 +130,7 @@ public static class RussianToEnglishTransliteration
         { 'В', "V" },
         { 'Г', "G" },
         { 'Д', "D" },
-        { 'Е', "E" }, // Default case, special handling below
+        { 'Е', "E" },
         { 'Ё', "Yo" },
         { 'Ж', "Zh" },
         { 'З', "Z" },
@@ -165,7 +159,6 @@ public static class RussianToEnglishTransliteration
         { 'Ю', "Yu" },
         { 'Я', "Ya" },
         { ' ', " " },
-        //{ (char)769, "" }, // accent mark
     };
 
     private static readonly HashSet<char> Vowels =
@@ -185,37 +178,38 @@ public static class RussianToEnglishTransliteration
         'Ѵ',
     ];
 
-    public static string ToEnglishTransliteration(this string text)
+    extension(string text)
     {
-        if (string.IsNullOrEmpty(text))
+        public string ToEnglishTransliteration()
         {
-            return text;
-        }
-
-        var result = new StringBuilder(text.Length * 2); // Allocate extra space for potential multi-character transliterations
-
-        for (var i = 0; i < text.Length; i++)
-        {
-            var upperChar = char.ToUpper(text[i]);
-
-            if (TransliterationMap.TryGetValue(upperChar, out var englishLetter))
+            if (string.IsNullOrEmpty(text))
             {
-                // Special handling for Е and Ѣ (Yat)
-                if (upperChar is 'Е' or (char)1122)
+                return text;
+            }
+
+            var result = new StringBuilder(text.Length * 2);
+
+            for (var i = 0; i < text.Length; i++)
+            {
+                var upperChar = char.ToUpper(text[i]);
+
+                if (TransliterationMap.TryGetValue(upperChar, out var englishLetter))
                 {
-                    englishLetter = ShouldUseYe(i, text) ? "Ye" : "E";
+                    if (upperChar is 'Е' or (char)1122)
+                    {
+                        englishLetter = ShouldUseYe(i, text) ? "Ye" : "E";
+                    }
+
+                    result.Append(englishLetter);
                 }
+                else
+                {
+                    result.Append(text[i]);
+                }
+            }
 
-                result.Append(englishLetter);
-            }
-            else
-            {
-                // If character not in our map, keep it as-is
-                result.Append(text[i]);
-            }
+            return result.ToString();
         }
-
-        return result.ToString();
     }
 
     private static bool ShouldUseYe(int currentIndex, string text)

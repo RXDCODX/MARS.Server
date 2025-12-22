@@ -25,19 +25,16 @@ public class TwitchUser
     [Column(nameof(TwitchId))]
     public required string TwitchId
     {
-        get { return _twitchId; }
+        get;
         init
         {
             if (!IsValidTwitchId(value))
             {
                 throw new ArgumentException("TwitchId was not valid");
             }
-            _twitchId = value;
+            field = value;
         }
     }
-
-    [NotMapped]
-    private readonly string _twitchId = string.Empty;
 
     /// <summary>
     /// Логин пользователя

@@ -7,15 +7,14 @@ public class MemoryFile
 {
     public required string FileName { get; init; }
     public ushort UseCount { get; set; }
-    private byte[]? _fileContent;
     public required MediaType MediaType { get; init; }
     public required byte[] FileContent
     {
         get
         {
-            return _fileContent is not { Length: > 0 }
+            return field is not { Length: > 0 }
                 ? throw new NullReferenceException("Trying get empty content")
-                : _fileContent;
+                : field;
         }
         set
         {
@@ -24,13 +23,12 @@ public class MemoryFile
                 throw new NullReferenceException("Empty content is not allowed");
             }
 
-            _fileContent = value;
+            field = value;
         }
     }
-    private string? _exstension;
     public required string Exstension
     {
-        get { return string.IsNullOrWhiteSpace(_exstension) ? string.Empty : _exstension; }
+        get { return string.IsNullOrWhiteSpace(field) ? string.Empty : field; }
         set
         {
             if (string.IsNullOrWhiteSpace(value))
@@ -42,7 +40,7 @@ public class MemoryFile
                 throw new InvalidDataException("Only point extension is not allowed");
             }
 
-            _exstension = value;
+            field = value;
         }
     }
 

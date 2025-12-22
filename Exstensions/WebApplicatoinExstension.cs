@@ -11,52 +11,44 @@ public static class WebApplicatoinExstension
     {
         public new IFileInfo GetFileInfo(string subpath)
         {
-            // Убираем "/static" из пути, если он присутствует
             var cleanPath = subpath;
             if (subpath.StartsWith("/static", StringComparison.OrdinalIgnoreCase))
             {
                 cleanPath = subpath.Substring("/static".Length);
             }
 
-            // Если путь пустой, возвращаем null
             if (string.IsNullOrEmpty(cleanPath))
             {
                 return new NotFoundFileInfo(subpath);
             }
 
-            // Вызываем базовый метод с очищенным путем
             return base.GetFileInfo(cleanPath);
         }
 
         public new IDirectoryContents GetDirectoryContents(string subpath)
         {
-            // Убираем "/static" из пути, если он присутствует
             var cleanPath = subpath;
             if (subpath.StartsWith("/static", StringComparison.OrdinalIgnoreCase))
             {
                 cleanPath = subpath.Substring("/static".Length);
             }
 
-            // Если путь пустой, возвращаем содержимое корневой директории
             if (string.IsNullOrEmpty(cleanPath))
             {
                 return base.GetDirectoryContents(string.Empty);
             }
 
-            // Вызываем базовый метод с очищенным путем
             return base.GetDirectoryContents(cleanPath);
         }
 
         public new IChangeToken Watch(string filter)
         {
-            // Убираем "/static" из фильтра, если он присутствует
             var cleanFilter = filter;
             if (filter.StartsWith("/static", StringComparison.OrdinalIgnoreCase))
             {
                 cleanFilter = filter.Substring("/static".Length);
             }
 
-            // Вызываем базовый метод с очищенным фильтром
             return base.Watch(cleanFilter);
         }
 
@@ -67,49 +59,49 @@ public static class WebApplicatoinExstension
             : base(root, filters) { }
     }
 
-    public static WebApplicationBuilder AddStaticFilesBrowserOptions(this WebApplicationBuilder app)
+    extension(WebApplicationBuilder app)
     {
-        var sharedOptions = new SharedOptions()
+        public WebApplicationBuilder AddStaticFilesBrowserOptions()
         {
-            RequestPath = "/static",
-            RedirectToAppendTrailingSlash = true,
-            FileProvider = new StaticAssetsFileProvider(app.Environment.WebRootPath),
-        };
-        //if (env.IsProduction())
-        //{
-        //    sharedOptions.FileProvider = new StaticAssetsFileProvider(
-        //        Path.Combine(directory, "wwwroot")
-        //    );
-        //}
+            var sharedOptions = new SharedOptions()
+            {
+                RequestPath = "/static",
+                RedirectToAppendTrailingSlash = true,
+                FileProvider = new StaticAssetsFileProvider(app.Environment.WebRootPath),
+            };
 
-        app.Services.AddSingleton(sharedOptions);
+            app.Services.AddSingleton(sharedOptions);
 
-        return app;
+            return app;
+        }
     }
 
-    public static IApplicationBuilder AddStaticFilesBrowser(this WebApplication app)
+    extension(WebApplication app)
     {
-        var sharedOptions = app.Services.GetRequiredService<SharedOptions>();
-
-        var fileOptions = new StaticFileOptions()
+        public IApplicationBuilder AddStaticFilesBrowser()
         {
-            ServeUnknownFileTypes = true,
-            OnPrepareResponse = context =>
+            var sharedOptions = app.Services.GetRequiredService<SharedOptions>();
+
+            var fileOptions = new StaticFileOptions()
             {
-                var path = context.File.PhysicalPath;
-                var exst = Path.GetExtension(path);
-                if (exst == ".tgs")
+                ServeUnknownFileTypes = true,
+                OnPrepareResponse = context =>
                 {
-                    context.Context.Response.ContentType = string.Empty;
-                }
-            },
-            FileProvider = sharedOptions.FileProvider,
-            RedirectToAppendTrailingSlash = true,
-        };
+                    var path = context.File.PhysicalPath;
+                    var exst = Path.GetExtension(path);
+                    if (exst == ".tgs")
+                    {
+                        context.Context.Response.ContentType = string.Empty;
+                    }
+                },
+                FileProvider = sharedOptions.FileProvider,
+                RedirectToAppendTrailingSlash = true,
+            };
 
-        app.UseDirectoryBrowser(new DirectoryBrowserOptions(sharedOptions) { });
+            app.UseDirectoryBrowser(new DirectoryBrowserOptions(sharedOptions) { });
 
-        app.UseStaticFiles(fileOptions);
-        return app;
+            app.UseStaticFiles(fileOptions);
+            return app;
+        }
     }
 }
