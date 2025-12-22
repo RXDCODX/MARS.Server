@@ -250,6 +250,9 @@ dotnet_diagnostic.IDE0058.severity = none
 dotnet_diagnostic.SYSLIB1045.severity = none
 csharp_style_prefer_implicitly_typed_lambda_expression = true:suggestion
 
+# CA1873: Избегайте потенциально ресурсоемкого ведения журнала
+dotnet_diagnostic.CA1873.severity = none
+
 [*.{cs,vb}]
 dotnet_style_operator_placement_when_wrapping = beginning_of_line
 tab_width = 4

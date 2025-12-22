@@ -56,7 +56,7 @@ using MARS.Server.Services.WaifuRoll;
 using MARS.Server.Services.WaifuRoll.Entitys.Interfaces;
 using MARS.Server.Services.WaifuRoll.helpers;
 using MARS.Server.Swagger;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 using TwitchLib.Api;
 using TwitchLib.Api.Core;
 using TwitchLib.Api.Core.Enums;

@@ -1,4 +1,6 @@
-﻿using Microsoft.OpenApi.Models;
+﻿using System.Reflection;
+using System.Runtime.InteropServices;
+using Microsoft.OpenApi;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace MARS.Server.Swagger;
@@ -9,31 +11,31 @@ public sealed class DotNetTypesDocumentFilter : IDocumentFilter
     private static readonly HashSet<string> BlockedSchemaNames = new(StringComparer.Ordinal)
     {
         // Core reflection and system types that should not appear in public schema
-        "Exception",
-        "MethodBase",
-        "MethodInfo",
-        "ConstructorInfo",
-        "MemberInfo",
-        "PropertyInfo",
-        "FieldInfo",
-        "EventInfo",
-        "ParameterInfo",
-        "Type",
-        "TypeInfo",
-        "Assembly",
-        "Module",
-        "ModuleHandle",
-        "RuntimeMethodHandle",
-        "RuntimeFieldHandle",
-        "RuntimeTypeHandle",
-        "IntPtr",
-        "ICustomAttributeProvider",
-        "CustomAttributeData",
-        "CustomAttributeNamedArgument",
-        "CustomAttributeTypedArgument",
-        "StructLayoutAttribute",
+        nameof(Exception),
+        nameof(MethodBase),
+        nameof(MethodInfo),
+        nameof(ConstructorInfo),
+        nameof(MemberInfo),
+        nameof(PropertyInfo),
+        nameof(FieldInfo),
+        nameof(EventInfo),
+        nameof(ParameterInfo),
+        nameof(Type),
+        nameof(TypeInfo),
+        nameof(Assembly),
+        nameof(Module),
+        nameof(ModuleHandle),
+        nameof(RuntimeMethodHandle),
+        nameof(RuntimeFieldHandle),
+        nameof(RuntimeTypeHandle),
+        nameof(IntPtr),
+        nameof(ICustomAttributeProvider),
+        nameof(CustomAttributeData),
+        nameof(CustomAttributeNamedArgument),
+        nameof(CustomAttributeTypedArgument),
+        nameof(StructLayoutAttribute),
         // Frequently leaked framework models
-        "Color",
+        nameof(System.Drawing.Color),
     };
 
     public void Apply(OpenApiDocument swaggerDoc, DocumentFilterContext context)
@@ -42,6 +44,11 @@ public sealed class DotNetTypesDocumentFilter : IDocumentFilter
         {
             foreach (var path in swaggerDoc.Paths.Values)
             {
+                if (path.Operations == null)
+                {
+                    continue;
+                }
+
                 foreach (var operation in path.Operations.Values)
                 {
                     // Remove parameters that reference blocked schemas
@@ -54,30 +61,33 @@ public sealed class DotNetTypesDocumentFilter : IDocumentFilter
                     }
 
                     // Sanitize request bodies
-                    if (operation.RequestBody != null)
+                    if (operation.RequestBody?.Content != null)
                     {
                         foreach (var mt in operation.RequestBody.Content.Values)
                         {
                             if (IsRefToBlocked(mt.Schema))
                             {
-                                mt.Schema = new OpenApiSchema { Type = "string" };
+                                mt.Schema = new OpenApiSchema { Type = JsonSchemaType.String };
                             }
                         }
                     }
 
                     // Sanitize responses
-                    foreach (var response in operation.Responses.Values)
+                    if (operation.Responses != null)
                     {
-                        if (response.Content == null)
+                        foreach (var response in operation.Responses.Values)
                         {
-                            continue;
-                        }
-
-                        foreach (var mt in response.Content.Values)
-                        {
-                            if (IsRefToBlocked(mt.Schema))
+                            if (response.Content == null)
                             {
-                                mt.Schema = new OpenApiSchema { Type = "string" };
+                                continue;
+                            }
+
+                            foreach (var mt in response.Content.Values)
+                            {
+                                if (IsRefToBlocked(mt.Schema))
+                                {
+                                    mt.Schema = new OpenApiSchema { Type = JsonSchemaType.String };
+                                }
                             }
                         }
                     }
@@ -100,24 +110,30 @@ public sealed class DotNetTypesDocumentFilter : IDocumentFilter
         }
     }
 
-    private static bool IsRefToBlocked(OpenApiSchema? schema)
+    private static bool IsRefToBlocked(IOpenApiSchema? schema)
     {
-        if (schema?.Reference == null)
+        if (schema == null)
         {
             return false;
         }
 
-        var id = schema.Reference.Id;
-        if (string.IsNullOrWhiteSpace(id))
+        // Check if it's a reference
+        if (schema is OpenApiSchemaReference schemaRef)
         {
-            // Fallback: parse last segment of ref (e.g., #/components/schemas/Exception)
-            var r = schema.Reference.ReferenceV3;
-            if (!string.IsNullOrWhiteSpace(r))
+            var id = schemaRef.Reference?.Id ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(id))
             {
-                id = r.Split('/')[^1];
+                // Fallback: parse last segment of ref (e.g., #/components/schemas/Exception)
+                var r = schemaRef.Reference?.ReferenceV3 ?? string.Empty;
+                if (!string.IsNullOrWhiteSpace(r))
+                {
+                    id = r.Split('/')[^1];
+                }
             }
+            return IsBlockedSchemaName(id);
         }
-        return IsBlockedSchemaName(id);
+
+        return false;
     }
 
     private static bool IsBlockedSchemaName(string? name)

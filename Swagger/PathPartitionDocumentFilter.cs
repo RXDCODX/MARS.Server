@@ -1,4 +1,4 @@
-﻿using Microsoft.OpenApi.Models;
+﻿using Microsoft.OpenApi;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace MARS.Server.Swagger;
@@ -24,10 +24,10 @@ public sealed class PathPartitionDocumentFilter : IDocumentFilter
             return;
         }
 
-        var keep = new Dictionary<string, OpenApiPathItem>(StringComparer.OrdinalIgnoreCase);
+        var keep = new Dictionary<string, IOpenApiPathItem>(StringComparer.OrdinalIgnoreCase);
         var tagsKeep = new Dictionary<string, OpenApiTag>(StringComparer.OrdinalIgnoreCase);
 
-        foreach ((var path, OpenApiPathItem? value) in swaggerDoc.Paths)
+        foreach (var (path, value) in swaggerDoc.Paths)
         {
             if (isApiDoc)
             {
@@ -45,20 +45,26 @@ public sealed class PathPartitionDocumentFilter : IDocumentFilter
             }
         }
 
-        foreach (var openApiTag in swaggerDoc.Tags)
+        if (swaggerDoc.Tags != null)
         {
-            if (isApiDoc)
+            foreach (var openApiTag in swaggerDoc.Tags)
             {
-                if (!IsHubTag(openApiTag.Name))
+                if (!string.IsNullOrEmpty(openApiTag.Name))
                 {
-                    tagsKeep[openApiTag.Name] = openApiTag;
-                }
-            }
-            else if (isHubsDoc)
-            {
-                if (IsHubTag(openApiTag.Name))
-                {
-                    tagsKeep[openApiTag.Name] = openApiTag;
+                    if (isApiDoc)
+                    {
+                        if (!IsHubTag(openApiTag.Name))
+                        {
+                            tagsKeep[openApiTag.Name] = openApiTag;
+                        }
+                    }
+                    else if (isHubsDoc)
+                    {
+                        if (IsHubTag(openApiTag.Name))
+                        {
+                            tagsKeep[openApiTag.Name] = openApiTag;
+                        }
+                    }
                 }
             }
         }
@@ -69,10 +75,13 @@ public sealed class PathPartitionDocumentFilter : IDocumentFilter
             swaggerDoc.Paths.Add(kv.Key, kv.Value);
         }
 
-        swaggerDoc.Tags.Clear();
-        foreach (var kv in tagsKeep)
+        if (swaggerDoc.Tags != null)
         {
-            swaggerDoc.Tags.Add(kv.Value);
+            swaggerDoc.Tags.Clear();
+            foreach (var kv in tagsKeep)
+            {
+                swaggerDoc.Tags.Add(kv.Value);
+            }
         }
 
         // Filter component schemas to only those referenced by the kept paths
@@ -106,11 +115,19 @@ public sealed class PathPartitionDocumentFilter : IDocumentFilter
 
             foreach (var path in doc.Paths.Values)
             {
+                if (path.Operations == null)
+                {
+                    continue;
+                }
+
                 foreach (var op in path.Operations.Values)
                 {
-                    foreach (var p in op.Parameters)
+                    if (op.Parameters != null)
                     {
-                        EnqueueSchema(p.Schema);
+                        foreach (var p in op.Parameters)
+                        {
+                            EnqueueSchema(p.Schema);
+                        }
                     }
 
                     var rb = op.RequestBody;
@@ -121,16 +138,20 @@ public sealed class PathPartitionDocumentFilter : IDocumentFilter
                             EnqueueSchema(mt.Schema);
                         }
                     }
-                    foreach (var resp in op.Responses.Values)
-                    {
-                        if (resp.Content == null)
-                        {
-                            continue;
-                        }
 
-                        foreach (var mt in resp.Content.Values)
+                    if (op.Responses != null)
+                    {
+                        foreach (var resp in op.Responses.Values)
                         {
-                            EnqueueSchema(mt.Schema);
+                            if (resp.Content == null)
+                            {
+                                continue;
+                            }
+
+                            foreach (var mt in resp.Content.Values)
+                            {
+                                EnqueueSchema(mt.Schema);
+                            }
                         }
                     }
                 }
@@ -166,50 +187,68 @@ public sealed class PathPartitionDocumentFilter : IDocumentFilter
 
             return referenced;
 
-            void EnqueueSchema(OpenApiSchema? schema)
+            void EnqueueSchema(IOpenApiSchema? schema)
             {
                 if (schema == null)
                 {
                     return;
                 }
 
-                if (schema.Reference?.Id is { Length: > 0 } id)
+                // Handle reference type
+                if (schema is OpenApiSchemaReference { Reference.Id: { Length: > 0 } id })
                 {
                     referenced.Add(id);
-                }
-                if (schema.Items != null)
-                {
-                    EnqueueSchema(schema.Items);
+                    return;
                 }
 
-                if (schema.Not != null)
+                // Cast to concrete type to access properties
+                if (schema is not OpenApiSchema concreteSchema)
                 {
-                    EnqueueSchema(schema.Not);
+                    return;
                 }
 
-                foreach (var s in schema.AllOf)
+                if (concreteSchema.Items != null)
                 {
-                    EnqueueSchema(s);
+                    EnqueueSchema(concreteSchema.Items);
                 }
 
-                foreach (var s in schema.AnyOf)
+                if (concreteSchema.Not != null)
                 {
-                    EnqueueSchema(s);
+                    EnqueueSchema(concreteSchema.Not);
                 }
 
-                foreach (var s in schema.OneOf)
+                if (concreteSchema.AllOf != null)
                 {
-                    EnqueueSchema(s);
+                    foreach (var s in concreteSchema.AllOf)
+                    {
+                        EnqueueSchema(s);
+                    }
                 }
 
-                if (schema.AdditionalProperties != null)
+                if (concreteSchema.AnyOf != null)
                 {
-                    EnqueueSchema(schema.AdditionalProperties);
+                    foreach (var s in concreteSchema.AnyOf)
+                    {
+                        EnqueueSchema(s);
+                    }
                 }
 
-                if (schema.Properties != null)
+                if (concreteSchema.OneOf != null)
                 {
-                    foreach (var prop in schema.Properties.Values)
+                    foreach (var s in concreteSchema.OneOf)
+                    {
+                        EnqueueSchema(s);
+                    }
+                }
+
+                if (concreteSchema.AdditionalProperties != null)
+                {
+                    EnqueueSchema(concreteSchema.AdditionalProperties);
+                }
+
+                if (concreteSchema.Properties != null)
+                {
+                    foreach (var prop in concreteSchema.Properties.Values)
                     {
                         EnqueueSchema(prop);
                     }

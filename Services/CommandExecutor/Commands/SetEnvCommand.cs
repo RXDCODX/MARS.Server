@@ -48,7 +48,7 @@ public class SetEnvCommand(EnvironmentVariableService environmentVariableService
         CancellationToken cancellationToken = default
     )
     {
-        var result = string.Empty;
+        string result;
 
         var hasKey = parameters.TryGetValue("key", out var keyObj) && keyObj != null;
         var hasValue = parameters.TryGetValue("value", out var valueObj) && valueObj != null;

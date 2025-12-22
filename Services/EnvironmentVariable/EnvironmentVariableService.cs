@@ -37,7 +37,7 @@ public class EnvironmentVariableService(
             .EnvironmentVariables.AsNoTracking()
             .ToListAsync(cancellationToken);
 
-        if (!variables.Any())
+        if (variables.Count == 0)
         {
             logger.LogInformation("В базе данных нет переменных окружения");
             return;

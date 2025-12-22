@@ -479,7 +479,7 @@ public class CommandsService(
                     foreach (var param in parameters)
                     {
                         var keyValue = param.Split('=');
-                        if (keyValue.Length == 2 && keyValue[0] == "v")
+                        if (keyValue is ["v", _])
                         {
                             result = keyValue[1];
                             break;
