@@ -55,7 +55,7 @@ using MARS.Server.Services.WaifuRoll;
 using MARS.Server.Services.WaifuRoll.Entitys.Interfaces;
 using MARS.Server.Services.WaifuRoll.helpers;
 using MARS.Server.Swagger;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 using TwitchLib.Api;
 using TwitchLib.Api.Core;
 using TwitchLib.Api.Core.Enums;
@@ -270,7 +270,9 @@ public static class StartupEstensions
         services.AddSingleton<RollWaifu>();
         services.AddHostedService(sp => sp.GetRequiredService<RollWaifu>());
         services.AddSingleton<WaifuRollCooldownNotificationService>();
-        services.AddHostedService(sp => sp.GetRequiredService<WaifuRollCooldownNotificationService>());
+        services.AddHostedService(sp =>
+            sp.GetRequiredService<WaifuRollCooldownNotificationService>()
+        );
         services.AddSingleton<RandomMeme>();
         services.AddHostedService(sp => sp.GetRequiredService<RandomMeme>());
         services.AddScoped<TwitchRussianRoulete>();

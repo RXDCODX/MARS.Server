@@ -1,6 +1,5 @@
-﻿using Microsoft.OpenApi.Any;
-using Microsoft.OpenApi.Interfaces;
-using Microsoft.OpenApi.Models;
+﻿using System.Text.Json.Nodes;
+using Microsoft.OpenApi;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace MARS.Server.Swagger;
@@ -38,25 +37,22 @@ public sealed class OperationResultSchemaFilter : IDocumentFilter
         // Создаем базовую generic схему OperationResult<TData>
         var baseOperationResultSchema = new OpenApiSchema
         {
-            Type = "object",
+            Type = JsonSchemaType.Object,
             Description = "Обобщенный результат операции",
-            Properties = new Dictionary<string, OpenApiSchema>
+            Properties = new Dictionary<string, IOpenApiSchema>
             {
-                ["success"] = new() { Type = "boolean", Description = "Флаг успешности операции" },
-                ["message"] = new()
+                ["success"] = new OpenApiSchema { Type = JsonSchemaType.Boolean, Description = "Флаг успешности операции" },
+                ["message"] = new OpenApiSchema
                 {
-                    Type = "string",
-                    Nullable = true,
+                    Type = JsonSchemaType.String,
                     Description = "Сообщение о результате операции",
                 },
-                ["data"] = new()
+                ["data"] = new OpenApiSchema
                 {
                     Description = "Данные результата операции",
-                    Nullable = true,
-                    // Используем расширение для указания на generic параметр
                     Extensions = new Dictionary<string, IOpenApiExtension>
                     {
-                        ["x-generic-type"] = new OpenApiString("TData"),
+                        ["x-generic-type"] = new JsonValueExtension("TData"),
                     },
                 },
             },
@@ -65,8 +61,8 @@ public sealed class OperationResultSchemaFilter : IDocumentFilter
             // Добавляем маркер generic типа
             Extensions = new Dictionary<string, IOpenApiExtension>
             {
-                ["x-is-generic"] = new OpenApiBoolean(true),
-                ["x-generic-parameters"] = new OpenApiArray { new OpenApiString("TData") },
+                ["x-is-generic"] = new JsonValueExtension(true),
+                ["x-generic-parameters"] = new JsonValueExtension(new JsonArray { "TData" }),
             },
         };
 
@@ -84,19 +80,12 @@ public sealed class OperationResultSchemaFilter : IDocumentFilter
                 continue;
             }
 
-            // Создаем новую схему используя allOf
+            // Создаем новую схему используя allOf с ссылкой на базовый тип
             var newSchema = new OpenApiSchema
             {
                 AllOf =
                 [
-                    new()
-                    {
-                        Reference = new OpenApiReference
-                        {
-                            Type = ReferenceType.Schema,
-                            Id = BaseOperationResultSchemaName,
-                        },
-                    },
+                    new OpenApiSchemaReference(BaseOperationResultSchemaName, swaggerDoc, null),
                 ],
                 Description =
                     schema.Description
@@ -104,7 +93,7 @@ public sealed class OperationResultSchemaFilter : IDocumentFilter
                 // Добавляем информацию о типе данных для генераторов клиентов
                 Extensions = new Dictionary<string, IOpenApiExtension>
                 {
-                    ["x-generic-type-argument"] = new OpenApiString(GetDataTypeName(dataProperty)),
+                    ["x-generic-type-argument"] = new JsonValueExtension(GetDataTypeName(dataProperty)),
                 },
             };
 
@@ -116,7 +105,7 @@ public sealed class OperationResultSchemaFilter : IDocumentFilter
     /// <summary>
     /// Проверяет, является ли схема OperationResult
     /// </summary>
-    private static bool IsOperationResultSchema(string schemaName, OpenApiSchema schema)
+    private static bool IsOperationResultSchema(string schemaName, IOpenApiSchema schema)
     {
         // Проверяем по имени
         if (!schemaName.EndsWith("OperationResult", StringComparison.Ordinal))
@@ -124,15 +113,20 @@ public sealed class OperationResultSchemaFilter : IDocumentFilter
             return false;
         }
 
-        // Проверяем структуру: должны быть поля success, message, data
-        if (schema.Properties == null || schema.Properties.Count == 0)
+        if (!(schema is OpenApiSchema concreteSchema))
         {
             return false;
         }
 
-        var hasSuccess = schema.Properties.ContainsKey("success");
-        var hasMessage = schema.Properties.ContainsKey("message");
-        var hasData = schema.Properties.ContainsKey("data");
+        // Проверяем структуру: должны быть поля success, message, data
+        if (concreteSchema.Properties == null || concreteSchema.Properties.Count == 0)
+        {
+            return false;
+        }
+
+        var hasSuccess = concreteSchema.Properties.ContainsKey("success");
+        var hasMessage = concreteSchema.Properties.ContainsKey("message");
+        var hasData = concreteSchema.Properties.ContainsKey("data");
 
         return hasSuccess && hasMessage && hasData;
     }
@@ -140,42 +134,72 @@ public sealed class OperationResultSchemaFilter : IDocumentFilter
     /// <summary>
     /// Извлекает имя типа данных из схемы свойства data
     /// </summary>
-    private static string GetDataTypeName(OpenApiSchema dataSchema)
+    private static string GetDataTypeName(IOpenApiSchema dataSchema)
     {
-        // Если есть ссылка на схему
-        if (dataSchema.Reference != null)
+        // Check for reference
+        if (dataSchema is OpenApiSchemaReference schemaRef && schemaRef.Id != null)
         {
-            return dataSchema.Reference.Id ?? "unknown";
+            return schemaRef.Id;
+        }
+
+        if (!(dataSchema is OpenApiSchema concreteSchema))
+        {
+            return "unknown";
         }
 
         // Если это allOf со ссылкой
-        if (dataSchema.AllOf?.Count > 0)
+        if (concreteSchema.AllOf?.Count > 0)
         {
-            var firstRef = dataSchema.AllOf.FirstOrDefault(s => s.Reference != null);
-            if (firstRef?.Reference != null)
+            var firstRef = concreteSchema.AllOf.FirstOrDefault(s => s is OpenApiSchemaReference);
+            if (firstRef is OpenApiSchemaReference refSchema && refSchema.Id != null)
             {
-                return firstRef.Reference.Id ?? "unknown";
+                return refSchema.Id;
             }
         }
 
         // Если это массив
-        if (dataSchema is { Type: "array", Items: not null })
+        if (concreteSchema.Type == JsonSchemaType.Array && concreteSchema.Items != null)
         {
-            var itemTypeName = GetDataTypeName(dataSchema.Items);
+            var itemTypeName = GetDataTypeName(concreteSchema.Items);
             return $"{itemTypeName}[]";
         }
 
         // Если это примитивный тип
-        return !string.IsNullOrEmpty(dataSchema.Type)
-            ? dataSchema.Type switch
+        if (concreteSchema.Type.HasValue)
+        {
+            return concreteSchema.Type.Value switch
             {
-                "string" => "string",
-                "integer" => "number",
-                "number" => "number",
-                "boolean" => "boolean",
-                "object" => "object",
-                _ => dataSchema.Type,
-            }
-            : "any";
+                JsonSchemaType.String => "string",
+                JsonSchemaType.Integer => "number",
+                JsonSchemaType.Number => "number",
+                JsonSchemaType.Boolean => "boolean",
+                JsonSchemaType.Object => "object",
+                JsonSchemaType.Array => "array",
+                JsonSchemaType.Null => "null",
+                _ => "any",
+            };
+        }
+
+        return "any";
+    }
+}
+
+/// <summary>
+/// Custom extension to handle JSON values in extensions dictionary
+/// </summary>
+internal class JsonValueExtension : IOpenApiExtension
+{
+    private readonly JsonNode? _value;
+
+    public JsonValueExtension(string value) => _value = JsonNode.Parse($"\"{value}\"");
+    public JsonValueExtension(bool value) => _value = JsonNode.Parse(value.ToString().ToLower());
+    public JsonValueExtension(JsonNode value) => _value = value;
+
+    public void Write(IOpenApiWriter writer, OpenApiSpecVersion specVersion)
+    {
+        if (_value != null)
+        {
+            writer.WriteRaw(_value.ToJsonString());
+        }
     }
 }
