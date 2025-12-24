@@ -23,17 +23,12 @@ public interface ITelegramusHub
         Waifu content,
         string displayName,
         Host? waifuHusband,
-        string? color = default
+        string? color = null
     );
 
     [SignalRMethod]
-    public Task AddNewWaifu(Waifu content, string displayName, string? color = default);
-    public Task MergeWaifu(
-        Waifu content,
-        Host host,
-        string? avatar = default,
-        string? color = default
-    );
+    public Task AddNewWaifu(Waifu content, string displayName, string? color = null);
+    public Task MergeWaifu(Waifu content, Host host, string? avatar = null, string? color = null);
     public Task FumoFriday(string displayName, string? color = null);
     public Task NewMessage(string id, ChatMessage message);
     public Task DeleteMessage(string id);
@@ -82,4 +77,10 @@ public interface ITelegramusHub
 
     [SignalRMethod]
     Task MikuMikuBeam(List<TwitchUser> users);
+
+    [SignalRMethod]
+    Task PhonkEdit();
+
+    [SignalRMethod]
+    Task TikTokEdit(Guid guid, string text);
 }

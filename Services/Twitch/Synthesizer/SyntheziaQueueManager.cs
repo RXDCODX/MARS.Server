@@ -85,7 +85,7 @@ public class SyntheziaQueueManager(
                     message = new MessageToSynthezid
                     {
                         CreationDateTime = DateTimeOffset.Now,
-                        Guid = new Guid(),
+                        Guid = Guid.Empty,
                         Message = currentMessage
                             .Trim()
                             .CutTooLongText()

@@ -44,6 +44,7 @@ using MARS.Server.Services.Twitch.Rewards.TwitchRandomArt;
 using MARS.Server.Services.Twitch.Rewards.TwitchRandomMeme;
 using MARS.Server.Services.Twitch.Rewards.TwitchRefundService;
 using MARS.Server.Services.Twitch.Rewards.TwitchScreenParticles;
+using MARS.Server.Services.Twitch.Rewards.TwitchTiktokEdit;
 using MARS.Server.Services.Twitch.Rewards.TwitchWaifuRolls;
 using MARS.Server.Services.Twitch.Rewards.WaifuRollCooldownNotification;
 using MARS.Server.Services.Twitch.SoundBarService;
@@ -343,6 +344,12 @@ public static class StartupEstensions
 
         services.AddSingleton<TwitchMikuBeamRewardService>();
         services.AddHostedService(sp => sp.GetRequiredService<TwitchMikuBeamRewardService>());
+
+        services.AddSingleton<TwitchPhonkEditService>();
+        services.AddHostedService(sp => sp.GetRequiredService<TwitchPhonkEditService>());
+
+        services.AddSingleton<TwitchTikTokEditService>();
+        services.AddHostedService(sp => sp.GetRequiredService<TwitchTikTokEditService>());
 
         services.AddHostedService<TwitchRefundService>();
 

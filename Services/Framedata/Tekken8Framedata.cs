@@ -24,8 +24,8 @@ public partial class Tekken8FrameData(
     }
 
     public async Task StartScrupFrameData(
-        Chat? chat = default,
-        FramedataParserOptions? options = default,
+        Chat? chat = null,
+        FramedataParserOptions? options = null,
         FramedataSource? source = FramedataSource.Tekkendocs
     )
     {
@@ -40,7 +40,7 @@ public partial class Tekken8FrameData(
         {
             // Создаем парсер для основного источника
             var primaryParser =
-                options != default
+                options != null
                     ? FramedataParserFactory.CreateDefaultParser(
                         primary,
                         logger,
@@ -182,9 +182,9 @@ public partial class Tekken8FrameData(
     /// <param name="options">Настройки парсера</param>
     /// <param name="source">Источник данных для дополнения</param>
     public async Task StartSupplementFrameData(
-        Chat? chat = default,
-        FramedataParserOptions? options = default,
-        FramedataSource? source = default
+        Chat? chat = null,
+        FramedataParserOptions? options = null,
+        FramedataSource? source = null
     )
     {
         var supplementSource =

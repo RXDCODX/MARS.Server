@@ -5,7 +5,7 @@ public static class TelegramLoggerProviderExtensions
     public static ILoggingBuilder AddTelegramLogger(
         this ILoggingBuilder loggerFactory,
         TelegramLoggerOptions options,
-        Func<string, LogLevel, bool>? filter = default
+        Func<string, LogLevel, bool>? filter = null
     )
     {
         filter ??= (s, level) => true;
@@ -18,7 +18,7 @@ public static class TelegramLoggerProviderExtensions
     public static ILoggingBuilder AddTelegramLogger(
         this ILoggingBuilder loggerFactory,
         Action<TelegramLoggerOptions> configure,
-        Func<string, LogLevel, bool>? filter = default
+        Func<string, LogLevel, bool>? filter = null
     )
     {
         filter ??= (s, level) => true;

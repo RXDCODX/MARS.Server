@@ -39,7 +39,7 @@ public class TwitchMediaAlerts(
                         e.MetaInfo.TwitchGuid.ToString() == args.ChatMessage.CustomRewardId
                     );
 
-                    if (alert != default)
+                    if (alert != null)
                     {
                         await SendAlert(args);
                     }
