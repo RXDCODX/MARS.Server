@@ -1,0 +1,45 @@
+#!/bin/sh
+#
+# Pre-commit hook для форматирования MARS.Server с помощью CSharpier
+# Этот хук автоматически форматирует все .cs файлы в проекте MARS.Server
+#
+
+echo "🔍 Проверка форматирования кода с CSharpier..."
+
+# Определяем путь к проекту MARS.Server относительно корня репозитория
+PROJECT_DIR="MARS.Projects/MARS.Server"
+
+# Проверяем, установлен ли dotnet csharpier
+if ! dotnet tool list -g | grep -q "csharpier"; then
+    echo "❌ CSharpier не установлен глобально."
+    echo "Установите его командой: dotnet tool install -g csharpier"
+    exit 1
+fi
+
+# Получаем список измененных .cs файлов в проекте MARS.Server
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep "^$PROJECT_DIR/.*\.cs$")
+
+if [ -z "$STAGED_FILES" ]; then
+    echo "✅ Нет изменений в .cs файлах проекта MARS.Server"
+    exit 0
+fi
+
+echo "📝 Найдено измененных файлов: $(echo "$STAGED_FILES" | wc -l)"
+
+# Форматируем весь проект MARS.Server
+echo "🔧 Форматирование проекта MARS.Server..."
+dotnet csharpier "$PROJECT_DIR"
+
+if [ $? -ne 0 ]; then
+    echo "❌ Ошибка форматирования"
+    exit 1
+fi
+
+# Добавляем отформатированные файлы обратно в staging area
+echo "📦 Добавление отформатированных файлов в staging area..."
+for FILE in $STAGED_FILES; do
+    git add "$FILE"
+done
+
+echo "✅ Форматирование завершено успешно!"
+exit 0

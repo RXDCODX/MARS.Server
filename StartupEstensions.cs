@@ -133,63 +133,15 @@ public static class StartupEstensions
                 }
             );
 
-        services.AddSingleton<WTelegramClient>(
-            (sp) =>
-            {
-                var options = sp.GetRequiredService<IOptions<WTelegramClientConfiguration>>().Value;
-                if (
-                    !File.Exists(
-                        Path.Combine(
-                            Directory.GetCurrentDirectory(),
-                            "WTelegram",
-                            "WTelegram.session"
-                        )
-                    )
-                )
-                {
-                    throw new FileNotFoundException("WTelegram session not found");
-                }
-                var client = new WTelegramClient(
-                    options.AppId,
-                    options.ApiHash,
-                    "WTelegram/WTelegram.session"
-                );
-                var logger = factory.CreateLogger("WTelegram");
-                WTelegram.Helpers.Log = (i, v) => logger.Log((LogLevel)i, "{Message}", [v]);
-                client.LoginUserIfNeeded();
-                //DoLogin(client, options.PhoneNumber, options).GetAwaiter().GetResult();
-
-                return client;
-
-                //static async Task DoLogin(
-                //    Client client,
-                //    string loginInfo,
-                //    WTelegramClientConfiguration configuration
-                //) // (add this method to your code)
-                //{
-                //    while (client.User == null)
-                //    {
-                //        switch (await client.Login(loginInfo)) // returns which config is needed to continue login
-                //        {
-                //            case "verification_code":
-                //                Console.Write("Code: ");
-                //                loginInfo =
-                //                    Console.ReadLine() ?? throw new NullReferenceException();
-                //                break;
-                //            case "name":
-                //                loginInfo = configuration.FirstNameLastName;
-                //                break; // if sign-up is required (first/last_name)
-                //            case "password":
-                //                loginInfo = configuration.Password;
-                //                break; // if user has enabled 2FA
-                //            default:
-                //                loginInfo = string.Empty;
-                //                break;
-                //        }
-                //    }
-                //}
-            }
-        );
+        // Регистрируем новый сервис-обертку для WTelegram с поддержкой уведомлений
+        services.AddSingleton<WTelegramClientService>();
+        
+        // Для обратной совместимости регистрируем также WTelegram.Client
+        services.AddSingleton<WTelegram.Client>(sp =>
+        {
+            var clientService = sp.GetRequiredService<WTelegramClientService>();
+            return clientService.GetClientAsync().GetAwaiter().GetResult();
+        });
 
         services.AddScoped<UpdateHandler>();
         services.AddScoped<ReceiverService>();
