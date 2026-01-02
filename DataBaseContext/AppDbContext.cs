@@ -14,6 +14,8 @@ using MARS.Server.Services.Twitch.Management.Entitys;
 using MARS.Server.Services.Twitch.Rewards.ChannelRewards.Entities;
 using MARS.Server.Services.Twitch.Rewards.TwitchMikuMondayReward.Entities;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using MARS.Server.Services.Twitch.Synthesizer.Enitity;
+using MARS.Server.Services.TelegramPrivateChannelsResender.Entities;
 
 namespace MARS.Server.DataBaseContext;
 
@@ -77,6 +79,8 @@ public sealed partial class AppDbContext : DbContext
     public DbSet<MikuMondayTrack> MikuMondayTracks { get; set; } = null!;
     public DbSet<MikuMondayActivation> MikuMondayActivations { get; set; } = null!;
     public DbSet<EnvironmentVariable> EnvironmentVariables { get; set; } = null!;
+    public DbSet<BlockedTtsVoice> BlockedTtsVoices { get; set; } = null!;
+    public DbSet<ChannelProcessingState> ChannelProcessingStates { get; set; } = null!;
 
     /// <summary>
     /// Partial метод для конфигурации таблиц, связанных с TwitchUser (реализован в TwitchUsersDbContext.cs)
@@ -328,6 +332,11 @@ public sealed partial class AppDbContext : DbContext
 
         // Конфигурация для EnvironmentVariable
         modelBuilder.Entity<EnvironmentVariable>().HasIndex(e => e.Key).IsUnique();
+
+        modelBuilder
+            .Entity<BlockedTtsVoice>()
+            .HasIndex(e => e.VoiceName)
+            .IsUnique();
 
         // Конфигурация связей с TwitchUser вынесена в TwitchUsersDbContext
 

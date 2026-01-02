@@ -3,6 +3,7 @@ using System;
 using MARS.Server.DataBaseContext;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MARS.Server.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251228205924_AddBlockedTtsVoices")]
+    partial class AddBlockedTtsVoices
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -994,28 +997,6 @@ namespace MARS.Server.Migrations
                     b.HasKey("UserId");
 
                     b.ToTable("TelegramUsers");
-                });
-
-            modelBuilder.Entity("MARS.Server.Services.TelegramPrivateChannelsResender.Entities.ChannelProcessingState", b =>
-                {
-                    b.Property<long>("ChannelId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("ChannelId"));
-
-                    b.Property<DateTime>("LastUpdated")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<long?>("MessagesHash")
-                        .HasColumnType("bigint");
-
-                    b.Property<int>("OffsetId")
-                        .HasColumnType("integer");
-
-                    b.HasKey("ChannelId");
-
-                    b.ToTable("ChannelProcessingStates");
                 });
 
             modelBuilder.Entity("MARS.Server.Services.Twitch.ClientMessages.AutoMessages.Entitys.AutoMessage", b =>

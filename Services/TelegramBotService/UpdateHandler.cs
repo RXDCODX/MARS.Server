@@ -13,6 +13,7 @@ namespace MARS.Server.Services.TelegramBotService;
 public class UpdateHandler : IUpdateHandler
 {
     public delegate Task TelegramUpdateDelegate(ITelegramBotClient client, Update update);
+    public event TelegramUpdateDelegate TelegramUpdate = (client, update) => Task.CompletedTask;
 
     private readonly ITelegramBotClient _botClient;
     private readonly ICommandService _commandService;
@@ -30,7 +31,8 @@ public class UpdateHandler : IUpdateHandler
         IHostApplicationLifetime applicationLifetime,
         Tekken8FrameData frameData,
         IDbContextFactory<AppDbContext> dbContextFactory,
-        TelegramCommandService telegramCommandService
+        TelegramCommandService telegramCommandService,
+        IServiceProvider serviceProvider
     )
     {
         _botClient = botClient;
@@ -45,6 +47,16 @@ public class UpdateHandler : IUpdateHandler
             TelegramUpdate += randomMemHandler.HandMessage;
             TelegramUpdate += frameData.HandAlert;
             TelegramUpdate += telegramCommandService.HandMessage;
+
+            // Получаем Singleton WTelegramClientService из корневого провайдера
+            var wTelegramClientService =
+                serviceProvider.GetRequiredService<WTelegramClientService>();
+            TelegramUpdate += wTelegramClientService.HandleUpdate;
+        });
+
+        applicationLifetime.ApplicationStopped.Register(() =>
+        {
+            botClient.SendMessage(TelegramExstension.Rxdcodx, "Приложение остановленно!");
         });
     }
 
@@ -116,8 +128,6 @@ public class UpdateHandler : IUpdateHandler
             }
         }
     }
-
-    public event TelegramUpdateDelegate TelegramUpdate = (client, update) => Task.CompletedTask;
 
     private async void ResendMessage(Update update)
     {

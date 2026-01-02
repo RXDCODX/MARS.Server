@@ -2,6 +2,7 @@
 using System.Xml.XPath;
 using HtmlAgilityPack;
 using MARS.Server.Services._365Genius.Entitys;
+using MARS.Server.Services.TelegramBotService;
 using TL;
 
 namespace MARS.Server.Services._365Genius;
@@ -12,7 +13,7 @@ public class Worker365(
     IHostApplicationLifetime lifetime,
     IHostEnvironment environment,
     IDbContextFactory<AppDbContext> appDbContextFactory,
-    WTelegramClient botClient,
+    WTelegramClientService wTelegramClientService,
     ILogger<Worker365> logger
 ) : IHostedService
 {
@@ -120,6 +121,7 @@ public class Worker365(
 
         var bb = File.OpenRead(path);
 
+        var botClient = await wTelegramClientService.GetClientAsync(_cancellationToken);
         var chats = await botClient.Messages_GetAllChats();
         var channel = chats.chats[options.Value.TelegramChannelId];
         var file = await botClient.UploadFileAsync(bb, video.Id.ToString());

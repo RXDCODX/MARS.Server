@@ -1,5 +1,6 @@
 ﻿using System.Collections.Frozen;
 using MARS.Server.Services.MemoryStorageService;
+using MARS.Server.Services.TelegramBotService;
 using TL;
 using Document = TL.Document;
 using Message = TL.Message;
@@ -10,11 +11,13 @@ namespace MARS.Server.Services.RandomMem;
 
 public class RandomMemOnline(
     IHostApplicationLifetime lifetime,
-    WTelegramClient client,
+    WTelegramClientService wTelegramClientService,
     IDbContextFactory<AppDbContext> factory,
     IHubContext<TelegramusHub, ITelegramusHub> hubContext
 ) : BackgroundService
 {
+    private WTelegramClient? _client;
+
     public static bool IsStop
     {
         get;
@@ -41,29 +44,42 @@ public class RandomMemOnline(
     {
         lifetime.ApplicationStarted.Register(() =>
         {
-            using var dbContext = factory.CreateDbContext();
-            var isStop = dbContext.ApplicationState.Single().RandomMemeOnlineIsStop;
-
-            IsStop = isStop;
-
-            client.OnUpdates += async (@base) =>
-            {
-                if (IsStop)
-                {
-                    return;
-                }
-
-                foreach (Update update in @base.UpdateList)
-                {
-                    if (update is UpdateNewChannelMessage message)
-                    {
-                        await Task.Factory.StartNew(() => OnUpdate(message), stoppingToken);
-                    }
-                }
-            };
+            _ = InitializeUpdatesAsync(stoppingToken);
         });
 
         return Task.CompletedTask;
+    }
+
+    private async Task InitializeUpdatesAsync(CancellationToken stoppingToken)
+    {
+        var client = await GetClientAsync(stoppingToken);
+
+        await using var dbContext = await factory.CreateDbContextAsync(stoppingToken);
+        var isStop = dbContext.ApplicationState.Single().RandomMemeOnlineIsStop;
+
+        IsStop = isStop;
+
+        client.OnUpdates += async (@base) =>
+        {
+            if (IsStop)
+            {
+                return;
+            }
+
+            foreach (Update update in @base.UpdateList)
+            {
+                if (update is UpdateNewChannelMessage message)
+                {
+                    await Task.Factory.StartNew(() => OnUpdate(message), stoppingToken);
+                }
+            }
+        };
+    }
+
+    private async Task<WTelegramClient> GetClientAsync(CancellationToken cancellationToken)
+    {
+        _client ??= await wTelegramClientService.GetClientAsync(cancellationToken);
+        return _client;
     }
 
     private async Task OnUpdate(UpdateNewChannelMessage arg1)
@@ -144,6 +160,7 @@ public class RandomMemOnline(
 
     private async Task ProcessVideoDocument(Document doc, string? message)
     {
+        var client = await GetClientAsync(CancellationToken.None);
         var buffer = new byte[doc.size];
         await using var fs = new MemoryStream(buffer);
 
@@ -181,6 +198,7 @@ public class RandomMemOnline(
 
     private async Task ProcessPhoto(Photo photo, string? message)
     {
+        var client = await GetClientAsync(CancellationToken.None);
         if (photo.LargestPhotoSize is PhotoSize size)
         {
             var buffer = new byte[size.FileSize];
@@ -219,6 +237,7 @@ public class RandomMemOnline(
 
     private async Task ProcessPhotoDocument(Document document, string? message)
     {
+        var client = await GetClientAsync(CancellationToken.None);
         var buffer = new byte[document.size];
         await using var fs = new MemoryStream(buffer);
 

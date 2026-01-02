@@ -1,4 +1,5 @@
 using MARS.Server.Services.TelegramBotService;
+using MARS.Server.Services.TelegramBotService.Entities;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MARS.Server.Controllers;
@@ -16,7 +17,7 @@ public class WTelegramController(
     /// <summary>
     /// Принудительно выполняет повторную авторизацию WTelegram клиента
     /// </summary>
-    /// <returns>Результат операции</returns>
+    /// <returns>Результат операции переавторизации</returns>
     [HttpPost("relogin")]
     public async Task<IActionResult> ReLogin(CancellationToken cancellationToken)
     {
@@ -26,7 +27,12 @@ public class WTelegramController(
 
             await clientService.ReLoginAsync(cancellationToken);
 
-            return Ok(new { success = true, message = "Переавторизация выполнена успешно" });
+            var status = await clientService.GetClientStatusAsync(cancellationToken);
+
+            return Ok(WTelegramOperationResult.CreateSuccess(
+                "Переавторизация выполнена успешно",
+                status
+            ));
         }
         catch (Exception ex)
         {
@@ -34,12 +40,10 @@ public class WTelegramController(
 
             return StatusCode(
                 500,
-                new
-                {
-                    success = false,
-                    message = "Ошибка при переавторизации",
-                    error = ex.Message,
-                }
+                WTelegramOperationResult.CreateFailure(
+                    "Ошибка при переавторизации",
+                    ex.Message
+                )
             );
         }
     }
@@ -53,17 +57,9 @@ public class WTelegramController(
     {
         try
         {
-            var client = await clientService.GetClientAsync(cancellationToken);
+            var status = await clientService.GetClientStatusAsync(cancellationToken);
 
-            return Ok(
-                new
-                {
-                    isAuthenticated = client.User != null,
-                    userId = client.User?.id,
-                    username = client.User?.username,
-                    phone = client.User?.phone,
-                }
-            );
+            return Ok(status);
         }
         catch (Exception ex)
         {
@@ -71,12 +67,10 @@ public class WTelegramController(
 
             return StatusCode(
                 500,
-                new
-                {
-                    success = false,
-                    message = "Ошибка при получении статуса",
-                    error = ex.Message,
-                }
+                WTelegramOperationResult.CreateFailure(
+                    "Ошибка при получении статуса",
+                    ex.Message
+                )
             );
         }
     }

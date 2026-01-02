@@ -4,7 +4,6 @@ using BooruSharp.Booru;
 using MARS.Server.CustomLoggers.SignalRLogger;
 using MARS.Server.Services._365Genius;
 using MARS.Server.Services.Framedata;
-using MARS.Server.Services.Honkai;
 using MARS.Server.Services.PyroAlerts;
 using MARS.Server.Services.RandomMem;
 using MARS.Server.Services.Scoreboard;
@@ -16,6 +15,7 @@ using MARS.Server.Services.SoundRequest.Interfaces;
 using MARS.Server.Services.SoundRequest.Queue;
 using MARS.Server.Services.SoundRequest.YouTube;
 using MARS.Server.Services.TelegramBotService;
+using MARS.Server.Services.TelegramPrivateChannelsResender;
 using MARS.Server.Services.Twitch;
 using MARS.Server.Services.Twitch.AutoInfoFetch;
 using MARS.Server.Services.Twitch.Client;
@@ -133,7 +133,8 @@ public static class StartupEstensions
                 }
             );
 
-        // Регистрируем новый сервис-обертку для WTelegram с поддержкой уведомлений
+        // Регистрируем сервис-обертку для WTelegram как Singleton
+        // UpdateHandler получит его через IServiceProvider
         services.AddSingleton<WTelegramClientService>();
         
         // Для обратной совместимости регистрируем также WTelegram.Client
@@ -146,6 +147,9 @@ public static class StartupEstensions
         services.AddScoped<UpdateHandler>();
         services.AddScoped<ReceiverService>();
         services.AddHostedService<PollingService>();
+
+        // Регистрируем сервис для пересылки медиа из forwarded сообщений
+        services.AddHostedService<TelegramChannelsResenderService>();
 
         // Регистрируем ScoreboardService
         services.AddScoped<ScoreboardService>();
@@ -545,8 +549,12 @@ public static class StartupEstensions
 
     internal static IServiceCollection AddSyntheziaServices(this IServiceCollection services)
     {
+        services.AddSingleton<ITtsVoiceRepository, TtsVoiceRepository>();
         services.AddSingleton(
-            (sp) => VoicerFactory.CreateVoicer(sp.GetRequiredService<ILogger<IVoicer>>())
+            sp => VoicerFactory.CreateVoicer(
+                sp.GetRequiredService<ILogger<IVoicer>>(),
+                sp.GetRequiredService<ITtsVoiceRepository>()
+            )
         );
         services.AddSingleton<SyntheziaQueueManager>();
         services.AddHostedService(sp => sp.GetRequiredService<SyntheziaQueueManager>());
@@ -580,7 +588,7 @@ public static class StartupEstensions
     }
 
     /// <summary>
-    /// Добавляет все Twitch-связанные сервисы
+    /// Добавляет все Twitch-связанная сервисы
     /// </summary>
     internal static IServiceCollection AddTwitchServices(
         this IServiceCollection services,

@@ -19,29 +19,55 @@ public class NullVoicer(ILogger<IVoicer> logger) : IVoicer
 
     public Task Stop()
     {
-        return Task.FromResult(
-            () => logger.LogWarning("Speech synthesis is not supported on this platform.")
-        );
+        return Task.CompletedTask;
     }
 
     public Task Block()
     {
-        return Task.FromResult(
-            () => logger.LogWarning("Speech block is not supported on this platform.")
-        );
+        return Task.CompletedTask;
     }
 
     public Task Unblock()
     {
-        return Task.FromResult(
-            () => logger.LogWarning("Speech unblock is not supported on this platform.")
-        );
+        return Task.CompletedTask;
+    }
+
+    public Task RefreshBlockedVoicesAsync(CancellationToken cancellationToken = default)
+    {
+        logger.LogWarning("Speech synthesis is not supported on this platform.");
+        return Task.CompletedTask;
+    }
+
+    public Task ResetVoiceAsync(string name, CancellationToken cancellationToken = default)
+    {
+        logger.LogWarning("Speech synthesis is not supported on this platform.");
+        return Task.CompletedTask;
+    }
+
+    public Task ResetAllVoicesAsync(CancellationToken cancellationToken = default)
+    {
+        logger.LogWarning("Speech synthesis is not supported on this platform.");
+        return Task.CompletedTask;
+    }
+
+    public Task<IReadOnlyDictionary<string, string>> GetLinkedVoicesAsync(
+        CancellationToken cancellationToken = default
+    )
+    {
+        logger.LogWarning("Speech synthesis is not supported on this platform.");
+        return Task.FromResult<IReadOnlyDictionary<string, string>>(new Dictionary<string, string>());
+    }
+
+    public Task<List<string>> GetInstalledVoicesAsync(
+        CancellationToken cancellationToken = default
+    )
+    {
+        logger.LogWarning("Speech synthesis is not supported on this platform.");
+        return Task.FromResult(new List<string>());
     }
 
     public Task Sound(MessageToSynthezid message)
     {
-        return Task.FromResult(
-            () => logger.LogWarning("Speech synthesis is not supported on this platform.")
-        );
+        return Task.CompletedTask;
     }
 }

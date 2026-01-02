@@ -1,4 +1,5 @@
-﻿using MARS.Server.Services.StreamAcrhive_UNUSED.Entitys;
+﻿using MARS.Server.Services.TelegramBotService;
+using MARS.Server.Services.StreamAcrhive_UNUSED.Entitys;
 using MARS.Server.Services.StreamAcrhive_UNUSED.Interfaces;
 using TL;
 using InputFile = TL.InputFile;
@@ -6,7 +7,7 @@ using InputFile = TL.InputFile;
 namespace MARS.Server.Services.StreamAcrhive_UNUSED;
 
 public class StreamArchiveService(
-    WTelegramClient telegramClient,
+    WTelegramClientService telegramClientService,
     IDbContextFactory<AppDbContext> dbContextFactory,
     ILogger<StreamArchiveService> logger,
     IFFmpegService ffmpegService
@@ -14,6 +15,13 @@ public class StreamArchiveService(
 {
     private readonly Dictionary<Guid, Task> _activeTasks = [];
     private readonly CancellationTokenSource _cancellationTokenSource = new();
+    private WTelegramClient? _telegramClient;
+
+    private async Task<WTelegramClient> GetTelegramClientAsync(CancellationToken cancellationToken)
+    {
+        _telegramClient ??= await telegramClientService.GetClientAsync(cancellationToken);
+        return _telegramClient;
+    }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -446,6 +454,8 @@ public class StreamArchiveService(
 
             await using var fileStream = File.OpenRead(filePath);
 
+            var telegramClient = await GetTelegramClientAsync(_cancellationTokenSource.Token);
+
             // Получаем информацию о канале
             var chats = await telegramClient.Messages_GetAllChats();
             if (!chats.chats.TryGetValue((long)config.TelegramChannelId, out var channel))
@@ -522,6 +532,8 @@ public class StreamArchiveService(
 
             await using var fileStream = File.OpenRead(chunkPath);
 
+            var telegramClient = await GetTelegramClientAsync(_cancellationTokenSource.Token);
+
             // Получаем информацию о канале
             var chats = await telegramClient.Messages_GetAllChats();
             if (!chats.chats.TryGetValue((long)config.TelegramChannelId, out var channel))
@@ -581,6 +593,66 @@ public class StreamArchiveService(
             await UpdateChunkStatusAsync(fileChunk.Id, StreamArchiveChunkStatus.Failed, ex.Message);
             throw;
         }
+    }
+
+    private async Task<long> SendVideoAsync(
+        InputPeer channel,
+        InputFile uploadedFile,
+        string fileName,
+        string mimeType
+    )
+    {
+        var telegramClient = await GetTelegramClientAsync(_cancellationTokenSource.Token);
+
+        var attributes = new List<DocumentAttribute>
+        {
+            new DocumentAttributeFilename { file_name = fileName },
+        };
+
+        await telegramClient.Messages_SendMedia(
+            channel,
+            new InputMediaUploadedDocument
+            {
+                file = uploadedFile,
+                mime_type = mimeType,
+                attributes = [.. attributes],
+            },
+            $"📹 {fileName}",
+            Random.Shared.NextInt64()
+        );
+
+        // Возвращаем случайный ID, так как WTelegram не возвращает ID сообщения напрямую
+        return Random.Shared.NextInt64();
+    }
+
+    private async Task<long> SendDocumentAsync(
+        InputPeer channel,
+        InputFile uploadedFile,
+        string fileName,
+        string mimeType
+    )
+    {
+        var telegramClient = await GetTelegramClientAsync(_cancellationTokenSource.Token);
+
+        var attributes = new List<DocumentAttribute>
+        {
+            new DocumentAttributeFilename { file_name = fileName },
+        };
+
+        await telegramClient.Messages_SendMedia(
+            channel,
+            new InputMediaUploadedDocument
+            {
+                file = uploadedFile,
+                mime_type = mimeType,
+                attributes = [.. attributes],
+            },
+            $"📄 {fileName}",
+            Random.Shared.NextInt64()
+        );
+
+        // Возвращаем случайный ID, так как WTelegram не возвращает ID сообщения напрямую
+        return Random.Shared.NextInt64();
     }
 
     private async Task<StreamArchiveFileChunk> CreateFileChunkAsync(
@@ -701,62 +773,6 @@ public class StreamArchiveService(
             chunk.UploadedAt = DateTime.UtcNow;
             await dbContext.SaveChangesAsync();
         }
-    }
-
-    private async Task<long> SendVideoAsync(
-        InputPeer channel,
-        InputFile uploadedFile,
-        string fileName,
-        string mimeType
-    )
-    {
-        var attributes = new List<DocumentAttribute>
-        {
-            new DocumentAttributeFilename { file_name = fileName },
-        };
-
-        await telegramClient.Messages_SendMedia(
-            channel,
-            new InputMediaUploadedDocument
-            {
-                file = uploadedFile,
-                mime_type = mimeType,
-                attributes = [.. attributes],
-            },
-            $"📹 {fileName}",
-            Random.Shared.NextInt64()
-        );
-
-        // Возвращаем случайный ID, так как WTelegram не возвращает ID сообщения напрямую
-        return Random.Shared.NextInt64();
-    }
-
-    private async Task<long> SendDocumentAsync(
-        InputPeer channel,
-        InputFile uploadedFile,
-        string fileName,
-        string mimeType
-    )
-    {
-        var attributes = new List<DocumentAttribute>
-        {
-            new DocumentAttributeFilename { file_name = fileName },
-        };
-
-        await telegramClient.Messages_SendMedia(
-            channel,
-            new InputMediaUploadedDocument
-            {
-                file = uploadedFile,
-                mime_type = mimeType,
-                attributes = [.. attributes],
-            },
-            $"📄 {fileName}",
-            Random.Shared.NextInt64()
-        );
-
-        // Возвращаем случайный ID, так как WTelegram не возвращает ID сообщения напрямую
-        return Random.Shared.NextInt64();
     }
 
     public new void Dispose()

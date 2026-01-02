@@ -1,29 +1,27 @@
-using MARS.Server.Configuration;
-using MARS.Server.Exstensions;
-using Microsoft.Extensions.Options;
-using Telegram.Bot;
+using MARS.Server.Services.TelegramBotService.Entities;
 using Telegram.Bot.Types.Enums;
-using TL;
 
 namespace MARS.Server.Services.TelegramBotService;
 
 /// <summary>
-/// Сервис-обертка для WTelegram.Client с автоматической переавторизацией
+/// Сервис-обертка для WTelegramClient с автоматической переавторизацией
 /// </summary>
 public class WTelegramClientService : IDisposable
 {
     private readonly ILogger<WTelegramClientService> _logger;
     private readonly WTelegramClientConfiguration _configuration;
-    private readonly ITelegramBotClient? _botClient;
     private readonly string _sessionPath;
     private WTelegramClient? _client;
     private readonly SemaphoreSlim _loginLock = new(1, 1);
     private bool _isDisposed;
 
+    private readonly ITelegramBotClient _botClient;
+    private TaskCompletionSource<string>? _verificationCodeTcs;
+
     public WTelegramClientService(
         ILogger<WTelegramClientService> logger,
         IOptions<WTelegramClientConfiguration> configuration,
-        ITelegramBotClient? botClient = null
+        ITelegramBotClient botClient
     )
     {
         _logger = logger;
@@ -39,6 +37,76 @@ public class WTelegramClientService : IDisposable
 
         WTelegram.Helpers.Log = (level, message) =>
             _logger.Log((LogLevel)level, "{Message}", message);
+    }
+
+    /// <summary>
+    /// Обрабатывает обновления от Telegram Bot для получения экземпляра ITelegramBotClient
+    /// </summary>
+    public async Task HandleUpdate(ITelegramBotClient _, Update? update)
+    {
+        // Кэшируем экземпляр клиента при первом обновлении
+        _logger.LogInformation("WTelegramClientService получил экземпляр ITelegramBotClient");
+
+        try
+        {
+            await _botClient.SendMessage(
+                TelegramExstension.Rxdcodx,
+                "WTelegramClient успешно подключен"
+            );
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "Не удалось отправить уведомление о подключении WTelegramClient"
+            );
+        }
+
+        if (
+            update?.Message?.Text is { } text
+            && _verificationCodeTcs is { Task.IsCompleted: false } pendingCode
+        )
+        {
+            pendingCode.TrySetResult(text);
+            _logger.LogInformation("Получен код верификации через бота");
+        }
+    }
+
+    /// <summary>
+    /// Получает статус авторизации WTelegram клиента
+    /// </summary>
+    public async Task<WTelegramClientStatus> GetClientStatusAsync(
+        CancellationToken cancellationToken = default
+    )
+    {
+        try
+        {
+            if (_client?.User != null)
+            {
+                return new WTelegramClientStatus
+                {
+                    IsAuthenticated = true,
+                    UserId = _client.User.id,
+                    Username = _client.User.username,
+                    Phone = _client.User.phone,
+                };
+            }
+
+            var client = await GetClientAsync(cancellationToken);
+
+            return new WTelegramClientStatus
+            {
+                IsAuthenticated = client.User != null,
+                UserId = client.User?.id,
+                Username = client.User?.username,
+                Phone = client.User?.phone,
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Ошибка при получении статуса WTelegram");
+            return new WTelegramClientStatus { IsAuthenticated = false, ErrorMessage = ex.Message };
+        }
     }
 
     /// <summary>
@@ -129,15 +197,25 @@ public class WTelegramClientService : IDisposable
 
             _logger.LogInformation("WTelegram требует: {WhatIsNeeded}", whatIsNeeded);
 
-            switch (whatIsNeeded)
+            var requirement = ParseAuthenticationRequirement(whatIsNeeded);
+
+            switch (requirement)
             {
-                case "verification_code":
+                case WTelegramAuthenticationRequirement.VerificationCode:
                     _logger.LogWarning("ТРЕБУЕТСЯ КОД ВЕРИФИКАЦИИ! Введите код в консоль...");
 
                     await NotifyVerificationCodeRequiredAsync();
 
-                    Console.Write("Код верификации: ");
-                    loginInfo = Console.ReadLine();
+                    if (_botClient is not null)
+                    {
+                        await _botClient.SendMessage(
+                            TelegramExstension.Rxdcodx,
+                            "Введите код верификации:",
+                            cancellationToken: cancellationToken
+                        );
+                    }
+
+                    loginInfo = await WaitForVerificationCodeAsync(cancellationToken);
 
                     if (string.IsNullOrWhiteSpace(loginInfo))
                     {
@@ -145,16 +223,24 @@ public class WTelegramClientService : IDisposable
                     }
                     break;
 
-                case "name":
+                case WTelegramAuthenticationRequirement.Name:
                     loginInfo = _configuration.FirstNameLastName;
                     _logger.LogInformation("Используется имя: {Name}", loginInfo);
                     break;
 
-                case "password":
+                case WTelegramAuthenticationRequirement.Password:
                     loginInfo = _configuration.Password;
                     _logger.LogInformation("Используется пароль 2FA");
                     break;
 
+                case WTelegramAuthenticationRequirement.PhoneNumber:
+                    loginInfo = _configuration.PhoneNumber;
+                    _logger.LogInformation("Используется номер телефона: {PhoneNumber}", loginInfo);
+                    break;
+                case WTelegramAuthenticationRequirement.Completed:
+                    break;
+                case WTelegramAuthenticationRequirement.Unknown:
+                    break;
                 default:
                     loginInfo = string.Empty;
                     break;
@@ -175,18 +261,38 @@ public class WTelegramClientService : IDisposable
         await NotifyAuthSuccessAsync(username);
     }
 
+    private static WTelegramAuthenticationRequirement ParseAuthenticationRequirement(
+        string requirement
+    ) =>
+        requirement switch
+        {
+            "verification_code" => WTelegramAuthenticationRequirement.VerificationCode,
+            "name" => WTelegramAuthenticationRequirement.Name,
+            "password" => WTelegramAuthenticationRequirement.Password,
+            _ => WTelegramAuthenticationRequirement.Unknown,
+        };
+
     #region Notification Methods
+
+    private async Task<string> WaitForVerificationCodeAsync(CancellationToken cancellationToken)
+    {
+        _verificationCodeTcs = new TaskCompletionSource<string>(
+            TaskCreationOptions.RunContinuationsAsynchronously
+        );
+
+        await using var registration = cancellationToken.Register(() =>
+        {
+            _verificationCodeTcs?.TrySetCanceled(cancellationToken);
+        });
+
+        return await _verificationCodeTcs.Task;
+    }
 
     /// <summary>
     /// Уведомляет администратора о необходимости повторной авторизации WTelegram
     /// </summary>
     private async Task NotifyAuthRequiredAsync(string reason = "AUTH_KEY_UNREGISTERED")
     {
-        if (_botClient == null)
-        {
-            return;
-        }
-
         try
         {
             var message = $"""
@@ -212,10 +318,13 @@ public class WTelegramClientService : IDisposable
             _logger.LogInformation(
                 "Уведомление о необходимости переавторизации WTelegram отправлено администратору"
             );
+
+            WTelegramOperationResult.CreateSuccess("Notification sent successfully");
         }
         catch (Exception e)
         {
             _logger.LogError(e, "Ошибка при отправке уведомления о переавторизации WTelegram");
+            WTelegramOperationResult.CreateFailure("Failed to send notification", e.Message);
         }
     }
 
@@ -224,11 +333,6 @@ public class WTelegramClientService : IDisposable
     /// </summary>
     private async Task NotifyAuthSuccessAsync(string username)
     {
-        if (_botClient == null)
-        {
-            return;
-        }
-
         try
         {
             var message = $"""
@@ -246,10 +350,16 @@ public class WTelegramClientService : IDisposable
             );
 
             _logger.LogInformation("Уведомление об успешной переавторизации WTelegram отправлено");
+
+            WTelegramOperationResult.CreateSuccess("Success notification sent");
         }
         catch (Exception e)
         {
             _logger.LogError(e, "Ошибка при отправке уведомления об успешной авторизации");
+            WTelegramOperationResult.CreateFailure(
+                "Failed to send success notification",
+                e.Message
+            );
         }
     }
 
@@ -258,20 +368,15 @@ public class WTelegramClientService : IDisposable
     /// </summary>
     private async Task NotifyVerificationCodeRequiredAsync()
     {
-        if (_botClient == null)
-        {
-            return;
-        }
-
         try
         {
             var message = """
                 🔐 <b>WTelegram ожидает код верификации!</b>
 
                 📱 <b>Действия:</b>
-                1. Проверьте Telegram на предмет сообщения с кодом
-                2. Откройте консоль приложения
-                3. Введите полученный код
+                1. Проверить Telegram на предмет сообщения с кодом
+                2. Открыть консоль приложения
+                3. Ввести полученный код
 
                 ⏰ <b>Важно:</b> Процесс авторизации приостановлен до ввода кода.
                 """;
@@ -283,10 +388,16 @@ public class WTelegramClientService : IDisposable
             );
 
             _logger.LogInformation("Уведомление о необходимости кода верификации отправлено");
+
+            WTelegramOperationResult.CreateSuccess("Verification code notification sent");
         }
         catch (Exception e)
         {
             _logger.LogError(e, "Ошибка при отправке уведомления о коде верификации");
+            WTelegramOperationResult.CreateFailure(
+                "Failed to send verification code notification",
+                e.Message
+            );
         }
     }
 
@@ -295,11 +406,6 @@ public class WTelegramClientService : IDisposable
     /// </summary>
     private async Task NotifyAuthFailedAsync(string errorMessage)
     {
-        if (_botClient == null)
-        {
-            return;
-        }
-
         try
         {
             var message = $"""
@@ -323,10 +429,13 @@ public class WTelegramClientService : IDisposable
             );
 
             _logger.LogInformation("Уведомление об ошибке авторизации WTelegram отправлено");
+
+            WTelegramOperationResult.CreateSuccess("Error notification sent");
         }
         catch (Exception e)
         {
             _logger.LogError(e, "Ошибка при отправке уведомления об ошибке авторизации");
+            WTelegramOperationResult.CreateFailure("Failed to send error notification", e.Message);
         }
     }
 
@@ -341,6 +450,7 @@ public class WTelegramClientService : IDisposable
 
         _client?.Dispose();
         _loginLock.Dispose();
+        GC.SuppressFinalize(this);
         _isDisposed = true;
     }
 }

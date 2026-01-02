@@ -1,6 +1,4 @@
-﻿using MARS.Server.Exstensions;
-using MARS.Server.Services.WaifuRoll;
-using MARS.Server.Services.WaifuRoll.Entitys;
+﻿using MARS.Server.Services.WaifuRoll;
 using TwitchLib.Client.Events;
 using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Websockets;

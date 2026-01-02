@@ -4,8 +4,10 @@ namespace MARS.Server.Services.Twitch.Synthesizer;
 
 public static class VoicerFactory
 {
-    public static IVoicer CreateVoicer(ILogger<IVoicer> logger)
+    public static IVoicer CreateVoicer(ILogger<IVoicer> logger, ITtsVoiceRepository repository)
     {
-        return OperatingSystem.IsWindows() ? new SyntheziaVoicer(logger) : new NullVoicer(logger);
+        return OperatingSystem.IsWindows()
+            ? new SyntheziaVoicer(logger, repository)
+            : new NullVoicer(logger);
     }
 }

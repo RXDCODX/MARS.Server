@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using MARS.Server.Configuration;
 using MARS.Server.CustomLoggers.DatabaseLogger;
 using MARS.Server.CustomLoggers.SignalRLogger;
 using MARS.Server.CustomLoggers.TelegramLogger;
@@ -199,6 +200,8 @@ public static class Program
         });
 
         services.AddSingleton<AnswersForTwitchRewards>();
+
+        // WTelegramClient registration moved to StartupExtensions.AddTelegramThings()
 
         // Добавляем сервис архивирования потоков
         //services.AddSingleton<IFFmpegService, FFmpegService>();
