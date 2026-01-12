@@ -25,7 +25,7 @@ public static class Program
 
     public static async Task Main(string[] args)
     {
-        var builder = WebApplication.CreateBuilder(new WebApplicationOptions() { Args = args });
+        var builder = WebApplication.CreateBuilder(new WebApplicationOptions { Args = args });
 
         var services = builder.Services;
         var configuration = builder.Configuration;

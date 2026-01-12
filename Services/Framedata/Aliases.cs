@@ -10,11 +10,11 @@ public static class Aliases
     public static readonly FrozenDictionary<string, string[]> CharacterNameAliases = new Dictionary<
         string,
         string[]
-    >()
+    >
     {
         { "alisa", ["ali", "als"] },
         { "anna", ["ann", "annochka", "anya"] },
-        //{ "armor_king", new string[] { "armorking", "amk", "ak", "armor king", "armor" } },
+        { "armor king", new[] { "armorking", "amk", "ak", "armor king", "armor" } },
         { "asuka", ["asu"] },
         { "bryan", ["bry", "brayn"] },
         { "claudio", ["cld", "cla"] },
@@ -58,12 +58,29 @@ public static class Aliases
         { "reina", ["rheina"] },
         { "heihachi", ["hei", "hachi"] },
         //{ "mokujin", ["mokujin", "mokuj"] },
+        {
+            "miary zo",
+            [
+                "miary zoo",
+                "mara",
+                "miara",
+                "miary",
+                "mimiry",
+                "zo",
+                "zozo",
+                "zoo",
+                "zooo",
+                "masha",
+                "marishka",
+                "marima",
+            ]
+        },
     }.ToFrozenDictionary();
 
     public static readonly FrozenDictionary<string, string> MoveInputReplacer = new Dictionary<
         string,
         string
-    >()
+    >
     {
         { "cd+", "fnddf" },
         { "cd", "fnddf" },
@@ -94,10 +111,7 @@ public static class Aliases
         { "hold", "*" },
     }.ToFrozenDictionary();
 
-    public static readonly FrozenDictionary<string, string> Stances = new Dictionary<
-        string,
-        string
-    >()
+    public static readonly FrozenDictionary<string, string> Stances = new Dictionary<string, string>
     {
         { "bkp", "Backup" },
         { "sbt", "Boot" },
@@ -187,5 +201,12 @@ public static class Aliases
         { "tom", "Pleasure Time" },
         { "cjm", "Chaos Judgement" },
         { "ham", "Hammer Chance" },
+        { "grf", "Garuda Force" },
+        { "ram", "Rama Stance" },
+        { "bad", "Bad Jaguar" },
+        { "dmd", "Dark Magma Drive" },
+        { "bao", "Baobab Mihira" },
+        { "mor", "Morengy Miroso" },
+        { "wal", "Mikisaka Malaky" },
     }.ToFrozenDictionary();
 }

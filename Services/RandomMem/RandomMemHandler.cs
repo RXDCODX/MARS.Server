@@ -240,7 +240,7 @@ public class RandomMemHandler(
             .RandomMemeOrder.Where(e => e.MemeTypeId == typeId)
             .MaxAsync(e => e.Order, CancellationToken);
 
-        var newOrder = new MemeOrder()
+        var newOrder = new MemeOrder
         {
             FilePath = filePath,
             Order = ++order,

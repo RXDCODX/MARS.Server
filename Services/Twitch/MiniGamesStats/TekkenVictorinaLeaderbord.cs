@@ -96,7 +96,7 @@ public class TekkenVictorinaLeaderbord(
                 cancellationToken: _cancellationToken
             );
 
-            var newUser = new TwitchLeaderboardUser()
+            var newUser = new TwitchLeaderboardUser
             {
                 TwitchId = twitchId,
                 TekkenVictorinaWins = 1,

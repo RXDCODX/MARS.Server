@@ -128,13 +128,13 @@ public class Worker365(
         var thumb = await botClient.UploadFileAsync(video.ThumbnailFilePath);
         await botClient.Messages_SendMedia(
             channel,
-            new InputMediaUploadedDocument()
+            new InputMediaUploadedDocument
             {
                 file = file,
                 mime_type = "video/mp4",
                 attributes =
                 [
-                    new DocumentAttributeVideo()
+                    new DocumentAttributeVideo
                     {
                         duration = video.Duration.TotalSeconds,
                         w = video.VideoWidth,

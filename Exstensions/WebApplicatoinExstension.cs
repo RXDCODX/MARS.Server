@@ -53,7 +53,7 @@ public static class WebApplicatoinExstension
     {
         public WebApplicationBuilder AddStaticFilesBrowserOptions()
         {
-            var sharedOptions = new SharedOptions()
+            var sharedOptions = new SharedOptions
             {
                 RequestPath = "/static",
                 RedirectToAppendTrailingSlash = true,
@@ -72,7 +72,7 @@ public static class WebApplicatoinExstension
         {
             var sharedOptions = app.Services.GetRequiredService<SharedOptions>();
 
-            var fileOptions = new StaticFileOptions()
+            var fileOptions = new StaticFileOptions
             {
                 ServeUnknownFileTypes = true,
                 OnPrepareResponse = context =>

@@ -21,6 +21,11 @@ public class TelegramChannelsResenderService(
 
     private WTelegramClient? _client;
 
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<
+        long,
+        string
+    > _channelTitleCache = new();
+
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
         lifetime.ApplicationStarted.Register(() =>
@@ -96,6 +101,7 @@ public class TelegramChannelsResenderService(
                 var totalProcessed = 0;
                 var hasMoreMessages = true;
                 var offsetId = state.OffsetId;
+                var maxId = 0;
 
                 while (hasMoreMessages && !cancellationToken.IsCancellationRequested)
                 {
@@ -106,7 +112,7 @@ public class TelegramChannelsResenderService(
                     // limit - количество сообщений для получения
                     var messages = await _client!.Messages_GetHistory(
                         peer: inputPeer,
-                        offset_id: offsetId,
+                        offset_id: offsetId + 100,
                         add_offset: 0,
                         limit: 100
                     );
@@ -117,12 +123,6 @@ public class TelegramChannelsResenderService(
                     }
 
                     var messagesList = messages.Messages;
-
-                    if (messagesList.Length == 0)
-                    {
-                        hasMoreMessages = false;
-                        break;
-                    }
 
                     var batchProcessedCount = 0;
 
@@ -150,7 +150,7 @@ public class TelegramChannelsResenderService(
                             totalProcessed++;
 
                             // Небольшая задержка между обработкой сообщений
-                            await Task.Delay(1500, cancellationToken);
+                            await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
                         }
 
                         // Обновляем offset_id на текущее сообщение
@@ -162,18 +162,22 @@ public class TelegramChannelsResenderService(
                     state.LastUpdated = DateTime.UtcNow;
                     await dbContext.SaveChangesAsync(cancellationToken);
 
+                    if (maxId == (messagesList.MaxBy(e => e.ID)?.ID ?? 0))
+                    {
+                        hasMoreMessages = false;
+                        break;
+                    }
+                    else
+                    {
+                        maxId = messagesList.MaxBy(e => e.ID)?.ID ?? 0;
+                    }
+
                     logger.LogInformation(
                         "Батч обработан: {BatchCount} forwarded сообщений из {TotalInBatch} проверенных. Всего обработано: {Total}",
                         batchProcessedCount,
                         sortedMessages.Count,
                         totalProcessed
                     );
-
-                    // Если в батче меньше 100 сообщений - достигли конца канала
-                    if (messagesList.Length < 100)
-                    {
-                        hasMoreMessages = false;
-                    }
                 }
 
                 logger.LogInformation(
@@ -375,11 +379,11 @@ public class TelegramChannelsResenderService(
             switch (message.media)
             {
                 case MessageMediaPhoto { photo: Photo photo }:
-                    await DownloadAndResendPhotoAsync(channel, photo, message.message);
+                    await DownloadAndResendPhotoAsync(channel, photo, message);
                     break;
 
                 case MessageMediaDocument { document: TLDocument document }:
-                    await DownloadAndResendDocumentAsync(channel, document, message.message);
+                    await DownloadAndResendDocumentAsync(channel, document, message);
                     break;
 
                 default:
@@ -400,7 +404,7 @@ public class TelegramChannelsResenderService(
     private async Task DownloadAndResendPhotoAsync(
         InputPeerChannel channel,
         Photo photo,
-        string? caption
+        TLMessage originalMessage
     )
     {
         if (_client == null)
@@ -408,14 +412,21 @@ public class TelegramChannelsResenderService(
             return;
         }
 
-        // Скачиваем фото (самый большой размер)
-        if (photo.LargestPhotoSize is not TLPhotoSize largestSize)
+        // Попытка получить TLPhotoSize: сначала из LargestPhotoSize, иначе из списка sizes
+        var largestSize =
+            photo.LargestPhotoSize as TLPhotoSize
+            ?? photo
+                .sizes?.OfType<TLPhotoSize>()
+                .OrderByDescending(s => s.FileSize)
+                .FirstOrDefault();
+
+        if (largestSize == null)
         {
-            logger.LogWarning("Не удалось найти размер фото {PhotoId}", photo.id);
+            logger.LogWarning("Не удалось найти пригодный размер фото {PhotoId}", photo.id);
             return;
         }
 
-        var buffer = new byte[largestSize.FileSize];
+        var buffer = new byte[Math.Max(1, largestSize.FileSize)];
         await using var stream = new MemoryStream(buffer);
         var fileType = await _client.DownloadFileAsync(photo, stream, largestSize);
 
@@ -430,21 +441,53 @@ public class TelegramChannelsResenderService(
         // Загружаем как новый файл
         var inputFile = await _client.UploadFileAsync(stream, $"photo_{photo.id}.jpg");
 
+        // Формируем подпись: оригинальная подпись + метаданные (id, источник, дата)
+        var originalCaption = string.IsNullOrWhiteSpace(originalMessage.message)
+            ? string.Empty
+            : originalMessage.message.Trim();
+        var timestamp = originalMessage.Date.ToLocalTime();
+        var sourceName = "Unknown";
+        if (originalMessage.fwd_from != null)
+        {
+            sourceName = !string.IsNullOrEmpty(originalMessage.fwd_from.from_name)
+                ? originalMessage.fwd_from.from_name
+                : GetForwardSourceInfo(originalMessage.fwd_from);
+        }
+        var meta =
+            $"(id: {originalMessage.Peer.ID}, from: {sourceName}, date: {timestamp:yyyy-MM-dd HH:mm})";
+        var captionWithMeta = string.IsNullOrEmpty(originalCaption)
+            ? meta
+            : $"{originalCaption}\n{meta}";
+
         // Отправляем
         await _client.Messages_SendMedia(
             peer: channel,
             media: new InputMediaUploadedPhoto { file = inputFile },
-            message: caption ?? string.Empty,
+            message: captionWithMeta,
             random_id: Random.Shared.NextInt64()
         );
 
-        logger.LogInformation("Фото successfully sent to channel {ChannelId}", channel.channel_id);
+        logger.LogInformation("Фото успешно отправлено в канал {ChannelId}", channel.channel_id);
+
+        // После отправки помечаем диалог как непрочитанный для текущего пользователя (кеш/лог)
+        try
+        {
+            await _client.Messages_MarkDialogUnread(channel, unread: true);
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(
+                ex,
+                "Не удалось пометить диалог как непрочитанный для канала {ChannelId}",
+                channel.channel_id
+            );
+        }
     }
 
     private async Task DownloadAndResendDocumentAsync(
         InputPeerChannel channel,
         TLDocument document,
-        string? caption
+        TLMessage originalMessage
     )
     {
         if (_client == null)
@@ -453,7 +496,7 @@ public class TelegramChannelsResenderService(
         }
 
         // Скачиваем документ/видео
-        var buffer = new byte[document.size];
+        var buffer = new byte[Math.Max(1, document.size)];
         await using var stream = new MemoryStream(buffer);
         var fileType = await _client.DownloadFileAsync(document, stream);
 
@@ -477,6 +520,24 @@ public class TelegramChannelsResenderService(
         // Копируем атрибуты документа
         var attributes = document.attributes.ToArray();
 
+        // Формируем подпись: оригинальная подпись + метаданные (id, источник, дата)
+        var originalCaption = string.IsNullOrWhiteSpace(originalMessage.message)
+            ? string.Empty
+            : originalMessage.message.Trim();
+        var timestamp = originalMessage.date.ToLocalTime();
+        var sourceName = "Unknown";
+        if (originalMessage.fwd_from != null)
+        {
+            sourceName = !string.IsNullOrEmpty(originalMessage.fwd_from.from_name)
+                ? originalMessage.fwd_from.from_name
+                : GetForwardSourceInfo(originalMessage.fwd_from);
+        }
+        var metaDoc =
+            $"(id: {originalMessage.Peer.ID}, from: {sourceName}, date: {timestamp:yyyy-MM-dd HH:mm})";
+        var captionWithMetaDoc = string.IsNullOrEmpty(originalCaption)
+            ? metaDoc
+            : $"{originalCaption}\n{metaDoc}";
+
         // Отправляем
         await _client.Messages_SendMedia(
             peer: channel,
@@ -486,11 +547,25 @@ public class TelegramChannelsResenderService(
                 mime_type = document.mime_type,
                 attributes = attributes,
             },
-            message: caption ?? string.Empty,
+            message: captionWithMetaDoc,
             random_id: Random.Shared.NextInt64()
         );
 
         logger.LogInformation("Документ успешно отправлен в канал {ChannelId}", channel.channel_id);
+
+        // После отправки помечаем диалог как непрочитанный для текущего пользователя (кеш/лог)
+        try
+        {
+            await _client.Messages_MarkDialogUnread(channel, unread: true);
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(
+                ex,
+                "Не удалось пометить диалог как непрочитанный для канала {ChannelId}",
+                channel.channel_id
+            );
+        }
     }
 
     private async Task DeleteMessageAsync(InputPeerChannel channel, int messageId)
@@ -500,7 +575,7 @@ public class TelegramChannelsResenderService(
             return;
         }
 
-        await _client.Channels_DeleteMessages(channel, [messageId]);
+        await _client.Channels_DeleteMessages(channel, new[] { messageId });
 
         logger.LogInformation("Сообщение {MessageId} успешно удалено", messageId);
     }
@@ -523,17 +598,67 @@ public class TelegramChannelsResenderService(
         return channel != null ? new InputPeerChannel(channel.id, channel.access_hash) : null;
     }
 
-    private static string GetForwardSourceInfo(MessageFwdHeader fwdFrom)
+    private string GetChannelTitle(long peerChannelId)
+    {
+        if (_client == null)
+        {
+            return $"Channel:{peerChannelId}";
+        }
+
+        if (_channelTitleCache.TryGetValue(peerChannelId, out var cached))
+        {
+            return cached;
+        }
+
+        try
+        {
+            // Messages_GetAllChats may be sync; use Result to reuse existing client API
+            var allChats = _client.Messages_GetAllChats().Result;
+            var channel = allChats
+                .chats.Values.OfType<Channel>()
+                .FirstOrDefault(c => c.id == peerChannelId);
+            if (channel != null)
+            {
+                var title = channel.title ?? $"Channel:{peerChannelId}";
+                _channelTitleCache.TryAdd(peerChannelId, title);
+                return title;
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(
+                ex,
+                "Не удалось получить список чатов для поиска названия канала {ChannelId}",
+                peerChannelId
+            );
+        }
+
+        var fallback = $"Channel:{peerChannelId}";
+        _channelTitleCache.TryAdd(peerChannelId, fallback);
+        return fallback;
+    }
+
+    private string GetForwardSourceInfo(MessageFwdHeader fwdFrom)
     {
         if (fwdFrom.from_id != null)
         {
-            return fwdFrom.from_id switch
+            if (fwdFrom.from_id is PeerChannel peerChannel)
             {
-                PeerChannel peerChannel => $"Channel:{peerChannel.channel_id}",
-                PeerUser peerUser => $"User:{peerUser.user_id}",
-                PeerChat peerChat => $"Chat:{peerChat.chat_id}",
-                _ => "Unknown",
-            };
+                // peerChannel.channel_id is the numeric id of the source channel
+                return GetChannelTitle(peerChannel.channel_id);
+            }
+
+            if (fwdFrom.from_id is PeerUser peerUser)
+            {
+                return $"User:{peerUser.user_id}";
+            }
+
+            if (fwdFrom.from_id is PeerChat peerChat)
+            {
+                return $"Chat:{peerChat.chat_id}";
+            }
+
+            return "Unknown";
         }
 
         return !string.IsNullOrEmpty(fwdFrom.from_name)
@@ -550,10 +675,10 @@ public class TelegramChannelsResenderService(
         long hash = 0;
         foreach (var message in messages)
         {
-            hash = hash ^ (hash >> 21);
-            hash = hash ^ (hash << 35);
-            hash = hash ^ (hash >> 4);
-            hash = hash + message.ID;
+            hash ^= (hash >> 21);
+            hash ^= (hash << 35);
+            hash ^= (hash >> 4);
+            hash += message.ID;
         }
         return hash;
     }

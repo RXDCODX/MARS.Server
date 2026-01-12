@@ -15,7 +15,6 @@ public partial class Tekken8FrameData(
     IOptions<FramedataConfiguration> framedataOptions
 ) : BackgroundService, ITelegramusService
 {
-    private readonly FramedataStagingService _stagingService = stagingService;
     private readonly FramedataConfiguration _framedataConfig = framedataOptions.Value;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -40,19 +39,19 @@ public partial class Tekken8FrameData(
         {
             // Создаем парсер для основного источника
             var primaryParser =
-                options != null
+                options == null
                     ? FramedataParserFactory.CreateDefaultParser(
                         primary,
                         logger,
                         dbContextFactory,
-                        _stagingService,
+                        stagingService,
                         _cancellationToken
                     )
                     : FramedataParserFactory.CreateParser(
                         primary,
                         logger,
                         dbContextFactory,
-                        _stagingService,
+                        stagingService,
                         _cancellationToken,
                         options
                     );
@@ -67,29 +66,29 @@ public partial class Tekken8FrameData(
         try
         {
             // Вторичный источник всегда работает в режиме дополнения и обрабатывает ВСЕХ персонажей
-            var secondaryOptions = new FramedataParserOptions
-            {
-                RequestDelaySeconds = options?.RequestDelaySeconds ?? 2,
-                CharacterDelaySeconds = options?.CharacterDelaySeconds ?? 5,
-                UseStagingService = options?.UseStagingService ?? true,
-                ParseMoves = options?.ParseMoves ?? true,
-                IsSupplementMode = true, // Всегда включаем режим дополнения
-                MaxRetries = options?.MaxRetries ?? 3,
-                HttpTimeoutSeconds = options?.HttpTimeoutSeconds ?? 30,
-            };
+            //var secondaryOptions = new FramedataParserOptions
+            //{
+            //    RequestDelaySeconds = options?.RequestDelaySeconds ?? 2,
+            //    CharacterDelaySeconds = options?.CharacterDelaySeconds ?? 5,
+            //    UseStagingService = options?.UseStagingService ?? true,
+            //    ParseMoves = options?.ParseMoves ?? true,
+            //    IsSupplementMode = true, // Всегда включаем режим дополнения
+            //    MaxRetries = options?.MaxRetries ?? 3,
+            //    HttpTimeoutSeconds = options?.HttpTimeoutSeconds ?? 30,
+            //};
 
-            var secondaryParser = FramedataParserFactory.CreateParser(
-                secondary,
-                logger,
-                dbContextFactory,
-                _stagingService,
-                _cancellationToken,
-                secondaryOptions
-            );
+            //var secondaryParser = FramedataParserFactory.CreateParser(
+            //    secondary,
+            //    logger,
+            //    dbContextFactory,
+            //    stagingService,
+            //    _cancellationToken,
+            //    secondaryOptions
+            //);
 
-            // Обрабатываем ВСЕХ персонажей в режиме дополнения
-            var allCharacterKeys = Aliases.CharacterNameAliases.Keys.ToList();
-            await secondaryParser.ParseCharactersAndMoves(allCharacterKeys);
+            //// Обрабатываем ВСЕХ персонажей в режиме дополнения
+            //var allCharacterKeys = Aliases.CharacterNameAliases.Keys.ToList();
+            //await secondaryParser.ParseCharactersAndMoves(allCharacterKeys);
         }
         catch (Exception ex)
         {
@@ -208,7 +207,7 @@ public partial class Tekken8FrameData(
                     supplementSource,
                     logger,
                     dbContextFactory,
-                    _stagingService,
+                    stagingService,
                     _cancellationToken,
                     options
                 );
@@ -220,7 +219,7 @@ public partial class Tekken8FrameData(
                     supplementSource,
                     logger,
                     dbContextFactory,
-                    _stagingService,
+                    stagingService,
                     _cancellationToken
                 );
             }

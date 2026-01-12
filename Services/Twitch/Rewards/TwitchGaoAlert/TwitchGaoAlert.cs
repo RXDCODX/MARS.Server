@@ -74,7 +74,7 @@ public class TwitchGaoAlert(
                                 if (twitchUser is { Users.Length: > 0 })
                                 {
                                     var user = twitchUser.Users.First();
-                                    gaoAlert = new GaoAlertDto()
+                                    gaoAlert = new GaoAlertDto
                                     {
                                         TwitchUser = user,
                                         IsJustText = false,
@@ -94,7 +94,7 @@ public class TwitchGaoAlert(
                         }
                     }
 
-                    gaoAlert = new GaoAlertDto() { IsJustText = true, JustText = text };
+                    gaoAlert = new GaoAlertDto { IsJustText = true, JustText = text };
                     await hubContext.Clients.All.GaoAlert(gaoAlert);
                     logger.LogInformation("Gao alert with user {text}", text);
                 }

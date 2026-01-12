@@ -229,7 +229,7 @@ public class UpdateHandler : IUpdateHandler
             }
             else
             {
-                var obset = new TelegramUpdateReceiverOffset()
+                var obset = new TelegramUpdateReceiverOffset
                 {
                     Offset = updateId,
                     Id = Guid.NewGuid(),

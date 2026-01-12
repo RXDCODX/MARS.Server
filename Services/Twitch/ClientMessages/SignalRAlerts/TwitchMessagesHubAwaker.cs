@@ -106,7 +106,7 @@ public class TwitchMessagesHubAwaker(
                             Random.Shared.Shuffle(alerts);
                             var info = alerts[0];
 
-                            var alert = new MediaDto() { MediaInfo = info };
+                            var alert = new MediaDto { MediaInfo = info };
 
                             await hubContext.Clients.All.Alert(alert);
                             break;

@@ -126,7 +126,7 @@ public class FumoFridayWorker(
                                 _cancellationToken
                             );
 
-                            var host = new FumoUser() { TwitchId = id, LastTime = now };
+                            var host = new FumoUser { TwitchId = id, LastTime = now };
 
                             await dbContext.FumoUsers.AddAsync(host, _cancellationToken);
                             await dbContext.SaveChangesAsync(_cancellationToken);

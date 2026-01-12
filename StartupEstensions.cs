@@ -136,7 +136,7 @@ public static class StartupEstensions
         // Регистрируем сервис-обертку для WTelegram как Singleton
         // UpdateHandler получит его через IServiceProvider
         services.AddSingleton<WTelegramClientService>();
-        
+
         // Для обратной совместимости регистрируем также WTelegram.Client
         services.AddSingleton<WTelegram.Client>(sp =>
         {
@@ -184,7 +184,7 @@ public static class StartupEstensions
             var twitchApi = new TwitchAPI(
                 sp.GetRequiredService<ILoggerFactory>(),
                 sp.GetRequiredService<IRateLimiter>(),
-                new ApiSettings() { ClientId = twitchConfig.ClientId },
+                new ApiSettings { ClientId = twitchConfig.ClientId },
                 new TwitchHttpClient(sp.GetRequiredService<ILogger<TwitchHttpClient>>())
             )
             {
@@ -550,8 +550,8 @@ public static class StartupEstensions
     internal static IServiceCollection AddSyntheziaServices(this IServiceCollection services)
     {
         services.AddSingleton<ITtsVoiceRepository, TtsVoiceRepository>();
-        services.AddSingleton(
-            sp => VoicerFactory.CreateVoicer(
+        services.AddSingleton(sp =>
+            VoicerFactory.CreateVoicer(
                 sp.GetRequiredService<ILogger<IVoicer>>(),
                 sp.GetRequiredService<ITtsVoiceRepository>()
             )

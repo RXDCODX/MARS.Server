@@ -110,8 +110,15 @@ public abstract class BaseFramedataParser(
             }
 
             // Сохраняем мувы
+            // Use the tracked character instance to avoid tracking duplicates
+            var trackedCharacter = existingChar ?? character;
+
             foreach (var move in moves)
             {
+                // Ensure move refers to the tracked character to avoid EF attaching a different instance
+                move.CharacterName = trackedCharacter.Name;
+                move.Character = trackedCharacter;
+
                 var existingMove = await db.TekkenMoves.FirstOrDefaultAsync(
                     m => m.CharacterName == move.CharacterName && m.Command == move.Command,
                     CancellationToken

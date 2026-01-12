@@ -101,7 +101,7 @@ public class RandomArt(
                             ? staticFilesOptions.RequestPath.Value
                             : staticFilesOptions.RequestPath.Value + '/';
 
-                    var mediaDto = new MediaDto()
+                    var mediaDto = new MediaDto
                     {
                         MediaInfo = new MediaInfo
                         {

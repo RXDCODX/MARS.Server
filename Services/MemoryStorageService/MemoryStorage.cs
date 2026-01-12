@@ -44,7 +44,7 @@ public static class MemoryStorage
             var extension = Path.GetExtension(fileName);
             var mediaType = extension.GetFileMediaType();
 
-            var content = new MemoryFile()
+            var content = new MemoryFile
             {
                 Exstension = extension,
                 MediaType = mediaType,

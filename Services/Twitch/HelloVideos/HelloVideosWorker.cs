@@ -125,7 +125,7 @@ public class HelloVideoWorker(
         user.MediaInfo.FixAlertText(name, string.Empty);
         user.MediaInfo.TextInfo.KeyWordsColor = color;
 
-        var mediaDto = new MediaDto() { MediaInfo = user.MediaInfo };
+        var mediaDto = new MediaDto { MediaInfo = user.MediaInfo };
 
         await hubContext.Clients.All.Alert(mediaDto);
         return user.TwitchUser?.DisplayName;

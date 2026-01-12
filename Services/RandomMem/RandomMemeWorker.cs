@@ -106,7 +106,7 @@ public class RandomMemeWorker(
 
                 var cunter = 1;
                 dbContext.RandomMemeOrder.AddRange(
-                    newFiles.Select((a) => new MemeOrder() { FilePath = a, Order = cunter++ })
+                    newFiles.Select((a) => new MemeOrder { FilePath = a, Order = cunter++ })
                 );
             }
 

@@ -213,7 +213,7 @@ public class TwitchUser
 
     public static TwitchUser FromModerator(Moderator mod)
     {
-        return new TwitchUser()
+        return new TwitchUser
         {
             TwitchId = mod.UserId,
             UserLogin = mod.UserLogin,
@@ -226,7 +226,7 @@ public class TwitchUser
 
     public static TwitchUser? FromVip(ChannelVIPsResponseModel vip)
     {
-        return new TwitchUser()
+        return new TwitchUser
         {
             DisplayName = vip.UserName,
             TwitchId = vip.UserId,
