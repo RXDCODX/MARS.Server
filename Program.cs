@@ -1,5 +1,4 @@
 ﻿using System.Diagnostics;
-using MARS.Server.Configuration;
 using MARS.Server.CustomLoggers.DatabaseLogger;
 using MARS.Server.CustomLoggers.SignalRLogger;
 using MARS.Server.CustomLoggers.TelegramLogger;

@@ -1,6 +1,7 @@
 ﻿using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.Twitch.Management.Entitys;
+using TwitchLib.Api.Helix.Models.Moderation.BanUser;
 using TwitchLib.Client.Events;
 using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Websockets;
@@ -25,7 +26,8 @@ public class TwitchMikuBeamRewardService(
     public bool IsServiceActive { get; set; } = true;
     public int Cost { get; init; } = 1580;
 
-    private readonly HashSet<string> _allUserIds = new(); // Все ID пользователей для отображения (включая модераторов)
+    private readonly HashSet<string> _allUserIds = []; // Все ID пользователей для отображения (включая модераторов)
+    private readonly HashSet<string> _moderatorIds = []; // ID модераторов
     private readonly SemaphoreSlim _semaphoreSlim = new(1);
     private DateTimeOffset _lastActivation = DateTimeOffset.MinValue;
     private const int MaxStoredMessages = 100;
@@ -85,6 +87,12 @@ public class TwitchMikuBeamRewardService(
         _semaphoreSlim.Wait();
         _allUserIds.Add(e.ChatMessage.UserId);
 
+        // Отслеживаем модераторов
+        if (e.ChatMessage.IsModerator)
+        {
+            _moderatorIds.Add(e.ChatMessage.UserId);
+        }
+
         while (_allUserIds.Count > MaxStoredMessages)
         {
             _allUserIds.Remove(e.ChatMessage.UserId);
@@ -142,7 +150,7 @@ public class TwitchMikuBeamRewardService(
             );
 
             // Используем все ID пользователей (включая модераторов) для отображения
-            _semaphoreSlim.Wait();
+            await _semaphoreSlim.WaitAsync();
             var uniqueUserIds = _allUserIds.ToList();
             _semaphoreSlim.Release();
 
@@ -189,7 +197,7 @@ public class TwitchMikuBeamRewardService(
     }
 
     /// <summary>
-    /// Удаляет все сообщения в чате через Twitch API
+    /// Удаляет все сообщения в чате через Twitch API и отправляет юзеров в 1-секундный таймаут
     /// </summary>
     public async Task DeleteMessagesAsync()
     {
@@ -201,16 +209,44 @@ public class TwitchMikuBeamRewardService(
 
         try
         {
-            logger.LogInformation("MIKU MIKU BEAM: начинается удаление всех сообщений в чате");
+            // Получаем список юзеров для таймаута (исключаем модераторов)
+            await _semaphoreSlim.WaitAsync();
+            var usersToTimeout = _allUserIds
+                .Where(userId => !_moderatorIds.Contains(userId))
+                .ToList();
+            _semaphoreSlim.Release();
 
-            await api.Helix.Moderation.DeleteChatMessagesAsync(
-                TwitchExstension.ChannelId,
-                TwitchExstension.ChannelId,
-                null,
-                tokenService.Token?.AccessToken
-            );
+            if (usersToTimeout.Count > 0)
+            {
+                logger.LogInformation(
+                    "MIKU MIKU BEAM: отправляем {Count} юзеров в 1-секундный таймаут",
+                    usersToTimeout.Count
+                );
 
-            logger.LogInformation("MIKU MIKU BEAM: все сообщения удалены успешно");
+                // Отправляем каждого юзера в 1-секундный таймаут
+                foreach (var userId in usersToTimeout)
+                {
+                    try
+                    {
+                        await api.Helix.Moderation.BanUserAsync(
+                            TwitchExstension.ChannelId,
+                            userId,
+                            new BanUserRequest { Duration = 1 },
+                            tokenService.Token.AccessToken
+                        );
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogWarning(
+                            ex,
+                            "MIKU MIKU BEAM: не удалось отправить юзера {UserId} в таймаут",
+                            userId
+                        );
+                    }
+                }
+
+                logger.LogInformation("MIKU MIKU BEAM: юзеры успешно отправлены в таймаут");
+            }
         }
         catch (Exception ex)
         {
@@ -230,7 +266,7 @@ public class TwitchMikuBeamRewardService(
             logger.LogInformation("MIKU MIKU BEAM: ручная активация");
 
             // Используем все ID пользователей (включая модераторов) для отображения
-            _semaphoreSlim.Wait();
+            await _semaphoreSlim.WaitAsync();
             var uniqueUserIds = _allUserIds.ToList();
             _semaphoreSlim.Release();
 

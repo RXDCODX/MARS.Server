@@ -54,7 +54,7 @@ public class ScoreboardService(
             // Отменяем предыдущий таймер, если он существует
             if (PendingUpdates.TryGetValue(updateKey, out var existing))
             {
-                existing.Timer.Dispose();
+                await existing.Timer.DisposeAsync();
             }
 
             // Создаем новый таймер для отложенного обновления
@@ -83,7 +83,7 @@ public class ScoreboardService(
         if (PendingUpdates.TryGetValue(updateKey, out var pending))
         {
             stateToUpdate = pending.State;
-            pending.Timer.Dispose();
+            await pending.Timer.DisposeAsync();
             PendingUpdates.Remove(updateKey);
         }
 

@@ -65,7 +65,7 @@ public class RouleteGame(
                 await using AppDbContext context =
                     await factory.CreateDbContextAsync(token) ?? throw new Exception("еблан?");
                 Host host =
-                    context.Hosts.Find(shotPlayer.TwitchId)
+                    await context.Hosts.FindAsync(shotPlayer.TwitchId)
                     ?? throw new NullReferenceException(
                         "Обращение к спассеному host'у который был спасен"
                     );

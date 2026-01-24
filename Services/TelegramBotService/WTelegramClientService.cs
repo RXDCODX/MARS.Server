@@ -163,7 +163,7 @@ public class WTelegramClientService : IDisposable
             }
 
             // Dispose старого клиента
-            _client?.Dispose();
+            await _client?.DisposeAsync();
             _client = null;
 
             // Создаем нового клиента и авторизуемся

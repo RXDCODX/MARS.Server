@@ -16,7 +16,7 @@ public class WaifuRollCooldownNotificationService(
 {
     private const int WaifuRollCost = 4;
     private readonly Dictionary<string, DateTimeOffset> _pendingNotifications = new();
-    private readonly HashSet<string> _notifiedUsers = new();
+    private readonly HashSet<string> _notifiedUsers = [];
     private readonly SemaphoreSlim _semaphore = new(1, 1);
 
     protected override Task ExecuteAsync(CancellationToken stoppingToken)

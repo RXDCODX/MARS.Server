@@ -252,7 +252,7 @@ public class TekkenVictorina(
                     AddOrUpdateGoodAnswer(displayName, answerRange);
                     _currentGame.IsWaifuHelp = true;
                     _currentGame.WaifuId = (await dbContext.Hosts.FindAsync(userId))?.WaifuBrideId;
-                    _currentGame.CancellationTokenForRightAnswer.Cancel();
+                    await _currentGame.CancellationTokenForRightAnswer.CancelAsync();
                     return true;
                 }
             }
@@ -273,7 +273,7 @@ public class TekkenVictorina(
         {
             await _semaphoreSlim.WaitAsync();
             AddOrUpdateGoodAnswer(displayName, userRange.Value);
-            _currentGame.CancellationTokenForRightAnswer.Cancel();
+            await _currentGame.CancellationTokenForRightAnswer.CancelAsync();
             return true;
         }
 
