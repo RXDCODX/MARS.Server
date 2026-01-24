@@ -29,10 +29,9 @@ public class WTelegramController(
 
             var status = await clientService.GetClientStatusAsync(cancellationToken);
 
-            return Ok(WTelegramOperationResult.CreateSuccess(
-                "Переавторизация выполнена успешно",
-                status
-            ));
+            return Ok(
+                WTelegramOperationResult.CreateSuccess("Переавторизация выполнена успешно", status)
+            );
         }
         catch (Exception ex)
         {
@@ -40,10 +39,7 @@ public class WTelegramController(
 
             return StatusCode(
                 500,
-                WTelegramOperationResult.CreateFailure(
-                    "Ошибка при переавторизации",
-                    ex.Message
-                )
+                WTelegramOperationResult.CreateFailure("Ошибка при переавторизации", ex.Message)
             );
         }
     }
@@ -67,10 +63,7 @@ public class WTelegramController(
 
             return StatusCode(
                 500,
-                WTelegramOperationResult.CreateFailure(
-                    "Ошибка при получении статуса",
-                    ex.Message
-                )
+                WTelegramOperationResult.CreateFailure("Ошибка при получении статуса", ex.Message)
             );
         }
     }

@@ -55,12 +55,12 @@ public class NullVoicer(ILogger<IVoicer> logger) : IVoicer
     )
     {
         logger.LogWarning("Speech synthesis is not supported on this platform.");
-        return Task.FromResult<IReadOnlyDictionary<string, string>>(new Dictionary<string, string>());
+        return Task.FromResult<IReadOnlyDictionary<string, string>>(
+            new Dictionary<string, string>()
+        );
     }
 
-    public Task<List<string>> GetInstalledVoicesAsync(
-        CancellationToken cancellationToken = default
-    )
+    public Task<List<string>> GetInstalledVoicesAsync(CancellationToken cancellationToken = default)
     {
         logger.LogWarning("Speech synthesis is not supported on this platform.");
         return Task.FromResult(new List<string>());

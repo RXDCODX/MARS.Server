@@ -31,21 +31,25 @@ public class WTelegramOperationResult
     public static WTelegramOperationResult CreateSuccess(
         string message,
         WTelegramClientStatus? clientStatus = null
-    ) => new()
-    {
-        Success = true,
-        Message = message,
-        ClientStatus = clientStatus
-    };
+    ) =>
+        new()
+        {
+            Success = true,
+            Message = message,
+            ClientStatus = clientStatus,
+        };
 
     /// <summary>
     /// Создает результат с ошибкой
     /// </summary>
-    public static WTelegramOperationResult CreateFailure(string message, string? errorDetails = null) =>
+    public static WTelegramOperationResult CreateFailure(
+        string message,
+        string? errorDetails = null
+    ) =>
         new()
         {
             Success = false,
             Message = message,
-            ErrorDetails = errorDetails
+            ErrorDetails = errorDetails,
         };
 }

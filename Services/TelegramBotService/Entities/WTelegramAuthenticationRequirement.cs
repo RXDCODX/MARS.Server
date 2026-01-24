@@ -33,5 +33,5 @@ public enum WTelegramAuthenticationRequirement
     /// <summary>
     /// Неизвестное требование
     /// </summary>
-    Unknown
+    Unknown,
 }

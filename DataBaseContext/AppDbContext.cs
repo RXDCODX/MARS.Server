@@ -8,14 +8,14 @@ using MARS.Server.Services.Scoreboard.Entitys;
 using MARS.Server.Services.ServiceManager.Entitys;
 using MARS.Server.Services.SoundRequest.Entities;
 using MARS.Server.Services.StreamAcrhive_UNUSED.Entitys;
+using MARS.Server.Services.TelegramPrivateChannelsResender.Entities;
 using MARS.Server.Services.Twitch.ClientMessages.AutoMessages.Entitys;
 using MARS.Server.Services.Twitch.HelloVideos.Entitys;
 using MARS.Server.Services.Twitch.Management.Entitys;
 using MARS.Server.Services.Twitch.Rewards.ChannelRewards.Entities;
 using MARS.Server.Services.Twitch.Rewards.TwitchMikuMondayReward.Entities;
-using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using MARS.Server.Services.Twitch.Synthesizer.Enitity;
-using MARS.Server.Services.TelegramPrivateChannelsResender.Entities;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace MARS.Server.DataBaseContext;
 
@@ -333,10 +333,7 @@ public sealed partial class AppDbContext : DbContext
         // Конфигурация для EnvironmentVariable
         modelBuilder.Entity<EnvironmentVariable>().HasIndex(e => e.Key).IsUnique();
 
-        modelBuilder
-            .Entity<BlockedTtsVoice>()
-            .HasIndex(e => e.VoiceName)
-            .IsUnique();
+        modelBuilder.Entity<BlockedTtsVoice>().HasIndex(e => e.VoiceName).IsUnique();
 
         // Конфигурация связей с TwitchUser вынесена в TwitchUsersDbContext
 

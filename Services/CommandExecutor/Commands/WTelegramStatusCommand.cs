@@ -8,7 +8,8 @@ namespace MARS.Server.Services.CommandExecutor.Commands;
 public class WTelegramStatusCommand(WTelegramClientService clientService) : BaseCommand
 {
     public override string CommandName => "wtelegramstatus";
-    public override string Description => "Проверка, способен ли WTelegramClient принимать сообщения";
+    public override string Description =>
+        "Проверка, способен ли WTelegramClient принимать сообщения";
     public override bool IsAdminCommand => true;
     public override Platform[] AvailablePlatforms => [Platform.Telegram, Platform.Api];
 
