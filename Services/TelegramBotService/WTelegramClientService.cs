@@ -42,25 +42,10 @@ public class WTelegramClientService : IDisposable
     /// <summary>
     /// Обрабатывает обновления от Telegram Bot для получения экземпляра ITelegramBotClient
     /// </summary>
-    public async Task HandleUpdate(ITelegramBotClient _, Update? update)
+    public Task HandleUpdate(ITelegramBotClient _, Update? update)
     {
         // Кэшируем экземпляр клиента при первом обновлении
         _logger.LogInformation("WTelegramClientService получил экземпляр ITelegramBotClient");
-
-        try
-        {
-            await _botClient.SendMessage(
-                TelegramExstension.Rxdcodx,
-                "WTelegramClient успешно подключен"
-            );
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(
-                ex,
-                "Не удалось отправить уведомление о подключении WTelegramClient"
-            );
-        }
 
         if (
             update?.Message?.Text is { } text
@@ -70,6 +55,8 @@ public class WTelegramClientService : IDisposable
             pendingCode.TrySetResult(text);
             _logger.LogInformation("Получен код верификации через бота");
         }
+
+        return Task.CompletedTask;
     }
 
     /// <summary>
@@ -163,7 +150,10 @@ public class WTelegramClientService : IDisposable
             }
 
             // Dispose старого клиента
-            await _client?.DisposeAsync();
+            if (_client != null)
+            {
+                await _client.DisposeAsync();
+            }
             _client = null;
 
             // Создаем нового клиента и авторизуемся
