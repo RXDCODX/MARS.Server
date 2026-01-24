@@ -21,7 +21,7 @@ public class TwitchMikuMondayRewardService(
     IHostEnvironment environment
 ) : TemporaryReward(channelRewardsService, logger, environment)
 {
-    public override string AlertDisplayName { get; set; } = "🎤 Miku Monday";
+    public override string AlertDisplayName { get; set; } = "🎤 Miku Monday [BETA TEST]";
 
     public override string AlertDescription { get; set; } =
         "Мику заметила нас и решила посетить этот стрим! Активируй награду и получи от неё персональный трек! Один раз - каждый понедельник! ♪";
@@ -30,10 +30,9 @@ public class TwitchMikuMondayRewardService(
 
     public override int Cost { get; init; } = 39; // 39 - отсылка к числу Мику (3/9 - 9 марта)
 
-    //// Награда доступна только по понедельникам
-    //var result = date.DayOfWeek == DayOfWeek.Monday;
-    //return result;
-    public override Func<DateTime, bool> IsRewardEnabled { get; set; } = date => false;
+    // Награда доступна только по понедельникам
+    public override Func<DateTime, bool> IsRewardEnabled { get; set; } =
+        date => date.DayOfWeek == DayOfWeek.Monday;
 
     public bool IsServiceActive { get; set; } = true;
 

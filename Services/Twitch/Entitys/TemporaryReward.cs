@@ -54,7 +54,7 @@ public abstract class TemporaryReward(
 
     private async void OnTimerElapsed(object? state, ElapsedEventArgs elapsedEventArgs)
     {
-        if (environment.IsDevelopment())
+        if (!environment.IsProduction())
         {
             return;
         }
