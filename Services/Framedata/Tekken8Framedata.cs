@@ -30,10 +30,6 @@ public partial class Tekken8FrameData(
     {
         // Определяем порядок источников из конфигурации
         var primary = source ?? _framedataConfig.PrimarySource;
-        var secondary =
-            primary == FramedataSource.Tekkendocs
-                ? FramedataSource.Wavu
-                : FramedataSource.Tekkendocs;
 
         try
         {
