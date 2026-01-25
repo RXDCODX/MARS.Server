@@ -1,0 +1,60 @@
+await fetch("https://freetts.ru/api/history", {
+    "credentials": "include",
+    "headers": {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:146.0) Gecko/20100101 Firefox/146.0",
+        "Accept": "*/*",
+        "Accept-Language": "ru-RU,ru;q=0.8,en-US;q=0.5,en;q=0.3",
+        "Sec-GPC": "1",
+        "Sec-Fetch-Dest": "empty",
+        "Sec-Fetch-Mode": "cors",
+        "Sec-Fetch-Site": "same-origin",
+        "Priority": "u=4",
+        "Pragma": "no-cache",
+        "Cache-Control": "no-cache"
+    },
+    "referrer": "https://freetts.ru/",
+    "method": "GET",
+    "mode": "cors"
+});
+
+{
+    "status": "success",
+    "message": "OK",
+    "data": [
+        {
+            "id": 18089524,
+            "name": "Евдокия",
+            "text": "ПРИВЕТ",
+            "url": "https://freetts.ru/api/audio/convert/2ab0492b78039b2dc12ec2dfefa6b432.mp3",
+            "status": "done"
+        },
+        {
+            "id": 18089539,
+            "name": "Агафья",
+            "text": "ПРИВЕТ",
+            "url": "https://freetts.ru/api/audio/convert/b311f395dcdda02245ad8ccc3e1c8154.mp3",
+            "status": "done"
+        },
+        {
+            "id": 18089937,
+            "name": "Анастасия",
+            "text": "ПРИВЕТ",
+            "url": "https://freetts.ru/api/audio/convert/f49ef600f6d88368f7640ce655fe96e4.mp3",
+            "status": "done"
+        },
+        {
+            "id": 18089952,
+            "name": "Эмиль",
+            "text": "ПРИВЕТ",
+            "url": "https://freetts.ru/api/audio/convert/8d4b0fa7ee224eff48639f69051d571d.mp3",
+            "status": "done"
+        },
+        {
+            "id": 18089984,
+            "name": "Эмиль",
+            "text": "ПРИВЕТ",
+            "url": "https://freetts.ru/api/audio/convert/8d4b0fa7ee224eff48639f69051d571d.mp3",
+            "status": "done"
+        }
+    ]
+}

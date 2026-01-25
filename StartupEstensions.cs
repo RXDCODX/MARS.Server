@@ -52,6 +52,7 @@ using MARS.Server.Services.Twitch.StreamBotNotifications;
 using MARS.Server.Services.Twitch.StreamManagement;
 using MARS.Server.Services.Twitch.Synthesizer;
 using MARS.Server.Services.Twitch.Synthesizer.Enitity;
+using MARS.Server.Services.Twitch.Synthesizer.FreeTts;
 using MARS.Server.Services.Twitch.TwitchFollowers;
 using MARS.Server.Services.WaifuRoll;
 using MARS.Server.Services.WaifuRoll.Entitys.Interfaces;
@@ -550,12 +551,34 @@ public static class StartupEstensions
     internal static IServiceCollection AddSyntheziaServices(this IServiceCollection services)
     {
         services.AddSingleton<ITtsVoiceRepository, TtsVoiceRepository>();
-        services.AddSingleton(sp =>
-            VoicerFactory.CreateVoicer(
-                sp.GetRequiredService<ILogger<IVoicer>>(),
-                sp.GetRequiredService<ITtsVoiceRepository>()
-            )
-        );
+        
+        // Register FreeTTS Synthesizer services
+        services.AddFreeTtsSynthesizer();
+        
+        // Register HttpClient for FreeTtsVoicer
+        services.AddHttpClient<FreeTtsVoicer>();
+        
+        // Register FreeTtsVoicer with keyed service
+        services.AddSingleton<IVoicer>(sp =>
+        {
+            var synthesizerService = sp.GetService<IFreeTtsSynthesizerService>();
+            if (synthesizerService != null)
+            {
+                var voiceRepository = sp.GetRequiredService<ITtsVoiceRepository>();
+                var logger = sp.GetRequiredService<ILogger<IVoicer>>();
+                var environment = sp.GetRequiredService<IHostEnvironment>();
+                var httpClient = sp.GetRequiredService<HttpClient>();
+                return new FreeTtsVoicer(synthesizerService, voiceRepository, logger, environment, httpClient);
+            }
+
+            // Fallback to SyntheziaVoicer if FreeTTS is not available
+            var fallbackLogger = sp.GetRequiredService<ILogger<IVoicer>>();
+            var fallbackRepository = sp.GetRequiredService<ITtsVoiceRepository>();
+            return OperatingSystem.IsWindows()
+                ? new SyntheziaVoicer(fallbackLogger, fallbackRepository)
+                : new NullVoicer(fallbackLogger);
+        });
+        
         services.AddSingleton<SyntheziaQueueManager>();
         services.AddHostedService(sp => sp.GetRequiredService<SyntheziaQueueManager>());
         return services;

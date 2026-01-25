@@ -1,4 +1,5 @@
-﻿using MARS.Server.Services.Twitch.Management.Entitys;
+﻿using System.Collections.Frozen;
+using MARS.Server.Services.Twitch.Management.Entitys;
 using TwitchLib.Api.Auth;
 using TwitchLib.Api.Helix.Models.Chat;
 using TwitchLib.Client.Models;
@@ -12,7 +13,7 @@ public static class TwitchExstension
     public const string BotName = "catisaai";
     public const string BotId = "888848441";
 
-    public static readonly List<string> BlackList =
+    public static readonly FrozenSet<string> BlackList =
     [
         BotName,
         "streamelements",

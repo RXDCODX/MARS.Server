@@ -6,5 +6,5 @@ public class MessageToSynthezid
     public string Message { get; set; }
     public string Name { get; set; }
     public DateTimeOffset CreationDateTime { get; set; }
-    public Guid Guid { get; set; }
+    public Guid Guid { get; set; } = Guid.NewGuid();
 }

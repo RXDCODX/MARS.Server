@@ -11,4 +11,5 @@ public interface ITtsVoiceRepository
         string voiceName,
         CancellationToken cancellationToken = default
     );
+    Task EnsureDefaultBlockedVoicesAsync(CancellationToken cancellationToken = default);
 }

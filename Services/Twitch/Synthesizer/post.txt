@@ -1,0 +1,51 @@
+await fetch("https://freetts.ru/api/synthesis", {
+    "credentials": "include",
+    "headers": {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:146.0) Gecko/20100101 Firefox/146.0",
+        "Accept": "*/*",
+        "Accept-Language": "ru-RU,ru;q=0.8,en-US;q=0.5,en;q=0.3",
+        "Content-Type": "application/json",
+        "Sec-GPC": "1",
+        "Sec-Fetch-Dest": "empty",
+        "Sec-Fetch-Mode": "cors",
+        "Sec-Fetch-Site": "same-origin",
+        "Priority": "u=0",
+        "Pragma": "no-cache",
+        "Cache-Control": "no-cache"
+    },
+    "referrer": "https://freetts.ru/",
+    "body": "{\"text\":\"⁣ПРИВЕТ\",\"voiceid\":\"LkNrBvCxZtWu\",\"ext\":\"mp3\"}",
+    "method": "POST",
+    "mode": "cors"
+});
+
+{
+    "status": "pending",
+    "message": "Обработка: 0%",
+    "data": false
+}
+
+await fetch("https://freetts.ru/api/synthesis", {
+    "credentials": "include",
+    "headers": {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:146.0) Gecko/20100101 Firefox/146.0",
+        "Accept": "*/*",
+        "Accept-Language": "ru-RU,ru;q=0.8,en-US;q=0.5,en;q=0.3",
+        "Sec-GPC": "1",
+        "Sec-Fetch-Dest": "empty",
+        "Sec-Fetch-Mode": "cors",
+        "Sec-Fetch-Site": "same-origin",
+        "Priority": "u=4",
+        "Pragma": "no-cache",
+        "Cache-Control": "no-cache"
+    },
+    "referrer": "https://freetts.ru/",
+    "method": "GET",
+    "mode": "cors"
+});
+
+{
+    "status": 200,
+    "message": "Обработка: 100%",
+    "data": false
+}

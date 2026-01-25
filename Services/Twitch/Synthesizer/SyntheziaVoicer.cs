@@ -29,6 +29,7 @@ public class SyntheziaVoicer : IVoicer
             _speechSynthesizer.SetOutputToDefaultAudioDevice();
             try
             {
+                _voiceRepository.EnsureDefaultBlockedVoicesAsync().GetAwaiter().GetResult();
                 RefreshBlockedVoicesAsync().GetAwaiter().GetResult();
             }
             catch (Exception ex)

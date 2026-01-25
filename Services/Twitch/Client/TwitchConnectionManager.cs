@@ -1,4 +1,5 @@
 ﻿using TwitchLib.Client;
+using TwitchLib.Client.Enums;
 using TwitchLib.Client.Models;
 using TwitchLib.Communication.Clients;
 using TwitchLib.Communication.Models;
@@ -39,7 +40,7 @@ public class TwitchConnectionManager : IHostedService
         _webSocketClient = new WebSocketClient(clientOptions);
         _client = new TwitchClient(
             _webSocketClient,
-            default,
+            ClientProtocol.WebSocket,
             loggerFactory.CreateLogger<TwitchClient>()
         );
 

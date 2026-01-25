@@ -73,6 +73,16 @@ public class TtsVoiceRepository(IDbContextFactory<AppDbContext> contextFactory)
         return true;
     }
 
+    public async Task EnsureDefaultBlockedVoicesAsync(CancellationToken cancellationToken = default)
+    {
+        var defaultBlockedVoices = new[] { "Microsoft Pavel" };
+
+        foreach (var voiceName in defaultBlockedVoices)
+        {
+            await AddBlockedVoiceAsync(voiceName, cancellationToken);
+        }
+    }
+
     private static string Normalize(string voiceName)
     {
         return voiceName.Trim().ToLowerInvariant();
