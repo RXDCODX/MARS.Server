@@ -1,5 +1,7 @@
-﻿using MARS.Server.Services.Twitch.FumoFriday.Entitys;
+﻿using MARS.Server.Services.Twitch.Entitys;
+using MARS.Server.Services.Twitch.FumoFriday.Entitys;
 using MARS.Server.Services.Twitch.Management.Entitys;
+using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
 using TwitchLib.Client.Events;
 using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Websockets;
@@ -7,23 +9,62 @@ using TwitchLib.EventSub.Websockets;
 namespace MARS.Server.Services.Twitch.FumoFriday;
 
 public class FumoFridayWorker(
-    IHubContext<TelegramusHub, ITelegramusHub> alertsHub,
+    ChannelRewardsService channelRewardsService,
     IDbContextFactory<AppDbContext> dbContextFactory,
     ILogger<FumoFridayWorker> logger,
     IHostApplicationLifetime hostApplicationLifetime,
     ITwitchClient twitchClient,
     ITwitchAPI twitchApi,
     EventSubWebsocketClient wsClient,
-    TwitchUserEnsureService twitchUserEnsureService
-) : BackgroundService, ITwitchReward
+    TwitchUserEnsureService twitchUserEnsureService,
+    IHubContext<TelegramusHub, ITelegramusHub> alertsHub,
+    IHostEnvironment environment
+) : TemporaryReward(channelRewardsService, logger, environment)
 {
+    public override string AlertDisplayName { get; set; } = "🌙 Fumo Friday";
+
+    public override string AlertDescription { get; set; } =
+        "Присоединись к Fumo Friday и получи персональное сообщение от фумо каждую пятницу! ♪";
+
+    public override Color Color { get; set; } = Color.FromArgb(255, 192, 203); // Розовый цвет для Fumo
+
+    public override int Cost { get; init; } = 13;
+
+    // Награда доступна только по пятницам
+    public override Func<DateTime, bool> IsRewardEnabled { get; set; } =
+        date => date.DayOfWeek == DayOfWeek.Friday;
+
     public bool IsServiceActive { get; set; } = true;
-    public int Cost { get; init; } = 13;
 
     private readonly CancellationToken _cancellationToken =
         hostApplicationLifetime.ApplicationStopping;
 
     private readonly List<string> _users = [];
+
+    public override async Task StartAsync(CancellationToken cancellationToken)
+    {
+        await base.StartAsync(cancellationToken);
+
+        hostApplicationLifetime.ApplicationStarted.Register(() =>
+        {
+            twitchClient.OnMessageReceived += OnMessageReceived;
+            wsClient.ChannelPointsCustomRewardRedemptionAdd += OnRewardRedemption;
+        });
+
+        hostApplicationLifetime.ApplicationStopping.Register(() =>
+        {
+            twitchClient.OnMessageReceived -= OnMessageReceived;
+            wsClient.ChannelPointsCustomRewardRedemptionAdd -= OnRewardRedemption;
+        });
+    }
+
+    public override async Task StopAsync(CancellationToken cancelToken)
+    {
+        twitchClient.OnMessageReceived -= OnMessageReceived;
+        wsClient.ChannelPointsCustomRewardRedemptionAdd -= OnRewardRedemption;
+
+        await base.StopAsync(cancelToken);
+    }
 
     public async void OnMessageReceived(object? sender, OnMessageReceivedArgs e)
     {
@@ -167,21 +208,5 @@ public class FumoFridayWorker(
         {
             return null;
         }
-    }
-
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-    {
-        twitchClient.OnMessageReceived += OnMessageReceived;
-        wsClient.ChannelPointsCustomRewardRedemptionAdd += OnRewardRedemption;
-
-        // Ждем остановки сервиса
-        await Task.Delay(Timeout.Infinite, stoppingToken);
-    }
-
-    public override async Task StopAsync(CancellationToken cancellationToken)
-    {
-        twitchClient.OnMessageReceived -= OnMessageReceived;
-        wsClient.ChannelPointsCustomRewardRedemptionAdd -= OnRewardRedemption;
-        await base.StopAsync(cancellationToken);
     }
 }

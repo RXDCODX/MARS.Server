@@ -6,4 +6,5 @@ public partial class RootState
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     public int Id { get; set; }
     public bool RandomMemeOnlineIsStop { get; set; }
+    public long WaifuRollCooldownMinutes { get; set; } = 20;
 }

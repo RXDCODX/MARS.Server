@@ -12,7 +12,6 @@ public abstract class TemporaryReward(
 ) : IHostedService, ITwitchReward
 {
     private Timer? _timer;
-    private string? _rewardId;
     private readonly SemaphoreSlim _semaphore = new(1);
 
     public abstract string AlertDisplayName { get; set; }
@@ -87,50 +86,34 @@ public abstract class TemporaryReward(
     }
 
     /// <summary>
-    /// Убеждаемся, что награда существует. Если _rewardId есть - проверяем через API, иначе ищем/создаём
+    /// Убеждаемся, что награда существует. Ищем по названию и цене (всегда уникально).
     /// </summary>
     private async Task EnsureRewardExistsAsync()
     {
-        // Если _rewardId есть, проверяем что награда действительно существует
-        if (!string.IsNullOrWhiteSpace(_rewardId))
-        {
-            var existingReward = await channelRewardsService.GetRewardByIdAsync(_rewardId);
-
-            if (existingReward != null)
-            {
-                // Награда существует, всё хорошо
-                return;
-            }
-
-            // Награда не найдена - очищаем кэш и ищем заново
-            logger.LogWarning(
-                "Награда {AlertName} с Id: {RewardId} не найдена на сервере. Ищем заново.",
-                AlertDisplayName,
-                _rewardId
-            );
-            _rewardId = null;
-        }
-
         // Проверяем через API, не существует ли уже такая награда
         var existingRewards = await channelRewardsService.GetRewardsAsync();
 
-        var duplicateReward = existingRewards?.FirstOrDefault(r =>
+        var existingReward = existingRewards?.FirstOrDefault(r =>
             r.Title.Equals(AlertDisplayName, StringComparison.OrdinalIgnoreCase) && r.Cost == Cost
         );
 
-        if (duplicateReward != null)
+        if (existingReward != null)
         {
             logger.LogInformation(
-                "Найдена существующая награда {AlertName} с Id: {RewardId}. Используем её.",
+                "Награда {AlertName} (Cost: {Cost}) уже существует с Id: {RewardId}. Используем её.",
                 AlertDisplayName,
-                duplicateReward.Id
+                Cost,
+                existingReward.Id
             );
-            _rewardId = duplicateReward.Id;
             return;
         }
 
         // Награды нет - создаём
-        logger.LogInformation("Создание временной награды: {AlertName}", AlertDisplayName);
+        logger.LogInformation(
+            "Создание временной награды: {AlertName} (Cost: {Cost})",
+            AlertDisplayName,
+            Cost
+        );
 
         var request = new CreateCustomRewardsRequest
         {
@@ -150,7 +133,6 @@ public abstract class TemporaryReward(
 
         if (!string.IsNullOrWhiteSpace(rewardId))
         {
-            _rewardId = rewardId;
             logger.LogInformation(
                 "Временная награда {AlertName} успешно создана с Id: {RewardId}",
                 AlertDisplayName,
@@ -165,54 +147,46 @@ public abstract class TemporaryReward(
 
     private async Task<bool> RemoveRewardIfExistsAsync()
     {
-        var result = false;
+        // Ищем награду по названию и цене
+        var existingRewards = await channelRewardsService.GetRewardsAsync();
 
-        if (!string.IsNullOrWhiteSpace(_rewardId))
+        var rewardToDelete = existingRewards?.FirstOrDefault(r =>
+            r.Title.Equals(AlertDisplayName, StringComparison.OrdinalIgnoreCase) && r.Cost == Cost
+        );
+
+        if (rewardToDelete == null)
         {
-            // Проверяем через API, существует ли награда на сервере Twitch
-            var existingReward = await channelRewardsService.GetRewardByIdAsync(_rewardId);
-
-            if (existingReward == null)
-            {
-                logger.LogWarning(
-                    "Награда {AlertName} с Id: {RewardId} не найдена на сервере Twitch. Возможно, она уже была удалена.",
-                    AlertDisplayName,
-                    _rewardId
-                );
-                _rewardId = null;
-                result = true;
-            }
-            else
-            {
-                logger.LogInformation(
-                    "Удаление временной награды: {AlertName} (Id: {RewardId})",
-                    AlertDisplayName,
-                    _rewardId
-                );
-
-                var deleted = await channelRewardsService.DeleteRewardAsync(_rewardId);
-
-                if (deleted)
-                {
-                    logger.LogInformation(
-                        "Временная награда {AlertName} успешно удалена",
-                        AlertDisplayName
-                    );
-                    _rewardId = null;
-                    result = true;
-                }
-                else
-                {
-                    logger.LogError(
-                        "Не удалось удалить временную награду {AlertName} с Id: {RewardId}",
-                        AlertDisplayName,
-                        _rewardId
-                    );
-                }
-            }
+            logger.LogWarning(
+                "Награда {AlertName} (Cost: {Cost}) не найдена на сервере Twitch. Возможно, она уже была удалена.",
+                AlertDisplayName,
+                Cost
+            );
+            return true;
         }
 
-        return result;
+        logger.LogInformation(
+            "Удаление временной награды: {AlertName} (Id: {RewardId})",
+            AlertDisplayName,
+            rewardToDelete.Id
+        );
+
+        var deleted = await channelRewardsService.DeleteRewardAsync(rewardToDelete.Id);
+
+        if (deleted)
+        {
+            logger.LogInformation(
+                "Временная награда {AlertName} успешно удалена",
+                AlertDisplayName
+            );
+            return true;
+        }
+
+        logger.LogError(
+            "Не удалось удалить временную награду {AlertName} с Id: {RewardId}",
+            AlertDisplayName,
+            rewardToDelete.Id
+        );
+        return false;
     }
 
     private static string ColorToHex(Color color)

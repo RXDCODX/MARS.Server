@@ -1,5 +1,4 @@
 ﻿using System.Collections.Concurrent;
-using MARS.Server.Services.EnvironmentVariable;
 using MARS.Server.Services.Twitch;
 using MARS.Server.Services.Twitch.Rewards;
 using MARS.Server.Services.WaifuRoll.helpers;
@@ -13,8 +12,7 @@ public class WaifuRollService(
     IOptions<ShikimoriClientOptions> options,
     IDbContextFactory<AppDbContext> factory,
     WaifuRollEnsurenceService waifuDbHelper,
-    TwitchUserEnsureService twitchUserEnsureService,
-    EnvironmentVariableService environmentVariableService
+    TwitchUserEnsureService twitchUserEnsureService
 ) : BackgroundService, IWaifuRollService
 {
     /// <summary>
@@ -521,12 +519,10 @@ public class WaifuRollService(
 
     public async Task<TimeSpan> GetWaifuRollCoolDownAsync()
     {
-        var waifurollMinutes = await environmentVariableService.GetVariableAsync(
-            "waifurollMinutes"
-        );
-        var defaultValue = TimeSpan.FromMinutes(20);
-        var isGet = long.TryParse(waifurollMinutes?.Value, out var minutes);
+        await using var dbContext = await factory.CreateDbContextAsync();
+        var rootState = await dbContext.ApplicationState.AsNoTracking().FirstOrDefaultAsync();
+        var cooldownMinutes = rootState?.WaifuRollCooldownMinutes ?? 20;
 
-        return isGet ? TimeSpan.FromMinutes(minutes) : defaultValue;
+        return TimeSpan.FromMinutes(cooldownMinutes);
     }
 }
