@@ -230,8 +230,13 @@ public class TwitchMikuBeamRewardService(
                     {
                         await api.Helix.Moderation.BanUserAsync(
                             TwitchExstension.ChannelId,
-                            userId,
-                            new BanUserRequest { Duration = 1 },
+                            TwitchExstension.BotId,
+                            new BanUserRequest
+                            {
+                                Duration = 5,
+                                Reason = "MIKU MIKU BEAM",
+                                UserId = userId,
+                            },
                             tokenService.Token.AccessToken
                         );
                     }

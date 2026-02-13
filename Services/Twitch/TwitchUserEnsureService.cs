@@ -1,6 +1,7 @@
 ﻿using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.Twitch.TwitchFollowers;
+using Microsoft.EntityFrameworkCore;
 using TwitchLib.Client.Events;
 using TwitchLib.Client.Models;
 using TwitchLib.EventSub.Core.EventArgs.Channel;
@@ -268,17 +269,44 @@ public class TwitchUserEnsureService(
                         enrichedUser.TwitchId
                     );
 
-                    db.TwitchUsers.Add(enrichedUser);
-                    await db.SaveChangesAsync(cancellationToken);
+                    try
+                    {
+                        db.TwitchUsers.Add(enrichedUser);
+                        await db.SaveChangesAsync(cancellationToken);
 
-                    logger.LogInformation(
-                        "Создан новый пользователь Twitch: {UserName} (ID: {UserId}), Avatar: {Avatar}",
-                        enrichedUser.UserLogin,
-                        enrichedUser.TwitchId,
-                        enrichedUser.ProfileImageUrl ?? "null"
-                    );
+                        logger.LogInformation(
+                            "Создан новый пользователь Twitch: {UserName} (ID: {UserId}), Avatar: {Avatar}",
+                            enrichedUser.UserLogin,
+                            enrichedUser.TwitchId,
+                            enrichedUser.ProfileImageUrl ?? "null"
+                        );
 
-                    result = enrichedUser;
+                        result = enrichedUser;
+                    }
+                    catch (DbUpdateException ex)
+                        when (ex.InnerException?.Message.Contains("23505") == true)
+                    {
+                        // Обработка race condition: другой процесс создал пользователя одновременно
+                        logger.LogInformation(
+                            "Конфликт при создании пользователя {TwitchId}. Получение существующего пользователя.",
+                            enrichedUser.TwitchId
+                        );
+
+                        // Создаем новый контекст для получения созданного пользователя
+                        await using var dbRetry = await dbFactory.CreateDbContextAsync(
+                            cancellationToken
+                        );
+                        var createdUser = await dbRetry.TwitchUsers.FirstOrDefaultAsync(
+                            u => u.TwitchId == enrichedUser.TwitchId,
+                            cancellationToken: cancellationToken
+                        );
+
+                        result =
+                            createdUser
+                            ?? throw new InvalidOperationException(
+                                $"Не удалось получить пользователя {enrichedUser.TwitchId} после constraint violation"
+                            );
+                    }
                 }
             }
             catch (Exception ex)
