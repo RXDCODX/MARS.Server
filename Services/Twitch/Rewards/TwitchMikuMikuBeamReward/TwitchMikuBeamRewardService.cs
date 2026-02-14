@@ -230,7 +230,7 @@ public class TwitchMikuBeamRewardService(
                     {
                         await api.Helix.Moderation.BanUserAsync(
                             TwitchExstension.ChannelId,
-                            TwitchExstension.BotId,
+                            TwitchExstension.ChannelId,
                             new BanUserRequest
                             {
                                 Duration = 5,
