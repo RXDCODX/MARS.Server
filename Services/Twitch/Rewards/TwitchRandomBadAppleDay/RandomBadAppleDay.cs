@@ -1,20 +1,23 @@
 ﻿using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
 using TwitchLib.Client.Events;
+using TwitchLib.EventSub.Core.EventArgs.Channel;
+using TwitchLib.EventSub.Websockets;
 
 namespace MARS.Server.Services.Twitch.Rewards.TwitchRandomBadAppleDay;
 
 public class RandomBadAppleDay(
     ChannelRewardsService channelRewardsService,
+    EventSubWebsocketClient wsClient,
     ILogger<RandomBadAppleDay> logger,
     IWebHostEnvironment environment,
     IHostApplicationLifetime lifetime,
     ITwitchClient twitchClient,
     IHubContext<TelegramusHub, ITelegramusHub> hubContext
-) : TemporaryReward(channelRewardsService, (ILogger<TemporaryReward>)(object)logger, environment)
+) : TemporaryReward(channelRewardsService, logger, environment)
 {
     private readonly Random _random = new();
-    private DateTimeOffset _lastActivation = DateTimeOffset.MinValue;
+    private DateTime _lastActivation = DateTime.MinValue;
     private const int CooldownMinutes = 90; // 1.5 часа
     private const double ActivationChancePerWord = 0.002; // 0.2% на слово
     private const string BadApplesFolder = "badapples";
@@ -24,13 +27,17 @@ public class RandomBadAppleDay(
         "Твоя уникальная возможность активации BadApple";
     public override Color Color { get; set; } = Color.Black;
     public override int Cost { get; init; } = 45;
-    public override Func<DateTime, bool> IsRewardEnabled { get; set; } = time => false;
+    public override Func<DateTime, bool> IsRewardEnabled { get; set; } = time => _isRewardEnabled;
+
+    private static bool _isRewardEnabled = false;
 
     public override Task StartAsync(CancellationToken cancellationToken)
     {
         lifetime.ApplicationStarted.Register(() =>
         {
             twitchClient.OnMessageReceived += OnMessageReceived;
+            wsClient.ChannelPointsCustomRewardRedemptionAdd +=
+                WsClientOnChannelPointsCustomRewardRedemptionAdd;
             logger.LogInformation(
                 "RandomBadAppleDay запущен. Награда может активироваться с вероятностью {Chance}% на каждое слово.",
                 ActivationChancePerWord * 100
@@ -40,15 +47,68 @@ public class RandomBadAppleDay(
         lifetime.ApplicationStopping.Register(() =>
         {
             twitchClient.OnMessageReceived -= OnMessageReceived;
+            wsClient.ChannelPointsCustomRewardRedemptionAdd -=
+                WsClientOnChannelPointsCustomRewardRedemptionAdd;
         });
 
         return Task.CompletedTask;
+    }
+
+    private async Task WsClientOnChannelPointsCustomRewardRedemptionAdd(
+        object? sender,
+        ChannelPointsCustomRewardRedemptionArgs args
+    )
+    {
+        var twEvent = args.Payload.Event;
+
+        var cost = twEvent.Reward.Cost;
+        var channel = twEvent.BroadcasterUserId;
+
+        if (
+            channel.Equals(TwitchExstension.ChannelId, StringComparison.OrdinalIgnoreCase)
+            && cost == Cost
+        )
+        {
+            await Task.Run(async () =>
+            {
+                _isRewardEnabled = false;
+                var videoFiles = GetAvailableVideoFiles();
+                if (videoFiles.Count > 0)
+                {
+                    TimerElapseNow();
+                    var randomVideo = videoFiles[_random.Next(videoFiles.Count)];
+                    await SendAlertAsync(randomVideo);
+                }
+            });
+        }
     }
 
     public override async Task StopAsync(CancellationToken cancelToken)
     {
         twitchClient.OnMessageReceived -= OnMessageReceived;
         await base.StopAsync(cancelToken);
+    }
+
+    /// <summary>
+    /// Ручная активация награды (для команды)
+    /// </summary>
+    public async Task<string> ManualActivateAsync()
+    {
+        // Получаем видео файлы
+        var videoFiles = GetAvailableVideoFiles();
+
+        if (videoFiles.Count == 0)
+        {
+            return "❌ Нет доступных видео файлов Bad Apple";
+        }
+
+        // Выбираем случайное видео
+        var randomVideo = videoFiles[_random.Next(videoFiles.Count)];
+
+        // Активируем награду от имени администратора
+        await ActivateRewardAsync("Admin", "Администратор", randomVideo);
+
+        return $"✅ Bad Apple активирован! Видео: {Path.GetFileName(randomVideo)}";
     }
 
     private async void OnMessageReceived(object? sender, OnMessageReceivedArgs e)
@@ -87,20 +147,24 @@ public class RandomBadAppleDay(
         );
 
         // Для каждого слова проверяем вероятность активации
-        foreach (var word in words)
+        for (var index = 0; index < words.Length; index++)
         {
             if (_random.NextDouble() < ActivationChancePerWord)
             {
                 // Вероятность сработала - проверяем есть ли видео файлы
                 var videoFiles = GetAvailableVideoFiles();
-                
+
                 if (videoFiles.Count > 0)
                 {
                     // Выбираем случайное видео
                     var randomVideo = videoFiles[_random.Next(videoFiles.Count)];
-                    await ActivateRewardAsync(e.ChatMessage.Username, e.ChatMessage.DisplayName, randomVideo);
+                    await ActivateRewardAsync(
+                        e.ChatMessage.Username,
+                        e.ChatMessage.DisplayName,
+                        randomVideo
+                    );
                 }
-                
+
                 return; // Активируем только один раз за сообщение
             }
         }
@@ -128,7 +192,11 @@ public class RandomBadAppleDay(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Ошибка при получении видео из папки {BadApplesFolder}", BadApplesFolder);
+            logger.LogError(
+                ex,
+                "Ошибка при получении видео из папки {BadApplesFolder}",
+                BadApplesFolder
+            );
             return [];
         }
     }
@@ -137,22 +205,39 @@ public class RandomBadAppleDay(
     {
         try
         {
-            _lastActivation = DateTimeOffset.UtcNow;
-
-            var fullVideoPath = $"/{videoPath}";
+            _lastActivation = DateTime.Now;
 
             // Отправляем сообщение в чат
             var duration = TimeSpan.FromMinutes(10);
-            var endTime = DateTimeOffset.UtcNow.Add(duration);
+            var endTime = DateTime.Now.Add(duration);
             var timeString = endTime.ToString("HH:mm");
 
             var chatMessage =
                 $"💀 {displayName} случайным образом активировал(а) {AlertDisplayName}! Награда будет доступна до {timeString}! 💀";
 
+            _isRewardEnabled = true;
+
+            TimerElapseNow();
             await twitchClient.SendMessageToMainTwitchAsync(chatMessage, logger);
 
-            // Отправляем Alert через SignalR
-            await SendAlertAsync(fullVideoPath);
+            await Task.Factory.StartNew(async () =>
+            {
+                await Task.Delay(duration);
+
+                if (!_isRewardEnabled)
+                {
+                    logger.LogInformation(
+                        "RandomBadAppleDay деактивирована после 10 минут активации пользователем {Username} ({DisplayName}). Видео: {Video}",
+                        username,
+                        displayName,
+                        videoPath
+                    );
+                }
+                else
+                {
+                    _isRewardEnabled = false;
+                }
+            });
 
             logger.LogInformation(
                 "RandomBadAppleDay активирована пользователем {Username} ({DisplayName}). Видео: {Video}",

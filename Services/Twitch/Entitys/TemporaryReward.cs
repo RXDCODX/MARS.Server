@@ -198,6 +198,13 @@ public abstract class TemporaryReward(
         return false;
     }
 
+    private protected void TimerElapseNow()
+    {
+        _timer?.Stop();
+        OnTimerElapsed(this, new ElapsedEventArgs(DateTime.Now));
+        _timer?.Start();
+    }
+
     private static string ColorToHex(Color color)
     {
         var result = $"#{color.R:X2}{color.G:X2}{color.B:X2}";
