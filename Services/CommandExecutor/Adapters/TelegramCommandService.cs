@@ -277,7 +277,7 @@ public class TelegramCommandService(
             return "Нет доступных команд для вашей роли.";
         }
 
-        var result = includeAdminCommands && isAdmin ? "Команды: " : "Команды: ";
+        var result = "Команды: ";
 
         result += string.Join(" | ", commands);
 

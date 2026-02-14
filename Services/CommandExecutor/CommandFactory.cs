@@ -5,7 +5,7 @@ namespace MARS.Server.Services.CommandExecutor;
 /// <summary>
 /// Фабрика для создания команд с поддержкой DI
 /// </summary>
-public class CommandFactory(IServiceProvider serviceProvider)
+public class CommandFactory(IServiceProvider serviceProvider, ILogger<CommandFactory> logger)
 {
     /// <summary>
     /// Создает все команды, наследующие от BaseCommand, автоматически внедряя зависимости
@@ -31,11 +31,15 @@ public class CommandFactory(IServiceProvider serviceProvider)
             catch (Exception ex)
             {
                 // Логируем ошибку создания команды, но продолжаем работу
-                Console.WriteLine($"Ошибка создания команды {commandType.Name}: {ex.Message}");
+                logger.LogError(
+                    "Ошибка создания команды {CommandTypeName}: {ExMessage}",
+                    commandType.Name,
+                    ex.Message
+                );
             }
         }
 
-        return commands;
+        return commands.OrderBy(e => e.Key).ToDictionary(e => e.Key, e => e.Value);
     }
 
     /// <summary>
@@ -79,6 +83,11 @@ public class CommandFactory(IServiceProvider serviceProvider)
                 }
                 else
                 {
+                    logger.LogError(
+                        "Не удалось разрешить зависимость {ParameterTypeName} для команды {CommandTypeName}",
+                        parameter.ParameterType.Name,
+                        commandType.Name
+                    );
                     throw new InvalidOperationException(
                         $"Не удалось разрешить зависимость {parameter.ParameterType.Name} для команды {commandType.Name}"
                     );

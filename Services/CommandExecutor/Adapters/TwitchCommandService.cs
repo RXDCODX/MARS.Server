@@ -87,12 +87,6 @@ public class TwitchCommandService : PlatformCommandServiceBase<string>, IHostedS
         {
             _aliases[alias] = command.CommandName;
         }
-
-        // Добавляем специальные алиасы
-        if (command.CommandName == "framedata")
-        {
-            _aliases["fd"] = command.CommandName;
-        }
     }
 
     private void ClientOnOnMessageReceived(object? sender, OnMessageReceivedArgs e)

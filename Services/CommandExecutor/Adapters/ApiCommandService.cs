@@ -61,12 +61,6 @@ public class ApiCommandService : PlatformCommandServiceBase<string>
         {
             _aliases[alias] = command.CommandName;
         }
-
-        // Добавляем специальные алиасы
-        if (command.CommandName == "framedata")
-        {
-            _aliases["fd"] = command.CommandName;
-        }
     }
 
     /// <summary>
@@ -182,57 +176,6 @@ public class ApiCommandService : PlatformCommandServiceBase<string>
     }
 
     /// <summary>
-    /// Получить информацию о команде
-    /// </summary>
-    /// <param name="commandName">Название команды</param>
-    /// <returns>Информация о команде или null</returns>
-    public CommandInfo? GetCommandInfo(string commandName)
-    {
-        CommandInfo? result = null;
-
-        if (!string.IsNullOrWhiteSpace(commandName))
-        {
-            // Проверяем алиасы
-            if (_aliases.TryGetValue(commandName, out var actualCommandName))
-            {
-                commandName = actualCommandName;
-            }
-
-            if (_commands.TryGetValue(commandName, out var command))
-            {
-                result = new CommandInfo
-                {
-                    Name = command.CommandName,
-                    Description = command.Description,
-                    IsAdminCommand = command.IsAdminCommand,
-                    Parameters = command.GetParameterInfo(),
-                    AvailablePlatforms = command.GetAvailablePlatforms(),
-                };
-            }
-        }
-
-        return result;
-    }
-
-    /// <summary>
-    /// Получить список всех доступных команд для API
-    /// </summary>
-    /// <returns>Список команд</returns>
-    public IEnumerable<CommandInfo> GetAvailableCommands()
-    {
-        return _commands
-            .Values.Where(c => c.IsAvailableOnPlatform(Platform.Api))
-            .Select(c => new CommandInfo
-            {
-                Name = c.CommandName,
-                Description = c.Description,
-                IsAdminCommand = c.IsAdminCommand,
-                Parameters = c.GetParameterInfo(),
-                AvailablePlatforms = c.GetAvailablePlatforms(),
-            });
-    }
-
-    /// <summary>
     /// Проверить, является ли команда админской
     /// </summary>
     /// <param name="commandName">Название команды</param>
@@ -309,24 +252,6 @@ public class ApiCommandService : PlatformCommandServiceBase<string>
     }
 
     /// <summary>
-    /// Получить названия пользовательских команд
-    /// </summary>
-    /// <returns>Массив названий пользовательских команд</returns>
-    public Task<string[]> GetUserCommandsAsync()
-    {
-        return Task.FromResult(UserCommands.ToArray());
-    }
-
-    /// <summary>
-    /// Получить названия админских команд
-    /// </summary>
-    /// <returns>Массив названий админских команд</returns>
-    public Task<string[]> GetAdminCommandsAsync()
-    {
-        return Task.FromResult(AdminCommands.ToArray());
-    }
-
-    /// <summary>
     /// Получить названия пользовательских команд для указанных платформ
     /// </summary>
     /// <param name="platforms">Платформы для фильтрации команд</param>
@@ -383,50 +308,6 @@ public class ApiCommandService : PlatformCommandServiceBase<string>
     }
 
     /// <summary>
-    /// Получить информацию о пользовательских командах
-    /// </summary>
-    /// <returns>Массив информации о пользовательских командах</returns>
-    public Task<CommandInfo[]> GetUserCommandsInfoAsync()
-    {
-        return Task.FromResult(
-            _commands
-                .Values.Where(c => !c.IsAdminCommand && c.IsAvailableOnPlatform(Platform.Api))
-                .Select(c => new CommandInfo
-                {
-                    Name = c.CommandName,
-                    Description = c.Description,
-                    IsAdminCommand = c.IsAdminCommand,
-                    Parameters = c.GetParameterInfo(),
-                    AvailablePlatforms = c.GetAvailablePlatforms(),
-                    Visibility = c.Visibility,
-                })
-                .ToArray()
-        );
-    }
-
-    /// <summary>
-    /// Получить информацию об админских командах
-    /// </summary>
-    /// <returns>Массив информации об админских командах</returns>
-    public Task<CommandInfo[]> GetAdminCommandsInfoAsync()
-    {
-        return Task.FromResult(
-            _commands
-                .Values.Where(c => c.IsAdminCommand && c.IsAvailableOnPlatform(Platform.Api))
-                .Select(c => new CommandInfo
-                {
-                    Name = c.CommandName,
-                    Description = c.Description,
-                    IsAdminCommand = c.IsAdminCommand,
-                    Parameters = c.GetParameterInfo(),
-                    AvailablePlatforms = c.GetAvailablePlatforms(),
-                    Visibility = c.Visibility,
-                })
-                .ToArray()
-        );
-    }
-
-    /// <summary>
     /// Получить информацию о пользовательских командах для указанных платформ
     /// </summary>
     /// <param name="platforms">Платформы для фильтрации команд</param>
@@ -470,15 +351,5 @@ public class ApiCommandService : PlatformCommandServiceBase<string>
                 })
                 .ToArray()
         );
-    }
-
-    /// <summary>
-    /// Проверить, является ли команда админской
-    /// </summary>
-    /// <param name="commandName">Название команды</param>
-    /// <returns>True если команда админская</returns>
-    public Task<bool> IsAdminCommandAsync(string commandName)
-    {
-        return Task.FromResult(IsAdminCommand(commandName));
     }
 }
