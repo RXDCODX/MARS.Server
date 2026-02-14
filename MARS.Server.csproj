@@ -145,7 +145,6 @@
     <Folder Include="WTelegram\" />
     <Folder Include="Services\Twitch\Rewards\TestReward\" />
     <Folder Include="Services\Twitch\TwitchFollowers\Entitys\" />
-    <Folder Include="wwwroot\BadApples\" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\YoutubeReExplode\YoutubeReExplode\YoutubeReExplode.csproj" />

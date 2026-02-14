@@ -7,12 +7,29 @@ namespace MARS.Server.Services.Twitch.Entitys;
 
 public abstract class TemporaryReward(
     ChannelRewardsService channelRewardsService,
-    ILogger<TemporaryReward> logger,
+    ILogger logger,
     IHostEnvironment environment
 ) : IHostedService, ITwitchReward
 {
     private Timer? _timer;
     private readonly SemaphoreSlim _semaphore = new(1);
+
+    private protected virtual CreateCustomRewardsRequest CreateCustomRewardsRequest
+    {
+        get =>
+            new()
+            {
+                Title = AlertDisplayName,
+                Prompt = AlertDescription,
+                Cost = Cost,
+                IsEnabled = true,
+                IsUserInputRequired = false,
+                IsMaxPerStreamEnabled = false,
+                IsMaxPerUserPerStreamEnabled = false,
+                IsGlobalCooldownEnabled = false,
+                ShouldRedemptionsSkipRequestQueue = false,
+            };
+    }
 
     public abstract string AlertDisplayName { get; set; }
     public abstract string AlertDescription { get; set; }
@@ -115,19 +132,11 @@ public abstract class TemporaryReward(
             Cost
         );
 
-        var request = new CreateCustomRewardsRequest
-        {
-            Title = AlertDisplayName,
-            Prompt = AlertDescription,
-            Cost = Cost,
-            BackgroundColor = ColorToHex(Color),
-            IsEnabled = true,
-            IsUserInputRequired = false,
-            IsMaxPerStreamEnabled = false,
-            IsMaxPerUserPerStreamEnabled = false,
-            IsGlobalCooldownEnabled = false,
-            ShouldRedemptionsSkipRequestQueue = false,
-        };
+        var request = CreateCustomRewardsRequest;
+        request.BackgroundColor = ColorToHex(Color);
+        request.Cost = Cost;
+        request.Prompt = AlertDescription;
+        request.Title = AlertDisplayName;
 
         var rewardId = await channelRewardsService.CreateRewardAsync(request);
 

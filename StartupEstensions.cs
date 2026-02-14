@@ -35,6 +35,7 @@ using MARS.Server.Services.Twitch.Rewards.TwitchAdhdReward;
 using MARS.Server.Services.Twitch.Rewards.TwitchAlerts;
 using MARS.Server.Services.Twitch.Rewards.TwitchClipCreator;
 using MARS.Server.Services.Twitch.Rewards.TwitchCredits;
+using MARS.Server.Services.Twitch.Rewards.TwitchFumoFridayNight;
 using MARS.Server.Services.Twitch.Rewards.TwitchGaoAlert;
 using MARS.Server.Services.Twitch.Rewards.TwitchHighlitedMessage;
 using MARS.Server.Services.Twitch.Rewards.TwitchMichaelJacksonReward;
@@ -315,6 +316,9 @@ public static class StartupEstensions
 
         services.AddSingleton<RandomBadAppleDay>();
         services.AddHostedService(sp => sp.GetRequiredService<RandomBadAppleDay>());
+
+        services.AddSingleton<TwitchFumoFridayNight>();
+        services.AddHostedService(sp => sp.GetRequiredService<TwitchFumoFridayNight>());
 
         services.AddSingleton<ChannelRewardsService>();
         //services.AddHostedService<AlertInitializationService>();

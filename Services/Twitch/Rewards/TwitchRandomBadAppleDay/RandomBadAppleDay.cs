@@ -18,7 +18,6 @@ public class RandomBadAppleDay(
     private const int CooldownMinutes = 90; // 1.5 часа
     private const double ActivationChancePerWord = 0.002; // 0.2% на слово
     private const string BadApplesFolder = "badapples";
-    private List<string> _badAppleVideos = [];
 
     public override string AlertDisplayName { get; set; } = "Bad Apple";
     public override string AlertDescription { get; set; } =
@@ -31,26 +30,11 @@ public class RandomBadAppleDay(
     {
         lifetime.ApplicationStarted.Register(() =>
         {
-            // Загружаем доступные видео
-            LoadAvailableVideos();
-
-            // Если видео есть, регистрируем обработчик сообщений
-            if (_badAppleVideos.Count > 0)
-            {
-                twitchClient.OnMessageReceived += OnMessageReceived;
-                logger.LogInformation(
-                    "RandomBadAppleDay запущен. Найдено {Count} видео Bad Apple. Награда может активироваться с вероятностью {Chance}% на каждое слово.",
-                    _badAppleVideos.Count,
-                    ActivationChancePerWord * 100
-                );
-            }
-            else
-            {
-                logger.LogWarning(
-                    "RandomBadAppleDay: не найдены видео файлы в папке wwwroot/{BadApplesFolder}. Награда не будет активирована.",
-                    BadApplesFolder
-                );
-            }
+            twitchClient.OnMessageReceived += OnMessageReceived;
+            logger.LogInformation(
+                "RandomBadAppleDay запущен. Награда может активироваться с вероятностью {Chance}% на каждое слово.",
+                ActivationChancePerWord * 100
+            );
         });
 
         lifetime.ApplicationStopping.Register(() =>
@@ -65,46 +49,6 @@ public class RandomBadAppleDay(
     {
         twitchClient.OnMessageReceived -= OnMessageReceived;
         await base.StopAsync(cancelToken);
-    }
-
-    private void LoadAvailableVideos()
-    {
-        _badAppleVideos.Clear();
-
-        try
-        {
-            var badApplesPath = Path.Combine(environment.WebRootPath, BadApplesFolder);
-
-            if (!Directory.Exists(badApplesPath))
-            {
-                logger.LogWarning("Папка {Path} не существует", badApplesPath);
-                return;
-            }
-
-            var videoExtensions = new[] { ".mp4", ".webm" };
-            var videoFiles = Directory
-                .GetFiles(badApplesPath)
-                .Where(f => videoExtensions.Contains(Path.GetExtension(f).ToLower()))
-                .ToList();
-
-            _badAppleVideos = videoFiles
-                .Select(f => Path.Combine(BadApplesFolder, Path.GetFileName(f)))
-                .ToList();
-
-            logger.LogInformation(
-                "Загружено {Count} видео Bad Apple из папки {Path}",
-                _badAppleVideos.Count,
-                badApplesPath
-            );
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(
-                ex,
-                "Ошибка при загрузке видео из папки {BadApplesFolder}",
-                BadApplesFolder
-            );
-        }
     }
 
     private async void OnMessageReceived(object? sender, OnMessageReceivedArgs e)
@@ -130,12 +74,6 @@ public class RandomBadAppleDay(
             return;
         }
 
-        // Пропускаем если нет видео файлов
-        if (_badAppleVideos.Count == 0)
-        {
-            return;
-        }
-
         // Проверяем кулдаун
         if (DateTimeOffset.UtcNow - _lastActivation < TimeSpan.FromMinutes(CooldownMinutes))
         {
@@ -153,21 +91,55 @@ public class RandomBadAppleDay(
         {
             if (_random.NextDouble() < ActivationChancePerWord)
             {
-                await ActivateRewardAsync(e.ChatMessage.Username, e.ChatMessage.DisplayName);
+                // Вероятность сработала - проверяем есть ли видео файлы
+                var videoFiles = GetAvailableVideoFiles();
+                
+                if (videoFiles.Count > 0)
+                {
+                    // Выбираем случайное видео
+                    var randomVideo = videoFiles[_random.Next(videoFiles.Count)];
+                    await ActivateRewardAsync(e.ChatMessage.Username, e.ChatMessage.DisplayName, randomVideo);
+                }
+                
                 return; // Активируем только один раз за сообщение
             }
         }
     }
 
-    private async Task ActivateRewardAsync(string username, string displayName)
+    private List<string> GetAvailableVideoFiles()
+    {
+        try
+        {
+            var badApplesPath = Path.Combine(environment.WebRootPath, BadApplesFolder);
+
+            if (!Directory.Exists(badApplesPath))
+            {
+                return [];
+            }
+
+            var videoExtensions = new[] { ".mp4", ".webm" };
+            var videoFiles = Directory
+                .GetFiles(badApplesPath)
+                .Where(f => videoExtensions.Contains(Path.GetExtension(f).ToLower()))
+                .Select(f => Path.Combine(BadApplesFolder, Path.GetFileName(f)))
+                .ToList();
+
+            return videoFiles;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при получении видео из папки {BadApplesFolder}", BadApplesFolder);
+            return [];
+        }
+    }
+
+    private async Task ActivateRewardAsync(string username, string displayName, string videoPath)
     {
         try
         {
             _lastActivation = DateTimeOffset.UtcNow;
 
-            // Выбираем случайное видео
-            var randomVideo = _badAppleVideos[_random.Next(_badAppleVideos.Count)];
-            var videoPath = $"/{randomVideo}"; // badapples/video.mp4
+            var fullVideoPath = $"/{videoPath}";
 
             // Отправляем сообщение в чат
             var duration = TimeSpan.FromMinutes(10);
@@ -180,13 +152,13 @@ public class RandomBadAppleDay(
             await twitchClient.SendMessageToMainTwitchAsync(chatMessage, logger);
 
             // Отправляем Alert через SignalR
-            await SendAlertAsync(videoPath);
+            await SendAlertAsync(fullVideoPath);
 
             logger.LogInformation(
                 "RandomBadAppleDay активирована пользователем {Username} ({DisplayName}). Видео: {Video}",
                 username,
                 displayName,
-                randomVideo
+                videoPath
             );
         }
         catch (Exception ex)
