@@ -1,7 +1,6 @@
 ﻿using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.Twitch.TwitchFollowers;
-using Microsoft.EntityFrameworkCore;
 using TwitchLib.Client.Events;
 using TwitchLib.Client.Models;
 using TwitchLib.EventSub.Core.EventArgs.Channel;

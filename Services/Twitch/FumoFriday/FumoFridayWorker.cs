@@ -1,6 +1,5 @@
 ﻿using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.FumoFriday.Entitys;
-using MARS.Server.Services.Twitch.Management.Entitys;
 using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
 using TwitchLib.Client.Events;
 using TwitchLib.EventSub.Core.EventArgs.Channel;

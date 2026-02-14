@@ -41,6 +41,7 @@ using MARS.Server.Services.Twitch.Rewards.TwitchMichaelJacksonReward;
 using MARS.Server.Services.Twitch.Rewards.TwitchMikuMikuBeamReward;
 using MARS.Server.Services.Twitch.Rewards.TwitchMikuMondayReward;
 using MARS.Server.Services.Twitch.Rewards.TwitchRandomArt;
+using MARS.Server.Services.Twitch.Rewards.TwitchRandomBadAppleDay;
 using MARS.Server.Services.Twitch.Rewards.TwitchRandomMeme;
 using MARS.Server.Services.Twitch.Rewards.TwitchRefundService;
 using MARS.Server.Services.Twitch.Rewards.TwitchScreenParticles;
@@ -64,8 +65,6 @@ using TwitchLib.Api.Core.Enums;
 using TwitchLib.Api.Core.HttpCallHandlers;
 using TwitchLib.Api.Core.Interfaces;
 using TwitchLib.EventSub.Websockets.Extensions;
-using YandexMusicResolver;
-using YandexMusicResolver.Config;
 
 namespace MARS.Server;
 
@@ -244,7 +243,6 @@ public static class StartupEstensions
         services.AddSingleton<HelloVideoWorker>();
         services.AddHostedService(sp => sp.GetRequiredService<HelloVideoWorker>());
 
-        services.AddSingleton<Confetty>();
         services.AddSingleton<Fireworks>();
         services.AddSingleton<Emojis>();
         services.AddHostedService(sp => sp.GetRequiredService<Confetty>());
@@ -314,6 +312,9 @@ public static class StartupEstensions
 
         services.AddSingleton<TwitchGaoAlert>();
         services.AddHostedService(sp => sp.GetRequiredService<TwitchGaoAlert>());
+
+        services.AddSingleton<RandomBadAppleDay>();
+        services.AddHostedService(sp => sp.GetRequiredService<RandomBadAppleDay>());
 
         services.AddSingleton<ChannelRewardsService>();
         //services.AddHostedService<AlertInitializationService>();
@@ -387,9 +388,6 @@ public static class StartupEstensions
         services.Configure<YandexMusicConfiguration>(
             configuration.GetSection(AppBase.Base).GetSection(YandexMusicConfiguration.SectionName)
         );
-        services.Configure<KinopoiskConfiguration>(
-            configuration.GetSection(AppBase.Base).GetSection(KinopoiskConfiguration.SectionName)
-        );
 
         return services;
     }
@@ -418,6 +416,8 @@ public static class StartupEstensions
     {
         Program.IsUseSwagger = true;
         services.AddEndpointsApiExplorer();
+        Program.IsUseSwagger = true;
+        services.AddEndpointsApiExplorer();
         services.AddSwaggerGen(options =>
         {
             options.AddSignalRSwaggerGen();
@@ -434,34 +434,6 @@ public static class StartupEstensions
             // Two separate documents served by Swashbuckle
             options.SwaggerDoc("api", new OpenApiInfo { Title = "Telegramus API" });
             options.SwaggerDoc("hubs", new OpenApiInfo { Title = "Telegramus Hubs" });
-        });
-
-        return services;
-    }
-
-    internal static IServiceCollection AddYandexMusic(this IServiceCollection services)
-    {
-        services.AddSingleton<IYandexMusicMainResolver>(sp =>
-        {
-            var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
-            var httpClient = httpClientFactory.CreateClient("YandexMusicResolver");
-            var config = sp.GetRequiredService<IOptions<YandexMusicConfiguration>>();
-            var authService = YandexMusicAuthService.Create(httpClient);
-            var result = authService
-                .LoginAsync(config.Value.Login, config.Value.Password)
-                .GetAwaiter()
-                .GetResult();
-            var credentialProvider = YandexCredentialsProvider.Create(
-                authService,
-                config.Value.Login,
-                config.Value.Password
-            );
-            var yandexMusicMainResolver = YandexMusicMainResolver.Create(
-                credentialProvider,
-                httpClient
-            );
-
-            return yandexMusicMainResolver;
         });
 
         return services;
