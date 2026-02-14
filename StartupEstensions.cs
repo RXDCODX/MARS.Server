@@ -244,6 +244,7 @@ public static class StartupEstensions
         services.AddSingleton<HelloVideoWorker>();
         services.AddHostedService(sp => sp.GetRequiredService<HelloVideoWorker>());
 
+        services.AddSingleton<Confetty>();
         services.AddSingleton<Fireworks>();
         services.AddSingleton<Emojis>();
         services.AddHostedService(sp => sp.GetRequiredService<Confetty>());
@@ -418,8 +419,6 @@ public static class StartupEstensions
 
     public static IServiceCollection AddSwaggerServices(this IServiceCollection services)
     {
-        Program.IsUseSwagger = true;
-        services.AddEndpointsApiExplorer();
         Program.IsUseSwagger = true;
         services.AddEndpointsApiExplorer();
         services.AddSwaggerGen(options =>
