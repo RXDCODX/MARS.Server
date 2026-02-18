@@ -82,13 +82,6 @@ public class MiniGamesManager(
 
             switch (cost)
             {
-                case 9:
-                    var bullsAndCows =
-                        asyncServiceScope.ServiceProvider.GetRequiredService<TwitchBullsAndCows>();
-                    bullsAndCows.IsGameRunning = true;
-                    MiniGames.Add(9, bullsAndCows);
-                    await bullsAndCows.GameStart(name, userId, _cancellationToken);
-                    break;
                 case 8:
                     var tekkenVictorina =
                         asyncServiceScope.ServiceProvider.GetRequiredService<TekkenVictorina>();

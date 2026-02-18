@@ -42,7 +42,6 @@ using MARS.Server.Services.Twitch.Rewards.TwitchMichaelJacksonReward;
 using MARS.Server.Services.Twitch.Rewards.TwitchMikuMikuBeamReward;
 using MARS.Server.Services.Twitch.Rewards.TwitchMikuMondayReward;
 using MARS.Server.Services.Twitch.Rewards.TwitchRandomArt;
-using MARS.Server.Services.Twitch.Rewards.TwitchRandomBadAppleDay;
 using MARS.Server.Services.Twitch.Rewards.TwitchRandomMeme;
 using MARS.Server.Services.Twitch.Rewards.TwitchRefundService;
 using MARS.Server.Services.Twitch.Rewards.TwitchScreenParticles;
@@ -234,7 +233,6 @@ public static class StartupEstensions
         services.AddSingleton<RandomMeme>();
         services.AddHostedService(sp => sp.GetRequiredService<RandomMeme>());
         services.AddScoped<TwitchRussianRoulete>();
-        services.AddScoped<TwitchBullsAndCows>();
         services.AddScoped<TekkenVictorina>();
         services.AddScoped<TwitchTrivia>();
         services.AddSingleton<HighlitedMessage>();
@@ -314,9 +312,6 @@ public static class StartupEstensions
 
         services.AddSingleton<TwitchGaoAlert>();
         services.AddHostedService(sp => sp.GetRequiredService<TwitchGaoAlert>());
-
-        services.AddSingleton<RandomBadAppleDay>();
-        services.AddHostedService(sp => sp.GetRequiredService<RandomBadAppleDay>());
 
         services.AddSingleton<TwitchFumoFridayNight>();
         services.AddHostedService(sp => sp.GetRequiredService<TwitchFumoFridayNight>());
