@@ -1,5 +1,5 @@
-using System.Text;
 using System.Reflection;
+using System.Text;
 using Microsoft.EntityFrameworkCore;
 using TwitchLib.Client.Events;
 using TwitchLib.Client.Models;
@@ -229,7 +229,7 @@ public class PuntoSwitcherService : BackgroundService, IPuntoSwitcherService
         {
             var replaced = 0;
 
-            for (var i = 0; i < parts.Length; i++)
+            for (var i = 0 ; i < parts.Length ; i++)
             {
                 var sourceToken = parts[i];
                 var fixedToken = TryFixToken(sourceToken);
