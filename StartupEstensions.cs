@@ -71,10 +71,27 @@ namespace MARS.Server;
 
 public static class StartupEstensions
 {
-    internal static IServiceCollection AddBaseAspNetMiddlewares(this IServiceCollection services)
+    internal static IServiceCollection AddBaseAspNetMiddlewares(
+        this IServiceCollection services,
+        IConfiguration configuration
+    )
     {
         services.AddSpaYarp();
-        services.AddApplicationInsightsTelemetry();
+
+        var aiConnectionString =
+            configuration["ApplicationInsights:ConnectionString"]
+            ?? configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"];
+        var aiInstrumentationKey =
+            configuration["ApplicationInsights:InstrumentationKey"]
+            ?? configuration["APPINSIGHTS_INSTRUMENTATIONKEY"];
+
+        if (
+            !string.IsNullOrWhiteSpace(aiConnectionString)
+            || !string.IsNullOrWhiteSpace(aiInstrumentationKey)
+        )
+        {
+            services.AddApplicationInsightsTelemetry();
+        }
 
         services
             .AddSignalR(options =>

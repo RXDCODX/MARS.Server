@@ -183,7 +183,7 @@ public static class Program
             .AddCommandExecutorServices()
             .AddTelegramThings(loggerFactory)
             .AddConfiguration(configuration)
-            .AddBaseAspNetMiddlewares()
+            .AddBaseAspNetMiddlewares(configuration)
             .AddSwaggerServices()
             .AddCinemaQueueServicesAsSingleton()
             .AddGameServices()
