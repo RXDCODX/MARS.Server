@@ -1,6 +1,7 @@
 using MARS.Server.Services.TelegramBotService;
 using MARS.Server.Services.TelegramPrivateChannelsResender.Entities;
 using TL;
+using InputMediaType = TL.InputMedia;
 using TLDocument = TL.Document;
 using TLMessage = TL.Message;
 using TLPhotoSize = TL.PhotoSize;
@@ -102,6 +103,7 @@ public class TelegramChannelsResenderService(
                 var hasMoreMessages = true;
                 var offsetId = state.OffsetId;
                 var maxId = 0;
+                var processedGroupIds = new HashSet<long>();
 
                 while (hasMoreMessages && !cancellationToken.IsCancellationRequested)
                 {
@@ -144,7 +146,21 @@ public class TelegramChannelsResenderService(
                                 GetForwardSourceInfo(message.fwd_from)
                             );
 
+                            // Пропускаем, если уже обработали эту группу
+                            if (
+                                message.grouped_id != 0
+                                && processedGroupIds.Contains(message.grouped_id)
+                            )
+                            {
+                                continue;
+                            }
+
                             await ProcessForwardedMessageAsync(message, channelId);
+
+                            if (message.grouped_id != 0)
+                            {
+                                processedGroupIds.Add(message.grouped_id);
+                            }
 
                             batchProcessedCount++;
                             totalProcessed++;
@@ -320,6 +336,13 @@ public class TelegramChannelsResenderService(
                 return;
             }
 
+            // Проверяем, является ли это частью альбома (группировка медиа)
+            if (message.grouped_id != 0)
+            {
+                await ProcessGroupedMediaAsync(message, channelId);
+                return;
+            }
+
             if (message.media == null)
             {
                 logger.LogInformation(
@@ -353,7 +376,7 @@ public class TelegramChannelsResenderService(
             await DeleteMessageAsync(inputPeer, message.ID);
 
             logger.LogInformation(
-                "Медиа из сообщения {MessageId} успешно переслано и оригинал удален",
+                "Медия из сообщения {MessageId} успешно переслано и оригинал удален",
                 message.ID
             );
         }
@@ -365,6 +388,239 @@ public class TelegramChannelsResenderService(
                 message.ID
             );
         }
+    }
+
+    private async Task ProcessGroupedMediaAsync(TLMessage originalMessage, long channelId)
+    {
+        try
+        {
+            var inputPeer = GetInputPeerChannel(channelId);
+            if (inputPeer == null)
+            {
+                logger.LogWarning(
+                    "Не удалось получить InputPeer для канала {ChannelId}",
+                    channelId
+                );
+                return;
+            }
+
+            // Собираем все сообщения в группе с одинаковым grouped_id
+            var groupedMessages = await FetchGroupedMessagesAsync(
+                inputPeer,
+                originalMessage.grouped_id,
+                originalMessage.ID
+            );
+
+            if (groupedMessages.Count == 0)
+            {
+                logger.LogWarning(
+                    "Не удалось найти сообщения группы для grouped_id {GroupedId} (messageId: {MessageId})",
+                    originalMessage.grouped_id,
+                    originalMessage.ID
+                );
+                return;
+            }
+
+            logger.LogInformation(
+                "Обнаружена группа медиа с {Count} элементами (grouped_id: {GroupedId})",
+                groupedMessages.Count,
+                originalMessage.grouped_id
+            );
+
+            // Подготавливаем медиа для альбома
+            var inputMedias = new List<InputMediaType>();
+
+            foreach (var msg in groupedMessages)
+            {
+                if (msg.media != null)
+                {
+                    var inputMedia = await PrepareMediaForAlbumAsync(msg.media);
+                    if (inputMedia != null)
+                    {
+                        inputMedias.Add(inputMedia);
+                    }
+                }
+            }
+
+            if (inputMedias.Count == 0)
+            {
+                logger.LogWarning("Не удалось подготовить медиа для отправки");
+                return;
+            }
+
+            // Формируем подпись для альбома
+            var caption = FormatGroupedCaption(originalMessage);
+
+            // Отправляем альбом одним сообщением
+            await _client!.SendAlbumAsync(inputPeer, inputMedias, caption);
+
+            logger.LogInformation("Альбом из {Count} медиа успешно отправлен", inputMedias.Count);
+
+            // Удаляем оригинальные сообщения
+            var messageIds = groupedMessages.Select(m => m.ID).ToArray();
+            await DeleteMessagesAsync(inputPeer, messageIds);
+
+            // Помечаем диалог как непрочитанный
+            try
+            {
+                await _client.Messages_MarkDialogUnread(inputPeer, unread: true);
+            }
+            catch (Exception ex)
+            {
+                logger.LogDebug(
+                    ex,
+                    "Не удалось пометить диалог как непрочитанный для канала {ChannelId}",
+                    channelId
+                );
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(
+                ex,
+                "Ошибка при обработке группировки медиа (grouped_id: {GroupedId})",
+                originalMessage.grouped_id
+            );
+        }
+    }
+
+    private async Task<InputMediaType?> PrepareMediaForAlbumAsync(MessageMedia media)
+    {
+        if (_client == null)
+        {
+            return null;
+        }
+
+        try
+        {
+            return media switch
+            {
+                MessageMediaPhoto { photo: Photo photo } => await PreparePhotoForAlbumAsync(photo),
+                MessageMediaDocument { document: TLDocument document } =>
+                    await PrepareDocumentForAlbumAsync(document),
+                _ => null,
+            };
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при подготовке медиа для альбома");
+            return null;
+        }
+    }
+
+    private async Task<InputMediaType?> PreparePhotoForAlbumAsync(Photo photo)
+    {
+        if (_client == null)
+        {
+            return null;
+        }
+
+        try
+        {
+            // PhotoBase имеет implicit conversion к InputMediaPhoto
+            if (photo is PhotoBase photoBase)
+            {
+                return photoBase;
+            }
+
+            // Для других типов фото - загружаем
+            var largestSize =
+                photo.LargestPhotoSize as TLPhotoSize
+                ?? photo
+                    .sizes?.OfType<TLPhotoSize>()
+                    .OrderByDescending(s => s.FileSize)
+                    .FirstOrDefault();
+
+            if (largestSize == null)
+            {
+                logger.LogWarning("Не удалось найти пригодный размер фото {PhotoId}", photo.id);
+                return null;
+            }
+
+            var buffer = new byte[Math.Max(1, largestSize.FileSize)];
+            await using var stream = new MemoryStream(buffer);
+            await _client.DownloadFileAsync(photo, stream, largestSize);
+
+            stream.Position = 0;
+
+            var inputFile = await _client.UploadFileAsync(stream, $"photo_{photo.id}.jpg");
+
+            return new InputMediaUploadedPhoto { file = inputFile };
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при подготовке фото для альбома");
+            return null;
+        }
+    }
+
+    private async Task<InputMediaType?> PrepareDocumentForAlbumAsync(TLDocument document)
+    {
+        if (_client == null)
+        {
+            return null;
+        }
+
+        try
+        {
+            var buffer = new byte[Math.Max(1, document.size)];
+            await using var stream = new MemoryStream(buffer);
+            await _client.DownloadFileAsync(document, stream);
+
+            stream.Position = 0;
+
+            var fileName =
+                document.attributes.OfType<DocumentAttributeFilename>().FirstOrDefault()?.file_name
+                ?? $"file_{document.id}";
+
+            var inputFile = await _client.UploadFileAsync(stream, fileName);
+            var attributes = document.attributes.ToArray();
+
+            return new InputMediaUploadedDocument
+            {
+                file = inputFile,
+                mime_type = document.mime_type,
+                attributes = attributes,
+            };
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при подготовке документа для альбома");
+            return null;
+        }
+    }
+
+    private string FormatGroupedCaption(TLMessage originalMessage)
+    {
+        var originalCaption = string.IsNullOrWhiteSpace(originalMessage.message)
+            ? string.Empty
+            : originalMessage.message.Trim();
+
+        var timestamp = originalMessage.Date.ToLocalTime();
+        var sourceName = "Unknown";
+        if (originalMessage.fwd_from != null)
+        {
+            sourceName = !string.IsNullOrEmpty(originalMessage.fwd_from.from_name)
+                ? originalMessage.fwd_from.from_name
+                : GetForwardSourceInfo(originalMessage.fwd_from);
+        }
+
+        var meta =
+            $"(id: {originalMessage.Peer.ID}, from: {sourceName}, date: {timestamp:yyyy-MM-dd HH:mm})";
+
+        return string.IsNullOrEmpty(originalCaption) ? meta : $"{originalCaption}\n{meta}";
+    }
+
+    private async Task DeleteMessagesAsync(InputPeerChannel channel, int[] messageIds)
+    {
+        if (_client == null || messageIds.Length == 0)
+        {
+            return;
+        }
+
+        await _client.Channels_DeleteMessages(channel, messageIds);
+
+        logger.LogInformation("Удалено {Count} сообщений из группы", messageIds.Length);
     }
 
     private async Task DownloadAndResendMediaAsync(InputPeerChannel channel, TLMessage message)
@@ -688,5 +944,73 @@ public class TelegramChannelsResenderService(
         _client?.OnUpdates -= OnUpdatesReceived;
 
         base.Dispose();
+    }
+
+    private async Task<List<TLMessage>> FetchGroupedMessagesAsync(
+        InputPeerChannel channel,
+        long groupedId,
+        int referenceMessageId
+    )
+    {
+        if (_client == null)
+        {
+            return [];
+        }
+
+        try
+        {
+            var groupedMessages = new List<TLMessage>();
+
+            // Ищем сообщения в диапазоне около текущего ID
+            // Начинаем с более новых сообщений (меньший offset_id)
+            for (var offset = 0; offset <= 300; offset += 100)
+            {
+                var messages = await _client.Messages_GetHistory(
+                    peer: channel,
+                    offset_id: referenceMessageId + offset,
+                    add_offset: 0,
+                    limit: 100
+                );
+
+                if (messages is null)
+                {
+                    break;
+                }
+
+                var foundInBatch = messages
+                    .Messages.OfType<TLMessage>()
+                    .Where(m => m.grouped_id == groupedId)
+                    .ToList();
+
+                groupedMessages.AddRange(foundInBatch);
+
+                // Если нашли сообщения этой группы, можно остановиться
+                if (foundInBatch.Count > 0)
+                {
+                    break;
+                }
+            }
+
+            // Сортируем по ID и удаляем дубликаты
+            groupedMessages = groupedMessages.OrderBy(m => m.ID).DistinctBy(m => m.ID).ToList();
+
+            logger.LogInformation(
+                "FetchGroupedMessagesAsync: найдено {Count} сообщений для grouped_id {GroupedId} (ref messageId: {RefId})",
+                groupedMessages.Count,
+                groupedId,
+                referenceMessageId
+            );
+
+            return groupedMessages;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(
+                ex,
+                "Ошибка при получении сообщений группы (grouped_id: {GroupedId})",
+                groupedId
+            );
+            return [];
+        }
     }
 }
