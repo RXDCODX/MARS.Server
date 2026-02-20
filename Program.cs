@@ -214,9 +214,6 @@ public static class Program
 
         services.AddSingleton(loggerFactory);
 
-        // Добавляем инициализатор базы данных
-        services.AddDataBaseInitializer();
-
         // Добавляем сервис перехвата клавиатуры
         services.AddKeyboardHookService();
 
@@ -329,8 +326,12 @@ public static class Program
             hubsDocument
         );
 
-        Console.WriteLine($"OpenAPI schema generated: {Path.Combine(outputDirectory, "swagger_api.json")}");
-        Console.WriteLine($"OpenAPI schema generated: {Path.Combine(outputDirectory, "swagger_hubs.json")}");
+        Console.WriteLine(
+            $"OpenAPI schema generated: {Path.Combine(outputDirectory, "swagger_api.json")}"
+        );
+        Console.WriteLine(
+            $"OpenAPI schema generated: {Path.Combine(outputDirectory, "swagger_hubs.json")}"
+        );
     }
 
     private static async Task WriteSwaggerDocumentAsync(string filePath, OpenApiDocument document)

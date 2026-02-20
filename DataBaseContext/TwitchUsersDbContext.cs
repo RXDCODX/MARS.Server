@@ -1,5 +1,4 @@
 ﻿using MARS.Server.Services.CinemaQueue.Entitys;
-using MARS.Server.Services.Honkai.Entitys;
 using MARS.Server.Services.SoundRequest.Entities;
 using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.FumoFriday.Entitys;
@@ -24,7 +23,6 @@ public sealed partial class AppDbContext
     public DbSet<HelloVideosUsers> HelloVideosUsers { get; set; } = null!;
     public DbSet<FumoUser> FumoUsers { get; set; } = null!;
     public DbSet<WaifuRollGuarantee> WaifuRollGuarantees { get; set; } = null!;
-    public DbSet<DailyAutoMarkupUser> HonkaiMarkupUser { get; set; } = null!;
     public DbSet<HostCoolDown> HostsCoolDowns { get; set; } = null!;
     public DbSet<HostAutoHello> HostsGreetings { get; set; } = null!;
 
@@ -100,14 +98,6 @@ public sealed partial class AppDbContext
             .HasOne(wrg => wrg.TwitchUser)
             .WithMany()
             .HasForeignKey(wrg => wrg.TwitchId)
-            .OnDelete(DeleteBehavior.Restrict);
-
-        // Конфигурация DailyAutoMarkupUser -> TwitchUser (опциональная связь)
-        modelBuilder
-            .Entity<DailyAutoMarkupUser>()
-            .HasOne(damu => damu.TwitchUser)
-            .WithMany()
-            .HasForeignKey(damu => damu.TwitchId)
             .OnDelete(DeleteBehavior.Restrict);
 
         // Конфигурация QueueItem -> TwitchUser

@@ -62,7 +62,7 @@ public class Worker365(
 
         var pageNumbers = GetFavouritePagesCount(doc);
 
-        for (var i = pageNumbers; i >= 1; i--)
+        for (var i = pageNumbers ; i >= 1 ; i--)
         {
             await Task.Delay(TimeSpan.FromSeconds(5), _cancellationToken);
             var pageDoc = await GetFavouritePageHtmlDocument(httpClient, i);

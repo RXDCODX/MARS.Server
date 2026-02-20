@@ -43,7 +43,6 @@
     <PackageReference Include="Ben.Demystifier" />
     <PackageReference Include="BooruSharp" />
     <PackageReference Include="H.Hooks" />
-    <PackageReference Include="MarchSeven" />
     <PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
@@ -60,16 +59,12 @@
     </PackageReference>
     <PackageReference Include="Microsoft.EntityFrameworkCore.DynamicLinq" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite.Core" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" />
     <PackageReference Include="Microsoft.Extensions.Http.Polly" />
-    <PackageReference Include="Microsoft.Kiota.Authentication.Azure" />
-    <PackageReference Include="Microsoft.Kiota.Bundle" />
-    <PackageReference Include="NAudio" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
     <PackageReference Include="ShikimoriSharp" />
     <PackageReference Include="SignalRSwaggerGen" />
@@ -95,7 +90,6 @@
     <PackageReference Include="TwitchLib.Api.Helix.Models" />
     <PackageReference Include="TwitchLib.EventSub.Websockets" />
     <PackageReference Include="WTelegramClient" />
-    <PackageReference Include="YandexMusicResolver" />
   </ItemGroup>
   <ItemGroup>
     <Content Update="appsettings.Development.json">
