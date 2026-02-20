@@ -8,6 +8,8 @@
     <DockerfileContext>..\..</DockerfileContext>
     <WarningsAsErrors>CS0618</WarningsAsErrors>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- Suppress analyzer errors from external dependencies -->
+    <NoWarn>$(NoWarn);AD0001</NoWarn>
     <!-- SpaYarp configuration -->
     <SpaRoot>../mars.client</SpaRoot>
     <SpaClientUrl>http://localhost:44478</SpaClientUrl>
@@ -38,11 +40,9 @@
     <PackageReference Include="AngleSharp" />
     <PackageReference Include="AngleSharp.XPath" />
     <PackageReference Include="AspNetCore.SpaYarp" />
-    <PackageReference Include="Azure.Identity" />
     <PackageReference Include="Ben.Demystifier" />
     <PackageReference Include="BooruSharp" />
     <PackageReference Include="H.Hooks" />
-    <PackageReference Include="HtmlAgilityPack" />
     <PackageReference Include="MarchSeven" />
     <PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" />

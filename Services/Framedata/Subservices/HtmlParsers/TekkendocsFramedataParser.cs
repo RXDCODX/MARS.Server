@@ -1,4 +1,7 @@
-﻿using HtmlAgilityPack;
+﻿using AngleSharp;
+using AngleSharp.Dom;
+using AngleSharp.Html.Parser;
+using AngleSharp.XPath;
 using MARS.Server.Services.Framedata;
 using MARS.Server.Services.Framedata.Entitys;
 using MARS.Server.Services.Framedata.Subservices.Entitys;
@@ -11,7 +14,8 @@ namespace MARS.Server.Services.Framedata.Subservices.HtmlParsers;
 public class TekkendocsFramedataParser : BaseFramedataParser
 {
     private readonly Uri _basePath = new("https://tekkendocs.com");
-    private readonly HtmlWeb _htmlWeb;
+    private readonly HttpClient _httpClient;
+    private readonly HtmlParser _htmlParser;
 
     public TekkendocsFramedataParser(
         ILogger logger,
@@ -22,10 +26,11 @@ public class TekkendocsFramedataParser : BaseFramedataParser
     )
         : base(logger, dbContextFactory, stagingService, cancellationToken, options)
     {
-        _htmlWeb = new HtmlWeb
+        _httpClient = new HttpClient
         {
-            Timeout = Options.HttpTimeoutSeconds * 1000, // HtmlWeb использует миллисекунды
+            Timeout = TimeSpan.FromSeconds(Options.HttpTimeoutSeconds),
         };
+        _htmlParser = new HtmlParser();
     }
 
     public override async Task<List<string>> ParseCharactersAndMoves(
@@ -33,10 +38,13 @@ public class TekkendocsFramedataParser : BaseFramedataParser
     )
     {
         var parsedCharacters = new List<string>();
-        var doc = await _htmlWeb.LoadFromWebAsync(_basePath.AbsoluteUri, CancellationToken);
+        var html = await _httpClient.GetStringAsync(_basePath.AbsoluteUri, CancellationToken);
+        var doc = await _htmlParser.ParseDocumentAsync(html, CancellationToken);
 
-        var ulNode = doc.DocumentNode.SelectSingleNode("//ul");
-        var liNodes = ulNode?.SelectNodes(".//li[@class='cursor-pointer']");
+        var ulNode = doc.Body?.SelectSingleNode("//ul") as IElement;
+        var liNodes = ulNode?.SelectNodes(".//li[@class='cursor-pointer']")
+            ?.Cast<IElement>()
+            .ToList();
 
         if (liNodes == null)
         {
@@ -48,8 +56,8 @@ public class TekkendocsFramedataParser : BaseFramedataParser
         {
             await DelayBetweenRequests();
 
-            var nameNode = liNode.SelectSingleNode(".//div[contains(@class, 'text-center')]");
-            var name = nameNode?.InnerText.Trim().ToLower();
+            var nameNode = liNode.SelectSingleNode(".//div[contains(@class, 'text-center')]") as IElement;
+            var name = nameNode?.TextContent.Trim().ToLower();
 
             if (
                 string.IsNullOrWhiteSpace(name)
@@ -118,9 +126,12 @@ public class TekkendocsFramedataParser : BaseFramedataParser
 
         try
         {
-            var doc = await _htmlWeb.LoadFromWebAsync(chatPage, CancellationToken);
-            var tableNode = doc.DocumentNode.SelectSingleNode("//tbody");
-            var rowNodes = tableNode?.SelectNodes(".//tr[@class='rt-TableRow']");
+            var html = await _httpClient.GetStringAsync(chatPage, CancellationToken);
+            var doc = await _htmlParser.ParseDocumentAsync(html, CancellationToken);
+            var tableNode = doc.Body?.SelectSingleNode("//tbody") as IElement;
+            var rowNodes = tableNode?.SelectNodes(".//tr[@class='rt-TableRow']")
+                ?.Cast<IElement>()
+                .ToList();
 
             if (rowNodes == null)
             {
@@ -133,14 +144,16 @@ public class TekkendocsFramedataParser : BaseFramedataParser
 
             foreach (var rowNode in rowNodes)
             {
-                var cellNodes = rowNode?.SelectNodes(".//td[@class='rt-TableCell']");
+                var cellNodes = rowNode?.SelectNodes(".//td[@class='rt-TableCell']")
+                    ?.Cast<IElement>()
+                    .ToList();
 
                 if (cellNodes == null || cellNodes.Count < 8)
                 {
                     continue;
                 }
 
-                var command = cellNodes[0].SelectSingleNode(".//a")?.InnerText.Trim().ToLower();
+                var command = (cellNodes[0].SelectSingleNode(".//a") as IElement)?.TextContent.Trim().ToLower();
                 if (string.IsNullOrWhiteSpace(command))
                 {
                     continue;
@@ -151,12 +164,12 @@ public class TekkendocsFramedataParser : BaseFramedataParser
                     Character = character,
                     CharacterName = character.Name,
                     Command = command.Replace(".", " "),
-                    HitLevel = cellNodes[1].InnerText.Trim().ToLower(),
-                    Damage = cellNodes[2].InnerText.Trim().ToLower(),
-                    StartUpFrame = cellNodes[3].InnerText.Trim().ToLower(),
-                    BlockFrame = cellNodes[4].InnerText.Trim().ToLower(),
-                    HitFrame = cellNodes[5].InnerText.Trim().ToLower(),
-                    CounterHitFrame = cellNodes[6].InnerText.Trim().ToLower(),
+                    HitLevel = cellNodes[1].TextContent.Trim().ToLower(),
+                    Damage = cellNodes[2].TextContent.Trim().ToLower(),
+                    StartUpFrame = cellNodes[3].TextContent.Trim().ToLower(),
+                    BlockFrame = cellNodes[4].TextContent.Trim().ToLower(),
+                    HitFrame = cellNodes[5].TextContent.Trim().ToLower(),
+                    CounterHitFrame = cellNodes[6].TextContent.Trim().ToLower(),
                 };
 
                 // Парсим Notes
@@ -193,10 +206,10 @@ public class TekkendocsFramedataParser : BaseFramedataParser
         return movelist;
     }
 
-    private Task<TekkenCharacter> ParseCharacter(HtmlNode liNode)
+    private Task<TekkenCharacter> ParseCharacter(IElement liNode)
     {
-        var aNode = liNode.SelectSingleNode(".//a[@class='cursor-pointer']");
-        var href = aNode?.GetAttributeValue("href", string.Empty);
+        var aNode = liNode.SelectSingleNode(".//a[@class='cursor-pointer']") as IElement;
+        var href = aNode?.GetAttribute("href") ?? string.Empty;
 
         if (string.IsNullOrWhiteSpace(href))
         {
@@ -205,12 +218,12 @@ public class TekkendocsFramedataParser : BaseFramedataParser
 
         href = href.StartsWith('/') ? href.Substring(1) : href;
 
-        var imgNode = liNode.SelectSingleNode(".//img");
-        var imageUrl = imgNode?.GetAttributeValue("src", "");
+        var imgNode = liNode.SelectSingleNode(".//img") as IElement;
+        var imageUrl = imgNode?.GetAttribute("src") ?? "";
         var imagePath = new Uri(_basePath, imageUrl);
 
-        var nameNode = liNode.SelectSingleNode(".//div[contains(@class, 'text-center')]");
-        var name = nameNode?.InnerText.Trim().ToLower();
+        var nameNode = liNode.SelectSingleNode(".//div[contains(@class, 'text-center')]") as IElement;
+        var name = nameNode?.TextContent.Trim().ToLower();
         name = name?.Equals("jack-8") ?? false ? "jack 8" : name;
 
         if (string.IsNullOrWhiteSpace(name))
@@ -297,7 +310,7 @@ public class TekkendocsFramedataParser : BaseFramedataParser
     /// </summary>
     /// <param name="node">Узел для извлечения текста</param>
     /// <returns>Массив строк с текстом</returns>
-    private static List<string> ExtractAllTextElements(HtmlNode node)
+    private static List<string> ExtractAllTextElements(IElement node)
     {
         var textElements = new List<string>();
 
@@ -310,9 +323,9 @@ public class TekkendocsFramedataParser : BaseFramedataParser
         var hasDirectText = false;
         foreach (var childNode in node.ChildNodes)
         {
-            if (childNode.NodeType == HtmlNodeType.Text)
+            if (childNode.NodeType == NodeType.Text)
             {
-                var text = childNode.InnerText?.Trim();
+                var text = childNode.TextContent?.Trim();
                 if (!string.IsNullOrWhiteSpace(text))
                 {
                     hasDirectText = true;
@@ -327,9 +340,9 @@ public class TekkendocsFramedataParser : BaseFramedataParser
         {
             foreach (var child in node.ChildNodes)
             {
-                if (child.NodeType == HtmlNodeType.Element)
+                if (child.NodeType == NodeType.Element && child is IElement element)
                 {
-                    var childTextElements = ExtractAllTextElements(child);
+                    var childTextElements = ExtractAllTextElements(element);
                     textElements.AddRange(childTextElements);
                 }
             }

@@ -1,6 +1,10 @@
 ﻿using System.Net;
 using System.Xml.XPath;
-using HtmlAgilityPack;
+using AngleSharp;
+using AngleSharp.Dom;
+using AngleSharp.Html.Dom;
+using AngleSharp.Html.Parser;
+using AngleSharp.XPath;
 using MARS.Server.Services._365Genius.Entitys;
 using MARS.Server.Services.TelegramBotService;
 using TL;
@@ -49,10 +53,10 @@ public class Worker365(
             throw new HttpRequestException();
         }
 
-        var pageContent = await pageResponse.Content.ReadAsStreamAsync(_cancellationToken);
+        var pageContent = await pageResponse.Content.ReadAsStringAsync(_cancellationToken);
 
-        var doc = new HtmlDocument();
-        doc.Load(pageContent);
+        var parser = new HtmlParser();
+        var doc = await parser.ParseDocumentAsync(pageContent, _cancellationToken);
 
         ValidateFavouriteCountVideos(doc);
 
@@ -210,13 +214,11 @@ public class Worker365(
         return cookie;
     }
 
-    private static void ValidateFavouriteCountVideos(HtmlDocument doc)
+    private static void ValidateFavouriteCountVideos(IHtmlDocument doc)
     {
-        var favouriteNode = doc.DocumentNode.SelectSingleNode(
-            XPathExpression.Compile("//a[@class=\"fav_a\"]")
-        );
+        var favouriteNode = doc.Body?.SelectSingleNode("//a[@class='fav_a']") as IElement;
 
-        var count = favouriteNode?.SelectSingleNode("//span[@class=\"user_fav_count\"]")?.InnerText;
+        var count = favouriteNode?.SelectSingleNode(".//span[@class='user_fav_count']")?.TextContent;
 
         if (!int.TryParse(count, out var aa))
         {
@@ -229,19 +231,19 @@ public class Worker365(
         }
     }
 
-    private static int GetFavouritePagesCount(HtmlDocument document)
+    private static int GetFavouritePagesCount(IHtmlDocument document)
     {
-        var pagenav = document.GetElementbyId("pagenav") ?? throw new NullReferenceException();
+        var pagenav = document.GetElementById("pagenav") ?? throw new NullReferenceException();
         var lastPageNode =
-            pagenav.SelectSingleNode(".//ul/li[last()-1]") ?? throw new NullReferenceException();
-        var lastPageText = lastPageNode.InnerText.Trim();
+            pagenav.SelectSingleNode(".//ul/li[last()-1]") as IElement ?? throw new NullReferenceException();
+        var lastPageText = lastPageNode.TextContent.Trim();
 
         return int.TryParse(lastPageText, out var pageCount)
             ? pageCount
             : throw new NullReferenceException();
     }
 
-    private async Task<HtmlDocument> GetFavouritePageHtmlDocument(HttpClient httpClient, int i)
+    private async Task<IHtmlDocument> GetFavouritePageHtmlDocument(HttpClient httpClient, int i)
     {
         var requestMessage = GetFavoritePageRequestMessage(i);
         var favPageResponse = await httpClient.SendAsync(requestMessage, _cancellationToken);
@@ -251,26 +253,25 @@ public class Worker365(
             throw new HttpRequestException();
         }
 
-        var favPageContent = await favPageResponse.Content.ReadAsStreamAsync(_cancellationToken);
+        var favPageContent = await favPageResponse.Content.ReadAsStringAsync(_cancellationToken);
 
-        var pageDoc = new HtmlDocument();
-        pageDoc.Load(favPageContent);
+        var parser = new HtmlParser();
+        var pageDoc = await parser.ParseDocumentAsync(favPageContent, _cancellationToken);
 
         return pageDoc;
     }
 
-    private async Task GetVideos365(HttpClient httpClient, HtmlDocument document)
+    private async Task GetVideos365(HttpClient httpClient, IHtmlDocument document)
     {
         await using var dbConext = await appDbContextFactory.CreateDbContextAsync(
             _cancellationToken
         );
         var liNodes = document
-            .DocumentNode.SelectNodes(
-                "//div[@id='video-content']//li[contains(@class, 'video_block')]"
-            )
-            ?.Reverse()
+            .Body?.SelectNodes("//div[@id='video-content']//li[contains(@class, 'video_block')]")
+            ?.Cast<IElement>()
+            .Reverse()
             .ToList();
-        var ids = liNodes?.Select(e => e.GetAttributeValue("id", 0)).ToArray();
+        var ids = liNodes?.Select(e => int.TryParse(e.GetAttribute("id"), out var id) ? id : 0).ToArray();
 
         var ll = ids?.Where(e => dbConext.Videos365.All(t => t.SiteId != e)).ToArray();
 
@@ -280,9 +281,9 @@ public class Worker365(
             {
                 foreach (var node in liNodes)
                 {
-                    var id = node.GetAttributeValue("id", 0);
-                    var link = node.SelectSingleNode(".//a[@class=\"image\"]")
-                        ?.GetAttributeValue("href", string.Empty);
+                    var id = int.TryParse(node.GetAttribute("id"), out var nodeId) ? nodeId : 0;
+                    var link = (node.SelectSingleNode(".//a[@class='image']") as IElement)
+                        ?.GetAttribute("href") ?? string.Empty;
 
                     var isUploaded = await dbConext.Videos365.AnyAsync(
                         e => e.SiteId == id,
@@ -375,30 +376,27 @@ public class Worker365(
             throw new HttpRequestException();
         }
 
-        var stream = await response.Content.ReadAsStreamAsync(_cancellationToken);
-        var document = new HtmlDocument();
-        document.Load(stream);
+        var html = await response.Content.ReadAsStringAsync(_cancellationToken);
+        var parser = new HtmlParser();
+        var document = await parser.ParseDocumentAsync(html, _cancellationToken);
 
-        var title = document.DocumentNode.SelectSingleNode("//head/title")!.InnerText.Trim();
-        var discription = document
-            .DocumentNode.SelectSingleNode("//div[@class=\"story_desription\"]")
-            ?.InnerText;
-        var playerUrl = document
-            .DocumentNode.SelectSingleNode("//video[@playsinline]")
-            ?.GetAttributeValue("src", string.Empty);
-        var downloadUrl = document
-            .DocumentNode.SelectSingleNode("//ul[@class=\"download_ul\"]")
-            ?.SelectSingleNode("//a[@title]")
-            ?.GetAttributeValue("href", string.Empty);
-        var duration = document
-            .DocumentNode.SelectSingleNode("//meta[@property='video:duration']")
-            ?.GetAttributeValue("content", 0);
-        var width = document
-            .DocumentNode.SelectSingleNode("//meta[@property='og:video:width']")
-            ?.GetAttributeValue("content", 0);
-        var height = document
-            .DocumentNode.SelectSingleNode("//meta[@property='og:video:height']")
-            ?.GetAttributeValue("content", 0);
+        var title = (document.Head?.SelectSingleNode("//title") as IElement)!.TextContent.Trim();
+        var discription = (document.Body?.SelectSingleNode("//div[@class='story_desription']") as IElement)
+            ?.TextContent;
+        var playerUrl = (document.Body?.SelectSingleNode("//video[@playsinline]") as IElement)
+            ?.GetAttribute("src") ?? string.Empty;
+        var downloadUrlElement = (document.Body?.SelectSingleNode("//ul[@class='download_ul']") as IElement)
+            ?.SelectSingleNode(".//a[@title]") as IElement;
+        var downloadUrl = downloadUrlElement?.GetAttribute("href") ?? string.Empty;
+        var durationStr = (document.Head?.SelectSingleNode("//meta[@property='video:duration']") as IElement)
+            ?.GetAttribute("content");
+        var duration = int.TryParse(durationStr, out var dur) ? dur : 0;
+        var widthStr = (document.Head?.SelectSingleNode("//meta[@property='og:video:width']") as IElement)
+            ?.GetAttribute("content");
+        var width = int.TryParse(widthStr, out var w) ? w : 0;
+        var heightStr = (document.Head?.SelectSingleNode("//meta[@property='og:video:height']") as IElement)
+            ?.GetAttribute("content");
+        var height = int.TryParse(heightStr, out var h) ? h : 0;
         var thumbNailFilePath = await GetThumbNailFilePath(httpClient, document);
 
         if (
@@ -411,11 +409,11 @@ public class Worker365(
             throw new NullReferenceException();
         }
 
-        if (duration != null)
+        if (duration != 0)
         {
-            if (height != null)
+            if (height != 0)
             {
-                if (width != null)
+                if (width != 0)
                 {
                     return new Video365
                     {
@@ -425,9 +423,9 @@ public class Worker365(
                         PlayerUrl = playerUrl,
                         DownloadUrl = downloadUrl,
                         SiteId = id,
-                        Duration = TimeSpan.FromSeconds(duration.Value),
-                        VideoHeight = height.Value,
-                        VideoWidth = width.Value,
+                        Duration = TimeSpan.FromSeconds(duration),
+                        VideoHeight = height,
+                        VideoWidth = width,
                         ThumbnailFilePath = thumbNailFilePath,
                     };
                 }
@@ -437,7 +435,7 @@ public class Worker365(
         return null;
     }
 
-    private async Task<string> GetThumbNailFilePath(HttpClient httpClient, HtmlDocument document)
+    private async Task<string> GetThumbNailFilePath(HttpClient httpClient, IHtmlDocument document)
     {
         try
         {
@@ -445,11 +443,11 @@ public class Worker365(
 
             // 1. Находим элемент <link> с прелоад-изображением
             var linkNode =
-                document.DocumentNode.SelectSingleNode("//link[@rel=\"preload\" and @as=\"image\"]")
+                (document.Head?.SelectSingleNode("//link[@rel='preload' and @as='image']") as IElement)
                 ?? throw new Exception("Элемент <link> не найден.");
 
             // 2. Извлекаем URL изображения
-            var imageUrl = linkNode.GetAttributeValue("href", "");
+            var imageUrl = linkNode.GetAttribute("href") ?? "";
             if (string.IsNullOrEmpty(imageUrl))
             {
                 throw new Exception("Атрибут href не содержит ссылки.");
