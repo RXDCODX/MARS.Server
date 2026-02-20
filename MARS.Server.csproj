@@ -12,6 +12,9 @@
     <SpaRoot>../mars.client</SpaRoot>
     <SpaClientUrl>http://localhost:44478</SpaClientUrl>
     <SpaLaunchCommand>yarn dev</SpaLaunchCommand>
+    <OpenApiExportOnRun>false</OpenApiExportOnRun>
+    <RunArguments Condition="'$(OpenApiExportOnRun)' == 'true' and '$(RunArguments)' == ''">--generate-openapi</RunArguments>
+    <RunArguments Condition="'$(OpenApiExportOnRun)' == 'true' and '$(RunArguments)' != ''">$(RunArguments) --generate-openapi</RunArguments>
     <!-- Change the timeout of the proxy (defaults to 120 seconds) -->
     <SpaProxyTimeoutInSeconds>1200</SpaProxyTimeoutInSeconds>
     <!-- Optionally forward only request starting with the specified path -->

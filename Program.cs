@@ -11,6 +11,8 @@ using MARS.Server.Services.Logs.Services;
 using MARS.Server.Services.MemoryStorageService;
 using MARS.Server.Services.Twitch;
 using MARS.Server.Services.Twitch.Rewards;
+using Microsoft.OpenApi;
+using Swashbuckle.AspNetCore.Swagger;
 using WTelegram;
 
 namespace MARS.Server;
@@ -21,9 +23,14 @@ public static class Program
 {
     public static bool IsUseSoundRequest { get; set; }
     public static bool IsUseSwagger { get; set; }
+    private const string GenerateOpenApiArgument = "--generate-openapi";
 
     public static async Task Main(string[] args)
     {
+        var shouldGenerateOpenApi = args.Any(arg =>
+            arg.Equals(GenerateOpenApiArgument, StringComparison.OrdinalIgnoreCase)
+        );
+
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions { Args = args });
 
         var services = builder.Services;
@@ -243,6 +250,12 @@ public static class Program
         var app = builder.Build();
         var logger = app.Logger;
 
+        if (shouldGenerateOpenApi)
+        {
+            await GenerateOpenApiFilesAsync(app);
+            return;
+        }
+
         app.AddStaticFilesBrowser();
 
         if (IsUseSwagger)
@@ -295,5 +308,40 @@ public static class Program
         {
             logger.LogException(e);
         }
+    }
+
+    private static async Task GenerateOpenApiFilesAsync(WebApplication app)
+    {
+        var outputDirectory = Path.GetFullPath(
+            Path.Combine(app.Environment.ContentRootPath, "..", "mars.client", "api")
+        );
+
+        Directory.CreateDirectory(outputDirectory);
+
+        var swaggerProvider = app.Services.GetRequiredService<ISwaggerProvider>();
+        var apiDocument = swaggerProvider.GetSwagger("api");
+        var hubsDocument = swaggerProvider.GetSwagger("hubs");
+
+        await WriteSwaggerDocumentAsync(
+            Path.Combine(outputDirectory, "swagger_api.json"),
+            apiDocument
+        );
+        await WriteSwaggerDocumentAsync(
+            Path.Combine(outputDirectory, "swagger_hubs.json"),
+            hubsDocument
+        );
+
+        Console.WriteLine($"OpenAPI schema generated: {Path.Combine(outputDirectory, "swagger_api.json")}");
+        Console.WriteLine($"OpenAPI schema generated: {Path.Combine(outputDirectory, "swagger_hubs.json")}");
+    }
+
+    private static async Task WriteSwaggerDocumentAsync(string filePath, OpenApiDocument document)
+    {
+        await using var stream = File.Create(filePath);
+        await using var writer = new StreamWriter(stream, new System.Text.UTF8Encoding(false));
+        var jsonWriter = new OpenApiJsonWriter(writer);
+
+        document.SerializeAsV3(jsonWriter);
+        await writer.FlushAsync();
     }
 }
