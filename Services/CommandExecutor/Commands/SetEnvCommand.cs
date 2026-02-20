@@ -1,13 +1,13 @@
 using MARS.Server.Services.CommandExecutor.Entitys;
 using MARS.Server.Services.CommandExecutor.Entitys.Commands;
-using MARS.Server.Services.EnvironmentVariable;
+using EnvironmentVariableEntity = MARS.Server.Services.EnvironmentVariable.Entitys.EnvironmentVariable;
 
 namespace MARS.Server.Services.CommandExecutor.Commands;
 
 /// <summary>
 /// Команда для установки переменных окружения
 /// </summary>
-public class SetEnvCommand(EnvironmentVariableService environmentVariableService) : BaseCommand
+public class SetEnvCommand(IDbContextFactory<AppDbContext> dbContextFactory) : BaseCommand
 {
     public override string CommandName => "setenv";
     public override string Description =>
@@ -57,9 +57,19 @@ public class SetEnvCommand(EnvironmentVariableService environmentVariableService
 
         if (!hasKey && !hasValue && !hasDescription)
         {
-            await environmentVariableService.LoadEnvironmentVariablesFromDatabaseAsync(
-                cancellationToken
-            );
+            await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+            var variables = await dbContext
+                .EnvironmentVariables.AsNoTracking()
+                .ToListAsync(cancellationToken);
+
+            foreach (var variable in variables)
+            {
+                if (!string.IsNullOrWhiteSpace(variable.Key))
+                {
+                    Environment.SetEnvironmentVariable(variable.Key, variable.Value);
+                }
+            }
+
             result = "Переменные окружения успешно перезагружены из базы данных";
         }
         else
@@ -85,11 +95,38 @@ public class SetEnvCommand(EnvironmentVariableService environmentVariableService
                     var value = valueObj!.ToString() ?? string.Empty;
                     var description = hasDescription ? descObj?.ToString() : null;
 
-                    var operationResult = await environmentVariableService.SetVariableAsync(
-                        key,
-                        value,
-                        description,
+                    await using var dbContext = await dbContextFactory.CreateDbContextAsync(
                         cancellationToken
+                    );
+                    var variable = await dbContext.EnvironmentVariables.FirstOrDefaultAsync(
+                        e => e.Key == key,
+                        cancellationToken
+                    );
+
+                    if (variable is not null)
+                    {
+                        variable.Value = value;
+                        variable.Description = description;
+                        variable.UpdatedAt = DateTime.UtcNow;
+                    }
+                    else
+                    {
+                        variable = new EnvironmentVariableEntity
+                        {
+                            Key = key,
+                            Value = value,
+                            Description = description,
+                            CreatedAt = DateTime.UtcNow,
+                            UpdatedAt = DateTime.UtcNow,
+                        };
+                        await dbContext.EnvironmentVariables.AddAsync(variable, cancellationToken);
+                    }
+
+                    await dbContext.SaveChangesAsync(cancellationToken);
+                    Environment.SetEnvironmentVariable(key, value);
+
+                    var operationResult = OperationResult.Ok(
+                        "Переменная окружения успешно установлена"
                     );
 
                     if (operationResult.Success)

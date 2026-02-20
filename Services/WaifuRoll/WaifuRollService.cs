@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using MARS.Server.ApplicationState;
 using MARS.Server.Services.Twitch;
 using MARS.Server.Services.Twitch.Rewards;
 using MARS.Server.Services.WaifuRoll.helpers;
@@ -520,8 +521,15 @@ public class WaifuRollService(
     public async Task<TimeSpan> GetWaifuRollCoolDownAsync()
     {
         await using var dbContext = await factory.CreateDbContextAsync();
-        var rootState = await dbContext.ApplicationState.AsNoTracking().FirstOrDefaultAsync();
-        var cooldownMinutes = rootState?.WaifuRollCooldownMinutes ?? 20;
+        var cooldownValue = await dbContext
+            .RootState.AsNoTracking()
+            .Where(e => e.Name == RootStateKeys.WaifuRollCooldownMinutes)
+            .Select(e => e.Value)
+            .FirstOrDefaultAsync();
+        var cooldownMinutes =
+            long.TryParse(cooldownValue, out var parsedCooldownMinutes) && parsedCooldownMinutes > 0
+                ? parsedCooldownMinutes
+                : 20;
 
         return TimeSpan.FromMinutes(cooldownMinutes);
     }

@@ -1,5 +1,4 @@
 ﻿using MARS.Server.Services;
-using MARS.Server.Services.EnvironmentVariable;
 using Microsoft.AspNetCore.Mvc;
 using EnvironmentVariableEntity = MARS.Server.Services.EnvironmentVariable.Entitys.EnvironmentVariable;
 
@@ -11,7 +10,7 @@ namespace MARS.Server.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 public class EnvironmentVariableController(
-    EnvironmentVariableService service,
+    IDbContextFactory<AppDbContext> dbContextFactory,
     ILogger<EnvironmentVariableController> logger
 ) : ControllerBase
 {
@@ -27,7 +26,10 @@ public class EnvironmentVariableController(
 
         try
         {
-            var variables = await service.GetAllVariablesAsync(cancellationToken);
+            await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+            var variables = await dbContext
+                .EnvironmentVariables.AsNoTracking()
+                .ToListAsync(cancellationToken);
             result = Ok(
                 OperationResult<List<EnvironmentVariableEntity>>.Ok(
                     "Переменные окружения получены",
@@ -73,7 +75,16 @@ public class EnvironmentVariableController(
             }
             else
             {
-                var variable = await service.GetVariableAsync(key, cancellationToken);
+                await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+                var variable = await dbContext.EnvironmentVariables.FindAsync([key], cancellationToken);
+
+                if (variable is null)
+                {
+                    variable = new EnvironmentVariableEntity { Key = key };
+                    await dbContext.EnvironmentVariables.AddAsync(variable, cancellationToken);
+                    await dbContext.SaveChangesAsync(cancellationToken);
+                }
+
                 if (variable is not null)
                 {
                     result = Ok(
@@ -127,11 +138,39 @@ public class EnvironmentVariableController(
             }
             else
             {
-                var operationResult = await service.SetVariableAsync(
-                    request.Key,
-                    request.Value ?? string.Empty,
-                    request.Description,
+                await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+
+                var key = request.Key;
+                var value = request.Value ?? string.Empty;
+                var variable = await dbContext.EnvironmentVariables.FirstOrDefaultAsync(
+                    e => e.Key == key,
                     cancellationToken
+                );
+
+                if (variable is not null)
+                {
+                    variable.Value = value;
+                    variable.Description = request.Description;
+                    variable.UpdatedAt = DateTime.UtcNow;
+                }
+                else
+                {
+                    variable = new EnvironmentVariableEntity
+                    {
+                        Key = key,
+                        Value = value,
+                        Description = request.Description,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow,
+                    };
+                    await dbContext.EnvironmentVariables.AddAsync(variable, cancellationToken);
+                }
+
+                await dbContext.SaveChangesAsync(cancellationToken);
+                Environment.SetEnvironmentVariable(key, value);
+
+                var operationResult = OperationResult.Ok(
+                    "Переменная окружения успешно установлена"
                 );
                 result = Ok(operationResult);
             }
@@ -168,8 +207,30 @@ public class EnvironmentVariableController(
             }
             else
             {
-                var operationResult = await service.DeleteVariableAsync(key, cancellationToken);
-                result = Ok(operationResult);
+                await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+                var variable = await dbContext.EnvironmentVariables.FirstOrDefaultAsync(
+                    e => e.Key == key,
+                    cancellationToken
+                );
+
+                if (variable is null)
+                {
+                    result = Ok(OperationResult.Bad("Переменная окружения не найдена"));
+                }
+                else
+                {
+                    variable.Value = null;
+                    variable.UpdatedAt = DateTime.UtcNow;
+                    dbContext.EnvironmentVariables.Update(variable);
+                    await dbContext.SaveChangesAsync(cancellationToken);
+
+                    Environment.SetEnvironmentVariable(key, null);
+
+                    var operationResult = OperationResult.Ok(
+                        "Переменная окружения успешно удалена"
+                    );
+                    result = Ok(operationResult);
+                }
             }
         }
         catch (Exception ex)
@@ -193,7 +254,19 @@ public class EnvironmentVariableController(
 
         try
         {
-            await service.LoadEnvironmentVariablesFromDatabaseAsync(cancellationToken);
+            await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+            var variables = await dbContext
+                .EnvironmentVariables.AsNoTracking()
+                .ToListAsync(cancellationToken);
+
+            foreach (var variable in variables)
+            {
+                if (!string.IsNullOrWhiteSpace(variable.Key))
+                {
+                    Environment.SetEnvironmentVariable(variable.Key, variable.Value);
+                }
+            }
+
             result = Ok(OperationResult.Ok("Переменные окружения успешно перезагружены"));
         }
         catch (Exception ex)

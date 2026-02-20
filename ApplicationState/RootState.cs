@@ -3,9 +3,18 @@
 public partial class RootState
 {
     [Key]
-    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-    public int Id { get; set; }
-    public bool RandomMemeOnlineIsStop { get; set; }
-    public bool PuntoSwitcherFilterEnabled { get; set; } = true;
-    public long WaifuRollCooldownMinutes { get; set; } = 20;
+    public required string Name { get; set; }
+
+    public string Value { get; set; } = string.Empty;
+
+    public string Description { get; set; } = string.Empty;
+
+    public string TypeDescription { get; set; } = string.Empty;
+}
+
+public static class RootStateKeys
+{
+    public const string RandomMemeOnlineIsStop = "RandomMemeOnlineIsStop";
+    public const string PuntoSwitcherFilterEnabled = "PuntoSwitcherFilterEnabled";
+    public const string WaifuRollCooldownMinutes = "WaifuRollCooldownMinutes";
 }

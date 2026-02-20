@@ -4,7 +4,6 @@ using MARS.Server.CustomLoggers.SignalRLogger;
 using MARS.Server.CustomLoggers.TelegramLogger;
 using MARS.Server.Services.CinemaQueue;
 using MARS.Server.Services.CommandExecutor;
-using MARS.Server.Services.EnvironmentVariable;
 using MARS.Server.Services.KeyboardHook_UNUSED;
 using MARS.Server.Services.Logs.Interfaces;
 using MARS.Server.Services.Logs.Services;
@@ -190,8 +189,7 @@ public static class Program
             .AddGameServices()
             .AddExternalApiServices()
             .AddSpecializedServices()
-            .AddSoundRequest()
-            .AddEnvironmentVariableService();
+            .AddSoundRequest();
 
         if (builder.Environment.IsProduction())
         {

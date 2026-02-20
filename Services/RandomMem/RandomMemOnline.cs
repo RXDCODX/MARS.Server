@@ -1,4 +1,5 @@
 ﻿using System.Collections.Frozen;
+using MARS.Server.ApplicationState;
 using MARS.Server.Services.MemoryStorageService;
 using MARS.Server.Services.TelegramBotService;
 using TL;
@@ -26,9 +27,15 @@ public class RandomMemOnline(
             if (StaticDbContextFactory.Factory != null)
             {
                 using var dbContext = StaticDbContextFactory.Factory.CreateDbContext();
-                var state = dbContext.ApplicationState.Single();
-                state.RandomMemeOnlineIsStop = value;
-                dbContext.SaveChanges();
+                var state = dbContext.RootState.SingleOrDefault(e =>
+                    e.Name == RootStateKeys.RandomMemeOnlineIsStop
+                );
+
+                if (state is not null)
+                {
+                    state.Value = value.ToString();
+                    dbContext.SaveChanges();
+                }
             }
 
             field = value;
@@ -55,7 +62,13 @@ public class RandomMemOnline(
         var client = await GetClientAsync(stoppingToken);
 
         await using var dbContext = await factory.CreateDbContextAsync(stoppingToken);
-        var isStop = dbContext.ApplicationState.Single().RandomMemeOnlineIsStop;
+        var isStopValue = await dbContext
+            .RootState.AsNoTracking()
+            .Where(e => e.Name == RootStateKeys.RandomMemeOnlineIsStop)
+            .Select(e => e.Value)
+            .FirstOrDefaultAsync(stoppingToken);
+
+        var isStop = bool.TryParse(isStopValue, out var parsedIsStop) && parsedIsStop;
 
         IsStop = isStop;
 

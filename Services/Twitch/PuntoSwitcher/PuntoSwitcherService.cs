@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Text;
+using MARS.Server.ApplicationState;
 using Microsoft.EntityFrameworkCore;
 using TwitchLib.Client.Events;
 using TwitchLib.Client.Models;
@@ -99,11 +100,15 @@ public class PuntoSwitcherService : BackgroundService, IPuntoSwitcherService
     private async Task InitializePuntoSwitcherStateAsync(CancellationToken stoppingToken)
     {
         await using var db = await _dbContextFactory!.CreateDbContextAsync(stoppingToken);
-        var rootState = await db.ApplicationState.AsNoTracking().FirstOrDefaultAsync(stoppingToken);
+        var rootStateValue = await db
+            .RootState.AsNoTracking()
+            .Where(e => e.Name == RootStateKeys.PuntoSwitcherFilterEnabled)
+            .Select(e => e.Value)
+            .FirstOrDefaultAsync(stoppingToken);
 
-        if (rootState is not null)
+        if (bool.TryParse(rootStateValue, out var isEnabled))
         {
-            PuntoSwitcherState.IsFilterEnabled = rootState.PuntoSwitcherFilterEnabled;
+            PuntoSwitcherState.IsFilterEnabled = isEnabled;
         }
     }
 

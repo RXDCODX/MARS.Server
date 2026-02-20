@@ -62,7 +62,7 @@ public sealed partial class AppDbContext : DbContext
     public DbSet<MovePending> TekkenMovesPending { get; set; } = null!;
     public DbSet<TelegramUpdateReceiverOffset> TelegramUpdateReceiverOffset { get; set; } = null!;
     public DbSet<WTelegramAlloweedChannel> WTelegramAlloweedChannels { get; set; } = null!;
-    public DbSet<RootState> ApplicationState { get; set; } = null!;
+    public DbSet<RootState> RootState { get; set; } = null!;
 
     // SoundRequest - новая структура
     public DbSet<BaseTrackInfo> SoundRequestBaseTrackInfos { get; set; } = null!;
@@ -259,15 +259,34 @@ public sealed partial class AppDbContext : DbContext
             .Property(e => e.Image)
             .HasColumnType("varbinary(max)");
 
+        modelBuilder.Entity<RootState>().ToTable("RootState");
+        modelBuilder.Entity<RootState>().HasIndex(e => e.Name).IsUnique();
         modelBuilder
             .Entity<RootState>()
             .HasData(
-                new RootState
-                {
-                    Id = 1,
-                    RandomMemeOnlineIsStop = false,
-                    PuntoSwitcherFilterEnabled = true,
-                }
+                [
+                    new RootState
+                    {
+                        Name = RootStateKeys.RandomMemeOnlineIsStop,
+                        Value = false.ToString(),
+                        Description = "Флаг остановки сервиса RandomMemeOnline",
+                        TypeDescription = "bool",
+                    },
+                    new RootState
+                    {
+                        Name = RootStateKeys.PuntoSwitcherFilterEnabled,
+                        Value = true.ToString(),
+                        Description = "Флаг включения фильтра PuntoSwitcher",
+                        TypeDescription = "bool",
+                    },
+                    new RootState
+                    {
+                        Name = RootStateKeys.WaifuRollCooldownMinutes,
+                        Value = 20L.ToString(),
+                        Description = "Кулдаун ролла вайфу в минутах",
+                        TypeDescription = "long",
+                    },
+                ]
             );
 
         // Конфигурация для Scoreboard

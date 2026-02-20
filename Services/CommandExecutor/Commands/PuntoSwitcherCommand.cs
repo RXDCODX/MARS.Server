@@ -1,3 +1,4 @@
+using MARS.Server.ApplicationState;
 using MARS.Server.Services.CommandExecutor.Entitys;
 using MARS.Server.Services.CommandExecutor.Entitys.Commands;
 using MARS.Server.Services.Twitch.PuntoSwitcher;
@@ -22,12 +23,16 @@ public class PuntoSwitcherCommand(IDbContextFactory<AppDbContext> dbContextFacto
         var result = "Не удалось переключить PuntoSwitcher";
 
         await using var db = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var rootState = await db.ApplicationState.FirstOrDefaultAsync(cancellationToken);
+        var rootState = await db.RootState.FirstOrDefaultAsync(
+            e => e.Name == RootStateKeys.PuntoSwitcherFilterEnabled,
+            cancellationToken
+        );
 
         if (rootState is not null)
         {
-            var nextState = !rootState.PuntoSwitcherFilterEnabled;
-            rootState.PuntoSwitcherFilterEnabled = nextState;
+            var currentState = bool.TryParse(rootState.Value, out var isEnabled) && isEnabled;
+            var nextState = !currentState;
+            rootState.Value = nextState.ToString();
             PuntoSwitcherState.IsFilterEnabled = nextState;
 
             await db.SaveChangesAsync(cancellationToken);
@@ -38,7 +43,7 @@ public class PuntoSwitcherCommand(IDbContextFactory<AppDbContext> dbContextFacto
         }
         else
         {
-            result = "RootState не найден";
+            result = "Переменная PuntoSwitcherFilterEnabled не найдена";
         }
 
         return result;
