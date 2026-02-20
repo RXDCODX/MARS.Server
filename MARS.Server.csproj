@@ -40,6 +40,7 @@
     <PackageReference Include="AngleSharp" />
     <PackageReference Include="AngleSharp.XPath" />
     <PackageReference Include="AspNetCore.SpaYarp" />
+    <PackageReference Include="Azure.Identity" />
     <PackageReference Include="Ben.Demystifier" />
     <PackageReference Include="BooruSharp" />
     <PackageReference Include="H.Hooks" />
@@ -80,7 +81,6 @@
     <PackageReference Include="System.Data.DataSetExtensions" />
     <PackageReference Include="System.Speech" />
     <PackageReference Include="Telegram.Bot" />
-    <PackageReference Include="TwitchLib" />
     <PackageReference Include="TwitchLib.Api" />
     <PackageReference Include="TwitchLib.Api.Core" />
     <PackageReference Include="TwitchLib.Api.Core.Enums" />
@@ -88,6 +88,11 @@
     <PackageReference Include="TwitchLib.Api.Core.Models" />
     <PackageReference Include="TwitchLib.Api.Helix" />
     <PackageReference Include="TwitchLib.Api.Helix.Models" />
+    <PackageReference Include="TwitchLib.Client" />
+    <PackageReference Include="TwitchLib.Client.Enums" />
+    <PackageReference Include="TwitchLib.Client.Models" />
+    <PackageReference Include="TwitchLib.Communication" />
+    <PackageReference Include="TwitchLib.EventSub.Core" />
     <PackageReference Include="TwitchLib.EventSub.Websockets" />
     <PackageReference Include="WTelegramClient" />
   </ItemGroup>
