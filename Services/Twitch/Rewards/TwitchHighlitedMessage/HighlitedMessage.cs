@@ -1,5 +1,8 @@
-﻿using MARS.Server.Services.AutoArts_OBSOLETE.Entitys;
+﻿using System.Reflection;
+using MARS.Server.Services.AutoArts_OBSOLETE.Entitys;
+using MARS.Server.Services.Twitch.PuntoSwitcher;
 using TwitchLib.Client.Events;
+using TwitchLib.Client.Models;
 
 namespace MARS.Server.Services.Twitch.Rewards.TwitchHighlitedMessage;
 
@@ -7,16 +10,19 @@ public class HighlitedMessage : BackgroundService
 {
     private readonly IHubContext<TelegramusHub, ITelegramusHub> _hubContext;
     private readonly IWebHostEnvironment _environment;
+    private readonly IPuntoSwitcherService _puntoSwitcherService;
 
     public HighlitedMessage(
         IHubContext<TelegramusHub, ITelegramusHub> hubContext,
         IWebHostEnvironment environment,
+        IPuntoSwitcherService puntoSwitcherService,
         ITwitchClient client,
         IHostApplicationLifetime applicationLifetime
     )
     {
         _hubContext = hubContext;
         _environment = environment;
+        _puntoSwitcherService = puntoSwitcherService;
 
         applicationLifetime.ApplicationStarted.Register(() =>
         {
@@ -56,10 +62,46 @@ public class HighlitedMessage : BackgroundService
                             .First()
                     );
 
-                    await _hubContext.Clients.All.Highlite(args.ChatMessage, color, image);
+                    var message = args.ChatMessage;
+                    if (PuntoSwitcherState.IsFilterEnabled)
+                    {
+                        var fixedMessage = _puntoSwitcherService.TryFixMessage(
+                            args.ChatMessage.Message
+                        );
+                        if (fixedMessage.Success && fixedMessage.Data.HasChanges)
+                        {
+                            message = TryOverrideMessage(
+                                message,
+                                fixedMessage.Data.CorrectedMessage
+                            );
+                        }
+                    }
+
+                    await _hubContext.Clients.All.Highlite(message, color, image);
                 }
             });
         }
+    }
+
+    private static ChatMessage TryOverrideMessage(ChatMessage source, string correctedMessage)
+    {
+        var result = source;
+
+        if (!string.IsNullOrWhiteSpace(correctedMessage))
+        {
+            var backingField = source
+                .GetType()
+                .GetField(
+                    "<Message>k__BackingField",
+                    BindingFlags.Instance | BindingFlags.NonPublic
+                );
+
+            backingField?.SetValue(source, correctedMessage);
+
+            result = source;
+        }
+
+        return result;
     }
 
     private static AutoArtImage GetImageByFilePath(string filePath)

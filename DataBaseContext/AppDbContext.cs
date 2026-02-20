@@ -261,7 +261,14 @@ public sealed partial class AppDbContext : DbContext
 
         modelBuilder
             .Entity<RootState>()
-            .HasData(new RootState { Id = 1, RandomMemeOnlineIsStop = false });
+            .HasData(
+                new RootState
+                {
+                    Id = 1,
+                    RandomMemeOnlineIsStop = false,
+                    PuntoSwitcherFilterEnabled = true,
+                }
+            );
 
         // Конфигурация для Scoreboard
         modelBuilder

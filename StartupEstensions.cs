@@ -27,6 +27,7 @@ using MARS.Server.Services.Twitch.FumoFriday;
 using MARS.Server.Services.Twitch.HelloVideos;
 using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.Twitch.MiniGamesStats;
+using MARS.Server.Services.Twitch.PuntoSwitcher;
 using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
 using MARS.Server.Services.Twitch.Rewards.CloseGameReward;
 using MARS.Server.Services.Twitch.Rewards.MiniGames;
@@ -235,6 +236,11 @@ public static class StartupEstensions
         services.AddScoped<TwitchRussianRoulete>();
         services.AddScoped<TekkenVictorina>();
         services.AddScoped<TwitchTrivia>();
+        services.AddSingleton<PuntoSwitcherService>();
+        services.AddSingleton<IPuntoSwitcherService>(sp =>
+            sp.GetRequiredService<PuntoSwitcherService>()
+        );
+        services.AddHostedService(sp => sp.GetRequiredService<PuntoSwitcherService>());
         services.AddSingleton<HighlitedMessage>();
         services.AddHostedService(sp => sp.GetRequiredService<HighlitedMessage>());
         services.AddSingleton<FumoFridayWorker>();
