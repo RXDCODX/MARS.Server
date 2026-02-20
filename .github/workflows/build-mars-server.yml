@@ -9,6 +9,9 @@ on:
 permissions:
   contents: read
 
+env:
+  HUSKY: 0
+
 jobs:
   build:
     name: Build
@@ -17,10 +20,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup .NET 9
+      - name: Setup .NET 10
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: "9.0.x"
+          dotnet-version: "10.0.x"
 
       - name: Cache NuGet packages
         uses: actions/cache@v4
@@ -31,10 +34,10 @@ jobs:
             ${{ runner.os }}-nuget-
 
       - name: Restore
-        run: dotnet restore MARS.Server.csproj
+        run: dotnet restore MARS.Server.csproj -p:HUSKY=0
 
       - name: Build (skip frontend/publish targets)
-        run: dotnet build MARS.Server.csproj -c Release --no-restore -warnaserror
+        run: dotnet build MARS.Server.csproj -c Release --no-restore -warnaserror -p:HUSKY=0
 
       # Важно: не вызываем dotnet publish, чтобы не срабатывали BeforeTargets/AfterTargets "Publish"
       # из csproj (они запускают yarn и сборку фронта). Нам нужна лишь проверка успешной сборки бэкенда.
