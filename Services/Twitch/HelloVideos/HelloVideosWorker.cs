@@ -28,7 +28,7 @@ public class HelloVideoWorker(
         await base.StopAsync(cancellationToken);
     }
 
-    public async void OnMessageReceived(object? sender, OnMessageReceivedArgs args)
+    public async Task OnMessageReceived(object? sender, OnMessageReceivedArgs args)
     {
         if ((args.ChatMessage.Channel != TwitchExstension.Channel || !IsServiceActive))
         {

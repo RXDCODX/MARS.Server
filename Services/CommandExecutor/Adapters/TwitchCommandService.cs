@@ -89,7 +89,7 @@ public class TwitchCommandService : PlatformCommandServiceBase<string>, IHostedS
         }
     }
 
-    private void ClientOnOnMessageReceived(object? sender, OnMessageReceivedArgs e)
+    private async Task ClientOnOnMessageReceived(object? sender, OnMessageReceivedArgs e)
     {
         if (
             TwitchExstension.BlackList.All(t =>
@@ -97,7 +97,7 @@ public class TwitchCommandService : PlatformCommandServiceBase<string>, IHostedS
             )
         )
         {
-            Task.Factory.StartNew(async () =>
+            await Task.Factory.StartNew(async () =>
             {
                 try
                 {

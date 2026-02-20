@@ -24,7 +24,7 @@ public class TwitchMessagesHubAwaker(
         return Task.CompletedTask;
     }
 
-    private async void ClientKeyTriggerAlert(object? sender, OnMessageReceivedArgs e)
+    private async Task ClientKeyTriggerAlert(object? sender, OnMessageReceivedArgs e)
     {
         if (
             e.ChatMessage.Channel.Equals(
@@ -125,7 +125,7 @@ public class TwitchMessagesHubAwaker(
         }
     }
 
-    private async void ClientOnOnMessageCleared(object? sender, OnMessageClearedArgs args)
+    private async Task ClientOnOnMessageCleared(object? sender, OnMessageClearedArgs args)
     {
         if (args.Channel.Equals(TwitchExstension.Channel, StringComparison.OrdinalIgnoreCase))
         {
@@ -136,7 +136,7 @@ public class TwitchMessagesHubAwaker(
         }
     }
 
-    private async void ClientOnOnMessageReceived(object? sender, OnMessageReceivedArgs args)
+    private async Task ClientOnOnMessageReceived(object? sender, OnMessageReceivedArgs args)
     {
         if (
             args.ChatMessage.Channel.Equals(

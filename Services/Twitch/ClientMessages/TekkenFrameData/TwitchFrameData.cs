@@ -16,7 +16,7 @@ public class TwitchFramedate(
     private readonly CancellationToken _cancellationToken = lifetime.ApplicationStopping;
     private static readonly Regex Regex = new(@"\p{C}+");
 
-    public async void FrameDateMessage(object? sender, OnMessageReceivedArgs args)
+    public async Task FrameDateMessage(object? sender, OnMessageReceivedArgs args)
     {
         if (
             args.ChatMessage.Channel.Equals(TwitchExstension.Channel)
@@ -172,7 +172,7 @@ public class TwitchFramedate(
             + tagsInfo;
     }
 
-    private Task SendResponse(string channel, string message, string username)
+    private async Task SendResponse(string channel, string message, string username)
     {
         message = AnswersForTwitchRewards.ReplaceKeywordsInAnswer(username, message);
 
@@ -184,7 +184,7 @@ public class TwitchFramedate(
                 )
             )
             {
-                client.JoinChannel(channel);
+                await client.JoinChannelAsync(channel);
             }
 
             var joinedChannel = client.GetJoinedChannel(channel);
@@ -195,14 +195,15 @@ public class TwitchFramedate(
                 message = message[..450] + "...";
             }
 
-            client.SendMessage(joinedChannel, message);
+            if (joinedChannel != null)
+            {
+                await client.SendMessageAsync(joinedChannel, message);
+            }
         }
         catch (Exception e)
         {
             logger?.LogError(e, "Ошибка при отправке сообщения в Twitch");
         }
-
-        return Task.CompletedTask;
     }
 
     protected override Task ExecuteAsync(CancellationToken stoppingToken)

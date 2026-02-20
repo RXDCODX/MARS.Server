@@ -30,12 +30,12 @@ public class HighlitedMessage : BackgroundService
         });
     }
 
-    internal async void TwitchClientOnNormalMessage(object? sender, OnMessageReceivedArgs args)
+    internal async Task TwitchClientOnNormalMessage(object? sender, OnMessageReceivedArgs args)
     {
         if (
             (
-                args.ChatMessage.IsVip
-                || args.ChatMessage.IsModerator
+                args.ChatMessage.UserDetail.IsVip
+                || args.ChatMessage.UserDetail.IsModerator
                 || args.ChatMessage.IsBroadcaster
             )
             && args.ChatMessage.IsHighlighted
@@ -51,9 +51,9 @@ public class HighlitedMessage : BackgroundService
             await Task.Factory.StartNew(async () =>
             {
                 {
-                    var color = string.IsNullOrWhiteSpace(args.ChatMessage.ColorHex)
+                    var color = string.IsNullOrWhiteSpace(args.ChatMessage.HexColor)
                         ? "#ffffff"
-                        : args.ChatMessage.ColorHex;
+                        : args.ChatMessage.HexColor;
                     var path = Path.Combine(_environment.WebRootPath, "faces");
                     var image = GetImageByFilePath(
                         Directory

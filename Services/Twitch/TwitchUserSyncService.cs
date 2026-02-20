@@ -41,7 +41,7 @@ public class TwitchUserSyncService(
         return base.StopAsync(cancellationToken);
     }
 
-    private async void OnMessageReceived(object? sender, OnMessageReceivedArgs e)
+    private async Task OnMessageReceived(object? sender, OnMessageReceivedArgs e)
     {
         // Пропускаем сообщения не из основного канала
         if (
@@ -167,9 +167,9 @@ public class TwitchUserSyncService(
             TwitchId = userId,
             UserLogin = userName,
             DisplayName = displayName,
-            IsModerator = chatMessage.IsModerator,
-            IsVip = chatMessage.IsVip,
-            ChatColor = chatColor ?? chatMessage.ColorHex,
+            IsModerator = chatMessage.UserDetail.IsModerator,
+            IsVip = chatMessage.UserDetail.IsVip,
+            ChatColor = chatColor ?? chatMessage.HexColor,
             ProfileImageUrl = apiUser?.ProfileImageUrl,
             CreatedAt = DateTime.UtcNow,
             LastUpdated = DateTime.UtcNow,
@@ -211,20 +211,20 @@ public class TwitchUserSyncService(
             needsUpdate = true;
         }
 
-        if (existingUser.IsModerator != chatMessage.IsModerator)
+        if (existingUser.IsModerator != chatMessage.UserDetail.IsModerator)
         {
-            existingUser.IsModerator = chatMessage.IsModerator;
+            existingUser.IsModerator = chatMessage.UserDetail.IsModerator;
             needsUpdate = true;
         }
 
-        if (existingUser.IsVip != chatMessage.IsVip)
+        if (existingUser.IsVip != chatMessage.UserDetail.IsVip)
         {
-            existingUser.IsVip = chatMessage.IsVip;
+            existingUser.IsVip = chatMessage.UserDetail.IsVip;
             needsUpdate = true;
         }
 
         // Обновляем цвет чата если изменился
-        var newChatColor = chatMessage.ColorHex;
+        var newChatColor = chatMessage.HexColor;
         if (existingUser.ChatColor != newChatColor && !string.IsNullOrWhiteSpace(newChatColor))
         {
             existingUser.ChatColor = newChatColor;

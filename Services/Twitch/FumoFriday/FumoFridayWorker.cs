@@ -65,7 +65,7 @@ public class FumoFridayWorker(
         await base.StopAsync(cancelToken);
     }
 
-    public async void OnMessageReceived(object? sender, OnMessageReceivedArgs e)
+    public async Task OnMessageReceived(object? sender, OnMessageReceivedArgs e)
     {
         if (
             !IsServiceActive
@@ -79,7 +79,7 @@ public class FumoFridayWorker(
 
         var name = e.ChatMessage.DisplayName;
         var id = e.ChatMessage.UserId;
-        var colorHex = e.ChatMessage.ColorHex;
+        var colorHex = e.ChatMessage.HexColor;
         var now = DateTimeOffset.Now;
 
         if (!_users.Contains(id) && e.ChatMessage.Channel == TwitchExstension.Channel)

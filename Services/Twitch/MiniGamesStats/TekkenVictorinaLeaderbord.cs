@@ -118,7 +118,7 @@ public class TekkenVictorinaLeaderbord(
         return Task.CompletedTask;
     }
 
-    private async void ClientOnOnMessageReceived(object? sender, OnMessageReceivedArgs e)
+    private async Task ClientOnOnMessageReceived(object? sender, OnMessageReceivedArgs e)
     {
         var message = e.ChatMessage.Message;
         var twitchId = e.ChatMessage.UserId!;

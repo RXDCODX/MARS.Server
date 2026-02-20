@@ -137,9 +137,9 @@ public class TwitchUser
                     TwitchId = chatMessage.UserId,
                     UserLogin = chatMessage.Username,
                     DisplayName = chatMessage.DisplayName,
-                    ChatColor = chatMessage.ColorHex,
-                    IsModerator = chatMessage.IsModerator,
-                    IsVip = chatMessage.IsVip,
+                    ChatColor = chatMessage.HexColor,
+                    IsModerator = chatMessage.UserDetail.IsModerator,
+                    IsVip = chatMessage.UserDetail.IsVip,
                     CreatedAt = DateTime.UtcNow,
                     LastUpdated = DateTime.UtcNow,
                 };

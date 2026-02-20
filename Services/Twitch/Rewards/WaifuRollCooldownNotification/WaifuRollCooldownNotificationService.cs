@@ -121,7 +121,7 @@ public class WaifuRollCooldownNotificationService(
         }
     }
 
-    private async void OnMessageReceived(object? sender, OnMessageReceivedArgs e)
+    private async Task OnMessageReceived(object? sender, OnMessageReceivedArgs e)
     {
         if (
             !e.ChatMessage.Channel.Equals(

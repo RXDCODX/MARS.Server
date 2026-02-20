@@ -29,7 +29,7 @@ public class CatisaCommand(ITwitchClient client) : BaseCommand
             },
         ];
 
-    public override Task<string> ExecuteAsync(
+    public override async Task<string> ExecuteAsync(
         Dictionary<string, object> parameters,
         Platform platform = Platform.None,
         CancellationToken cancellationToken = default
@@ -38,15 +38,9 @@ public class CatisaCommand(ITwitchClient client) : BaseCommand
         var message = (string)parameters["message"];
         var channel = (string)parameters["channel"];
 
-        Task.Factory.StartNew(
-            () =>
-            {
-                client.JoinChannel(channel);
-                client.SendMessage(channel, message);
-            },
-            cancellationToken
-        );
+        await client.JoinChannelAsync(channel);
+        await client.SendMessageAsync(channel, message);
 
-        return Task.FromResult($"Отправил \"{message}\" на канал \"{channel}\"!");
+        return $"Отправил \"{message}\" на канал \"{channel}\"!";
     }
 }

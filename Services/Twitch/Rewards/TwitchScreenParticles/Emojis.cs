@@ -14,7 +14,7 @@ public class Emojis(
 
     private readonly Guid _guid = Guid.Parse("22db3d35-1b76-4674-beb7-cc7546356a84");
 
-    private async void ClientOnOnMessageReceived(object? sender, OnMessageReceivedArgs e)
+    private async Task ClientOnOnMessageReceived(object? sender, OnMessageReceivedArgs e)
     {
         if (
             !string.IsNullOrWhiteSpace(e.ChatMessage.CustomRewardId)

@@ -25,7 +25,7 @@ public static class TwitchExstension
 
     extension(ITwitchClient client)
     {
-        public Task SendMessageToMainTwitchAsync<T>(
+        public async Task SendMessageToMainTwitchAsync<T>(
             string message,
             ILogger<T>? logger = null
         )
@@ -39,21 +39,22 @@ public static class TwitchExstension
                     )
                 )
                 {
-                    client.JoinChannel(Channel);
+                    await client.JoinChannelAsync(Channel);
                 }
 
                 JoinedChannel? channel = client.GetJoinedChannel(Channel);
-                client.SendMessage(channel, message);
+                if (channel != null)
+                {
+                    await client.SendMessageAsync(channel, message);
+                }
             }
             catch (Exception e)
             {
                 logger?.LogException(e);
             }
-
-            return Task.CompletedTask;
         }
 
-        public Task SendMessageToMainTwitchAsync(
+        public async Task SendMessageToMainTwitchAsync(
             string message,
             ILogger? logger = null
         )
@@ -66,18 +67,19 @@ public static class TwitchExstension
                     )
                 )
                 {
-                    client.JoinChannel(Channel);
+                    await client.JoinChannelAsync(Channel);
                 }
 
                 JoinedChannel? channel = client.GetJoinedChannel(Channel);
-                client.SendMessage(channel, message);
+                if (channel != null)
+                {
+                    await client.SendMessageAsync(channel, message);
+                }
             }
             catch (Exception e)
             {
                 logger?.LogException(e);
             }
-
-            return Task.CompletedTask;
         }
     }
 

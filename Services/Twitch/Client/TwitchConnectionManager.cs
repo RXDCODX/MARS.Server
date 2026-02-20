@@ -1,7 +1,5 @@
 ﻿using TwitchLib.Client;
 using TwitchLib.Client.Models;
-using TwitchLib.Communication.Clients;
-using TwitchLib.Communication.Models;
 
 namespace MARS.Server.Services.Twitch.Client;
 
@@ -9,12 +7,11 @@ public class TwitchConnectionManager : IHostedService
 {
     private readonly ILogger<TwitchConnectionManager> _logger;
 
-    private readonly WebSocketClient _webSocketClient;
     private readonly TwitchClient _client;
     private readonly ConnectionCredentials _credentials;
     private bool _initialized;
 
-    private bool IsConnected => _webSocketClient.IsConnected;
+    private bool IsConnected => _client.IsConnected;
     private DateTimeOffset? _lastConnectedAt;
     private DateTimeOffset? _lastDisconnectedAt;
     private string? _lastDisconnectReason;
@@ -40,19 +37,7 @@ public class TwitchConnectionManager : IHostedService
     {
         _logger = logger;
 
-        var clientOptions = new ClientOptions
-        {
-            MessagesAllowedInPeriod = 750,
-            ThrottlingPeriod = TimeSpan.FromSeconds(30),
-            DisconnectWait = (int)TimeSpan.FromSeconds(2).TotalMilliseconds,
-        };
-
-        _webSocketClient = new WebSocketClient(clientOptions);
-        _client = new TwitchClient(
-            _webSocketClient,
-            default,
-            loggerFactory.CreateLogger<TwitchClient>()
-        );
+        _client = new TwitchClient(loggerFactory: loggerFactory);
 
         _credentials = new ConnectionCredentials(
             TwitchExstension.BotName,
@@ -65,6 +50,7 @@ public class TwitchConnectionManager : IHostedService
             _reconnectAttempts = 0;
             _isReconnecting = false;
             _logger.LogInformation("Twitch chat connected as {Bot}", TwitchExstension.BotName);
+            return Task.CompletedTask;
         };
 
         _client.OnDisconnected += (_, _) =>
@@ -76,6 +62,8 @@ public class TwitchConnectionManager : IHostedService
             {
                 _ = TryReconnectAsync();
             }
+
+            return Task.CompletedTask;
         };
 
         _client.OnConnectionError += (_, args) =>
@@ -88,6 +76,8 @@ public class TwitchConnectionManager : IHostedService
             {
                 _ = TryReconnectAsync();
             }
+
+            return Task.CompletedTask;
         };
     }
 
@@ -97,7 +87,7 @@ public class TwitchConnectionManager : IHostedService
         {
             _reconnectCts = new CancellationTokenSource();
             _manualDisconnect = false;
-            EnsureInitializedAndConnected();
+            _ = EnsureInitializedAndConnected();
         }
         catch (Exception ex)
         {
@@ -121,7 +111,7 @@ public class TwitchConnectionManager : IHostedService
 
             if (_client.IsConnected)
             {
-                _client.Disconnect();
+                await _client.DisconnectAsync();
             }
 
             _reconnectCts?.Dispose();
@@ -144,7 +134,7 @@ public class TwitchConnectionManager : IHostedService
             + $"IsReconnecting: {_isReconnecting}";
     }
 
-    public Task<bool> ReconnectAsync()
+    public async Task<bool> ReconnectAsync()
     {
         try
         {
@@ -155,22 +145,22 @@ public class TwitchConnectionManager : IHostedService
 
             if (_client.IsConnected)
             {
-                _client.Disconnect();
+                await _client.DisconnectAsync();
             }
 
-            Thread.Sleep(TimeSpan.FromMilliseconds(250));
+            await Task.Delay(TimeSpan.FromMilliseconds(250));
 
             _reconnectAttempts = 0;
             _manualDisconnect = false;
             _reconnectCts = new CancellationTokenSource();
 
-            EnsureInitializedAndConnected();
-            return Task.FromResult(true);
+            await EnsureInitializedAndConnected();
+            return true;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to reconnect Twitch client");
-            return Task.FromResult(false);
+            return false;
         }
     }
 
@@ -224,7 +214,7 @@ public class TwitchConnectionManager : IHostedService
                     return;
                 }
 
-                EnsureInitializedAndConnected();
+                await EnsureInitializedAndConnected();
 
                 if (_client.IsConnected)
                 {
@@ -262,7 +252,7 @@ public class TwitchConnectionManager : IHostedService
         return TimeSpan.FromSeconds(delaySeconds);
     }
 
-    private void EnsureInitializedAndConnected()
+    private async Task EnsureInitializedAndConnected()
     {
         if (!_initialized)
         {
@@ -272,7 +262,7 @@ public class TwitchConnectionManager : IHostedService
 
         if (!_client.IsConnected)
         {
-            _client.Connect();
+            await _client.ConnectAsync();
         }
     }
 }

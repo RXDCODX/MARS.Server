@@ -27,7 +27,7 @@ public class AutoHello : BackgroundService
         });
     }
 
-    public async void AutoHelloTwitchEvent(object? sender, OnMessageReceivedArgs args)
+    public async Task AutoHelloTwitchEvent(object? sender, OnMessageReceivedArgs args)
     {
         if (
             args.ChatMessage.Channel.Equals(

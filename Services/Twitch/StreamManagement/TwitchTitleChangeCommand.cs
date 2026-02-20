@@ -32,7 +32,7 @@ public class TwitchTitleChangeCommand(
         await base.StopAsync(cancellationToken);
     }
 
-    private async void OnMessageReceived(object? sender, OnMessageReceivedArgs args)
+    private async Task OnMessageReceived(object? sender, OnMessageReceivedArgs args)
     {
         if (!IsServiceActive)
         {
@@ -41,7 +41,7 @@ public class TwitchTitleChangeCommand(
 
         var message = args.ChatMessage.Message.Trim();
         var username = args.ChatMessage.DisplayName;
-        var isModerator = args.ChatMessage.IsModerator;
+        var isModerator = args.ChatMessage.UserDetail.IsModerator;
         var isBroadcaster = args.ChatMessage.IsBroadcaster;
 
         // Проверяем, что это команда !title

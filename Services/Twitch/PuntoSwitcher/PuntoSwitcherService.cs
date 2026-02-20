@@ -112,7 +112,7 @@ public class PuntoSwitcherService : BackgroundService, IPuntoSwitcherService
         }
     }
 
-    private void OnMessageReceived(object? sender, OnMessageReceivedArgs args)
+    private Task OnMessageReceived(object? sender, OnMessageReceivedArgs args)
     {
         if (PuntoSwitcherState.IsFilterEnabled)
         {
@@ -133,6 +133,8 @@ public class PuntoSwitcherService : BackgroundService, IPuntoSwitcherService
                 }
             }
         }
+
+        return Task.CompletedTask;
     }
 
     private static ChatMessage TryOverrideMessage(ChatMessage source, string correctedMessage)

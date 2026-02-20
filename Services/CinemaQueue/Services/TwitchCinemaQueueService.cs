@@ -150,20 +150,18 @@ public class TwitchCinemaQueueService(
         }
     }
 
-    private Task SendTwitchNotification(string userName, CinemaMediaItemDto cinemaMediaItem)
+    private async Task SendTwitchNotification(string userName, CinemaMediaItemDto cinemaMediaItem)
     {
         try
         {
             var message = $"@{userName} добавил '{cinemaMediaItem.Title}' в очередь просмотра! 🎬";
             logger.LogInformation("Twitch notification: {Message}", message);
 
-            twitchClient.SendMessageToMainTwitchAsync(message);
+            await twitchClient.SendMessageToMainTwitchAsync(message);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error sending Twitch notification");
         }
-
-        return Task.CompletedTask;
     }
 }

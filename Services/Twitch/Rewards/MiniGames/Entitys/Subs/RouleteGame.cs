@@ -186,11 +186,9 @@ public class RouleteGame(
                     $"@{username}, BANG! BANG! BANG!",
                     logger
                 );
-                client.TimeoutUser(
-                    TwitchExstension.Channel,
-                    username,
-                    TimeSpan.FromMinutes(10),
-                    "Проиграл(а) в русскую рулетку!"
+                await client.SendMessageToMainTwitchAsync(
+                    $"/timeout {username} 600 Проиграл(а)_в_русскую_рулетку!",
+                    logger
                 );
                 break;
         }

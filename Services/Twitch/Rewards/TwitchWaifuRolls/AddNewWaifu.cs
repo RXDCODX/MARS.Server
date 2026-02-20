@@ -30,7 +30,7 @@ public class AddNewWaifu(
 
     public bool IsServiceActive { get; set; } = true;
 
-    private async void AddNewWaifuTwitchEvent(
+    private async Task AddNewWaifuTwitchEvent(
         object? sender,
         OnMessageReceivedArgs onMessageReceivedArgs
     )
@@ -64,8 +64,8 @@ public class AddNewWaifu(
                 var userInput = onMessageReceivedArgs.ChatMessage.Message;
                 var userId = onMessageReceivedArgs.ChatMessage.UserId;
                 var isVip =
-                    onMessageReceivedArgs.ChatMessage.IsVip
-                    || onMessageReceivedArgs.ChatMessage.IsModerator
+                    onMessageReceivedArgs.ChatMessage.UserDetail.IsVip
+                    || onMessageReceivedArgs.ChatMessage.UserDetail.IsModerator
                     || onMessageReceivedArgs.ChatMessage.IsBroadcaster;
 
                 var id = await GetShikimoriCharacterIdFromLink(userInput);

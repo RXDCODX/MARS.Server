@@ -55,7 +55,7 @@ public class SyntheziaQueueManager(
         logger.LogInformation("Озвучка остановлена и заблокирована.");
     }
 
-    public async void HandMessageToVoice(object? sender, OnMessageReceivedArgs args)
+    public async Task HandMessageToVoice(object? sender, OnMessageReceivedArgs args)
     {
         if (
             args.ChatMessage.Channel.Equals(

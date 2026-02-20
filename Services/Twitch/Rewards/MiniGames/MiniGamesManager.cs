@@ -127,8 +127,7 @@ public class MiniGamesManager(
         }
     }
 
-    // ReSharper disable once AsyncVoidMethod
-    private async void ClientOnMessageReceived(object? sender, OnMessageReceivedArgs e)
+    private async Task ClientOnMessageReceived(object? sender, OnMessageReceivedArgs e)
     {
         if (
             !IsServiceActive

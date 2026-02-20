@@ -17,7 +17,7 @@ public class TwitchMediaAlerts(
 
     public bool IsServiceActive { get; set; } = true;
 
-    internal async void TwitchClientOnNormalMessage(object? sender, OnMessageReceivedArgs args)
+    internal async Task TwitchClientOnNormalMessage(object? sender, OnMessageReceivedArgs args)
     {
         if (
             args.ChatMessage.Channel.Equals(
@@ -53,6 +53,11 @@ public class TwitchMediaAlerts(
     {
         var message = args.ChatMessage;
 
+        if (string.IsNullOrWhiteSpace(message.CustomRewardId))
+        {
+            return;
+        }
+
         await using AppDbContext dbContext = await dbContextFactory.CreateDbContextAsync(_token);
         var mediaList = dbContext
             .Alerts.AsNoTracking()
@@ -68,11 +73,11 @@ public class TwitchMediaAlerts(
                 mediaOld = mediaList[0];
                 break;
             case > 1:
-            {
-                var index = Random.Shared.Next(mediaList.Count);
-                mediaOld = mediaList[index];
-                break;
-            }
+                {
+                    var index = Random.Shared.Next(mediaList.Count);
+                    mediaOld = mediaList[index];
+                    break;
+                }
         }
 
         if (mediaOld != null)
@@ -124,11 +129,11 @@ public class TwitchMediaAlerts(
                 mediaOld = mediaList[0];
                 break;
             case > 1:
-            {
-                var index = Random.Shared.Next(mediaList.Count);
-                mediaOld = mediaList[index];
-                break;
-            }
+                {
+                    var index = Random.Shared.Next(mediaList.Count);
+                    mediaOld = mediaList[index];
+                    break;
+                }
         }
 
         if (mediaOld != null)

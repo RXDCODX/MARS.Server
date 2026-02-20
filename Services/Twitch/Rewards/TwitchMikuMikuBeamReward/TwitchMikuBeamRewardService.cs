@@ -52,11 +52,11 @@ public class TwitchMikuBeamRewardService(
         return Task.CompletedTask;
     }
 
-    private void OnMessageReceived(object? sender, OnMessageReceivedArgs e)
+    private Task OnMessageReceived(object? sender, OnMessageReceivedArgs e)
     {
         if (!IsServiceActive)
         {
-            return;
+            return Task.CompletedTask;
         }
 
         if (
@@ -66,7 +66,7 @@ public class TwitchMikuBeamRewardService(
             )
         )
         {
-            return;
+            return Task.CompletedTask;
         }
 
         if (
@@ -75,12 +75,12 @@ public class TwitchMikuBeamRewardService(
             )
         )
         {
-            return;
+            return Task.CompletedTask;
         }
 
         if (string.IsNullOrWhiteSpace(e.ChatMessage.UserId))
         {
-            return;
+            return Task.CompletedTask;
         }
 
         // ID пользователя добавляем всегда (включая модераторов и стримера)
@@ -88,7 +88,7 @@ public class TwitchMikuBeamRewardService(
         _allUserIds.Add(e.ChatMessage.UserId);
 
         // Отслеживаем модераторов
-        if (e.ChatMessage.IsModerator)
+        if (e.ChatMessage.UserDetail.IsModerator)
         {
             _moderatorIds.Add(e.ChatMessage.UserId);
         }
@@ -99,6 +99,8 @@ public class TwitchMikuBeamRewardService(
         }
 
         _semaphoreSlim.Release();
+
+        return Task.CompletedTask;
     }
 
     private async Task OnChannelPointsCustomRewardRedemption(

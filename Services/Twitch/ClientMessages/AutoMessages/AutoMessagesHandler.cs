@@ -22,7 +22,7 @@ public class AutoMessagesHandler(
     private int MessagesCounter { get; set; }
     private DateTimeOffset LastPostDateTime { get; set; } = DateTimeOffset.MinValue;
 
-    public async void OnMessageReceived(object? sender, OnMessageReceivedArgs args)
+    public async Task OnMessageReceived(object? sender, OnMessageReceivedArgs args)
     {
         if (
             args.ChatMessage.Channel.Equals(Channel, StringComparison.OrdinalIgnoreCase)
@@ -61,7 +61,7 @@ public class AutoMessagesHandler(
                     var index = Random.Shared.Next(0, messages.Length - 1);
                     var message = messages.ElementAt(index);
 
-                    client.SendMessage(Channel, message.Message);
+                    await client.SendMessageAsync(Channel, message.Message);
 
                     // Отправляем сообщение через SignalR для отображения в OBS
                     await hubContext.Clients.All.AutoMessage(message.Message);
@@ -90,7 +90,7 @@ public class AutoMessagesHandler(
         });
     }
 
-    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         if (!client.IsConnected)
         {
@@ -98,16 +98,23 @@ public class AutoMessagesHandler(
         }
         else
         {
-            Connect(client, new OnConnectedArgs());
+            if (
+                !client.JoinedChannels.Any(e =>
+                    e.Channel.Equals(Channel, StringComparison.OrdinalIgnoreCase)
+                )
+            )
+            {
+                await client.JoinChannelAsync(Channel);
+            }
         }
 
         applicationLifetime.ApplicationStarted.Register(() =>
         {
             client.OnMessageReceived += OnMessageReceived;
         });
-        return Task.CompletedTask;
+        await Task.CompletedTask;
 
-        void Connect(object? sender, OnConnectedArgs onConnectedArgs)
+        async Task Connect(object? sender, OnConnectedEventArgs onConnectedArgs)
         {
             if (
                 !client.JoinedChannels.Any(e =>
@@ -115,7 +122,7 @@ public class AutoMessagesHandler(
                 )
             )
             {
-                client.JoinChannel(Channel);
+                await client.JoinChannelAsync(Channel);
                 client.OnConnected -= Connect;
             }
         }
