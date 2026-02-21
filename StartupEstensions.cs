@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 using BooruSharp.Booru;
+using MARS.Server.Configuration;
 using MARS.Server.CustomLoggers.SignalRLogger;
 using MARS.Server.Services._365Genius;
 using MARS.Server.Services.Discord;
@@ -18,6 +19,7 @@ using MARS.Server.Services.SoundRequest.YouTube;
 using MARS.Server.Services.TelegramBotService;
 using MARS.Server.Services.TelegramDiscordBridge;
 using MARS.Server.Services.TelegramPrivateChannelsResender;
+using MARS.Server.Services.TtsMultilingual;
 using MARS.Server.Services.Twitch;
 using MARS.Server.Services.Twitch.AutoInfoFetch;
 using MARS.Server.Services.Twitch.Client;
@@ -422,6 +424,9 @@ public static class StartupEstensions
         services.Configure<YandexMusicConfiguration>(
             configuration.GetSection(AppBase.Base).GetSection(YandexMusicConfiguration.SectionName)
         );
+        services.Configure<MultilingualTtsConfiguration>(
+            configuration.GetSection(AppBase.Base).GetSection(MultilingualTtsConfiguration.SectionName)
+        );
 
         return services;
     }
@@ -573,6 +578,41 @@ public static class StartupEstensions
         return services;
     }
 
+    internal static IServiceCollection AddMultilingualTtsServices(this IServiceCollection services)
+    {
+        services.AddHttpClient(HttpMultilingualTtsService.HttpClientName, (sp, client) =>
+        {
+            var configuration = sp
+                .GetRequiredService<IOptions<MultilingualTtsConfiguration>>()
+                .Value;
+
+            if (Uri.TryCreate(configuration.BaseUrl, UriKind.Absolute, out var uri))
+            {
+                client.BaseAddress = uri;
+            }
+
+            client.Timeout = TimeSpan.FromSeconds(Math.Clamp(configuration.TimeoutSeconds, 5, 300));
+        });
+
+        services.AddSingleton<HttpMultilingualTtsService>();
+        services.AddSingleton<LocalSherpaCliMultilingualTtsService>();
+        services.AddSingleton<IMultilingualTtsService>(sp =>
+        {
+            var configuration = sp
+                .GetRequiredService<IOptions<MultilingualTtsConfiguration>>()
+                .Value;
+
+            var provider = (configuration.Provider ?? string.Empty).Trim().ToLowerInvariant();
+            IMultilingualTtsService result = provider == "http"
+                ? sp.GetRequiredService<HttpMultilingualTtsService>()
+                : sp.GetRequiredService<LocalSherpaCliMultilingualTtsService>();
+
+            return result;
+        });
+
+        return services;
+    }
+
     internal static IServiceCollection AddBooruServices(this IServiceCollection services)
     {
         services.AddSingleton<Gelbooru>(sp =>
@@ -613,6 +653,7 @@ public static class StartupEstensions
         services
             //.AddHonkaiServices()
 
+
             .AddWaifuRollServices()
             .AddRandomMemServices()
             .AddScoreboardServiceSingleton();
@@ -635,7 +676,7 @@ public static class StartupEstensions
     /// </summary>
     internal static IServiceCollection AddSpecializedServices(this IServiceCollection services)
     {
-        services.AddSyntheziaServices().Add365Services();
+        services.AddSyntheziaServices().AddMultilingualTtsServices().Add365Services();
 
         return services;
     }

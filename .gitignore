@@ -372,3 +372,7 @@ appsettings.json
 /WTelegram/WTelegram.session
 /wwwroot/assets/*
 /Logs.csv
+
+# Local offline TTS assets (Sherpa + models)
+/tools/tts/
+/models/tts/
