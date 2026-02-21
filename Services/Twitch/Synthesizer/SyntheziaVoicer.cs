@@ -280,6 +280,6 @@ public class SyntheziaVoicer : IVoicer
 
     private static string NormalizeVoiceName(string voiceName)
     {
-        return voiceName.Trim().ToLowerInvariant();
+        return voiceName.Trim();
     }
 }

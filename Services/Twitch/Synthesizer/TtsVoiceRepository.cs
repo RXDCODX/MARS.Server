@@ -75,6 +75,6 @@ public class TtsVoiceRepository(IDbContextFactory<AppDbContext> contextFactory)
 
     private static string Normalize(string voiceName)
     {
-        return voiceName.Trim().ToLowerInvariant();
+        return voiceName.Trim();
     }
 }
