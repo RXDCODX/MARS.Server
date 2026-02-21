@@ -11,6 +11,10 @@ public interface IDiscordGatewayService
 
     void RegisterMessageCreatedHandler(Func<DiscordClient, MessageCreatedEventArgs, Task> handler);
 
+    void RegisterVoiceStateUpdatedHandler(
+        Func<DiscordClient, VoiceStateUpdatedEventArgs, Task> handler
+    );
+
     Task<OperationResult> SendMessageAsync(
         ulong channelId,
         string message,

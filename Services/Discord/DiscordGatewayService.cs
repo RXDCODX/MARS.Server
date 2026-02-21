@@ -1,5 +1,6 @@
 using DSharpPlus;
 using DSharpPlus.EventArgs;
+using DSharpPlus.VoiceNext;
 using ServerDiscordConfiguration = MARS.Server.Configuration.DiscordConfiguration;
 
 namespace MARS.Server.Services.Discord;
@@ -11,6 +12,7 @@ public class DiscordGatewayService(
 {
     private readonly ServerDiscordConfiguration _configuration = configuration.Value;
     private readonly List<Func<DiscordClient, MessageCreatedEventArgs, Task>> _messageHandlers = [];
+    private readonly List<Func<DiscordClient, VoiceStateUpdatedEventArgs, Task>> _voiceStateHandlers = [];
     private readonly Lock _handlersLock = new();
     private readonly SemaphoreSlim _connectLock = new(1, 1);
 
@@ -25,6 +27,16 @@ public class DiscordGatewayService(
         lock (_handlersLock)
         {
             _messageHandlers.Add(handler);
+        }
+    }
+
+    public void RegisterVoiceStateUpdatedHandler(
+        Func<DiscordClient, VoiceStateUpdatedEventArgs, Task> handler
+    )
+    {
+        lock (_handlersLock)
+        {
+            _voiceStateHandlers.Add(handler);
         }
     }
 
@@ -117,14 +129,19 @@ public class DiscordGatewayService(
                 result = Client;
                 if (result is null)
                 {
-                    var intents = DiscordIntents.GuildMessages | DiscordIntents.MessageContents;
+                    var intents =
+                        DiscordIntents.GuildMessages
+                        | DiscordIntents.MessageContents
+                        | DiscordIntents.GuildVoiceStates;
 
                     var builder = DiscordClientBuilder
                         .CreateDefault(_configuration.Token, intents)
                         .ConfigureEventHandlers(events =>
                         {
                             events.HandleMessageCreated(HandleMessageCreatedAsync);
+                            events.HandleVoiceStateUpdated(HandleVoiceStateUpdatedAsync);
                         })
+                        .UseVoiceNext(new VoiceNextConfiguration())
                         .SetLogLevel(LogLevel.Information);
 
                     result = builder.Build();
@@ -163,6 +180,31 @@ public class DiscordGatewayService(
             catch (Exception ex)
             {
                 logger.LogError(ex, "Ошибка обработки MessageCreated обработчиком");
+            }
+        }
+    }
+
+    private async Task HandleVoiceStateUpdatedAsync(
+        DiscordClient client,
+        VoiceStateUpdatedEventArgs args
+    )
+    {
+        List<Func<DiscordClient, VoiceStateUpdatedEventArgs, Task>> handlersCopy;
+
+        lock (_handlersLock)
+        {
+            handlersCopy = [.. _voiceStateHandlers];
+        }
+
+        foreach (var handler in handlersCopy)
+        {
+            try
+            {
+                await handler(client, args);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Ошибка обработки VoiceStateUpdated обработчиком");
             }
         }
     }

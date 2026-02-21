@@ -173,6 +173,9 @@ public static class StartupEstensions
         services.AddSingleton<IDiscordGatewayService, DiscordGatewayService>();
         services.AddHostedService(sp => (DiscordGatewayService)sp.GetRequiredService<IDiscordGatewayService>());
 
+        services.AddSingleton<IDiscordTtsVoiceRelayService, DiscordTtsVoiceRelayService>();
+        services.AddHostedService(sp => (DiscordTtsVoiceRelayService)sp.GetRequiredService<IDiscordTtsVoiceRelayService>());
+
         services.AddSingleton<ITelegramDiscordBridgeService, TelegramDiscordBridgeService>();
         services.AddHostedService(sp => (TelegramDiscordBridgeService)sp.GetRequiredService<ITelegramDiscordBridgeService>());
 
@@ -554,7 +557,8 @@ public static class StartupEstensions
         services.AddSingleton(sp =>
             VoicerFactory.CreateVoicer(
                 sp.GetRequiredService<ILogger<IVoicer>>(),
-                sp.GetRequiredService<ITtsVoiceRepository>()
+                sp.GetRequiredService<ITtsVoiceRepository>(),
+                sp.GetRequiredService<IDiscordTtsVoiceRelayService>()
             )
         );
         services.AddSingleton<SyntheziaQueueManager>();

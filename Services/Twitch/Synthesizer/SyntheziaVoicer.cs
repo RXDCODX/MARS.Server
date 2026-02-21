@@ -2,6 +2,7 @@
 using System.Runtime.Versioning;
 using System.Speech.Synthesis;
 using System.Text;
+using MARS.Server.Services.Discord;
 using MARS.Server.Services.Twitch.Synthesizer.Enitity;
 
 namespace MARS.Server.Services.Twitch.Synthesizer;
@@ -14,16 +15,22 @@ public class SyntheziaVoicer : IVoicer
     );
     private readonly ILogger<IVoicer> _logger;
     private readonly ITtsVoiceRepository _voiceRepository;
+    private readonly IDiscordTtsVoiceRelayService _discordVoiceRelayService;
     private readonly SpeechSynthesizer _speechSynthesizer = new();
     private readonly SemaphoreSlim _semaphore = new(1);
     private HashSet<string> _blockedVoices = new(StringComparer.OrdinalIgnoreCase);
 
     public bool IsActive { get; set; } = true;
 
-    public SyntheziaVoicer(ILogger<IVoicer> logger, ITtsVoiceRepository voiceRepository)
+    public SyntheziaVoicer(
+        ILogger<IVoicer> logger,
+        ITtsVoiceRepository voiceRepository,
+        IDiscordTtsVoiceRelayService discordVoiceRelayService
+    )
     {
         _logger = logger;
         _voiceRepository = voiceRepository;
+        _discordVoiceRelayService = discordVoiceRelayService;
         if (OperatingSystem.IsWindows())
         {
             _speechSynthesizer.SetOutputToDefaultAudioDevice();
@@ -139,7 +146,18 @@ public class SyntheziaVoicer : IVoicer
 
                 if (hasVoice && voice is not null)
                 {
-                    SpeakWithVoice(voice, preparedText);
+                    if (_discordVoiceRelayService.IsVoiceRoutingEnabled)
+                    {
+                        _speechSynthesizer.SpeakAsyncCancelAll();
+                        await _discordVoiceRelayService.PlaySpeechAsync(
+                            voice.VoiceInfo.Name,
+                            preparedText
+                        );
+                    }
+                    else
+                    {
+                        SpeakWithVoice(voice, preparedText);
+                    }
                 }
                 else
                 {
@@ -153,11 +171,22 @@ public class SyntheziaVoicer : IVoicer
                     }
 
                     _linkedVoices[message.Name] = randomVoice;
-                    SpeakWithVoice(
-                        randomVoice,
-                        $"Привет, {message.Name}! Для тебя был выбран голос {randomVoice.VoiceInfo.Name}",
-                        preparedText
-                    );
+                    var greeting =
+                        $"Привет, {message.Name}! Для тебя был выбран голос {randomVoice.VoiceInfo.Name}";
+
+                    if (_discordVoiceRelayService.IsVoiceRoutingEnabled)
+                    {
+                        _speechSynthesizer.SpeakAsyncCancelAll();
+                        await _discordVoiceRelayService.PlaySpeechAsync(
+                            randomVoice.VoiceInfo.Name,
+                            greeting,
+                            preparedText
+                        );
+                    }
+                    else
+                    {
+                        SpeakWithVoice(randomVoice, greeting, preparedText);
+                    }
                 }
             }
             finally
