@@ -25,11 +25,11 @@ public partial class Tekken8FrameData(
     public async Task StartScrupFrameData(
         Chat? chat = null,
         FramedataParserOptions? options = null,
-        FramedataSource? source = FramedataSource.Tekkendocs
+        FramedataSource? source = FramedataSource.Okizeme
     )
     {
-        // Определяем порядок источников из конфигурации
-        var primary = source ?? _framedataConfig.PrimarySource;
+        // Используем только Okizeme
+        var primary = FramedataSource.Okizeme;
 
         try
         {
@@ -98,9 +98,7 @@ public partial class Tekken8FrameData(
                 not null => chat,
                 _ => TelegramExstension.Rxdcodx,
             },
-            primary == FramedataSource.Tekkendocs
-                ? "Парсинг теккен фрейм даты (tekkendocs→fallback:wavu) завершён!"
-                : "Парсинг теккен фрейм даты (wavu→fallback:tekkendocs) завершён!",
+            $"Парсинг теккен фрейм даты из {primary} завершён!",
             cancellationToken: _cancellationToken
         );
     }
@@ -182,13 +180,7 @@ public partial class Tekken8FrameData(
         FramedataSource? source = null
     )
     {
-        var supplementSource =
-            source
-            ?? (
-                _framedataConfig.PrimarySource == FramedataSource.Tekkendocs
-                    ? FramedataSource.Wavu
-                    : FramedataSource.Tekkendocs
-            );
+        var supplementSource = FramedataSource.Okizeme;
 
         try
         {

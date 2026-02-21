@@ -26,26 +26,18 @@ public static class FramedataParserFactory
         FramedataParserOptions? options = null
     )
     {
-        return source switch
+        if (source == FramedataSource.None)
         {
-            FramedataSource.Wavu => new WavuFramedataParser(
-                logger,
-                dbContextFactory,
-                stagingService,
-                cancellationToken,
-                options
-            ),
+            throw new ArgumentException("Источник данных не задан");
+        }
 
-            FramedataSource.Tekkendocs => new TekkendocsFramedataParser(
-                logger,
-                dbContextFactory,
-                stagingService,
-                cancellationToken,
-                options
-            ),
-
-            _ => throw new ArgumentException($"Неизвестный источник данных: {source}"),
-        };
+        return new OkizemeFramedataParser(
+            logger,
+            dbContextFactory,
+            stagingService,
+            cancellationToken,
+            options
+        );
     }
 
     /// <summary>

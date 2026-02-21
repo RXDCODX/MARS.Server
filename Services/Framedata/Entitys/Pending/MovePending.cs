@@ -31,5 +31,6 @@ public class MovePending
     public string? BlockFrame { get; set; }
     public string? HitFrame { get; set; }
     public string? CounterHitFrame { get; set; }
+    public string? VideoUrl { get; set; }
     public string[]? Notes { get; set; }
 }

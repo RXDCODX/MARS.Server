@@ -167,6 +167,7 @@ public class FramedataStagingService(
                 BlockFrame = pm.BlockFrame,
                 HitFrame = pm.HitFrame,
                 CounterHitFrame = pm.CounterHitFrame,
+                VideoUrl = pm.VideoUrl,
                 Notes = pm.Notes,
                 IsNew = existing == null, // true если ход новый, false если обновление
             };
@@ -444,6 +445,7 @@ public class FramedataStagingService(
             BlockFrame = move.BlockFrame,
             HitFrame = move.HitFrame,
             CounterHitFrame = move.CounterHitFrame,
+            VideoUrl = move.VideoUrl,
             Notes = move.Notes?.ToArray(),
         };
 
@@ -468,6 +470,7 @@ public class FramedataStagingService(
             BlockFrame = move.BlockFrame,
             HitFrame = move.HitFrame,
             CounterHitFrame = move.CounterHitFrame,
+            VideoUrl = move.VideoUrl,
             Notes = move.Notes?.ToArray(),
         };
 
@@ -553,7 +556,7 @@ public class FramedataStagingService(
                     return true;
                 }
 
-                for (var i = 0; i < left.GetArrayLength(); i++)
+                for (var i = 0 ; i < left.GetArrayLength() ; i++)
                 {
                     if (HasNonNullChanges(left[i], right[i], isSupplementMode))
                     {

@@ -200,6 +200,7 @@ public abstract class BaseFramedataParser(
             BlockFrame = existing.BlockFrame ?? supplement.BlockFrame,
             HitFrame = existing.HitFrame ?? supplement.HitFrame,
             CounterHitFrame = existing.CounterHitFrame ?? supplement.CounterHitFrame,
+            VideoUrl = existing.VideoUrl ?? supplement.VideoUrl,
             Notes = existing.Notes, // Временно исключаем Notes из логики дополнения
         };
     }
@@ -263,6 +264,7 @@ public abstract class BaseFramedataParser(
                     BlockFrame = group.First().BlockFrame,
                     HitFrame = group.First().HitFrame,
                     CounterHitFrame = group.First().CounterHitFrame,
+                    VideoUrl = group.Select(m => m.VideoUrl).FirstOrDefault(e => !string.IsNullOrWhiteSpace(e)),
                     Notes = [.. group.SelectMany(m => m.Notes ?? [])],
                 };
 
