@@ -8,6 +8,7 @@ using MARS.Server.Services.Scoreboard.Entitys;
 using MARS.Server.Services.ServiceManager.Entitys;
 using MARS.Server.Services.SoundRequest.Entities;
 using MARS.Server.Services.StreamAcrhive_UNUSED.Entitys;
+using MARS.Server.Services.TelegramDiscordBridge.Entities;
 using MARS.Server.Services.TelegramPrivateChannelsResender.Entities;
 using MARS.Server.Services.Twitch.ClientMessages.AutoMessages.Entitys;
 using MARS.Server.Services.Twitch.HelloVideos.Entitys;
@@ -81,6 +82,8 @@ public sealed partial class AppDbContext : DbContext
     public DbSet<EnvironmentVariable> EnvironmentVariables { get; set; } = null!;
     public DbSet<BlockedTtsVoice> BlockedTtsVoices { get; set; } = null!;
     public DbSet<ChannelProcessingState> ChannelProcessingStates { get; set; } = null!;
+    public DbSet<TelegramDiscordChannelBinding> TelegramDiscordChannelBindings { get; set; } = null!;
+    public DbSet<TelegramDiscordChannelState> TelegramDiscordChannelStates { get; set; } = null!;
 
     /// <summary>
     /// Partial метод для конфигурации таблиц, связанных с TwitchUser (реализован в TwitchUsersDbContext.cs)
@@ -355,6 +358,20 @@ public sealed partial class AppDbContext : DbContext
                 a.WeekOfYear,
             })
             .IsUnique();
+
+        modelBuilder
+            .Entity<TelegramDiscordChannelBinding>()
+            .HasIndex(e => new { e.TelegramChannelId, e.DiscordChannelId })
+            .IsUnique();
+
+        modelBuilder
+            .Entity<TelegramDiscordChannelBinding>()
+            .Property(e => e.DiscordChannelId)
+            .HasConversion(new NumberToStringConverter<ulong>());
+
+        modelBuilder
+            .Entity<TelegramDiscordChannelState>()
+            .HasKey(e => e.TelegramChannelId);
 
         // Конфигурация для EnvironmentVariable
         modelBuilder.Entity<EnvironmentVariable>().HasIndex(e => e.Key).IsUnique();

@@ -20,7 +20,9 @@ public static class CommandExecutorServiceCollectionExtensions
         // Регистрируем платформенные сервисы
         services.AddSingleton<TelegramCommandService>();
         services.AddSingleton<TwitchCommandService>();
+        services.AddSingleton<DiscordCommandService>();
         services.AddHostedService(sp => sp.GetRequiredService<TwitchCommandService>());
+        services.AddHostedService(sp => sp.GetRequiredService<DiscordCommandService>());
 
         // Регистрируем CommandExecutorService как Scoped
         services.AddSingleton<CommandExecutorService>();

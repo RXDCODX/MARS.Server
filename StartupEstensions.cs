@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 using BooruSharp.Booru;
 using MARS.Server.CustomLoggers.SignalRLogger;
 using MARS.Server.Services._365Genius;
+using MARS.Server.Services.Discord;
 using MARS.Server.Services.Framedata;
 using MARS.Server.Services.PyroAlerts;
 using MARS.Server.Services.RandomMem;
@@ -15,6 +16,7 @@ using MARS.Server.Services.SoundRequest.Interfaces;
 using MARS.Server.Services.SoundRequest.Queue;
 using MARS.Server.Services.SoundRequest.YouTube;
 using MARS.Server.Services.TelegramBotService;
+using MARS.Server.Services.TelegramDiscordBridge;
 using MARS.Server.Services.TelegramPrivateChannelsResender;
 using MARS.Server.Services.Twitch;
 using MARS.Server.Services.Twitch.AutoInfoFetch;
@@ -167,6 +169,12 @@ public static class StartupEstensions
 
         // Регистрируем сервис для пересылки медиа из forwarded сообщений
         services.AddHostedService<TelegramChannelsResenderService>();
+
+        services.AddSingleton<IDiscordGatewayService, DiscordGatewayService>();
+        services.AddHostedService(sp => (DiscordGatewayService)sp.GetRequiredService<IDiscordGatewayService>());
+
+        services.AddSingleton<ITelegramDiscordBridgeService, TelegramDiscordBridgeService>();
+        services.AddHostedService(sp => (TelegramDiscordBridgeService)sp.GetRequiredService<ITelegramDiscordBridgeService>());
 
         // Регистрируем ScoreboardService
         services.AddScoped<ScoreboardService>();
@@ -600,6 +608,7 @@ public static class StartupEstensions
     {
         services
             //.AddHonkaiServices()
+
             .AddWaifuRollServices()
             .AddRandomMemServices()
             .AddScoreboardServiceSingleton();
