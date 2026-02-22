@@ -177,30 +177,88 @@ public class TtsVoiceController(
         CancellationToken cancellationToken
     )
     {
-        if (string.IsNullOrWhiteSpace(request.Name) || string.IsNullOrWhiteSpace(request.Message))
-        {
-            return Ok(OperationResult.Bad("Имя пользователя и текст сообщения обязательны"));
-        }
+        var result = OperationResult.Bad("Не удалось отправить сообщение на озвучку");
+        var messageText = request.Message?.Trim() ?? string.Empty;
+        var userName = request.Name?.Trim() ?? string.Empty;
+        var requestedVoiceName = request.VoiceName?.Trim() ?? string.Empty;
+        var hasMessage = !string.IsNullOrWhiteSpace(messageText);
+        var hasUserName = !string.IsNullOrWhiteSpace(userName);
+        var hasRequestedVoice = !string.IsNullOrWhiteSpace(requestedVoiceName);
 
-        try
+        if (hasMessage && (hasUserName || hasRequestedVoice))
         {
-            await voicer.Sound(
-                new MessageToSynthezid
+            try
+            {
+                if (hasRequestedVoice)
                 {
-                    Name = request.Name,
-                    Message = request.Message,
-                    CreationDateTime = DateTimeOffset.Now,
-                    Guid = Guid.NewGuid(),
-                }
-            );
+                    var installedVoices = await voicer.GetInstalledVoicesAsync(cancellationToken);
+                    var isVoiceInstalled = installedVoices.Any(v =>
+                        string.Equals(v, requestedVoiceName, StringComparison.OrdinalIgnoreCase)
+                    );
 
-            return Ok(OperationResult.Ok("Сообщение отправлено на озвучку"));
+                    if (isVoiceInstalled)
+                    {
+                        var blockedVoices = await repository.GetBlockedVoicesAsync(cancellationToken);
+                        var isVoiceBlocked = blockedVoices.Any(v =>
+                            string.Equals(v, requestedVoiceName, StringComparison.OrdinalIgnoreCase)
+                        );
+
+                        if (!isVoiceBlocked)
+                        {
+                            await voicer.Sound(
+                                new MessageToSynthezid
+                                {
+                                    Name = hasUserName ? userName : "tts_test_voice",
+                                    VoiceName = requestedVoiceName,
+                                    Message = messageText,
+                                    CreationDateTime = DateTimeOffset.Now,
+                                    Guid = Guid.NewGuid(),
+                                }
+                            );
+
+                            result = OperationResult.Ok(
+                                "Сообщение отправлено на озвучку выбранным голосом"
+                            );
+                        }
+                        else
+                        {
+                            result = OperationResult.Bad("Выбранный голос заблокирован");
+                        }
+                    }
+                    else
+                    {
+                        result = OperationResult.Bad("Выбранный голос не найден");
+                    }
+                }
+                else
+                {
+                    await voicer.Sound(
+                        new MessageToSynthezid
+                        {
+                            Name = userName,
+                            Message = messageText,
+                            CreationDateTime = DateTimeOffset.Now,
+                            Guid = Guid.NewGuid(),
+                        }
+                    );
+
+                    result = OperationResult.Ok("Сообщение отправлено на озвучку");
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Ошибка при озвучке сообщения пользователя {User}", userName);
+                result = OperationResult.Bad("Не удалось отправить сообщение на озвучку");
+            }
         }
-        catch (Exception ex)
+        else
         {
-            logger.LogError(ex, "Ошибка при озвучке сообщения пользователя {User}", request.Name);
-            return Ok(OperationResult.Bad("Не удалось отправить сообщение на озвучку"));
+            result = OperationResult.Bad(
+                "Для озвучки нужно указать текст и имя пользователя или выбранный голос"
+            );
         }
+
+        return Ok(result);
     }
 }
 
@@ -213,4 +271,5 @@ public class SpeakRequest
 {
     public string Name { get; set; } = string.Empty;
     public string Message { get; set; } = string.Empty;
+    public string? VoiceName { get; set; }
 }

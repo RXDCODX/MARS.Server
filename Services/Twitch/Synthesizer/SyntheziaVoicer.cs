@@ -135,58 +135,88 @@ public class SyntheziaVoicer : IVoicer
             await _semaphore.WaitAsync();
             try
             {
-                var hasVoice = _linkedVoices.TryGetValue(message.Name, out var voice);
-
-                if (hasVoice && voice is not null && IsVoiceBlocked(voice))
+                var hasRequestedVoice = !string.IsNullOrWhiteSpace(message.VoiceName);
+                if (hasRequestedVoice)
                 {
-                    _linkedVoices.Remove(message.Name);
-                    hasVoice = false;
-                    voice = null;
-                }
-
-                if (hasVoice && voice is not null)
-                {
-                    if (_discordVoiceRelayService.IsVoiceRoutingEnabled)
+                    var requestedVoice = FindAllowedVoiceByName(message.VoiceName!);
+                    if (requestedVoice is not null)
                     {
-                        _speechSynthesizer.SpeakAsyncCancelAll();
-                        await _discordVoiceRelayService.PlaySpeechAsync(
-                            voice.VoiceInfo.Name,
-                            preparedText
-                        );
+                        if (_discordVoiceRelayService.IsVoiceRoutingEnabled)
+                        {
+                            _speechSynthesizer.SpeakAsyncCancelAll();
+                            await _discordVoiceRelayService.PlaySpeechAsync(
+                                requestedVoice.VoiceInfo.Name,
+                                preparedText
+                            );
+                        }
+                        else
+                        {
+                            SpeakWithVoice(requestedVoice, preparedText);
+                        }
                     }
                     else
                     {
-                        SpeakWithVoice(voice, preparedText);
+                        var hasVoice = _linkedVoices.TryGetValue(message.Name, out var voice);
+
+                        if (hasVoice && voice is not null && IsVoiceBlocked(voice))
+                        {
+                            _linkedVoices.Remove(message.Name);
+                            hasVoice = false;
+                            voice = null;
+                        }
+
+                        if (hasVoice && voice is not null)
+                        {
+                            if (_discordVoiceRelayService.IsVoiceRoutingEnabled)
+                            {
+                                _speechSynthesizer.SpeakAsyncCancelAll();
+                                await _discordVoiceRelayService.PlaySpeechAsync(
+                                    voice.VoiceInfo.Name,
+                                    preparedText
+                                );
+                            }
+                            else
+                            {
+                                SpeakWithVoice(voice, preparedText);
+                            }
+                        }
+                        else
+                        {
+                            var randomVoice = GetRandomAllowedVoice();
+                            if (randomVoice is null)
+                            {
+                                _logger.LogWarning(
+                                    "No available voices to assign (all blocked or missing)."
+                                );
+                                return;
+                            }
+
+                            _linkedVoices[message.Name] = randomVoice;
+                            var greeting =
+                                $"Привет, {message.Name}! Для тебя был выбран голос {randomVoice.VoiceInfo.Name}";
+
+                            if (_discordVoiceRelayService.IsVoiceRoutingEnabled)
+                            {
+                                _speechSynthesizer.SpeakAsyncCancelAll();
+                                await _discordVoiceRelayService.PlaySpeechAsync(
+                                    randomVoice.VoiceInfo.Name,
+                                    greeting,
+                                    preparedText
+                                );
+                            }
+                            else
+                            {
+                                SpeakWithVoice(randomVoice, greeting, preparedText);
+                            }
+                        }
                     }
                 }
                 else
                 {
-                    var randomVoice = GetRandomAllowedVoice();
-                    if (randomVoice is null)
-                    {
-                        _logger.LogWarning(
-                            "No available voices to assign (all blocked or missing)."
-                        );
-                        return;
-                    }
-
-                    _linkedVoices[message.Name] = randomVoice;
-                    var greeting =
-                        $"Привет, {message.Name}! Для тебя был выбран голос {randomVoice.VoiceInfo.Name}";
-
-                    if (_discordVoiceRelayService.IsVoiceRoutingEnabled)
-                    {
-                        _speechSynthesizer.SpeakAsyncCancelAll();
-                        await _discordVoiceRelayService.PlaySpeechAsync(
-                            randomVoice.VoiceInfo.Name,
-                            greeting,
-                            preparedText
-                        );
-                    }
-                    else
-                    {
-                        SpeakWithVoice(randomVoice, greeting, preparedText);
-                    }
+                    _logger.LogWarning(
+                        "Requested voice {VoiceName} is not available for direct TTS playback.",
+                        message.VoiceName
+                    );
                 }
             }
             finally
@@ -271,6 +301,16 @@ public class SyntheziaVoicer : IVoicer
 
         var index = Random.Shared.Next(voices.Count);
         return voices[index];
+    }
+
+    private InstalledVoice? FindAllowedVoiceByName(string voiceName)
+    {
+        return _speechSynthesizer
+            .GetInstalledVoices(new CultureInfo("ru-RU"))
+            .FirstOrDefault(v =>
+                string.Equals(v.VoiceInfo.Name, voiceName, StringComparison.OrdinalIgnoreCase)
+                && !IsVoiceBlocked(v)
+            );
     }
 
     private bool IsVoiceBlocked(InstalledVoice voice)
