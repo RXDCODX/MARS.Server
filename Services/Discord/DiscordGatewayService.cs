@@ -117,7 +117,9 @@ public class DiscordGatewayService(
         return result;
     }
 
-    private async Task<DiscordClient?> EnsureConnectedAsync(CancellationToken cancellationToken)
+    public async Task<DiscordClient?> EnsureConnectedAsync(
+        CancellationToken cancellationToken = default
+    )
     {
         DiscordClient? result = Client;
 

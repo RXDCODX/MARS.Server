@@ -148,4 +148,56 @@ public class TelegramDiscordBridgeController(
 
         return result;
     }
+
+    [HttpGet("telegram-channels")]
+    public async Task<ActionResult<OperationResult<List<TelegramChannelOptionDto>>>> GetTelegramChannels(
+        CancellationToken cancellationToken = default
+    )
+    {
+        ActionResult<OperationResult<List<TelegramChannelOptionDto>>> result;
+
+        try
+        {
+            var serviceResult = await bridgeService.GetTelegramChannelsAsync(cancellationToken);
+            result = Ok(serviceResult);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка получения списка Telegram каналов для bridge");
+            result = Ok(
+                OperationResult<List<TelegramChannelOptionDto>>.Bad(
+                    "Ошибка получения Telegram каналов",
+                    []
+                )
+            );
+        }
+
+        return result;
+    }
+
+    [HttpGet("discord-channels")]
+    public async Task<ActionResult<OperationResult<List<DiscordChannelOptionDto>>>> GetDiscordChannels(
+        CancellationToken cancellationToken = default
+    )
+    {
+        ActionResult<OperationResult<List<DiscordChannelOptionDto>>> result;
+
+        try
+        {
+            var serviceResult = await bridgeService.GetDiscordChannelsAsync(cancellationToken);
+            result = Ok(serviceResult);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка получения списка Discord каналов для bridge");
+            result = Ok(
+                OperationResult<List<DiscordChannelOptionDto>>.Bad(
+                    "Ошибка получения Discord каналов",
+                    []
+                )
+            );
+        }
+
+        return result;
+    }
 }

@@ -24,4 +24,12 @@ public interface ITelegramDiscordBridgeService
     Task<OperationResult<List<TelegramDiscordChannelStateDto>>> GetStatesAsync(
         CancellationToken cancellationToken = default
     );
+
+    Task<OperationResult<List<TelegramChannelOptionDto>>> GetTelegramChannelsAsync(
+        CancellationToken cancellationToken = default
+    );
+
+    Task<OperationResult<List<DiscordChannelOptionDto>>> GetDiscordChannelsAsync(
+        CancellationToken cancellationToken = default
+    );
 }

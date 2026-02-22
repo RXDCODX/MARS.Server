@@ -342,6 +342,119 @@ public class TelegramDiscordBridgeService(
         return result;
     }
 
+    public async Task<OperationResult<List<TelegramChannelOptionDto>>> GetTelegramChannelsAsync(
+        CancellationToken cancellationToken = default
+    )
+    {
+        var result = OperationResult<List<TelegramChannelOptionDto>>.Bad(
+            "Не удалось получить Telegram каналы",
+            []
+        );
+
+        try
+        {
+            var client = _client;
+            if (client is null)
+            {
+                client = await wTelegramClientService.GetClientAsync(cancellationToken);
+            }
+
+            var chats = await client.Messages_GetAllChats();
+            var channels = chats
+                .chats.Values.OfType<Channel>()
+                .Select(channel => new TelegramChannelOptionDto
+                {
+                    Id = -1000000000000 - channel.id,
+                    Title = string.IsNullOrWhiteSpace(channel.title)
+                        ? $"channel-{channel.id}"
+                        : channel.title,
+                })
+                .OrderBy(e => e.Title)
+                .ThenBy(e => e.Id)
+                .ToList();
+
+            result = OperationResult<List<TelegramChannelOptionDto>>.Ok(
+                "Telegram каналы получены",
+                channels
+            );
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка получения Telegram каналов для bridge");
+            result = OperationResult<List<TelegramChannelOptionDto>>.Bad(
+                $"Ошибка получения Telegram каналов: {ex.Message}",
+                []
+            );
+        }
+
+        return result;
+    }
+
+    public async Task<OperationResult<List<DiscordChannelOptionDto>>> GetDiscordChannelsAsync(
+        CancellationToken cancellationToken = default
+    )
+    {
+        var result = OperationResult<List<DiscordChannelOptionDto>>.Bad(
+            "Не удалось получить Discord каналы",
+            []
+        );
+
+        try
+        {
+            var client = discordGatewayService.Client;
+            if (client is null)
+            {
+                client = await discordGatewayService.EnsureConnectedAsync(cancellationToken);
+            }
+
+            if (client is not null)
+            {
+                var channels = client
+                    .Guilds.Values.SelectMany(guild =>
+                        guild.Channels.Values
+                            .Where(channel =>
+                            {
+                                var channelType = channel.Type.ToString();
+                                return channelType is "Text" or "Announcement";
+                            })
+                            .Select(channel => new DiscordChannelOptionDto
+                            {
+                                Id = channel.Id,
+                                Name = channel.Name,
+                                GuildId = guild.Id,
+                                GuildName = guild.Name,
+                            })
+                    )
+                    .OrderBy(e => e.GuildName)
+                    .ThenBy(e => e.Name)
+                    .ThenBy(e => e.Id)
+                    .ToList();
+
+                result = OperationResult<List<DiscordChannelOptionDto>>.Ok(
+                    "Discord каналы получены",
+                    channels
+                );
+            }
+            else
+            {
+                result = OperationResult<List<DiscordChannelOptionDto>>.Bad(
+                    "Discord клиент недоступен",
+                    []
+                );
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка получения Discord каналов для bridge");
+            result = OperationResult<List<DiscordChannelOptionDto>>.Bad(
+                $"Ошибка получения Discord каналов: {ex.Message}",
+                []
+            );
+        }
+
+        return result;
+    }
+
     private async Task OnUpdatesReceived(IObject updates)
     {
         try

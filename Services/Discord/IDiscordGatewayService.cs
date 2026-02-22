@@ -15,6 +15,8 @@ public interface IDiscordGatewayService
         Func<DiscordClient, VoiceStateUpdatedEventArgs, Task> handler
     );
 
+    Task<DiscordClient?> EnsureConnectedAsync(CancellationToken cancellationToken = default);
+
     Task<OperationResult> SendMessageAsync(
         ulong channelId,
         string message,
