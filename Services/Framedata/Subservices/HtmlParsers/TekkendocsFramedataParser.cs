@@ -1,8 +1,6 @@
-﻿using AngleSharp;
-using AngleSharp.Dom;
+﻿using AngleSharp.Dom;
 using AngleSharp.Html.Parser;
 using AngleSharp.XPath;
-using MARS.Server.Services.Framedata;
 using MARS.Server.Services.Framedata.Entitys;
 using MARS.Server.Services.Framedata.Subservices.Entitys;
 
@@ -26,10 +24,7 @@ public class TekkendocsFramedataParser : BaseFramedataParser
     )
         : base(logger, dbContextFactory, stagingService, cancellationToken, options)
     {
-        _httpClient = new HttpClient
-        {
-            Timeout = TimeSpan.FromSeconds(Options.HttpTimeoutSeconds),
-        };
+        _httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(Options.HttpTimeoutSeconds) };
         _htmlParser = new HtmlParser();
     }
 
@@ -42,7 +37,8 @@ public class TekkendocsFramedataParser : BaseFramedataParser
         var doc = await _htmlParser.ParseDocumentAsync(html, CancellationToken);
 
         var ulNode = doc.Body?.SelectSingleNode("//ul") as IElement;
-        var liNodes = ulNode?.SelectNodes(".//li[@class='cursor-pointer']")
+        var liNodes = ulNode
+            ?.SelectNodes(".//li[@class='cursor-pointer']")
             ?.Cast<IElement>()
             .ToList();
 
@@ -56,7 +52,8 @@ public class TekkendocsFramedataParser : BaseFramedataParser
         {
             await DelayBetweenRequests();
 
-            var nameNode = liNode.SelectSingleNode(".//div[contains(@class, 'text-center')]") as IElement;
+            var nameNode =
+                liNode.SelectSingleNode(".//div[contains(@class, 'text-center')]") as IElement;
             var name = nameNode?.TextContent.Trim().ToLower();
 
             if (
@@ -129,7 +126,8 @@ public class TekkendocsFramedataParser : BaseFramedataParser
             var html = await _httpClient.GetStringAsync(chatPage, CancellationToken);
             var doc = await _htmlParser.ParseDocumentAsync(html, CancellationToken);
             var tableNode = doc.Body?.SelectSingleNode("//tbody") as IElement;
-            var rowNodes = tableNode?.SelectNodes(".//tr[@class='rt-TableRow']")
+            var rowNodes = tableNode
+                ?.SelectNodes(".//tr[@class='rt-TableRow']")
                 ?.Cast<IElement>()
                 .ToList();
 
@@ -144,7 +142,8 @@ public class TekkendocsFramedataParser : BaseFramedataParser
 
             foreach (var rowNode in rowNodes)
             {
-                var cellNodes = rowNode?.SelectNodes(".//td[@class='rt-TableCell']")
+                var cellNodes = rowNode
+                    ?.SelectNodes(".//td[@class='rt-TableCell']")
                     ?.Cast<IElement>()
                     .ToList();
 
@@ -153,7 +152,9 @@ public class TekkendocsFramedataParser : BaseFramedataParser
                     continue;
                 }
 
-                var command = (cellNodes[0].SelectSingleNode(".//a") as IElement)?.TextContent.Trim().ToLower();
+                var command = (cellNodes[0].SelectSingleNode(".//a") as IElement)
+                    ?.TextContent.Trim()
+                    .ToLower();
                 if (string.IsNullOrWhiteSpace(command))
                 {
                     continue;
@@ -222,7 +223,8 @@ public class TekkendocsFramedataParser : BaseFramedataParser
         var imageUrl = imgNode?.GetAttribute("src") ?? "";
         var imagePath = new Uri(_basePath, imageUrl);
 
-        var nameNode = liNode.SelectSingleNode(".//div[contains(@class, 'text-center')]") as IElement;
+        var nameNode =
+            liNode.SelectSingleNode(".//div[contains(@class, 'text-center')]") as IElement;
         var name = nameNode?.TextContent.Trim().ToLower();
         name = name?.Equals("jack-8") ?? false ? "jack 8" : name;
 

@@ -1,5 +1,4 @@
 using System.Text.Json;
-using MARS.Server.Services.Framedata;
 using MARS.Server.Services.Framedata.Entitys;
 using MARS.Server.Services.Framedata.Subservices.Entitys;
 
@@ -22,10 +21,7 @@ public class OkizemeFramedataParser : BaseFramedataParser
     )
         : base(logger, dbContextFactory, stagingService, cancellationToken, options)
     {
-        _httpClient = new HttpClient
-        {
-            Timeout = TimeSpan.FromSeconds(Options.HttpTimeoutSeconds),
-        };
+        _httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(Options.HttpTimeoutSeconds) };
     }
 
     public override async Task<List<string>> ParseCharactersAndMoves(
@@ -217,8 +213,10 @@ public class OkizemeFramedataParser : BaseFramedataParser
         return new TekkenCharacter
         {
             Name = characterName,
-            LinkToImage = new Uri(_basePath, $"/assets/images/{normalizedSlug}-portrait.png")
-                .AbsoluteUri,
+            LinkToImage = new Uri(
+                _basePath,
+                $"/assets/images/{normalizedSlug}-portrait.png"
+            ).AbsoluteUri,
             PageUrl = new Uri(_basePath, $"/database/{normalizedSlug}").AbsoluteUri,
         };
     }
@@ -263,7 +261,10 @@ public class OkizemeFramedataParser : BaseFramedataParser
         if (!string.IsNullOrWhiteSpace(move.Notes))
         {
             var lines = move
-                .Notes.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+                .Notes.Split(
+                    '\n',
+                    StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries
+                )
                 .Select(e => e.TrimStart('*', ' ').Trim())
                 .Where(e => !string.IsNullOrWhiteSpace(e))
                 .Select(e => e.ToLower());

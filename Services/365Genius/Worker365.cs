@@ -1,6 +1,4 @@
 ﻿using System.Net;
-using System.Xml.XPath;
-using AngleSharp;
 using AngleSharp.Dom;
 using AngleSharp.Html.Dom;
 using AngleSharp.Html.Parser;
@@ -62,7 +60,7 @@ public class Worker365(
 
         var pageNumbers = GetFavouritePagesCount(doc);
 
-        for (var i = pageNumbers ; i >= 1 ; i--)
+        for (var i = pageNumbers; i >= 1; i--)
         {
             await Task.Delay(TimeSpan.FromSeconds(5), _cancellationToken);
             var pageDoc = await GetFavouritePageHtmlDocument(httpClient, i);
@@ -218,7 +216,9 @@ public class Worker365(
     {
         var favouriteNode = doc.Body?.SelectSingleNode("//a[@class='fav_a']") as IElement;
 
-        var count = favouriteNode?.SelectSingleNode(".//span[@class='user_fav_count']")?.TextContent;
+        var count = favouriteNode
+            ?.SelectSingleNode(".//span[@class='user_fav_count']")
+            ?.TextContent;
 
         if (!int.TryParse(count, out var aa))
         {
@@ -235,7 +235,8 @@ public class Worker365(
     {
         var pagenav = document.GetElementById("pagenav") ?? throw new NullReferenceException();
         var lastPageNode =
-            pagenav.SelectSingleNode(".//ul/li[last()-1]") as IElement ?? throw new NullReferenceException();
+            pagenav.SelectSingleNode(".//ul/li[last()-1]") as IElement
+            ?? throw new NullReferenceException();
         var lastPageText = lastPageNode.TextContent.Trim();
 
         return int.TryParse(lastPageText, out var pageCount)
@@ -271,7 +272,9 @@ public class Worker365(
             ?.Cast<IElement>()
             .Reverse()
             .ToList();
-        var ids = liNodes?.Select(e => int.TryParse(e.GetAttribute("id"), out var id) ? id : 0).ToArray();
+        var ids = liNodes
+            ?.Select(e => int.TryParse(e.GetAttribute("id"), out var id) ? id : 0)
+            .ToArray();
 
         var ll = ids?.Where(e => dbConext.Videos365.All(t => t.SiteId != e)).ToArray();
 
@@ -282,8 +285,10 @@ public class Worker365(
                 foreach (var node in liNodes)
                 {
                     var id = int.TryParse(node.GetAttribute("id"), out var nodeId) ? nodeId : 0;
-                    var link = (node.SelectSingleNode(".//a[@class='image']") as IElement)
-                        ?.GetAttribute("href") ?? string.Empty;
+                    var link =
+                        (node.SelectSingleNode(".//a[@class='image']") as IElement)?.GetAttribute(
+                            "href"
+                        ) ?? string.Empty;
 
                     var isUploaded = await dbConext.Videos365.AnyAsync(
                         e => e.SiteId == id,
@@ -381,21 +386,29 @@ public class Worker365(
         var document = await parser.ParseDocumentAsync(html, _cancellationToken);
 
         var title = (document.Head?.SelectSingleNode("//title") as IElement)!.TextContent.Trim();
-        var discription = (document.Body?.SelectSingleNode("//div[@class='story_desription']") as IElement)
-            ?.TextContent;
-        var playerUrl = (document.Body?.SelectSingleNode("//video[@playsinline]") as IElement)
-            ?.GetAttribute("src") ?? string.Empty;
-        var downloadUrlElement = (document.Body?.SelectSingleNode("//ul[@class='download_ul']") as IElement)
-            ?.SelectSingleNode(".//a[@title]") as IElement;
+        var discription = (
+            document.Body?.SelectSingleNode("//div[@class='story_desription']") as IElement
+        )?.TextContent;
+        var playerUrl =
+            (document.Body?.SelectSingleNode("//video[@playsinline]") as IElement)?.GetAttribute(
+                "src"
+            ) ?? string.Empty;
+        var downloadUrlElement =
+            (
+                document.Body?.SelectSingleNode("//ul[@class='download_ul']") as IElement
+            )?.SelectSingleNode(".//a[@title]") as IElement;
         var downloadUrl = downloadUrlElement?.GetAttribute("href") ?? string.Empty;
-        var durationStr = (document.Head?.SelectSingleNode("//meta[@property='video:duration']") as IElement)
-            ?.GetAttribute("content");
+        var durationStr = (
+            document.Head?.SelectSingleNode("//meta[@property='video:duration']") as IElement
+        )?.GetAttribute("content");
         var duration = int.TryParse(durationStr, out var dur) ? dur : 0;
-        var widthStr = (document.Head?.SelectSingleNode("//meta[@property='og:video:width']") as IElement)
-            ?.GetAttribute("content");
+        var widthStr = (
+            document.Head?.SelectSingleNode("//meta[@property='og:video:width']") as IElement
+        )?.GetAttribute("content");
         var width = int.TryParse(widthStr, out var w) ? w : 0;
-        var heightStr = (document.Head?.SelectSingleNode("//meta[@property='og:video:height']") as IElement)
-            ?.GetAttribute("content");
+        var heightStr = (
+            document.Head?.SelectSingleNode("//meta[@property='og:video:height']") as IElement
+        )?.GetAttribute("content");
         var height = int.TryParse(heightStr, out var h) ? h : 0;
         var thumbNailFilePath = await GetThumbNailFilePath(httpClient, document);
 
@@ -443,8 +456,10 @@ public class Worker365(
 
             // 1. Находим элемент <link> с прелоад-изображением
             var linkNode =
-                (document.Head?.SelectSingleNode("//link[@rel='preload' and @as='image']") as IElement)
-                ?? throw new Exception("Элемент <link> не найден.");
+                (
+                    document.Head?.SelectSingleNode("//link[@rel='preload' and @as='image']")
+                    as IElement
+                ) ?? throw new Exception("Элемент <link> не найден.");
 
             // 2. Извлекаем URL изображения
             var imageUrl = linkNode.GetAttribute("href") ?? "";

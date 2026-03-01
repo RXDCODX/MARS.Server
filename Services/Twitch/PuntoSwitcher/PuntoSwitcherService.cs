@@ -1,7 +1,6 @@
 using System.Reflection;
 using System.Text;
 using MARS.Server.ApplicationState;
-using Microsoft.EntityFrameworkCore;
 using TwitchLib.Client.Events;
 using TwitchLib.Client.Models;
 
@@ -39,7 +38,19 @@ public class PuntoSwitcherService : BackgroundService, IPuntoSwitcherService
     ];
 
     private static readonly HashSet<char> LatinVowels = ['a', 'e', 'i', 'o', 'u', 'y'];
-    private static readonly HashSet<char> CyrillicVowels = ['а', 'е', 'ё', 'и', 'о', 'у', 'ы', 'э', 'ю', 'я'];
+    private static readonly HashSet<char> CyrillicVowels =
+    [
+        'а',
+        'е',
+        'ё',
+        'и',
+        'о',
+        'у',
+        'ы',
+        'э',
+        'ю',
+        'я',
+    ];
 
     private static readonly Dictionary<char, char> EnToRuMap = new()
     {
@@ -213,7 +224,10 @@ public class PuntoSwitcherService : BackgroundService, IPuntoSwitcherService
 
         if (!message.StartsWith('!') && !message.StartsWith('/') && !message.StartsWith('.'))
         {
-            if (!message.Contains("http://", StringComparison.OrdinalIgnoreCase) && !message.Contains("https://", StringComparison.OrdinalIgnoreCase))
+            if (
+                !message.Contains("http://", StringComparison.OrdinalIgnoreCase)
+                && !message.Contains("https://", StringComparison.OrdinalIgnoreCase)
+            )
             {
                 result = true;
             }
@@ -236,7 +250,7 @@ public class PuntoSwitcherService : BackgroundService, IPuntoSwitcherService
         {
             var replaced = 0;
 
-            for (var i = 0 ; i < parts.Length ; i++)
+            for (var i = 0; i < parts.Length; i++)
             {
                 var sourceToken = parts[i];
                 var fixedToken = TryFixToken(sourceToken);
@@ -280,7 +294,10 @@ public class PuntoSwitcherService : BackgroundService, IPuntoSwitcherService
                 if (!ProtectedTokens.Contains(core))
                 {
                     var converted = ConvertCore(core);
-                    if (!string.Equals(core, converted, StringComparison.Ordinal) && LooksLikeMistypedLayout(core, converted))
+                    if (
+                        !string.Equals(core, converted, StringComparison.Ordinal)
+                        && LooksLikeMistypedLayout(core, converted)
+                    )
                     {
                         result = $"{prefix}{converted}{suffix}";
                     }
@@ -299,7 +316,11 @@ public class PuntoSwitcherService : BackgroundService, IPuntoSwitcherService
         {
             if (!token.StartsWith('@') && !token.StartsWith('#'))
             {
-                if (!token.Contains("http://", StringComparison.OrdinalIgnoreCase) && !token.Contains("https://", StringComparison.OrdinalIgnoreCase) && !token.Contains("www.", StringComparison.OrdinalIgnoreCase))
+                if (
+                    !token.Contains("http://", StringComparison.OrdinalIgnoreCase)
+                    && !token.Contains("https://", StringComparison.OrdinalIgnoreCase)
+                    && !token.Contains("www.", StringComparison.OrdinalIgnoreCase)
+                )
                 {
                     result = token.Any(char.IsLetter) && !token.Any(char.IsDigit);
                 }

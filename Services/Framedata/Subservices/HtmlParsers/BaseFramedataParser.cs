@@ -1,5 +1,4 @@
-﻿using MARS.Server.Services.Framedata;
-using MARS.Server.Services.Framedata.Entitys;
+﻿using MARS.Server.Services.Framedata.Entitys;
 using MARS.Server.Services.Framedata.Subservices.Entitys;
 
 namespace MARS.Server.Services.Framedata.Subservices.HtmlParsers;
@@ -264,7 +263,9 @@ public abstract class BaseFramedataParser(
                     BlockFrame = group.First().BlockFrame,
                     HitFrame = group.First().HitFrame,
                     CounterHitFrame = group.First().CounterHitFrame,
-                    VideoUrl = group.Select(m => m.VideoUrl).FirstOrDefault(e => !string.IsNullOrWhiteSpace(e)),
+                    VideoUrl = group
+                        .Select(m => m.VideoUrl)
+                        .FirstOrDefault(e => !string.IsNullOrWhiteSpace(e)),
                     Notes = [.. group.SelectMany(m => m.Notes ?? [])],
                 };
 

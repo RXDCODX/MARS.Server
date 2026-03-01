@@ -170,14 +170,25 @@ public static class StartupEstensions
         // Регистрируем сервис для пересылки медиа из forwarded сообщений
         services.AddHostedService<TelegramChannelsResenderService>();
 
-        services.AddSingleton<IDiscordGatewayService, DiscordGatewayService>();
-        services.AddHostedService(sp => (DiscordGatewayService)sp.GetRequiredService<IDiscordGatewayService>());
+        services.AddSingleton<DiscordGatewayService>();
+        services.AddSingleton<IDiscordGatewayService>(sp =>
+            sp.GetRequiredService<DiscordGatewayService>()
+        );
+        services.AddHostedService<DiscordGatewayService>(sp =>
+            sp.GetRequiredService<DiscordGatewayService>()
+        );
 
-        services.AddSingleton<IDiscordTtsVoiceRelayService, DiscordTtsVoiceRelayService>();
-        services.AddHostedService(sp => (DiscordTtsVoiceRelayService)sp.GetRequiredService<IDiscordTtsVoiceRelayService>());
+        services.AddSingleton<DiscordTtsVoiceRelayService>();
+        services.AddSingleton<IDiscordTtsVoiceRelayService>(sp =>
+            sp.GetRequiredService<DiscordTtsVoiceRelayService>()
+        );
+        services.AddHostedService(sp => sp.GetRequiredService<DiscordTtsVoiceRelayService>());
 
-        services.AddSingleton<ITelegramDiscordBridgeService, TelegramDiscordBridgeService>();
-        services.AddHostedService(sp => (TelegramDiscordBridgeService)sp.GetRequiredService<ITelegramDiscordBridgeService>());
+        services.AddSingleton<TelegramDiscordBridgeService>();
+        services.AddSingleton<ITelegramDiscordBridgeService>(sp =>
+            sp.GetRequiredService<TelegramDiscordBridgeService>()
+        );
+        services.AddHostedService(sp => sp.GetRequiredService<TelegramDiscordBridgeService>());
 
         // Регистрируем ScoreboardService
         services.AddScoped<ScoreboardService>();
@@ -484,24 +495,6 @@ public static class StartupEstensions
         });
 
         return app;
-    }
-
-    /// <summary>
-    /// Групповая регистрация доменных сервисов MARS (Shikimori, WaifuRoll, RandomMem, Synthezia, 365, PyroAlerts, Gelbooru, Scoreboard)
-    /// </summary>
-    internal static IServiceCollection AddMarsDomainServices(this IServiceCollection services)
-    {
-        services
-            .AddPyroAlertsServices()
-            .AddShikimoriServices()
-            .AddScoreboardServiceSingleton()
-            .AddWaifuRollServices()
-            .AddRandomMemServices()
-            .AddSyntheziaServices()
-            .Add365Services()
-            .AddBooruServices();
-
-        return services;
     }
 
     internal static IServiceCollection AddPyroAlertsServices(this IServiceCollection services)

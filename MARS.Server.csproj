@@ -50,7 +50,6 @@
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
     <PackageReference Include="Microsoft.AspNetCore.SpaProxy"></PackageReference>
     <PackageReference Include="DSharpPlus" />
-    <PackageReference Include="DSharpPlus.Rest" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" />
     <PackageReference Include="Microsoft.CognitiveServices.Speech" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" />
