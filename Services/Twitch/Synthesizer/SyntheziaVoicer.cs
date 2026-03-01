@@ -15,7 +15,7 @@ public class SyntheziaVoicer : IVoicer
     );
     private readonly ILogger<IVoicer> _logger;
     private readonly ITtsVoiceRepository _voiceRepository;
-    private readonly IDiscordTtsVoiceRelayService _discordVoiceRelayService;
+    private readonly IDiscordTtsVoiceRelayService? _discordVoiceRelayService;
     private readonly SpeechSynthesizer _speechSynthesizer = new();
     private readonly SemaphoreSlim _semaphore = new(1);
     private HashSet<string> _blockedVoices = new(StringComparer.OrdinalIgnoreCase);
@@ -25,12 +25,12 @@ public class SyntheziaVoicer : IVoicer
     public SyntheziaVoicer(
         ILogger<IVoicer> logger,
         ITtsVoiceRepository voiceRepository,
-        IDiscordTtsVoiceRelayService discordVoiceRelayService
+        IServiceProvider serviceProvider
     )
     {
         _logger = logger;
         _voiceRepository = voiceRepository;
-        _discordVoiceRelayService = discordVoiceRelayService;
+        _discordVoiceRelayService = serviceProvider.GetService<IDiscordTtsVoiceRelayService>();
         if (OperatingSystem.IsWindows())
         {
             _speechSynthesizer.SetOutputToDefaultAudioDevice();
@@ -141,7 +141,7 @@ public class SyntheziaVoicer : IVoicer
                     var requestedVoice = FindAllowedVoiceByName(message.VoiceName!);
                     if (requestedVoice is not null)
                     {
-                        if (_discordVoiceRelayService.IsVoiceRoutingEnabled)
+                        if (_discordVoiceRelayService?.IsVoiceRoutingEnabled ?? false)
                         {
                             _speechSynthesizer.SpeakAsyncCancelAll();
                             await _discordVoiceRelayService.PlaySpeechAsync(
@@ -168,7 +168,7 @@ public class SyntheziaVoicer : IVoicer
 
                     if (hasVoice && voice is not null)
                     {
-                        if (_discordVoiceRelayService.IsVoiceRoutingEnabled)
+                        if (_discordVoiceRelayService?.IsVoiceRoutingEnabled ?? false)
                         {
                             _speechSynthesizer.SpeakAsyncCancelAll();
                             await _discordVoiceRelayService.PlaySpeechAsync(
@@ -196,7 +196,7 @@ public class SyntheziaVoicer : IVoicer
                         var greeting =
                             $"Привет, {message.Name}! Для тебя был выбран голос {randomVoice.VoiceInfo.Name}";
 
-                        if (_discordVoiceRelayService.IsVoiceRoutingEnabled)
+                        if (_discordVoiceRelayService?.IsVoiceRoutingEnabled ?? false)
                         {
                             _speechSynthesizer.SpeakAsyncCancelAll();
                             await _discordVoiceRelayService.PlaySpeechAsync(

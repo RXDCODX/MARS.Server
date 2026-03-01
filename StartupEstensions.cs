@@ -178,11 +178,11 @@ public static class StartupEstensions
             sp.GetRequiredService<DiscordGatewayService>()
         );
 
-        services.AddSingleton<DiscordTtsVoiceRelayService>();
-        services.AddSingleton<IDiscordTtsVoiceRelayService>(sp =>
-            sp.GetRequiredService<DiscordTtsVoiceRelayService>()
-        );
-        services.AddHostedService(sp => sp.GetRequiredService<DiscordTtsVoiceRelayService>());
+        //services.AddSingleton<DiscordTtsVoiceRelayService>();
+        //services.AddSingleton<IDiscordTtsVoiceRelayService>(sp =>
+        //    sp.GetRequiredService<DiscordTtsVoiceRelayService>()
+        //);
+        //services.AddHostedService(sp => sp.GetRequiredService<DiscordTtsVoiceRelayService>());
 
         services.AddSingleton<TelegramDiscordBridgeService>();
         services.AddSingleton<ITelegramDiscordBridgeService>(sp =>
