@@ -7,12 +7,15 @@ namespace MARS.Server.Services.Discord;
 
 public class DiscordGatewayService(
     IOptions<ServerDiscordConfiguration> configuration,
-    ILogger<DiscordGatewayService> logger
-) : IDiscordGatewayService, IHostedService
+    ILogger<DiscordGatewayService> logger,
+    IHostApplicationLifetime lifetime
+) : BackgroundService, IDiscordGatewayService
 {
     private readonly ServerDiscordConfiguration _configuration = configuration.Value;
     private readonly List<Func<DiscordClient, MessageCreatedEventArgs, Task>> _messageHandlers = [];
-    private readonly List<Func<DiscordClient, VoiceStateUpdatedEventArgs, Task>> _voiceStateHandlers = [];
+    private readonly List<
+        Func<DiscordClient, VoiceStateUpdatedEventArgs, Task>
+    > _voiceStateHandlers = [];
     private readonly Lock _handlersLock = new();
     private readonly SemaphoreSlim _connectLock = new(1, 1);
 
@@ -40,36 +43,41 @@ public class DiscordGatewayService(
         }
     }
 
-    public async Task StartAsync(CancellationToken cancellationToken)
+    protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        if (string.IsNullOrWhiteSpace(_configuration.Token))
+        lifetime.ApplicationStarted.Register(() =>
         {
-            logger.LogWarning("Discord token не задан, интеграция Discord отключена");
-        }
-        else
-        {
-            await EnsureConnectedAsync(cancellationToken);
-        }
-    }
+            if (string.IsNullOrWhiteSpace(_configuration.Token))
+            {
+                logger.LogWarning("Discord token не задан, интеграция Discord отключена");
+            }
+            else
+            {
+                EnsureConnectedAsync(stoppingToken).GetAwaiter().GetResult();
+            }
+        });
 
-    public async Task StopAsync(CancellationToken cancellationToken)
-    {
-        if (Client is not null)
+        lifetime.ApplicationStopping.Register(() =>
         {
-            try
+            if (Client is not null)
             {
-                await Client.DisconnectAsync();
+                try
+                {
+                    Client.DisconnectAsync().GetAwaiter().GetResult();
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "Ошибка при отключении Discord клиента");
+                }
+                finally
+                {
+                    IsConnected = false;
+                    Client = null;
+                }
             }
-            catch (Exception ex)
-            {
-                logger.LogWarning(ex, "Ошибка при отключении Discord клиента");
-            }
-            finally
-            {
-                IsConnected = false;
-                Client = null;
-            }
-        }
+        });
+
+        return Task.CompletedTask;
     }
 
     public async Task<OperationResult> SendMessageAsync(
@@ -105,7 +113,11 @@ public class DiscordGatewayService(
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Ошибка отправки сообщения в Discord канал {ChannelId}", channelId);
+                logger.LogError(
+                    ex,
+                    "Ошибка отправки сообщения в Discord канал {ChannelId}",
+                    channelId
+                );
                 result = OperationResult.Bad($"Ошибка Discord отправки: {ex.Message}");
             }
         }
@@ -132,7 +144,8 @@ public class DiscordGatewayService(
                 if (result is null)
                 {
                     var intents =
-                        DiscordIntents.GuildMessages
+                        DiscordIntents.Guilds
+                        | DiscordIntents.GuildMessages
                         | DiscordIntents.MessageContents
                         | DiscordIntents.GuildVoiceStates;
 
