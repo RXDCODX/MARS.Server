@@ -8,11 +8,11 @@ public static class VoicerFactory
     public static IVoicer CreateVoicer(
         ILogger<IVoicer> logger,
         ITtsVoiceRepository repository,
-        IDiscordTtsVoiceRelayService discordVoiceRelayService
+        IServiceProvider serviceProvider
     )
     {
         return OperatingSystem.IsWindows()
-            ? new SyntheziaVoicer(logger, repository, discordVoiceRelayService)
+            ? new SyntheziaVoicer(logger, repository, serviceProvider)
             : new NullVoicer(logger);
     }
 }

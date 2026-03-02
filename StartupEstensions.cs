@@ -551,7 +551,7 @@ public static class StartupEstensions
             VoicerFactory.CreateVoicer(
                 sp.GetRequiredService<ILogger<IVoicer>>(),
                 sp.GetRequiredService<ITtsVoiceRepository>(),
-                sp.GetRequiredService<IDiscordTtsVoiceRelayService>()
+                sp
             )
         );
         services.AddSingleton<SyntheziaQueueManager>();
