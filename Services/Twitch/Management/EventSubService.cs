@@ -21,6 +21,7 @@ public class EventSubService(
     private static readonly Timer EventTimer = new(TimeSpan.FromMinutes(5)) { AutoReset = true };
     private static readonly SemaphoreSlim SemaphoreSlim = new(1);
     private static readonly SemaphoreSlim WebsocketSemaphoreSlim = new(1);
+    private static readonly SemaphoreSlim WebsocketConnectSemaphoreSlim = new(1);
 
     private readonly CancellationToken _cancellationToken = lifetime.ApplicationStopping;
     private volatile bool _firstActivation = true;
@@ -78,13 +79,40 @@ public class EventSubService(
 
     private async Task SafeConnectAsync()
     {
+        var lockTaken = false;
+
         try
         {
-            await wsClient.ConnectAsync();
+            await WebsocketConnectSemaphoreSlim.WaitAsync(_cancellationToken);
+            lockTaken = true;
+
+            if (string.IsNullOrWhiteSpace(wsClient.SessionId))
+            {
+                await wsClient.ConnectAsync();
+            }
+        }
+        catch (InvalidOperationException ex)
+            when (ex.Message.Contains("already been started", StringComparison.OrdinalIgnoreCase))
+        {
+            logger.LogWarning(
+                ex,
+                "Пропущена дублирующая попытка ConnectAsync: WebSocket уже запускается"
+            );
+        }
+        catch (OperationCanceledException)
+        {
+            // graceful cancellation
         }
         catch (Exception ex)
         {
             logger.LogException(ex);
+        }
+        finally
+        {
+            if (lockTaken)
+            {
+                WebsocketConnectSemaphoreSlim.Release();
+            }
         }
     }
 
@@ -115,38 +143,53 @@ public class EventSubService(
 
     private async Task TryReconnectWithBackoffAsync()
     {
+        var lockTaken = false;
+
         if (WebsocketSemaphoreSlim.CurrentCount == 0)
         {
             return;
         }
 
-        await WebsocketSemaphoreSlim.WaitAsync(_cancellationToken);
-
-        var delayMs = 500;
-        for (var attempt = 0; attempt < 5 && !_cancellationToken.IsCancellationRequested; attempt++)
+        try
         {
-            try
+            await WebsocketSemaphoreSlim.WaitAsync(_cancellationToken);
+            lockTaken = true;
+
+            var delayMs = 500;
+            for (var attempt = 0 ; attempt < 5 && !_cancellationToken.IsCancellationRequested ; attempt++)
             {
-                var reconnected = await wsClient.ReconnectAsync();
-                if (reconnected)
+                try
                 {
-                    break;
+                    var reconnected = await wsClient.ReconnectAsync();
+                    if (reconnected)
+                    {
+                        break;
+                    }
                 }
-            }
-            catch (Exception ex)
-            {
-                logger.LogWarning(
-                    ex,
-                    "WebSocket реконнект не удался (попытка {Attempt})",
-                    attempt + 1
-                );
-            }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(
+                        ex,
+                        "WebSocket реконнект не удался (попытка {Attempt})",
+                        attempt + 1
+                    );
+                }
 
-            await Task.Delay(delayMs, _cancellationToken);
-            delayMs = Math.Min(delayMs * 2, 8000);
+                await Task.Delay(delayMs, _cancellationToken);
+                delayMs = Math.Min(delayMs * 2, 8000);
+            }
         }
-
-        WebsocketSemaphoreSlim.Release();
+        catch (OperationCanceledException)
+        {
+            // graceful cancellation
+        }
+        finally
+        {
+            if (lockTaken)
+            {
+                WebsocketSemaphoreSlim.Release();
+            }
+        }
     }
 
     private async Task DeleteAllSubsAsync()
@@ -232,19 +275,45 @@ public class EventSubService(
 
     private async Task<bool> EnsureWebSocketConnectedAsync()
     {
-        bool result;
+        var result = false;
+        var lockTaken = false;
+
         try
         {
+            await WebsocketConnectSemaphoreSlim.WaitAsync(_cancellationToken);
+            lockTaken = true;
+
             result = await wsClient.ReconnectAsync();
             if (!result)
             {
                 logger.LogError("Не удалось подключить WebSocket для создания подписок");
             }
         }
+        catch (InvalidOperationException ex)
+            when (ex.Message.Contains("already been started", StringComparison.OrdinalIgnoreCase))
+        {
+            logger.LogWarning(
+                ex,
+                "Пропущена дублирующая попытка ReconnectAsync: WebSocket уже запускается"
+            );
+            result = !string.IsNullOrWhiteSpace(wsClient.SessionId);
+        }
+        catch (OperationCanceledException)
+        {
+            // graceful cancellation
+            result = false;
+        }
         catch (Exception ex)
         {
             logger.LogException(ex);
             result = false;
+        }
+        finally
+        {
+            if (lockTaken)
+            {
+                WebsocketConnectSemaphoreSlim.Release();
+            }
         }
 
         return result;

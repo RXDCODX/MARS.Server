@@ -22,6 +22,7 @@ public class TwitchConnectionManager : IHostedService
     private bool _isReconnecting;
     private bool _manualDisconnect;
     private readonly SemaphoreSlim _reconnectLock = new(1, 1);
+    private readonly SemaphoreSlim _connectLock = new(1, 1);
 
     private const int MaxReconnectAttempts = 10;
     private const int BaseDelaySeconds = 2;
@@ -81,20 +82,18 @@ public class TwitchConnectionManager : IHostedService
         };
     }
 
-    public Task StartAsync(CancellationToken cancellationToken)
+    public async Task StartAsync(CancellationToken cancellationToken)
     {
         try
         {
             _reconnectCts = new CancellationTokenSource();
             _manualDisconnect = false;
-            _ = EnsureInitializedAndConnected();
+            await EnsureInitializedAndConnected();
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to connect Twitch client on startup");
         }
-
-        return Task.CompletedTask;
     }
 
     public async Task StopAsync(CancellationToken cancellationToken)
@@ -254,15 +253,34 @@ public class TwitchConnectionManager : IHostedService
 
     private async Task EnsureInitializedAndConnected()
     {
-        if (!_initialized)
+        await _connectLock.WaitAsync();
+        try
         {
-            _client.Initialize(_credentials, TwitchExstension.Channel);
-            _initialized = true;
-        }
+            if (!_initialized)
+            {
+                _client.Initialize(_credentials, TwitchExstension.Channel);
+                _initialized = true;
+            }
 
-        if (!_client.IsConnected)
+            if (!_client.IsConnected)
+            {
+                try
+                {
+                    await _client.ConnectAsync();
+                }
+                catch (InvalidOperationException ex)
+                    when (ex.Message.Contains("already been started", StringComparison.OrdinalIgnoreCase))
+                {
+                    _logger.LogWarning(
+                        ex,
+                        "Skipped duplicate Twitch connect attempt while WebSocket is already starting"
+                    );
+                }
+            }
+        }
+        finally
         {
-            await _client.ConnectAsync();
+            _connectLock.Release();
         }
     }
 }
