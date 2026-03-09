@@ -30,7 +30,7 @@ public class ScoreboardHub(ScoreboardService scoreboardService, ILogger<Scoreboa
 
     public async Task UpdateState(ScoreboardDto state)
     {
-        await Task.Factory.StartNew(async () => await scoreboardService.UpdateStateAsync(state));
+        await scoreboardService.UpdateStateAsync(state);
         // Отправляем всем клиентам, кроме отправителя, чтобы избежать рекурсии
         await Clients.Others.StateUpdated(state);
         logger.LogInformation("Scoreboard state updated by {ConnectionId}", Context.ConnectionId);

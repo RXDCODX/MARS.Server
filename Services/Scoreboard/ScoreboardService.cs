@@ -234,6 +234,25 @@ public class ScoreboardService(
             logger.LogInformation("Scoreboard visibility set to: {IsVisible}", isVisible);
             result = true;
         }
+        else
+        {
+            var newState = new ScoreboardState
+            {
+                IsVisible = isVisible,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                IsActive = true,
+            };
+
+            context.ScoreboardStates.Add(newState);
+            await context.SaveChangesAsync();
+
+            logger.LogInformation(
+                "Scoreboard state created with visibility: {IsVisible}",
+                isVisible
+            );
+            result = true;
+        }
 
         return result;
     }
