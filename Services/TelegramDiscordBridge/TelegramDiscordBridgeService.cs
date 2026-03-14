@@ -1,4 +1,4 @@
-using MARS.Server.Services.Discord;
+using MARS.Server.Services.Discord.Gateway;
 using MARS.Server.Services.TelegramBotService;
 using MARS.Server.Services.TelegramDiscordBridge.Entities;
 using MARS.Server.Services.TelegramDiscordBridge.Entitys;

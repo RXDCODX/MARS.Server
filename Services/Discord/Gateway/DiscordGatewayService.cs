@@ -3,7 +3,7 @@ using DSharpPlus.EventArgs;
 using DSharpPlus.VoiceNext;
 using ServerDiscordConfiguration = MARS.Server.Configuration.DiscordConfiguration;
 
-namespace MARS.Server.Services.Discord;
+namespace MARS.Server.Services.Discord.Gateway;
 
 public class DiscordGatewayService(
     IOptions<ServerDiscordConfiguration> configuration,
@@ -12,7 +12,12 @@ public class DiscordGatewayService(
 {
     private readonly ServerDiscordConfiguration _configuration = configuration.Value;
     private readonly List<Func<DiscordClient, MessageCreatedEventArgs, Task>> _messageHandlers = [];
-    private readonly List<Func<DiscordClient, VoiceStateUpdatedEventArgs, Task>> _voiceStateHandlers = [];
+    private readonly List<Func<DiscordClient, VoiceStateUpdatedEventArgs, Task>> _voiceStateHandlers =
+        [];
+    private readonly List<Func<DiscordClient, InteractionCreatedEventArgs, Task>> _interactionHandlers =
+        [];
+    private readonly List<Func<DiscordClient, ComponentInteractionCreatedEventArgs, Task>>
+        _componentInteractionHandlers = [];
     private readonly Lock _handlersLock = new();
     private readonly SemaphoreSlim _connectLock = new(1, 1);
 
@@ -37,6 +42,26 @@ public class DiscordGatewayService(
         lock (_handlersLock)
         {
             _voiceStateHandlers.Add(handler);
+        }
+    }
+
+    public void RegisterInteractionCreatedHandler(
+        Func<DiscordClient, InteractionCreatedEventArgs, Task> handler
+    )
+    {
+        lock (_handlersLock)
+        {
+            _interactionHandlers.Add(handler);
+        }
+    }
+
+    public void RegisterComponentInteractionCreatedHandler(
+        Func<DiscordClient, ComponentInteractionCreatedEventArgs, Task> handler
+    )
+    {
+        lock (_handlersLock)
+        {
+            _componentInteractionHandlers.Add(handler);
         }
     }
 
@@ -132,7 +157,8 @@ public class DiscordGatewayService(
                 if (result is null)
                 {
                     var intents =
-                        DiscordIntents.GuildMessages
+                        DiscordIntents.Guilds
+                        | DiscordIntents.GuildMessages
                         | DiscordIntents.MessageContents
                         | DiscordIntents.GuildVoiceStates;
 
@@ -142,6 +168,10 @@ public class DiscordGatewayService(
                         {
                             events.HandleMessageCreated(HandleMessageCreatedAsync);
                             events.HandleVoiceStateUpdated(HandleVoiceStateUpdatedAsync);
+                            events.HandleInteractionCreated(HandleInteractionCreatedAsync);
+                            events.HandleComponentInteractionCreated(
+                                HandleComponentInteractionCreatedAsync
+                            );
                         })
                         .UseVoiceNext(new VoiceNextConfiguration())
                         .SetLogLevel(LogLevel.Information);
@@ -207,6 +237,56 @@ public class DiscordGatewayService(
             catch (Exception ex)
             {
                 logger.LogError(ex, "Ошибка обработки VoiceStateUpdated обработчиком");
+            }
+        }
+    }
+
+    private async Task HandleInteractionCreatedAsync(
+        DiscordClient client,
+        InteractionCreatedEventArgs args
+    )
+    {
+        List<Func<DiscordClient, InteractionCreatedEventArgs, Task>> handlersCopy;
+
+        lock (_handlersLock)
+        {
+            handlersCopy = [.. _interactionHandlers];
+        }
+
+        foreach (var handler in handlersCopy)
+        {
+            try
+            {
+                await handler(client, args);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Ошибка обработки InteractionCreated обработчиком");
+            }
+        }
+    }
+
+    private async Task HandleComponentInteractionCreatedAsync(
+        DiscordClient client,
+        ComponentInteractionCreatedEventArgs args
+    )
+    {
+        List<Func<DiscordClient, ComponentInteractionCreatedEventArgs, Task>> handlersCopy;
+
+        lock (_handlersLock)
+        {
+            handlersCopy = [.. _componentInteractionHandlers];
+        }
+
+        foreach (var handler in handlersCopy)
+        {
+            try
+            {
+                await handler(client, args);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Ошибка обработки ComponentInteractionCreated обработчиком");
             }
         }
     }

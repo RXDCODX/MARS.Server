@@ -1,7 +1,7 @@
 using DSharpPlus;
 using DSharpPlus.EventArgs;
 
-namespace MARS.Server.Services.Discord;
+namespace MARS.Server.Services.Discord.Gateway;
 
 public interface IDiscordGatewayService
 {
@@ -13,6 +13,14 @@ public interface IDiscordGatewayService
 
     void RegisterVoiceStateUpdatedHandler(
         Func<DiscordClient, VoiceStateUpdatedEventArgs, Task> handler
+    );
+
+    void RegisterInteractionCreatedHandler(
+        Func<DiscordClient, InteractionCreatedEventArgs, Task> handler
+    );
+
+    void RegisterComponentInteractionCreatedHandler(
+        Func<DiscordClient, ComponentInteractionCreatedEventArgs, Task> handler
     );
 
     Task<DiscordClient?> EnsureConnectedAsync(CancellationToken cancellationToken = default);

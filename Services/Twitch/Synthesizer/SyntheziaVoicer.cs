@@ -2,7 +2,7 @@
 using System.Runtime.Versioning;
 using System.Speech.Synthesis;
 using System.Text;
-using MARS.Server.Services.Discord;
+using MARS.Server.Services.Discord.TtsVoiceRelay;
 using MARS.Server.Services.Twitch.Synthesizer.Enitity;
 
 namespace MARS.Server.Services.Twitch.Synthesizer;

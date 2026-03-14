@@ -1,4 +1,4 @@
-namespace MARS.Server.Services.Discord;
+namespace MARS.Server.Services.Discord.TtsVoiceRelay;
 
 public interface IDiscordTtsVoiceRelayService
 {

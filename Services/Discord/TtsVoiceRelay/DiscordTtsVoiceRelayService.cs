@@ -4,8 +4,9 @@ using System.Speech.Synthesis;
 using DSharpPlus;
 using DSharpPlus.EventArgs;
 using DSharpPlus.VoiceNext;
+using MARS.Server.Services.Discord.Gateway;
 
-namespace MARS.Server.Services.Discord;
+namespace MARS.Server.Services.Discord.TtsVoiceRelay;
 
 public class DiscordTtsVoiceRelayService(
     IDiscordGatewayService gatewayService,
@@ -261,18 +262,23 @@ public class DiscordTtsVoiceRelayService(
     private static int FindDataChunkOffset(byte[] source)
     {
         var result = -1;
+        var offset = 12;
 
-        for (var i = 12 ; i + 8 < source.Length ; i++)
+        while (offset + 8 <= source.Length)
         {
-            if (
-                source[i] == 'd'
-                && source[i + 1] == 'a'
-                && source[i + 2] == 't'
-                && source[i + 3] == 'a'
-            )
+            var chunkId = BitConverter.ToInt32(source, offset);
+            var chunkSize = BitConverter.ToInt32(source, offset + 4);
+
+            if (chunkId == 0x61746164)
             {
-                result = i;
+                result = offset;
                 break;
+            }
+
+            offset += 8 + chunkSize;
+            if (offset % 2 != 0)
+            {
+                offset++;
             }
         }
 

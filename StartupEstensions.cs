@@ -3,7 +3,9 @@ using System.Text.Json.Serialization;
 using BooruSharp.Booru;
 using MARS.Server.CustomLoggers.SignalRLogger;
 using MARS.Server.Services._365Genius;
-using MARS.Server.Services.Discord;
+using MARS.Server.Services.Discord.Gateway;
+using MARS.Server.Services.Discord.PlayRequest;
+using MARS.Server.Services.Discord.TtsVoiceRelay;
 using MARS.Server.Services.Framedata;
 using MARS.Server.Services.PyroAlerts;
 using MARS.Server.Services.RandomMem;
@@ -14,7 +16,6 @@ using MARS.Server.Services.Shikimori.Entitys;
 using MARS.Server.Services.SoundRequest;
 using MARS.Server.Services.SoundRequest.Interfaces;
 using MARS.Server.Services.SoundRequest.Queue;
-using MARS.Server.Services.SoundRequest.YouTube;
 using MARS.Server.Services.TelegramBotService;
 using MARS.Server.Services.TelegramDiscordBridge;
 using MARS.Server.Services.TelegramPrivateChannelsResender;
@@ -60,6 +61,7 @@ using MARS.Server.Services.Twitch.TwitchFollowers;
 using MARS.Server.Services.WaifuRoll;
 using MARS.Server.Services.WaifuRoll.Entitys.Interfaces;
 using MARS.Server.Services.WaifuRoll.helpers;
+using MARS.Server.Services.YouTube;
 using MARS.Server.Swagger;
 using Microsoft.OpenApi;
 using TwitchLib.Api;
@@ -447,6 +449,9 @@ public static class StartupEstensions
         services.AddSingleton<OutSignalRHubService>();
         services.AddSingleton<SoundRequestUserQueue>();
         services.AddSingleton<YouTubeResolver>();
+        services.AddSingleton<DiscordPlayAudioCacheService>();
+        services.AddSingleton<DiscordPlayRequestService>();
+        services.AddHostedService(sp => sp.GetRequiredService<DiscordPlayRequestService>());
 
         // Регистрируем плеер и CommandsService
         services.AddSingleton<MainPlayer>();
@@ -605,6 +610,7 @@ public static class StartupEstensions
     {
         services
             //.AddHonkaiServices()
+
 
             .AddWaifuRollServices()
             .AddRandomMemServices()

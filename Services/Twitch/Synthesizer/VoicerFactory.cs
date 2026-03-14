@@ -1,5 +1,4 @@
-﻿using MARS.Server.Services.Discord;
-using MARS.Server.Services.Twitch.Synthesizer.Enitity;
+﻿using MARS.Server.Services.Twitch.Synthesizer.Enitity;
 
 namespace MARS.Server.Services.Twitch.Synthesizer;
 

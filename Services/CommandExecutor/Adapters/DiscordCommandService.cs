@@ -2,7 +2,8 @@ using DSharpPlus;
 using DSharpPlus.EventArgs;
 using MARS.Server.Services.CommandExecutor.Entitys;
 using MARS.Server.Services.CommandExecutor.Entitys.Commands;
-using MARS.Server.Services.Discord;
+using MARS.Server.Services.Discord.Gateway;
+using MARS.Server.Services.Discord.PlayRequest;
 using ServerDiscordConfiguration = MARS.Server.Configuration.DiscordConfiguration;
 
 namespace MARS.Server.Services.CommandExecutor.Adapters;
@@ -10,6 +11,7 @@ namespace MARS.Server.Services.CommandExecutor.Adapters;
 public class DiscordCommandService(
     CommandExecutorService executor,
     ICommandService commandService,
+    DiscordPlayRequestService discordPlayRequestService,
     IDiscordGatewayService discordGatewayService,
     IOptions<ServerDiscordConfiguration> discordOptions,
     ILogger<DiscordCommandService> logger
@@ -72,6 +74,11 @@ public class DiscordCommandService(
             return;
         }
 
+        if (await discordPlayRequestService.TryHandleMessageAsync(client, args))
+        {
+            return;
+        }
+
         var messageText = args.Message.Content ?? string.Empty;
         if (!StartsWithCommandPrefix(messageText))
         {
@@ -98,6 +105,7 @@ public class DiscordCommandService(
                     AdminCommands,
                     includeAdminCommands
                 );
+                commandsList = AppendDiscordSpecificCommands(commandsList);
                 await args.Channel.SendMessageAsync(ValidateResponse(commandsList));
             }
             else
@@ -154,5 +162,23 @@ public class DiscordCommandService(
             logger.LogError(ex, "Ошибка обработки Discord команды");
             await args.Channel.SendMessageAsync("Ошибка выполнения команды.");
         }
+    }
+
+    private static string AppendDiscordSpecificCommands(string commandsList)
+    {
+        var result = commandsList;
+        const string playCommandDescription =
+            "/play - найти 10 треков на YouTube и прислать выбранный аудиофайл";
+
+        if (!string.IsNullOrWhiteSpace(commandsList))
+        {
+            result = string.Concat(commandsList, Environment.NewLine, " | ", playCommandDescription);
+        }
+        else
+        {
+            result = string.Concat("Доступные команды: ", playCommandDescription);
+        }
+
+        return result;
     }
 }
