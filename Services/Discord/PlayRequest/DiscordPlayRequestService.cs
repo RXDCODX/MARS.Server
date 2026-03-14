@@ -21,6 +21,8 @@ public class DiscordPlayRequestService(
     private const string QueryOptionName = "query";
     private const string PlayComponentPrefix = "discord-play:";
     private const int MaxSearchResults = 10;
+    private const long Tier2UploadLimitBytes = 50L * 1024 * 1024;
+    private const long Tier3UploadLimitBytes = 100L * 1024 * 1024;
     private static readonly TimeSpan SessionLifetime = TimeSpan.FromMinutes(10);
     private readonly ConcurrentDictionary<string, DiscordPlaySelectionSession> _sessions =
         new(StringComparer.Ordinal);
@@ -71,7 +73,30 @@ public class DiscordPlayRequestService(
             {
                 result = true;
 
-                if (!string.IsNullOrWhiteSpace(query))
+                if (string.IsNullOrWhiteSpace(query))
+                {
+                    await args.Channel.SendMessageAsync(BuildPlayUsageText());
+                }
+                else if (TryGetYouTubeUrl(query, out var normalizedYouTubeUrl))
+                {
+                    await HandleDirectMessageUrlAsync(
+                        client,
+                        args,
+                        normalizedYouTubeUrl,
+                        cancellationToken
+                    );
+                }
+                else if (TryGetAbsoluteUrl(query, out _))
+                {
+                    await args.Channel.SendMessageAsync(
+                        string.Concat(
+                            "Для прямой загрузки поддерживаются только ссылки YouTube.",
+                            Environment.NewLine,
+                            BuildPlayUsageText()
+                        )
+                    );
+                }
+                else
                 {
                     await CreateSelectionMessageAsync(
                         client,
@@ -79,12 +104,6 @@ public class DiscordPlayRequestService(
                         args.Author.Id,
                         query,
                         cancellationToken
-                    );
-                }
-                else
-                {
-                    await args.Channel.SendMessageAsync(
-                        "Использование: /play поисковый запрос. После этого выбери трек в dropdown ниже."
                     );
                 }
             }
@@ -106,7 +125,7 @@ public class DiscordPlayRequestService(
             && TryGetSlashPlayQuery(interaction, out var query)
         )
         {
-            await CreateSlashSelectionMessageAsync(interaction, query);
+            await CreateSlashSelectionMessageAsync(client, interaction, query);
         }
     }
 
@@ -188,34 +207,170 @@ public class DiscordPlayRequestService(
         }
     }
 
-    private async Task CreateSlashSelectionMessageAsync(DiscordInteraction interaction, string query)
+    private async Task HandleDirectMessageUrlAsync(
+        DiscordClient client,
+        MessageCreatedEventArgs args,
+        string videoUrl,
+        CancellationToken cancellationToken
+    )
     {
-        var tracks = await youTubeResolver.SearchTracksAsync(query, MaxSearchResults, CancellationToken.None);
+        var track = await youTubeResolver.ResolveVideoAsync(videoUrl, cancellationToken);
 
-        if (tracks.Length > 0)
+        if (track is not null)
         {
-            var session = CreateSession(interaction.ChannelId, interaction.User.Id, query, tracks);
-            var builder = BuildInteractionResponseBuilder(session);
-
-            await interaction.CreateResponseAsync(
-                DiscordInteractionResponseType.ChannelMessageWithSource,
-                builder
+            var statusMessage = await args.Channel.SendMessageAsync(
+                BuildDirectTrackPreparingMessage(track)
             );
 
-            var originalMessage = await interaction.GetOriginalResponseAsync();
-            session.MessageId = originalMessage.Id;
-            _sessions[session.SessionId] = session;
+            var attachmentLimit = ResolveAttachmentLimit(
+                0,
+                args.Channel.Guild?.PremiumTier ?? DiscordPremiumTier.None
+            );
+
+            await SendTrackFileAsync(
+                client,
+                null,
+                args.Channel,
+                statusMessage.Id,
+                track,
+                attachmentLimit,
+                cancellationToken
+            );
         }
         else
         {
-            var notFoundBuilder = new DiscordInteractionResponseBuilder();
-            notFoundBuilder.WithContent("Ничего не нашёл по этому запросу.");
-            notFoundBuilder.AsEphemeral(true);
+            await args.Channel.SendMessageAsync(
+                string.Concat(
+                    "Не удалось распознать YouTube-видео по ссылке.",
+                    Environment.NewLine,
+                    BuildPlayUsageText()
+                )
+            );
+        }
+    }
+
+    private async Task CreateSlashSelectionMessageAsync(
+        DiscordClient client,
+        DiscordInteraction interaction,
+        string query
+    )
+    {
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            var usageBuilder = new DiscordInteractionResponseBuilder();
+            usageBuilder.WithContent(BuildPlayUsageText());
+            usageBuilder.AsEphemeral(true);
 
             await interaction.CreateResponseAsync(
                 DiscordInteractionResponseType.ChannelMessageWithSource,
-                notFoundBuilder
+                usageBuilder
             );
+        }
+        else if (TryGetYouTubeUrl(query, out var normalizedYouTubeUrl))
+        {
+            var preparingBuilder = new DiscordInteractionResponseBuilder();
+            preparingBuilder.WithContent("Ссылка распознана, готовлю аудиодорожку...");
+
+            await interaction.CreateResponseAsync(
+                DiscordInteractionResponseType.ChannelMessageWithSource,
+                preparingBuilder
+            );
+
+            var originalMessage = await interaction.GetOriginalResponseAsync();
+            var track = await youTubeResolver.ResolveVideoAsync(normalizedYouTubeUrl, CancellationToken.None);
+
+            if (track is not null && interaction.Channel is not null)
+            {
+                var editBuilder = new DiscordWebhookBuilder();
+                editBuilder.WithContent(BuildDirectTrackPreparingMessage(track));
+
+                await interaction.EditOriginalResponseAsync(
+                    editBuilder,
+                    Array.Empty<DiscordAttachment>()
+                );
+
+                var attachmentLimit = ResolveAttachmentLimit(
+                    interaction.AttachmentSizeLimit,
+                    interaction.Guild?.PremiumTier ?? DiscordPremiumTier.None
+                );
+
+                await SendTrackFileAsync(
+                    client,
+                    interaction,
+                    interaction.Channel,
+                    originalMessage.Id,
+                    track,
+                    attachmentLimit,
+                    CancellationToken.None
+                );
+            }
+            else
+            {
+                var failBuilder = new DiscordWebhookBuilder();
+                failBuilder.WithContent(
+                    string.Concat(
+                        "Не удалось распознать YouTube-видео по ссылке.",
+                        Environment.NewLine,
+                        BuildPlayUsageText()
+                    )
+                );
+
+                await interaction.EditOriginalResponseAsync(
+                    failBuilder,
+                    Array.Empty<DiscordAttachment>()
+                );
+            }
+        }
+        else if (TryGetAbsoluteUrl(query, out _))
+        {
+            var nonYoutubeBuilder = new DiscordInteractionResponseBuilder();
+            nonYoutubeBuilder.WithContent(
+                string.Concat(
+                    "Для прямой загрузки поддерживаются только ссылки YouTube.",
+                    Environment.NewLine,
+                    BuildPlayUsageText()
+                )
+            );
+            nonYoutubeBuilder.AsEphemeral(true);
+
+            await interaction.CreateResponseAsync(
+                DiscordInteractionResponseType.ChannelMessageWithSource,
+                nonYoutubeBuilder
+            );
+        }
+        else
+        {
+            var tracks = await youTubeResolver.SearchTracksAsync(
+                query,
+                MaxSearchResults,
+                CancellationToken.None
+            );
+
+            if (tracks.Length > 0)
+            {
+                var session = CreateSession(interaction.ChannelId, interaction.User.Id, query, tracks);
+                var builder = BuildInteractionResponseBuilder(session);
+
+                await interaction.CreateResponseAsync(
+                    DiscordInteractionResponseType.ChannelMessageWithSource,
+                    builder
+                );
+
+                var originalMessage = await interaction.GetOriginalResponseAsync();
+                session.MessageId = originalMessage.Id;
+                _sessions[session.SessionId] = session;
+            }
+            else
+            {
+                var notFoundBuilder = new DiscordInteractionResponseBuilder();
+                notFoundBuilder.WithContent("Ничего не нашёл по этому запросу.");
+                notFoundBuilder.AsEphemeral(true);
+
+                await interaction.CreateResponseAsync(
+                    DiscordInteractionResponseType.ChannelMessageWithSource,
+                    notFoundBuilder
+                );
+            }
         }
     }
 
@@ -241,12 +396,18 @@ public class DiscordPlayRequestService(
                 updateBuilder
             );
 
+            var attachmentLimit = ResolveAttachmentLimit(
+                args.Interaction.AttachmentSizeLimit,
+                args.Guild?.PremiumTier ?? DiscordPremiumTier.None
+            );
+
             await SendTrackFileAsync(
                 client,
                 args.Interaction,
                 args.Channel,
                 args.Message.Id,
                 selectedTrack,
+                attachmentLimit,
                 CancellationToken.None
             );
         }
@@ -265,14 +426,14 @@ public class DiscordPlayRequestService(
 
     private async Task SendTrackFileAsync(
         DiscordClient client,
-        DiscordInteraction interaction,
+        DiscordInteraction? interaction,
         DiscordChannel channel,
         ulong replyMessageId,
         BaseTrackInfo track,
+        long attachmentLimit,
         CancellationToken cancellationToken
     )
     {
-        var attachmentLimit = ResolveAttachmentLimit(interaction.AttachmentSizeLimit);
         var preparedAudioResult = await audioCacheService.PrepareAudioAsync(
             track,
             attachmentLimit,
@@ -301,26 +462,42 @@ public class DiscordPlayRequestService(
             {
                 logger.LogError(ex, "Ошибка отправки Discord play аудиофайла для {VideoId}", track.VideoId);
 
-                var followupBuilder = new DiscordFollowupMessageBuilder();
-                followupBuilder.WithContent(
-                    "Аудиофайл подготовился, но не отправился в канал. Попробуй ещё раз позже."
-                );
-                followupBuilder.AsEphemeral(true);
+                if (interaction is not null)
+                {
+                    var followupBuilder = new DiscordFollowupMessageBuilder();
+                    followupBuilder.WithContent(
+                        "Аудиофайл подготовился, но не отправился в канал. Попробуй ещё раз позже."
+                    );
+                    followupBuilder.AsEphemeral(true);
 
-                await interaction.CreateFollowupMessageAsync(followupBuilder);
+                    await interaction.CreateFollowupMessageAsync(followupBuilder);
+                }
+                else
+                {
+                    await channel.SendMessageAsync(
+                        "Аудиофайл подготовился, но не отправился в канал. Попробуй ещё раз позже."
+                    );
+                }
             }
         }
         else
         {
-            var followupBuilder = new DiscordFollowupMessageBuilder();
-            followupBuilder.WithContent(
-                string.IsNullOrWhiteSpace(preparedAudioResult.Message)
-                    ? "Не удалось подготовить файл для отправки."
-                    : preparedAudioResult.Message
-            );
-            followupBuilder.AsEphemeral(true);
+            var errorMessage = string.IsNullOrWhiteSpace(preparedAudioResult.Message)
+                ? "Не удалось подготовить файл для отправки."
+                : preparedAudioResult.Message;
 
-            await interaction.CreateFollowupMessageAsync(followupBuilder);
+            if (interaction is not null)
+            {
+                var followupBuilder = new DiscordFollowupMessageBuilder();
+                followupBuilder.WithContent(errorMessage);
+                followupBuilder.AsEphemeral(true);
+
+                await interaction.CreateFollowupMessageAsync(followupBuilder);
+            }
+            else
+            {
+                await channel.SendMessageAsync(errorMessage);
+            }
         }
     }
 
@@ -370,13 +547,13 @@ public class DiscordPlayRequestService(
     {
         var queryOption = new DiscordApplicationCommandOption(
             QueryOptionName,
-            "Поисковый запрос для YouTube",
+            "Поисковый запрос или ссылка YouTube (параметр можно не указывать)",
             DiscordApplicationCommandOptionType.String,
-            true
+            false
         );
         var result = new DiscordApplicationCommand(
             PlayCommandName,
-            "Найти 10 треков на YouTube и выбрать один",
+            "Поиск трека или прямая загрузка по YouTube-ссылке",
             [queryOption]
         );
 
@@ -391,12 +568,12 @@ public class DiscordPlayRequestService(
         {
             var option = command.Options.FirstOrDefault();
             result =
-                command.Description == "Найти 10 треков на YouTube и выбрать один"
+                command.Description == "Поиск трека или прямая загрузка по YouTube-ссылке"
                 && command.Options.Count == 1
                 && option is not null
                 && option.Name == QueryOptionName
                 && option.Type == DiscordApplicationCommandOptionType.String
-                && option.Required == true;
+                && option.Required == false;
         }
 
         return result;
@@ -482,7 +659,10 @@ public class DiscordPlayRequestService(
         var result = false;
         query = string.Empty;
 
-        if (!string.IsNullOrWhiteSpace(messageText) && (messageText.StartsWith('/') || messageText.StartsWith('!')))
+        if (
+            !string.IsNullOrWhiteSpace(messageText)
+            && (messageText.StartsWith('/') || messageText.StartsWith('!'))
+        )
         {
             var commandParts = messageText.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
 
@@ -563,13 +743,77 @@ public class DiscordPlayRequestService(
         return result;
     }
 
-    private static long ResolveAttachmentLimit(long attachmentSizeLimit)
+    private static long ResolveAttachmentLimit(
+        long interactionAttachmentSizeLimit,
+        DiscordPremiumTier guildPremiumTier
+    )
+    {
+        var result = ResolveGuildAttachmentLimit(guildPremiumTier);
+
+        if (interactionAttachmentSizeLimit > 0)
+        {
+            result = Math.Max(result, interactionAttachmentSizeLimit);
+        }
+
+        return result;
+    }
+
+    private static long ResolveGuildAttachmentLimit(DiscordPremiumTier guildPremiumTier)
     {
         var result = DiscordPlayAudioCacheService.DefaultMaxAttachmentSizeBytes;
 
-        if (attachmentSizeLimit > 0)
+        if (guildPremiumTier == DiscordPremiumTier.Tier_2)
         {
-            result = attachmentSizeLimit;
+            result = Tier2UploadLimitBytes;
+        }
+        else if (guildPremiumTier == DiscordPremiumTier.Tier_3)
+        {
+            result = Tier3UploadLimitBytes;
+        }
+
+        return result;
+    }
+
+    private static bool TryGetAbsoluteUrl(string query, out string normalizedUrl)
+    {
+        var result = false;
+        normalizedUrl = string.Empty;
+
+        if (!string.IsNullOrWhiteSpace(query))
+        {
+            var candidateUrl = query.Trim();
+            if (
+                !candidateUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+                && !candidateUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase)
+            )
+            {
+                candidateUrl = string.Concat("https://", candidateUrl);
+            }
+
+            if (Uri.TryCreate(candidateUrl, UriKind.Absolute, out _))
+            {
+                normalizedUrl = candidateUrl;
+                result = true;
+            }
+        }
+
+        return result;
+    }
+
+    private static bool TryGetYouTubeUrl(string query, out string normalizedYouTubeUrl)
+    {
+        var result = false;
+        normalizedYouTubeUrl = string.Empty;
+
+        if (TryGetAbsoluteUrl(query, out var normalizedUrl))
+        {
+            var uri = new Uri(normalizedUrl);
+            var host = uri.Host.ToLowerInvariant();
+            if (host.Contains("youtube.com") || host.Contains("youtu.be"))
+            {
+                normalizedYouTubeUrl = normalizedUrl;
+                result = true;
+            }
         }
 
         return result;
@@ -641,6 +885,31 @@ public class DiscordPlayRequestService(
         var result = !string.IsNullOrWhiteSpace(author)
             ? string.Concat(author, " | ", durationText)
             : durationText;
+
+        return result;
+    }
+
+    private static string BuildDirectTrackPreparingMessage(BaseTrackInfo track)
+    {
+        var result = string.Concat(
+            "Получил ссылку YouTube, готовлю аудиодорожку: ",
+            TrimText(track.Title, 120)
+        );
+
+        return result;
+    }
+
+    private static string BuildPlayUsageText()
+    {
+        var result = string.Join(
+            Environment.NewLine,
+            [
+                "Как пользоваться /play:",
+                "1. /play <поисковый запрос> - бот покажет 10 треков и предложит выбрать один.",
+                "2. /play <ссылка YouTube> - бот сразу подготовит и отправит аудиофайл этого видео.",
+                "3. /play без аргументов - выводит эту подсказку.",
+            ]
+        );
 
         return result;
     }

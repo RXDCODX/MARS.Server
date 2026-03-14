@@ -11,7 +11,7 @@ public class DiscordPlayAudioCacheService(
     ILogger<DiscordPlayAudioCacheService> logger
 )
 {
-    public const long DefaultMaxAttachmentSizeBytes = 8 * 1024 * 1024;
+    public const long DefaultMaxAttachmentSizeBytes = 10 * 1024 * 1024;
 
     private const int MaxBitrateKbps = 192;
     private const int MinBitrateKbps = 32;
