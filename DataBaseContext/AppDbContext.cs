@@ -289,6 +289,13 @@ public sealed partial class AppDbContext : DbContext
                         Description = "Кулдаун ролла вайфу в минутах",
                         TypeDescription = "long",
                     },
+                    new RootState
+                    {
+                        Name = RootStateKeys.WTelegramMtProxyUrl,
+                        Value = string.Empty,
+                        Description = "MTProxy URL для WTelegram (например: https://t.me/proxy?server=...)",
+                        TypeDescription = "string",
+                    },
                 ]
             );
 

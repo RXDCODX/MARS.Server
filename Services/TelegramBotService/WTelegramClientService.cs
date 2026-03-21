@@ -1,5 +1,6 @@
 using MARS.Server.Services.TelegramBotService.Entities;
 using Telegram.Bot.Types.Enums;
+using MARS.Server.ApplicationState;
 
 namespace MARS.Server.Services.TelegramBotService;
 
@@ -10,6 +11,7 @@ public class WTelegramClientService : IDisposable
 {
     private readonly ILogger<WTelegramClientService> _logger;
     private readonly WTelegramClientConfiguration _configuration;
+    private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
     private readonly string _sessionPath;
     private WTelegramClient? _client;
     private readonly SemaphoreSlim _loginLock = new(1, 1);
@@ -21,12 +23,14 @@ public class WTelegramClientService : IDisposable
     public WTelegramClientService(
         ILogger<WTelegramClientService> logger,
         IOptions<WTelegramClientConfiguration> configuration,
-        ITelegramBotClient botClient
+        ITelegramBotClient botClient,
+        IDbContextFactory<AppDbContext> dbContextFactory
     )
     {
         _logger = logger;
         _configuration = configuration.Value;
         _botClient = botClient;
+        _dbContextFactory = dbContextFactory;
         _sessionPath = Path.Combine(
             Directory.GetCurrentDirectory(),
             "WTelegram",
@@ -179,6 +183,16 @@ public class WTelegramClientService : IDisposable
     {
         _client = new WTelegramClient(_configuration.AppId, _configuration.ApiHash, _sessionPath);
 
+        var mtProxyUrl = await GetMtProxyUrlFromRootStateAsync(cancellationToken);
+        if (!string.IsNullOrWhiteSpace(mtProxyUrl))
+        {
+            _client.MTProxyUrl = mtProxyUrl;
+            _logger.LogInformation(
+                "Для WTelegram включен MTProxy из RootState: {RootStateKey}",
+                RootStateKeys.WTelegramMtProxyUrl
+            );
+        }
+
         var loginInfo = _configuration.PhoneNumber;
 
         while (_client.User == null)
@@ -249,6 +263,39 @@ public class WTelegramClientService : IDisposable
 
         var username = _client.User?.username ?? _client.User?.phone ?? "Unknown";
         await NotifyAuthSuccessAsync(username);
+    }
+
+    private async Task<string?> GetMtProxyUrlFromRootStateAsync(CancellationToken cancellationToken)
+    {
+        string? mtProxyUrl = null;
+
+        try
+        {
+            await using var dbContext = await _dbContextFactory.CreateDbContextAsync(
+                cancellationToken
+            );
+
+            var proxyState = await dbContext
+                .RootState.AsNoTracking()
+                .SingleOrDefaultAsync(
+                    state => state.Name == RootStateKeys.WTelegramMtProxyUrl,
+                    cancellationToken
+                );
+
+            if (!string.IsNullOrWhiteSpace(proxyState?.Value))
+            {
+                mtProxyUrl = proxyState.Value.Trim();
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "Не удалось прочитать MTProxy URL из RootState. Клиент продолжит работу без прокси"
+            );
+        }
+
+        return mtProxyUrl;
     }
 
     private static WTelegramAuthenticationRequirement ParseAuthenticationRequirement(

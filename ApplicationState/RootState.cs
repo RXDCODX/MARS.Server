@@ -17,4 +17,5 @@ public static class RootStateKeys
     public const string RandomMemeOnlineIsStop = "RandomMemeOnlineIsStop";
     public const string PuntoSwitcherFilterEnabled = "PuntoSwitcherFilterEnabled";
     public const string WaifuRollCooldownMinutes = "WaifuRollCooldownMinutes";
+    public const string WTelegramMtProxyUrl = "WTelegramMtProxyUrl";
 }
