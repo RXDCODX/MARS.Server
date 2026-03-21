@@ -1,3 +1,5 @@
+using System.ComponentModel;
+using System.Diagnostics;
 using System.Text.RegularExpressions;
 using MARS.Server.Services.SoundRequest.Entities;
 using YoutubeReExplode;
@@ -159,7 +161,7 @@ public class YouTubeResolver(ILogger<YouTubeResolver> logger)
     }
 
     public async Task<string?> DownloadBestAudioStreamAsync(
-        BaseTrackInfo track,
+        BaseTrackInfo? track,
         string outputDirectory,
         CancellationToken ct
     )
@@ -168,47 +170,38 @@ public class YouTubeResolver(ILogger<YouTubeResolver> logger)
 
         if (track is not null && !string.IsNullOrWhiteSpace(outputDirectory))
         {
-            var videoId = GetVideoId(track);
+            var videoId = await ResolveDownloadVideoIdAsync(track, ct);
             if (!string.IsNullOrWhiteSpace(videoId))
             {
-                try
+                Directory.CreateDirectory(outputDirectory);
+
+                result = await TryDownloadWithYoutubeReExplodeAsync(
+                    track,
+                    videoId,
+                    outputDirectory,
+                    ct
+                );
+
+                if (string.IsNullOrWhiteSpace(result))
                 {
-                    Directory.CreateDirectory(outputDirectory);
-
-                    var manifest = await _youtubeClient.Videos.Streams.GetManifestAsync(videoId, ct);
-                    IStreamInfo? streamInfo = manifest
-                        .GetAudioOnlyStreams()
-                        .OrderByDescending(stream => stream.Bitrate)
-                        .FirstOrDefault();
-
-                    streamInfo ??= manifest
-                        .GetMuxedStreams()
-                        .OrderByDescending(stream => stream.Bitrate)
-                        .FirstOrDefault();
-
-                    if (streamInfo is not null)
-                    {
-                        var fileName = string.Concat(
-                            BuildSafeFileName(track.Title, videoId),
-                            ".",
-                            GetStreamExtension(streamInfo)
-                        );
-                        var filePath = Path.Combine(outputDirectory, fileName);
-
-                        await _youtubeClient.Videos.Streams.DownloadAsync(
-                            streamInfo,
-                            filePath,
-                            null,
-                            ct
-                        );
-
-                        result = filePath;
-                    }
+                    result = await TryDownloadWithYtDlpAsync(track, videoId, outputDirectory, ct);
                 }
-                catch (Exception ex)
+
+                if (string.IsNullOrWhiteSpace(result))
                 {
-                    logger.LogException(ex);
+                    logger.LogWarning(
+                        "[YouTubeResolver] Не удалось скачать аудио для videoId={VideoId}. URL={Url}",
+                        videoId,
+                        track.Url
+                    );
                 }
+            }
+            else
+            {
+                logger.LogWarning(
+                    "[YouTubeResolver] Не удалось определить video id для URL={Url}",
+                    track.Url
+                );
             }
         }
 
@@ -229,6 +222,237 @@ public class YouTubeResolver(ILogger<YouTubeResolver> logger)
             {
                 result = TryExtractVideoId(track.Url.ToString());
             }
+        }
+
+        return result;
+    }
+
+    private async Task<string?> ResolveDownloadVideoIdAsync(
+        BaseTrackInfo track,
+        CancellationToken ct
+    )
+    {
+        var result = GetVideoId(track);
+
+        if (track.Url is not null)
+        {
+            try
+            {
+                var video = await _youtubeClient.Videos.GetAsync(track.Url.ToString(), ct);
+                if (!string.IsNullOrWhiteSpace(video.Id))
+                {
+                    result = video.Id;
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(
+                    ex,
+                    "[YouTubeResolver] Не удалось обновить video id через Videos.GetAsync для URL={Url}",
+                    track.Url
+                );
+            }
+        }
+
+        return result;
+    }
+
+    private async Task<string?> TryDownloadWithYoutubeReExplodeAsync(
+        BaseTrackInfo track,
+        string videoId,
+        string outputDirectory,
+        CancellationToken ct
+    )
+    {
+        string? result = null;
+
+        for (var attempt = 1; attempt <= 2 && string.IsNullOrWhiteSpace(result); attempt++)
+        {
+            try
+            {
+                var youtubeClient = new YoutubeClient();
+                var manifest = await youtubeClient.Videos.Streams.GetManifestAsync(videoId, ct);
+                var streamInfo = SelectBestStream(manifest);
+
+                if (streamInfo is not null)
+                {
+                    var fileName = string.Concat(
+                        BuildSafeFileName(track.Title, videoId),
+                        ".",
+                        GetStreamExtension(streamInfo)
+                    );
+                    var filePath = Path.Combine(outputDirectory, fileName);
+
+                    await youtubeClient.Videos.Streams.DownloadAsync(
+                        streamInfo,
+                        filePath,
+                        null,
+                        ct
+                    );
+
+                    if (File.Exists(filePath))
+                    {
+                        result = filePath;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(
+                    ex,
+                    "[YouTubeResolver] Попытка {Attempt} скачать через YoutubeReExplode завершилась ошибкой для videoId={VideoId}",
+                    attempt,
+                    videoId
+                );
+            }
+        }
+
+        return result;
+    }
+
+    private async Task<string?> TryDownloadWithYtDlpAsync(
+        BaseTrackInfo track,
+        string videoId,
+        string outputDirectory,
+        CancellationToken ct
+    )
+    {
+        string? result = null;
+        var videoUrl = BuildVideoUrl(track, videoId);
+
+        if (!string.IsNullOrWhiteSpace(videoUrl))
+        {
+            var safeBaseName = BuildSafeFileName(track.Title, videoId);
+            var outputTemplate = Path.Combine(
+                outputDirectory,
+                string.Concat(safeBaseName, ".%(ext)s")
+            );
+            var existingFiles = Directory
+                .GetFiles(outputDirectory, string.Concat(safeBaseName, ".*"))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            try
+            {
+                using var process = new Process();
+
+                process.StartInfo = new ProcessStartInfo
+                {
+                    FileName = "yt-dlp",
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    RedirectStandardError = true,
+                    RedirectStandardOutput = true,
+                };
+
+                process.StartInfo.ArgumentList.Add("--no-playlist");
+                process.StartInfo.ArgumentList.Add("-f");
+                process.StartInfo.ArgumentList.Add("bestaudio/best");
+                process.StartInfo.ArgumentList.Add("-o");
+                process.StartInfo.ArgumentList.Add(outputTemplate);
+                process.StartInfo.ArgumentList.Add(videoUrl);
+
+                if (process.Start())
+                {
+                    var standardErrorTask = process.StandardError.ReadToEndAsync(ct);
+                    var standardOutputTask = process.StandardOutput.ReadToEndAsync(ct);
+
+                    await process.WaitForExitAsync(ct);
+
+                    var standardError = await standardErrorTask;
+                    await standardOutputTask;
+
+                    if (process.ExitCode == 0)
+                    {
+                        result = FindDownloadedFile(outputDirectory, safeBaseName, existingFiles);
+                    }
+                    else
+                    {
+                        logger.LogWarning(
+                            "[YouTubeResolver] yt-dlp завершился с кодом {ExitCode} для videoId={VideoId}. stderr: {StandardError}",
+                            process.ExitCode,
+                            videoId,
+                            standardError
+                        );
+                    }
+                }
+            }
+            catch (System.ComponentModel.Win32Exception)
+            {
+                logger.LogWarning(
+                    "[YouTubeResolver] yt-dlp не найден в PATH. videoId={VideoId}",
+                    videoId
+                );
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(
+                    ex,
+                    "[YouTubeResolver] Ошибка fallback-загрузки через yt-dlp для videoId={VideoId}",
+                    videoId
+                );
+            }
+        }
+
+        return result;
+    }
+
+    private static IStreamInfo? SelectBestStream(StreamManifest manifest)
+    {
+        IStreamInfo? result = manifest
+            .GetAudioOnlyStreams()
+            .OrderByDescending(stream => stream.Bitrate)
+            .FirstOrDefault();
+
+        result ??= manifest
+            .GetMuxedStreams()
+            .OrderByDescending(stream => stream.Bitrate)
+            .FirstOrDefault();
+
+        return result;
+    }
+
+    private static string BuildVideoUrl(BaseTrackInfo track, string videoId)
+    {
+        var result = !string.IsNullOrWhiteSpace(track?.Url?.ToString())
+            ? track.Url.ToString()
+            : string.Concat("https://www.youtube.com/watch?v=", videoId);
+
+        return result;
+    }
+
+    private static string? FindDownloadedFile(
+        string outputDirectory,
+        string safeBaseName,
+        HashSet<string> existingFiles
+    )
+    {
+        string? result = null;
+
+        var candidates = Directory
+            .GetFiles(outputDirectory, string.Concat(safeBaseName, ".*"))
+            .Where(path =>
+                !path.EndsWith(".part", StringComparison.OrdinalIgnoreCase)
+                && !path.EndsWith(".ytdl", StringComparison.OrdinalIgnoreCase)
+            )
+            .Where(path => !existingFiles.Contains(path))
+            .OrderByDescending(path => File.GetLastWriteTimeUtc(path))
+            .ToArray();
+
+        if (candidates.Length == 0)
+        {
+            candidates = Directory
+                .GetFiles(outputDirectory, string.Concat(safeBaseName, ".*"))
+                .Where(path =>
+                    !path.EndsWith(".part", StringComparison.OrdinalIgnoreCase)
+                    && !path.EndsWith(".ytdl", StringComparison.OrdinalIgnoreCase)
+                )
+                .OrderByDescending(path => File.GetLastWriteTimeUtc(path))
+                .ToArray();
+        }
+
+        if (candidates.Length > 0)
+        {
+            result = candidates[0];
         }
 
         return result;
