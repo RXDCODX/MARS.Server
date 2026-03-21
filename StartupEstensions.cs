@@ -14,6 +14,7 @@ using MARS.Server.Services.Shikimori.Entitys;
 using MARS.Server.Services.SoundRequest;
 using MARS.Server.Services.SoundRequest.Interfaces;
 using MARS.Server.Services.SoundRequest.Queue;
+using MARS.Server.Services.SoundRequest.Spotify;
 using MARS.Server.Services.SoundRequest.YouTube;
 using MARS.Server.Services.TelegramBotService;
 using MARS.Server.Services.TelegramDiscordBridge;
@@ -433,6 +434,14 @@ public static class StartupEstensions
         services.Configure<YandexMusicConfiguration>(
             configuration.GetSection(AppBase.Base).GetSection(YandexMusicConfiguration.SectionName)
         );
+        services.Configure<SoundRequestConfiguration>(
+            configuration.GetSection(AppBase.Base).GetSection(SoundRequestConfiguration.SectionName)
+        );
+        services.Configure<SpotifySoundRequestConfiguration>(
+            configuration
+                .GetSection(AppBase.Base)
+                .GetSection(SpotifySoundRequestConfiguration.SectionName)
+        );
 
         return services;
     }
@@ -447,6 +456,9 @@ public static class StartupEstensions
         services.AddSingleton<OutSignalRHubService>();
         services.AddSingleton<SoundRequestUserQueue>();
         services.AddSingleton<YouTubeResolver>();
+        services.AddHttpClient<SpotifyApiClient>();
+        services.AddSingleton<SpotifyResolver>();
+        services.AddSingleton<SpotifyPlaybackService>();
 
         // Регистрируем плеер и CommandsService
         services.AddSingleton<MainPlayer>();
