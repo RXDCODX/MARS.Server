@@ -78,7 +78,6 @@
     <PackageReference Include="Swashbuckle.AspNetCore.Swagger" />
     <PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" />
     <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" />
-    <PackageReference Include="System.Data.DataSetExtensions" />
     <PackageReference Include="System.Speech" />
     <PackageReference Include="Telegram.Bot" />
     <PackageReference Include="TwitchLib.Api" />
