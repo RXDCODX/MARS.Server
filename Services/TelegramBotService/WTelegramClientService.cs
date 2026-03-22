@@ -1,6 +1,9 @@
 using MARS.Server.Services.TelegramBotService.Entities;
 using Telegram.Bot.Types.Enums;
 using MARS.Server.ApplicationState;
+using System.Net;
+using System.Net.Sockets;
+using System.Text;
 
 namespace MARS.Server.Services.TelegramBotService;
 
@@ -183,15 +186,7 @@ public class WTelegramClientService : IDisposable
     {
         _client = new WTelegramClient(_configuration.AppId, _configuration.ApiHash, _sessionPath);
 
-        var mtProxyUrl = await GetMtProxyUrlFromRootStateAsync(cancellationToken);
-        if (!string.IsNullOrWhiteSpace(mtProxyUrl))
-        {
-            _client.MTProxyUrl = mtProxyUrl;
-            _logger.LogInformation(
-                "Для WTelegram включен MTProxy из RootState: {RootStateKey}",
-                RootStateKeys.WTelegramMtProxyUrl
-            );
-        }
+        await ApplyProxyConfigurationAsync(cancellationToken);
 
         var loginInfo = _configuration.PhoneNumber;
 
@@ -265,9 +260,368 @@ public class WTelegramClientService : IDisposable
         await NotifyAuthSuccessAsync(username);
     }
 
-    private async Task<string?> GetMtProxyUrlFromRootStateAsync(CancellationToken cancellationToken)
+    private async Task ApplyProxyConfigurationAsync(CancellationToken cancellationToken)
     {
-        string? mtProxyUrl = null;
+        var proxyValue = await GetProxyValueFromRootStateAsync(cancellationToken);
+        if (string.IsNullOrWhiteSpace(proxyValue) || _client is null)
+        {
+            return;
+        }
+
+        if (IsMtProxyUrl(proxyValue))
+        {
+            _client.MTProxyUrl = proxyValue;
+            _logger.LogInformation(
+                "Для WTelegram включен MTProxy из RootState: {RootStateKey}",
+                RootStateKeys.WTelegramMtProxyUrl
+            );
+        }
+        else if (TryParseProxyUri(proxyValue, out var proxyUri))
+        {
+            _client.TcpHandler = (destinationAddress, destinationPort) =>
+                CreateTcpClientThroughProxyAsync(proxyUri, destinationAddress, destinationPort);
+
+            _logger.LogInformation(
+                "Для WTelegram включен прокси {ProxyScheme} из RootState: {RootStateKey}",
+                proxyUri.Scheme,
+                RootStateKeys.WTelegramProxyUrl
+            );
+        }
+        else
+        {
+            _logger.LogWarning(
+                "Некорректный формат прокси для WTelegram в RootState. Ожидается MTProxy URL, socks5:// или http://"
+            );
+        }
+    }
+
+    private static bool IsMtProxyUrl(string proxyValue)
+    {
+        return proxyValue.Contains("/proxy?", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool TryParseProxyUri(string proxyValue, out Uri proxyUri)
+    {
+        var isValidUri = Uri.TryCreate(proxyValue, UriKind.Absolute, out var parsedUri);
+        if (
+            isValidUri
+            && parsedUri is not null
+            && (
+                parsedUri.Scheme.Equals("socks5", StringComparison.OrdinalIgnoreCase)
+                || parsedUri.Scheme.Equals("http", StringComparison.OrdinalIgnoreCase)
+            )
+        )
+        {
+            proxyUri = parsedUri;
+            return true;
+        }
+
+        proxyUri = null!;
+        return false;
+    }
+
+    private static async Task<TcpClient> CreateTcpClientThroughProxyAsync(
+        Uri proxyUri,
+        string destinationAddress,
+        int destinationPort
+    )
+    {
+        return proxyUri.Scheme.ToLowerInvariant() switch
+        {
+            "socks5" => await ConnectThroughSocks5ProxyAsync(
+                proxyUri,
+                destinationAddress,
+                destinationPort
+            ),
+            "http" => await ConnectThroughHttpProxyAsync(proxyUri, destinationAddress, destinationPort),
+            _ => throw new InvalidOperationException(
+                $"Неподдерживаемая схема прокси: {proxyUri.Scheme}"
+            ),
+        };
+    }
+
+    private static async Task<TcpClient> ConnectThroughHttpProxyAsync(
+        Uri proxyUri,
+        string destinationAddress,
+        int destinationPort
+    )
+    {
+        var tcpClient = new TcpClient();
+        try
+        {
+            var proxyPort = proxyUri.IsDefaultPort ? 80 : proxyUri.Port;
+            await tcpClient.ConnectAsync(proxyUri.Host, proxyPort);
+
+            await using var stream = tcpClient.GetStream();
+
+            var connectRequest = BuildHttpConnectRequest(proxyUri, destinationAddress, destinationPort);
+            var requestBytes = Encoding.ASCII.GetBytes(connectRequest);
+            await stream.WriteAsync(requestBytes);
+            await stream.FlushAsync();
+
+            var responseHeaders = await ReadHttpResponseHeadersAsync(stream);
+            if (!responseHeaders.StartsWith("HTTP/1.1 200", StringComparison.OrdinalIgnoreCase)
+                && !responseHeaders.StartsWith("HTTP/1.0 200", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(
+                    $"HTTP proxy CONNECT отклонен. Ответ прокси: {responseHeaders.Split("\r\n")[0]}"
+                );
+            }
+
+            return tcpClient;
+        }
+        catch
+        {
+            tcpClient.Dispose();
+            throw;
+        }
+    }
+
+    private static string BuildHttpConnectRequest(
+        Uri proxyUri,
+        string destinationAddress,
+        int destinationPort
+    )
+    {
+        var destination = $"{destinationAddress}:{destinationPort}";
+        var authHeader = string.Empty;
+
+        if (!string.IsNullOrWhiteSpace(proxyUri.UserInfo))
+        {
+            var credentials = Uri.UnescapeDataString(proxyUri.UserInfo);
+            var encodedCredentials = Convert.ToBase64String(Encoding.UTF8.GetBytes(credentials));
+            authHeader = $"Proxy-Authorization: Basic {encodedCredentials}\r\n";
+        }
+
+        return $"CONNECT {destination} HTTP/1.1\r\nHost: {destination}\r\nProxy-Connection: Keep-Alive\r\n{authHeader}\r\n";
+    }
+
+    private static async Task<string> ReadHttpResponseHeadersAsync(NetworkStream stream)
+    {
+        var buffer = new byte[4096];
+        var responseBuffer = new List<byte>(4096);
+
+        while (true)
+        {
+            var readCount = await stream.ReadAsync(buffer, 0, buffer.Length);
+            if (readCount == 0)
+            {
+                throw new IOException("HTTP proxy закрыл соединение во время CONNECT");
+            }
+
+            responseBuffer.AddRange(buffer.AsSpan(0, readCount).ToArray());
+
+            if (responseBuffer.Count >= 4)
+            {
+                var count = responseBuffer.Count;
+                if (
+                    responseBuffer[count - 4] == '\r'
+                    && responseBuffer[count - 3] == '\n'
+                    && responseBuffer[count - 2] == '\r'
+                    && responseBuffer[count - 1] == '\n'
+                )
+                {
+                    return Encoding.ASCII.GetString(responseBuffer.ToArray());
+                }
+            }
+
+            if (responseBuffer.Count > 64 * 1024)
+            {
+                throw new InvalidOperationException("Слишком длинный HTTP-ответ от прокси");
+            }
+        }
+    }
+
+    private static async Task<TcpClient> ConnectThroughSocks5ProxyAsync(
+        Uri proxyUri,
+        string destinationAddress,
+        int destinationPort
+    )
+    {
+        var tcpClient = new TcpClient();
+        try
+        {
+            var proxyPort = proxyUri.IsDefaultPort ? 1080 : proxyUri.Port;
+            await tcpClient.ConnectAsync(proxyUri.Host, proxyPort);
+
+            await using var stream = tcpClient.GetStream();
+
+            var hasCredentials = !string.IsNullOrWhiteSpace(proxyUri.UserInfo);
+            var greeting = hasCredentials
+                ? new byte[] { 0x05, 0x02, 0x00, 0x02 }
+                : new byte[] { 0x05, 0x01, 0x00 };
+            await stream.WriteAsync(greeting);
+
+            var methodResponse = await ReadExactAsync(stream, 2);
+            if (methodResponse[0] != 0x05)
+            {
+                throw new InvalidOperationException("Неверный ответ SOCKS5 прокси");
+            }
+
+            if (methodResponse[1] == 0xFF)
+            {
+                throw new InvalidOperationException(
+                    "SOCKS5 прокси не поддерживает доступные методы аутентификации"
+                );
+            }
+
+            if (methodResponse[1] == 0x02)
+            {
+                await AuthenticateSocks5Async(stream, proxyUri);
+            }
+            else if (methodResponse[1] != 0x00)
+            {
+                throw new InvalidOperationException(
+                    $"SOCKS5 прокси вернул неподдерживаемый метод: {methodResponse[1]}"
+                );
+            }
+
+            var connectRequest = BuildSocks5ConnectRequest(destinationAddress, destinationPort);
+            await stream.WriteAsync(connectRequest);
+
+            var connectResponseHead = await ReadExactAsync(stream, 4);
+            if (connectResponseHead[0] != 0x05)
+            {
+                throw new InvalidOperationException("Неверный ответ SOCKS5 при CONNECT");
+            }
+
+            if (connectResponseHead[1] != 0x00)
+            {
+                throw new InvalidOperationException(
+                    $"SOCKS5 CONNECT завершился ошибкой: {connectResponseHead[1]}"
+                );
+            }
+
+            await ConsumeSocks5BindAddressAsync(stream, connectResponseHead[3]);
+
+            return tcpClient;
+        }
+        catch
+        {
+            tcpClient.Dispose();
+            throw;
+        }
+    }
+
+    private static async Task AuthenticateSocks5Async(NetworkStream stream, Uri proxyUri)
+    {
+        var credentials = Uri.UnescapeDataString(proxyUri.UserInfo ?? string.Empty);
+        var separatorIndex = credentials.IndexOf(':');
+        if (separatorIndex <= 0)
+        {
+            throw new InvalidOperationException(
+                "Для SOCKS5-аутентификации требуется формат user:password"
+            );
+        }
+
+        var username = credentials[..separatorIndex];
+        var password = credentials[(separatorIndex + 1)..];
+        var usernameBytes = Encoding.UTF8.GetBytes(username);
+        var passwordBytes = Encoding.UTF8.GetBytes(password);
+
+        if (usernameBytes.Length > byte.MaxValue || passwordBytes.Length > byte.MaxValue)
+        {
+            throw new InvalidOperationException(
+                "Логин или пароль SOCKS5 превышают максимально допустимую длину"
+            );
+        }
+
+        var authRequest = new byte[3 + usernameBytes.Length + passwordBytes.Length];
+        authRequest[0] = 0x01;
+        authRequest[1] = (byte)usernameBytes.Length;
+        Buffer.BlockCopy(usernameBytes, 0, authRequest, 2, usernameBytes.Length);
+        authRequest[2 + usernameBytes.Length] = (byte)passwordBytes.Length;
+        Buffer.BlockCopy(
+            passwordBytes,
+            0,
+            authRequest,
+            3 + usernameBytes.Length,
+            passwordBytes.Length
+        );
+
+        await stream.WriteAsync(authRequest);
+
+        var authResponse = await ReadExactAsync(stream, 2);
+        if (authResponse[1] != 0x00)
+        {
+            throw new InvalidOperationException("SOCKS5-аутентификация отклонена прокси");
+        }
+    }
+
+    private static byte[] BuildSocks5ConnectRequest(string destinationAddress, int destinationPort)
+    {
+        var portBytes = new[]
+        {
+            (byte)((destinationPort >> 8) & 0xFF),
+            (byte)(destinationPort & 0xFF),
+        };
+
+        if (IPAddress.TryParse(destinationAddress, out var ipAddress))
+        {
+            var ipBytes = ipAddress.GetAddressBytes();
+            var addressType = ipBytes.Length == 16 ? (byte)0x04 : (byte)0x01;
+            var request = new byte[4 + ipBytes.Length + 2];
+            request[0] = 0x05;
+            request[1] = 0x01;
+            request[2] = 0x00;
+            request[3] = addressType;
+            Buffer.BlockCopy(ipBytes, 0, request, 4, ipBytes.Length);
+            Buffer.BlockCopy(portBytes, 0, request, 4 + ipBytes.Length, 2);
+            return request;
+        }
+
+        var hostBytes = Encoding.ASCII.GetBytes(destinationAddress);
+        if (hostBytes.Length == 0 || hostBytes.Length > byte.MaxValue)
+        {
+            throw new InvalidOperationException("Некорректный адрес назначения для SOCKS5 CONNECT");
+        }
+
+        var domainRequest = new byte[5 + hostBytes.Length + 2];
+        domainRequest[0] = 0x05;
+        domainRequest[1] = 0x01;
+        domainRequest[2] = 0x00;
+        domainRequest[3] = 0x03;
+        domainRequest[4] = (byte)hostBytes.Length;
+        Buffer.BlockCopy(hostBytes, 0, domainRequest, 5, hostBytes.Length);
+        Buffer.BlockCopy(portBytes, 0, domainRequest, 5 + hostBytes.Length, 2);
+        return domainRequest;
+    }
+
+    private static async Task ConsumeSocks5BindAddressAsync(NetworkStream stream, byte addressType)
+    {
+        int addressLength = addressType switch
+        {
+            0x01 => 4,
+            0x04 => 16,
+            0x03 => (await ReadExactAsync(stream, 1))[0],
+            _ => throw new InvalidOperationException($"Неизвестный тип адреса SOCKS5: {addressType}"),
+        };
+
+        await ReadExactAsync(stream, addressLength + 2);
+    }
+
+    private static async Task<byte[]> ReadExactAsync(NetworkStream stream, int count)
+    {
+        var buffer = new byte[count];
+        var offset = 0;
+
+        while (offset < count)
+        {
+            var readCount = await stream.ReadAsync(buffer, offset, count - offset);
+            if (readCount == 0)
+            {
+                throw new IOException("Прокси неожиданно закрыл соединение");
+            }
+
+            offset += readCount;
+        }
+
+        return buffer;
+    }
+
+    private async Task<string?> GetProxyValueFromRootStateAsync(CancellationToken cancellationToken)
+    {
+        string? proxyValue = null;
 
         try
         {
@@ -278,24 +632,34 @@ public class WTelegramClientService : IDisposable
             var proxyState = await dbContext
                 .RootState.AsNoTracking()
                 .SingleOrDefaultAsync(
-                    state => state.Name == RootStateKeys.WTelegramMtProxyUrl,
+                    state => state.Name == RootStateKeys.WTelegramProxyUrl,
                     cancellationToken
                 );
 
+            if (proxyState is null)
+            {
+                proxyState = await dbContext
+                    .RootState.AsNoTracking()
+                    .SingleOrDefaultAsync(
+                        state => state.Name == RootStateKeys.WTelegramMtProxyUrl,
+                        cancellationToken
+                    );
+            }
+
             if (!string.IsNullOrWhiteSpace(proxyState?.Value))
             {
-                mtProxyUrl = proxyState.Value.Trim();
+                proxyValue = proxyState.Value.Trim();
             }
         }
         catch (Exception ex)
         {
             _logger.LogWarning(
                 ex,
-                "Не удалось прочитать MTProxy URL из RootState. Клиент продолжит работу без прокси"
+                "Не удалось прочитать настройки прокси WTelegram из RootState. Клиент продолжит работу без прокси"
             );
         }
 
-        return mtProxyUrl;
+        return proxyValue;
     }
 
     private static WTelegramAuthenticationRequirement ParseAuthenticationRequirement(
