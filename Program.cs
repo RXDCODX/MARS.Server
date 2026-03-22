@@ -192,11 +192,6 @@ public static class Program
             .AddSpecializedServices()
             .AddSoundRequest();
 
-        if (builder.Environment.IsProduction())
-        {
-            //services.AddChannelRewardsManager();
-        }
-
         services.AddSingleton<IDbContextFactory<AppDbContext>>(contextFactory);
 
         services.AddWindowsService(options =>
