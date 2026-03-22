@@ -456,6 +456,7 @@ public static class StartupEstensions
         services.AddSingleton<OutSignalRHubService>();
         services.AddSingleton<SoundRequestUserQueue>();
         services.AddSingleton<YouTubeResolver>();
+        services.AddSingleton<SpotifyAuthService>();
         services.AddHttpClient<SpotifyApiClient>();
         services.AddSingleton<SpotifyResolver>();
         services.AddSingleton<SpotifyPlaybackService>();

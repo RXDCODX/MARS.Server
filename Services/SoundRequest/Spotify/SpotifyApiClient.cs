@@ -10,11 +10,11 @@ namespace MARS.Server.Services.SoundRequest.Spotify;
 
 public class SpotifyApiClient(
     HttpClient httpClient,
+    SpotifyAuthService spotifyAuthService,
     IOptions<SpotifySoundRequestConfiguration> options,
     ILogger<SpotifyApiClient> logger
 )
 {
-    private const string AuthUrl = "https://accounts.spotify.com/api/token";
     private const string ApiBaseUrl = "https://api.spotify.com/v1";
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -22,17 +22,12 @@ public class SpotifyApiClient(
     };
 
     private readonly SpotifySoundRequestConfiguration _settings = options.Value;
-
-    private string? _cachedAccessToken;
-    private DateTime _cachedAccessTokenExpiresAtUtc = DateTime.UnixEpoch;
+    private string? _cachedResolvedDeviceId;
+    private DateTime _cachedResolvedDeviceIdAtUtc = DateTime.UnixEpoch;
 
     public bool IsConfigured()
     {
-        var result =
-            _settings.Enabled
-            && !string.IsNullOrWhiteSpace(_settings.ClientId)
-            && !string.IsNullOrWhiteSpace(_settings.ClientSecret)
-            && !string.IsNullOrWhiteSpace(_settings.RefreshToken);
+        var result = _settings.Enabled;
 
         return result;
     }
@@ -99,7 +94,7 @@ public class SpotifyApiClient(
 
             var uri = $"spotify:track:{spotifyTrackId}";
             var requestBody = JsonSerializer.Serialize(new { uris = new[] { uri } });
-            var url = BuildPlayerUrl("play");
+            var url = await BuildPlayerUrlAsync("play", ct);
             var response = await SendAuthorizedAsync(
                 HttpMethod.Put,
                 url,
@@ -122,7 +117,11 @@ public class SpotifyApiClient(
             await TransferPlaybackAsync(ct);
         }
 
-        var response = await SendAuthorizedAsync(HttpMethod.Put, BuildPlayerUrl("play"), ct);
+        var response = await SendAuthorizedAsync(
+            HttpMethod.Put,
+            await BuildPlayerUrlAsync("play", ct),
+            ct
+        );
         result = response?.IsSuccessStatusCode == true;
 
         return result;
@@ -130,13 +129,21 @@ public class SpotifyApiClient(
 
     public async Task<bool> PauseAsync(CancellationToken ct)
     {
-        var response = await SendAuthorizedAsync(HttpMethod.Put, BuildPlayerUrl("pause"), ct);
+        var response = await SendAuthorizedAsync(
+            HttpMethod.Put,
+            await BuildPlayerUrlAsync("pause", ct),
+            ct
+        );
         return response?.IsSuccessStatusCode == true;
     }
 
     public async Task<bool> SkipToNextAsync(CancellationToken ct)
     {
-        var response = await SendAuthorizedAsync(HttpMethod.Post, BuildPlayerUrl("next"), ct);
+        var response = await SendAuthorizedAsync(
+            HttpMethod.Post,
+            await BuildPlayerUrlAsync("next", ct),
+            ct
+        );
         return response?.IsSuccessStatusCode == true;
     }
 
@@ -145,7 +152,7 @@ public class SpotifyApiClient(
         var clampedVolume = Math.Clamp(volume, 0, 100);
         var response = await SendAuthorizedAsync(
             HttpMethod.Put,
-            BuildPlayerUrl($"volume?volume_percent={clampedVolume}"),
+            await BuildPlayerUrlAsync($"volume?volume_percent={clampedVolume}", ct),
             ct
         );
 
@@ -156,7 +163,11 @@ public class SpotifyApiClient(
     {
         SpotifyPlaybackSnapshot? result = null;
 
-        var response = await SendAuthorizedAsync(HttpMethod.Get, BuildPlayerUrl(string.Empty), ct);
+        var response = await SendAuthorizedAsync(
+            HttpMethod.Get,
+            await BuildPlayerUrlAsync(string.Empty, ct),
+            ct
+        );
 
         if (response?.StatusCode == System.Net.HttpStatusCode.NoContent)
         {
@@ -217,19 +228,33 @@ public class SpotifyApiClient(
     {
         var result = false;
 
-        if (!string.IsNullOrWhiteSpace(_settings.DeviceId))
+        var accessTokenResult = await spotifyAuthService.GetValidAccessTokenAsync(ct);
+
+        if (accessTokenResult.Success)
         {
+            var resolvedDeviceId = await ResolveDeviceIdAsync(accessTokenResult.AccessToken, ct);
+
+            if (string.IsNullOrWhiteSpace(resolvedDeviceId))
+            {
+                resolvedDeviceId = accessTokenResult.DeviceId;
+            }
+
+            if (string.IsNullOrWhiteSpace(resolvedDeviceId))
+            {
+                resolvedDeviceId = _settings.DeviceId;
+            }
+
             var requestBody = JsonSerializer.Serialize(
                 new
                 {
-                    device_ids = new[] { _settings.DeviceId },
+                    device_ids = new[] { resolvedDeviceId },
                     play = false,
                 }
             );
 
             var response = await SendAuthorizedAsync(
                 HttpMethod.Put,
-                BuildPlayerUrl(string.Empty),
+                await BuildPlayerUrlAsync(string.Empty, ct),
                 ct,
                 new StringContent(requestBody, Encoding.UTF8, "application/json")
             );
@@ -240,7 +265,7 @@ public class SpotifyApiClient(
         return result;
     }
 
-    private string BuildPlayerUrl(string endpoint)
+    private async Task<string> BuildPlayerUrlAsync(string endpoint, CancellationToken ct)
     {
         var result = $"{ApiBaseUrl}/me/player";
 
@@ -250,10 +275,28 @@ public class SpotifyApiClient(
             result = $"{result}/{trimmed}";
         }
 
-        if (!string.IsNullOrWhiteSpace(_settings.DeviceId))
+        var accessTokenResult = await spotifyAuthService.GetValidAccessTokenAsync(ct);
+        var resolvedDeviceId = string.Empty;
+
+        if (accessTokenResult.Success)
+        {
+            resolvedDeviceId = await ResolveDeviceIdAsync(accessTokenResult.AccessToken, ct);
+
+            if (string.IsNullOrWhiteSpace(resolvedDeviceId))
+            {
+                resolvedDeviceId = accessTokenResult.DeviceId;
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(resolvedDeviceId))
+        {
+            resolvedDeviceId = _settings.DeviceId;
+        }
+
+        if (!string.IsNullOrWhiteSpace(resolvedDeviceId))
         {
             var separator = result.Contains('?') ? "&" : "?";
-            result = $"{result}{separator}device_id={Uri.EscapeDataString(_settings.DeviceId)}";
+            result = $"{result}{separator}device_id={Uri.EscapeDataString(resolvedDeviceId)}";
         }
 
         return result;
@@ -268,11 +311,15 @@ public class SpotifyApiClient(
     {
         HttpResponseMessage? result = null;
 
-        var token = await GetAccessTokenAsync(ct);
-        if (!string.IsNullOrWhiteSpace(token))
+        var accessToken = await spotifyAuthService.GetValidAccessTokenAsync(ct);
+
+        if (accessToken.Success && !string.IsNullOrWhiteSpace(accessToken.AccessToken))
         {
             using var request = new HttpRequestMessage(method, url);
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            request.Headers.Authorization = new AuthenticationHeaderValue(
+                "Bearer",
+                accessToken.AccessToken
+            );
             request.Content = content;
 
             try
@@ -295,60 +342,58 @@ public class SpotifyApiClient(
                 logger.LogError(ex, "Spotify API request exception: {Method} {Url}", method.Method, url);
             }
         }
+        else
+        {
+            logger.LogWarning("Spotify token is not available: {Message}", accessToken.Message);
+        }
 
         return result;
     }
 
-    private async Task<string?> GetAccessTokenAsync(CancellationToken ct)
+    private async Task<string> ResolveDeviceIdAsync(string accessToken, CancellationToken ct)
     {
-        string? result = null;
+        var result = string.Empty;
 
-        if (_cachedAccessTokenExpiresAtUtc > DateTime.UtcNow.AddSeconds(30))
+        if (
+            !string.IsNullOrWhiteSpace(_cachedResolvedDeviceId)
+            && _cachedResolvedDeviceIdAtUtc > DateTime.UtcNow.AddMinutes(-2)
+        )
         {
-            result = _cachedAccessToken;
+            result = _cachedResolvedDeviceId;
         }
-        else if (IsConfigured())
+        else if (!string.IsNullOrWhiteSpace(accessToken))
         {
             try
             {
-                var form = new Dictionary<string, string>
-                {
-                    ["grant_type"] = "refresh_token",
-                    ["refresh_token"] = _settings.RefreshToken,
-                    ["client_id"] = _settings.ClientId,
-                    ["client_secret"] = _settings.ClientSecret,
-                };
+                using var request = new HttpRequestMessage(
+                    HttpMethod.Get,
+                    $"{ApiBaseUrl}/me/player/devices"
+                );
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
 
-                using var content = new FormUrlEncodedContent(form);
-                using var response = await httpClient.PostAsync(AuthUrl, content, ct);
+                using var response = await httpClient.SendAsync(request, ct);
 
                 if (response.IsSuccessStatusCode)
                 {
                     var payload = await response.Content.ReadAsStringAsync(ct);
-                    var dto = JsonSerializer.Deserialize<SpotifyTokenResponseDto>(payload, JsonOptions);
+                    var dto = JsonSerializer.Deserialize<SpotifyDevicesResponseDto>(payload, JsonOptions);
 
-                    if (!string.IsNullOrWhiteSpace(dto?.AccessToken))
+                    var activeDevice = dto?.Devices?.FirstOrDefault(d => d.IsActive == true);
+                    var fallbackDevice = dto?.Devices?.FirstOrDefault();
+                    var resolved = activeDevice?.Id ?? fallbackDevice?.Id;
+
+                    if (!string.IsNullOrWhiteSpace(resolved))
                     {
-                        _cachedAccessToken = dto.AccessToken;
-                        _cachedAccessTokenExpiresAtUtc = DateTime.UtcNow.AddSeconds(
-                            Math.Max(60, dto.ExpiresIn - 30)
-                        );
-                        result = _cachedAccessToken;
+                        _cachedResolvedDeviceId = resolved;
+                        _cachedResolvedDeviceIdAtUtc = DateTime.UtcNow;
+                        await spotifyAuthService.SaveDeviceIdAsync(resolved, ct);
+                        result = resolved;
                     }
-                }
-                else
-                {
-                    var body = await response.Content.ReadAsStringAsync(ct);
-                    logger.LogWarning(
-                        "Spotify token request failed: Status={Status} Body={Body}",
-                        (int)response.StatusCode,
-                        body
-                    );
                 }
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Spotify token request exception");
+                logger.LogDebug(ex, "Не удалось получить список Spotify устройств");
             }
         }
 
@@ -379,13 +424,17 @@ public class SpotifyApiClient(
         return result;
     }
 
-    private class SpotifyTokenResponseDto
+    private class SpotifyDevicesResponseDto
     {
-        [JsonPropertyName("access_token")]
-        public string? AccessToken { get; set; }
+        public List<SpotifyDeviceDto>? Devices { get; set; }
+    }
 
-        [JsonPropertyName("expires_in")]
-        public int ExpiresIn { get; set; }
+    private class SpotifyDeviceDto
+    {
+        public string? Id { get; set; }
+
+        [JsonPropertyName("is_active")]
+        public bool IsActive { get; set; }
     }
 
     private class SpotifySearchResponseDto
