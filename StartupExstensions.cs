@@ -124,7 +124,7 @@ public static class StartupEstensions
                     builder
                         .AllowAnyHeader()
                         .AllowAnyMethod()
-                        .SetIsOriginAllowed(host => true)
+                        .SetIsOriginAllowed(_ => true)
                         .AllowCredentials();
                 }
             )

@@ -21,7 +21,7 @@ public class TelegramLogger : ILogger
     {
         _category = category ?? throw new ArgumentNullException(nameof(category));
         _messageQueue = messageQueue;
-        _filter = filter ?? ((cat, logLevel) => true);
+        _filter = filter ?? ((_, _) => true);
         _options = options;
     }
 

@@ -13,7 +13,7 @@ namespace MARS.Server.Services.TelegramBotService;
 public class UpdateHandler : IUpdateHandler
 {
     public delegate Task TelegramUpdateDelegate(ITelegramBotClient client, Update update);
-    public event TelegramUpdateDelegate TelegramUpdate = (client, update) => Task.CompletedTask;
+    public event TelegramUpdateDelegate TelegramUpdate = (_, _) => Task.CompletedTask;
 
     private readonly ITelegramBotClient _botClient;
     private readonly ICommandService _commandService;

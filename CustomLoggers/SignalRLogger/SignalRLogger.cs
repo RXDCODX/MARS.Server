@@ -10,7 +10,7 @@ public class SignalRLogger(
 {
     public static IHubContext<LoggerHub, ILoggerHub>? HubContext { get; set; }
 
-    private readonly Func<string, LogLevel, bool> _filter = filter ?? ((cat, logLevel) => true);
+    private readonly Func<string, LogLevel, bool> _filter = filter ?? ((_, _) => true);
 
     public void Log<TState>(
         LogLevel logLevel,

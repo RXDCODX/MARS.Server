@@ -29,7 +29,7 @@ public class ApiCommandService : PlatformCommandServiceBase<string>
             .Values.Where(c => c.IsAdminCommand && c.IsAvailableOnPlatform(Platform.Api))
             .Select(c => $"/{c.CommandName} - {c.Description}");
 
-    public override Func<string, bool> IsAdmin => (userId) => true; // Для API все пользователи считаются администраторами
+    public override Func<string, bool> IsAdmin => (_) => true; // Для API все пользователи считаются администраторами
 
     public ApiCommandService(CommandFactory commandFactory, ILogger<ApiCommandService> logger)
     {

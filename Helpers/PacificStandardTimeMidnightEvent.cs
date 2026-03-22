@@ -3,7 +3,7 @@
 public class PacificStandardTimeMidnightEvent : BackgroundService
 {
     // Событие, которое будет вызываться в полночь PST
-    public event EventHandler MidnightPstReached = (sender, args) => { };
+    public event EventHandler MidnightPstReached = (_, _) => { };
 
     private DateTimeOffset _lastMidnight;
 

@@ -16,7 +16,7 @@ public static class SignalRLoggerExtensions
         var options = new SignalRLoggerOptions();
         configure?.Invoke(options);
 
-        builder.Services.AddSingleton<ILoggerProvider>(serviceProvider => new SignalRLoggerProvider(
+        builder.Services.AddSingleton<ILoggerProvider>(_ => new SignalRLoggerProvider(
             options,
             null
         ));
@@ -40,7 +40,7 @@ public static class SignalRLoggerExtensions
         var options = new SignalRLoggerOptions();
         configure?.Invoke(options);
 
-        builder.Services.AddSingleton<ILoggerProvider>(serviceProvider => new SignalRLoggerProvider(
+        builder.Services.AddSingleton<ILoggerProvider>(_ => new SignalRLoggerProvider(
             options,
             filter
         ));
