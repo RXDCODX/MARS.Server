@@ -29,4 +29,5 @@ public static class RootStateKeys
     public const string SoundRequestSpotifyProduct = "SoundRequestSpotifyProduct";
     public const string SoundRequestSpotifyDeviceId = "SoundRequestSpotifyDeviceId";
     public const string SoundRequestSpotifyOAuthState = "SoundRequestSpotifyOAuthState";
+    public const string WTelegramProxyUrl = "WTelegramProxyUrl";
 }
