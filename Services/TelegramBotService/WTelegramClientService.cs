@@ -589,7 +589,7 @@ public class WTelegramClientService : IDisposable
 
     private static async Task ConsumeSocks5BindAddressAsync(NetworkStream stream, byte addressType)
     {
-        int addressLength = addressType switch
+        var addressLength = addressType switch
         {
             0x01 => 4,
             0x04 => 16,
