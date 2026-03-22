@@ -24,6 +24,11 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'" />
+  <PropertyGroup>
+    <UseLocalYoutubeReExplode Condition="'$(CI)' == 'true' or '$(GITHUB_ACTIONS)' == 'true'">false</UseLocalYoutubeReExplode>
+    <UseLocalYoutubeReExplode Condition="'$(UseLocalYoutubeReExplode)' == '' and Exists('..\..\..\YoutubeReExplode\YoutubeReExplode\YoutubeReExplode.csproj')">true</UseLocalYoutubeReExplode>
+    <UseLocalYoutubeReExplode Condition="'$(UseLocalYoutubeReExplode)' == ''">false</UseLocalYoutubeReExplode>
+  </PropertyGroup>
   <ItemGroup>
     <Compile Remove="Services\TabletopGames\**" />
     <Content Remove="Services\TabletopGames\**" />
@@ -94,7 +99,12 @@
     <PackageReference Include="TwitchLib.EventSub.Core" />
     <PackageReference Include="TwitchLib.EventSub.Websockets" />
     <PackageReference Include="WTelegramClient" />
-    <PackageReference Include="YoutubeExplode" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(UseLocalYoutubeReExplode)' == 'true'">
+    <ProjectReference Include="..\..\..\YoutubeReExplode\YoutubeReExplode\YoutubeReExplode.csproj" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(UseLocalYoutubeReExplode)' != 'true'">
+    <PackageReference Include="YoutubeReExplode" />
   </ItemGroup>
   <ItemGroup>
     <Content Update="appsettings.Development.json">
