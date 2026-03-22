@@ -58,7 +58,7 @@ public class HighlitedMessage : BackgroundService
                     var image = GetImageByFilePath(
                         Directory
                             .GetFiles(path, "*", SearchOption.AllDirectories)
-                            .OrderBy(_ => Random.Shared.Next())
+                            .OrderBy(e => Random.Shared.Next())
                             .First()
                     );
 

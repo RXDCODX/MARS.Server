@@ -8,7 +8,7 @@ public static class TelegramLoggerProviderExtensions
         Func<string, LogLevel, bool>? filter = null
     )
     {
-        filter ??= (_, _) => true;
+        filter ??= (s, level) => true;
 
         var botClient = new TelegramBotClient(options.BotToken);
         loggerFactory.AddProvider(new TelegramLoggerProvider(botClient, options, filter));
@@ -21,7 +21,7 @@ public static class TelegramLoggerProviderExtensions
         Func<string, LogLevel, bool>? filter = null
     )
     {
-        filter ??= (_, _) => true;
+        filter ??= (s, level) => true;
 
         var options = new TelegramLoggerOptions();
         configure(options);
