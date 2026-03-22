@@ -1,6 +1,9 @@
-﻿using MARS.Server.Services.SoundRequest.Entities;
+﻿using MARS.Server.Configuration;
+using MARS.Server.Services.SoundRequest.Entities;
 using MARS.Server.Services.SoundRequest.Interfaces;
 using MARS.Server.Services.SoundRequest.Queue;
+using MARS.Server.Services.SoundRequest.Spotify;
+using Microsoft.Extensions.Options;
 
 namespace MARS.Server.Services.SoundRequest;
 
@@ -16,6 +19,12 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
     private readonly SoundRequestUserQueue _queue;
     private readonly IDbContextFactory<AppDbContext> _dbFactory;
     private readonly ILogger<MainPlayer> _logger;
+    private readonly SpotifyPlaybackService _spotifyPlaybackService;
+    private readonly SoundRequestConfiguration _soundRequestConfiguration;
+    private readonly SpotifySoundRequestConfiguration _spotifyConfiguration;
+    private readonly SemaphoreSlim _spotifyMonitorTransitionLock = new(1, 1);
+    private Task? _spotifyMonitorTask;
+    private Guid? _lastSpotifyCompletedQueueItemId;
 
     private readonly ITwitchClient _twitchClient;
 
@@ -29,6 +38,9 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
         SoundRequestUserQueue queue,
         IDbContextFactory<AppDbContext> dbFactory,
         IHostApplicationLifetime lifetime,
+        SpotifyPlaybackService spotifyPlaybackService,
+        IOptions<SoundRequestConfiguration> soundRequestOptions,
+        IOptions<SpotifySoundRequestConfiguration> spotifyOptions,
         ITwitchClient twitchClient,
         ILogger<MainPlayer> logger
     )
@@ -37,6 +49,9 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
         _inSignalRHubService = inSignalRHubService;
         _queue = queue;
         _dbFactory = dbFactory;
+        _spotifyPlaybackService = spotifyPlaybackService;
+        _soundRequestConfiguration = soundRequestOptions.Value;
+        _spotifyConfiguration = spotifyOptions.Value;
         _twitchClient = twitchClient;
         _logger = logger;
         _cancellationToken = lifetime.ApplicationStopping;
@@ -51,11 +66,26 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
     async Task IHostedService.StartAsync(CancellationToken cancellationToken)
     {
         await InitializeAsync();
+
+        if (IsSpotifyMode())
+        {
+            _spotifyMonitorTask = Task.Run(() => MonitorSpotifyPlaybackAsync(_cancellationToken), _cancellationToken);
+        }
     }
 
-    Task IHostedService.StopAsync(CancellationToken cancellationToken)
+    async Task IHostedService.StopAsync(CancellationToken cancellationToken)
     {
-        return Task.CompletedTask;
+        if (_spotifyMonitorTask != null)
+        {
+            try
+            {
+                await _spotifyMonitorTask;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Spotify playback monitor stopped with exception");
+            }
+        }
     }
 
     #endregion
@@ -176,6 +206,15 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
             // Обновляем состояние - начинаем воспроизведение
             await _stateManager.StartPlayingAsync(queueItem, notify: true);
 
+            if (IsSpotifyMode() && _spotifyPlaybackService.IsConfigured())
+            {
+                var started = await _spotifyPlaybackService.PlayTrackAsync(queueItem.Track, _cancellationToken);
+                if (!started)
+                {
+                    throw new InvalidOperationException("Не удалось запустить трек в Spotify клиенте");
+                }
+            }
+
             _logger.LogDebug("Состояние обновлено, уведомление отправлено");
 
             // Обновляем время последнего воспроизведения в БД
@@ -203,6 +242,11 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
     /// </summary>
     public async Task PauseAsync(CancellationToken ct)
     {
+        if (IsSpotifyMode() && _spotifyPlaybackService.IsConfigured())
+        {
+            await _spotifyPlaybackService.PauseAsync(ct);
+        }
+
         await _stateManager.SetPausedAsync(true, notify: true);
     }
 
@@ -211,6 +255,11 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
     /// </summary>
     public async Task ResumeAsync(CancellationToken ct)
     {
+        if (IsSpotifyMode() && _spotifyPlaybackService.IsConfigured())
+        {
+            await _spotifyPlaybackService.ResumeAsync(ct);
+        }
+
         await _stateManager.SetPausedAsync(false, notify: true);
     }
 
@@ -219,6 +268,11 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
     /// </summary>
     public async Task StopAsync(CancellationToken ct)
     {
+        if (IsSpotifyMode() && _spotifyPlaybackService.IsConfigured())
+        {
+            await _spotifyPlaybackService.StopAsync(ct);
+        }
+
         await _stateManager.StopPlaybackAsync(notify: true);
     }
 
@@ -254,6 +308,11 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
     /// </summary>
     public async Task SetVolumeAsync(float volume, CancellationToken ct)
     {
+        if (IsSpotifyMode() && _spotifyPlaybackService.IsConfigured())
+        {
+            await _spotifyPlaybackService.SetVolumeAsync((int)Math.Clamp(volume, 0f, 100f), ct);
+        }
+
         await _stateManager.SetVolumeAsync(volume, notify: true);
     }
 
@@ -262,6 +321,11 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
     /// </summary>
     public async Task MuteAsync(CancellationToken ct)
     {
+        if (IsSpotifyMode() && _spotifyPlaybackService.IsConfigured())
+        {
+            await _spotifyPlaybackService.SetVolumeAsync(0, ct);
+        }
+
         await _stateManager.SetMutedAsync(true, notify: true);
     }
 
@@ -270,6 +334,12 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
     /// </summary>
     public async Task UnmuteAsync(CancellationToken ct)
     {
+        if (IsSpotifyMode() && _spotifyPlaybackService.IsConfigured())
+        {
+            var state = await _stateManager.GetStateAsync();
+            await _spotifyPlaybackService.SetVolumeAsync((int)Math.Clamp(state.Volume, 0f, 100f), ct);
+        }
+
         await _stateManager.SetMutedAsync(false, notify: true);
     }
 
@@ -806,12 +876,110 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
 
     #endregion
 
+    #region Spotify Monitoring
+
+    private async Task MonitorSpotifyPlaybackAsync(CancellationToken ct)
+    {
+        var pollingInterval = Math.Max(750, _spotifyConfiguration.PollingIntervalMs);
+
+        while (!ct.IsCancellationRequested)
+        {
+            try
+            {
+                if (_spotifyPlaybackService.IsConfigured())
+                {
+                    await HandleSpotifyPlaybackTickAsync(ct);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Ошибка Spotify playback monitor tick");
+            }
+
+            try
+            {
+                await Task.Delay(pollingInterval, ct);
+            }
+            catch (TaskCanceledException)
+            {
+                break;
+            }
+        }
+    }
+
+    private async Task HandleSpotifyPlaybackTickAsync(CancellationToken ct)
+    {
+        var state = await _stateManager.GetStateAsync();
+        var currentQueueItem = state.CurrentQueueItem;
+
+        if (
+            state.State == PlaybackState.Playing
+            && currentQueueItem?.Track != null
+            && _spotifyPlaybackService.IsSpotifyTrack(currentQueueItem.Track)
+        )
+        {
+            var playback = await _spotifyPlaybackService.GetCurrentPlaybackAsync(ct);
+
+            if (playback != null)
+            {
+                await _stateManager.UpdateCurrentTrackProgressAsync(
+                    TimeSpan.FromMilliseconds(Math.Max(0, playback.ProgressMs)),
+                    notify: false
+                );
+
+                var expectedTrackId = _spotifyPlaybackService.GetSpotifyTrackId(currentQueueItem.Track);
+                var isTrackChangedExternally =
+                    !string.IsNullOrWhiteSpace(playback.TrackId)
+                    && !string.IsNullOrWhiteSpace(expectedTrackId)
+                    && !string.Equals(playback.TrackId, expectedTrackId, StringComparison.OrdinalIgnoreCase);
+
+                var isTrackAlmostEnded =
+                    !playback.IsPlaying
+                    && playback.DurationMs > 0
+                    && playback.ProgressMs >= playback.DurationMs - 1200;
+
+                if (isTrackChangedExternally || isTrackAlmostEnded)
+                {
+                    await _spotifyMonitorTransitionLock.WaitAsync(ct);
+                    try
+                    {
+                        if (_lastSpotifyCompletedQueueItemId != currentQueueItem.Id)
+                        {
+                            _lastSpotifyCompletedQueueItemId = currentQueueItem.Id;
+                            await OnTrackEndedAsync(currentQueueItem.Track);
+                        }
+                    }
+                    finally
+                    {
+                        _spotifyMonitorTransitionLock.Release();
+                    }
+                }
+            }
+        }
+        else
+        {
+            _lastSpotifyCompletedQueueItemId = null;
+        }
+    }
+
+    private bool IsSpotifyMode()
+    {
+        var result =
+            _soundRequestConfiguration.Provider == SoundRequestProvider.Spotify
+            && _spotifyConfiguration.Enabled;
+
+        return result;
+    }
+
+    #endregion
+
     #region IDisposable
 
     public void Dispose()
     {
         if (!_disposed)
         {
+            _spotifyMonitorTransitionLock.Dispose();
             _disposed = true;
         }
         GC.SuppressFinalize(this);
