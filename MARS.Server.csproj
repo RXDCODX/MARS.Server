@@ -94,6 +94,7 @@
     <PackageReference Include="TwitchLib.EventSub.Core" />
     <PackageReference Include="TwitchLib.EventSub.Websockets" />
     <PackageReference Include="WTelegramClient" />
+    <PackageReference Include="YoutubeExplode" />
   </ItemGroup>
   <ItemGroup>
     <Content Update="appsettings.Development.json">
@@ -146,9 +147,6 @@
     <Folder Include="WTelegram\" />
     <Folder Include="Services\Twitch\Rewards\TestReward\" />
     <Folder Include="Services\Twitch\TwitchFollowers\Entitys\" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\..\YoutubeReExplode\YoutubeReExplode\YoutubeReExplode.csproj" />
   </ItemGroup>
   <Target Name="BuildClientApp" BeforeTargets="Publish">
     <Message Importance="high" Text="Сборка фронта через yarn build..." />
