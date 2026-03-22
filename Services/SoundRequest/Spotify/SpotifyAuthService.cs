@@ -304,6 +304,7 @@ public class SpotifyAuthService(
         var credentials = await GetCredentialsAsync(ct);
         var displayName = await GetRootStateValueAsync(RootStateKeys.SoundRequestSpotifyDisplayName, ct);
         var userId = await GetRootStateValueAsync(RootStateKeys.SoundRequestSpotifyUserId, ct);
+        var avatarUrl = await GetRootStateValueAsync(RootStateKeys.SoundRequestSpotifyAvatarUrl, ct);
         var product = await GetRootStateValueAsync(RootStateKeys.SoundRequestSpotifyProduct, ct);
 
         var hasClientCredentials =
@@ -317,6 +318,7 @@ public class SpotifyAuthService(
             HasClientCredentials = hasClientCredentials,
             DisplayName = displayName,
             UserId = userId,
+            AvatarUrl = avatarUrl,
             Product = product,
             DeviceId = credentials.DeviceId,
             AccessTokenExpiresAtUtc = credentials.AccessTokenExpiresAtUtc > DateTime.UnixEpoch
@@ -364,6 +366,13 @@ public class SpotifyAuthService(
             RootStateKeys.SoundRequestSpotifyUserId,
             string.Empty,
             "ID подключенного Spotify аккаунта",
+            "string",
+            ct
+        );
+        await UpsertRootStateAsync(
+            RootStateKeys.SoundRequestSpotifyAvatarUrl,
+            string.Empty,
+            "Аватар подключенного Spotify аккаунта",
             "string",
             ct
         );
@@ -501,6 +510,7 @@ public class SpotifyAuthService(
     {
         var displayName = profile?.DisplayName ?? string.Empty;
         var userId = profile?.Id ?? string.Empty;
+        var avatarUrl = profile?.Images?.FirstOrDefault()?.Url ?? string.Empty;
         var product = profile?.Product ?? string.Empty;
 
         await UpsertRootStateAsync(
@@ -514,6 +524,13 @@ public class SpotifyAuthService(
             RootStateKeys.SoundRequestSpotifyUserId,
             userId,
             "ID подключенного Spotify аккаунта",
+            "string",
+            ct
+        );
+        await UpsertRootStateAsync(
+            RootStateKeys.SoundRequestSpotifyAvatarUrl,
+            avatarUrl,
+            "Аватар подключенного Spotify аккаунта",
             "string",
             ct
         );
@@ -702,7 +719,15 @@ public class SpotifyAuthService(
         [JsonPropertyName("display_name")]
         public string? DisplayName { get; set; }
 
+        public List<SpotifyProfileImageDto>? Images { get; set; }
+
         public string? Product { get; set; }
+    }
+
+    private class SpotifyProfileImageDto
+    {
+        [JsonPropertyName("url")]
+        public string? Url { get; set; }
     }
 }
 
@@ -752,6 +777,8 @@ public class SpotifyAuthStatusResult
     public string? DisplayName { get; set; }
 
     public string? UserId { get; set; }
+
+    public string? AvatarUrl { get; set; }
 
     public string? Product { get; set; }
 
