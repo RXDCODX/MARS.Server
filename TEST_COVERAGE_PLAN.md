@@ -60,7 +60,8 @@
   - Прогресс: добавлены unit-тесты StateManager (инициализация/персистентность, playback transitions, clamp громкости, StateChanged), CommandsService (валидация входа и получение current song) и SoundRequestUserQueue (count/current/next/get-by-id/user filtering)
 - [x] Services/CinemaQueue: управление очередью, конфликтные кейсы
   - Прогресс: добавлены unit-тесты CinemaQueueService на чтение/маппинг, create/update, mark-as-next (reset флагов), смену статуса, aggregation статистики и negative-сценарии для отсутствующих сущностей
-- [ ] Services/Shikimori: rate-limit и обработка ошибок клиента
+- [x] Services/Shikimori: rate-limit и обработка ошибок клиента
+  - Прогресс: добавлены unit-тесты Shikimori rate limiter (acquire/info/cancel) и ShikimoriService на guard/error-ветки (invalid id, исключения в WaitForSlotAsync, GetRateLimiterInfo)
 - [ ] Services/PyroAlerts: правила алертов и граничные условия
 - [x] Services/Scoreboard: расчёты и синхронизация состояния
   - Прогресс: добавлены unit-тесты ScoreboardService на default/get state, debounced update + force process, visibility create/update, update score/final и negative-ветки валидации входа
