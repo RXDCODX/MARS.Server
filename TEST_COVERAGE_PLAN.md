@@ -46,17 +46,18 @@
 ## Этап 2. Backend unit-тесты (MARS.Server Services)
 
 ### 2.1 Критичные домены
-- [ ] Services/CommandExecutor: парсинг, маршрутизация, ошибки команд
+- [x] Services/CommandExecutor: парсинг, маршрутизация, ошибки команд
   - Прогресс: добавлены unit-тесты на парсинг параметров, кавычки/экранирование, проверку платформ и видимости, DI-создание команд (CommandFactory), Telegram-only команду, фильтрацию user/admin, alias-резолвинг, получение параметров по alias, platform-фильтрацию списков, методы CommandInfo, success/unknown/unavailable сценарии ExecuteCommandAsync и валидацию обязательных параметров, а также API-адаптер (ApiCommandService: alias execution, platform unavailable, required params, user/admin lists, validate response)
-- [ ] Services/ServiceManager: старт/стоп/рестарт, ошибки процесса
+- [x] Services/ServiceManager: старт/стоп/рестарт, ошибки процесса
   - Прогресс: добавлены unit-тесты lifecycle для ManagedServiceBase (start/stop, disabled, already running/stopped, error/exception ветки, LoadStateAsync и snapshot GetServiceInfo), ServiceManager read-only/guard сценарии (status/info/logs/all services, invalid/missing service для start/stop/restart/set-active), успешные managed-сценарии start/stop/restart/set-active c проверкой сохранения состояния в БД, а также mapping display/description через ServiceNameAttribute и mixed managed+hosted список сервисов
 - [ ] Services/EnvironmentVariable: чтение/валидация/апдейт переменных
   - Прогресс: добавлены unit-тесты EnvironmentVariableController на чтение списка, получение по ключу (включая auto-create), set/create, delete, reload и валидацию пустого ключа
-- [ ] Services/Logs: фильтрация, пагинация, форматирование
+- [x] Services/Logs: фильтрация, пагинация, форматирование
   - Прогресс: добавлены unit-тесты на фильтрацию/сортировку/пагинацию, recent logs и агрегированную статистику
 - [x] Services/RandomMem: выборка, фильтры, fallback-сценарии
   - Прогресс: добавлены unit-тесты RandomMemeService на MemeType/MemeOrder CRUD, защиту удаления типа при наличии заказов, count с фильтрами, random no-data и пересортировку order
 - [ ] Services/SoundRequest: постановка/очередь/валидация
+  - Прогресс: добавлены unit-тесты StateManager на инициализацию/персистентность состояния, переходы playback state, clamp громкости и события StateChanged
 - [x] Services/CinemaQueue: управление очередью, конфликтные кейсы
   - Прогресс: добавлены unit-тесты CinemaQueueService на чтение/маппинг, create/update, mark-as-next (reset флагов), смену статуса, aggregation статистики и negative-сценарии для отсутствующих сущностей
 - [ ] Services/Shikimori: rate-limit и обработка ошибок клиента
