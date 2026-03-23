@@ -8,6 +8,20 @@
 - [x] Есть базовые unit-тесты в MARS.Tests:
   - [x] Services/Twitch/Synthesizer/SyntheziaVoicerTests.cs
   - [x] Services/Twitch/PuntoSwitcher/PuntoSwitcherServiceTests.cs
+  - [x] Services/OperationResultTests.cs
+  - [x] Services/MemoryStorageService/MemoryStorageTests.cs
+  - [x] Services/MemoryStorageService/MemoryFileTests.cs
+  - [x] Exstensions/StringExtensionTests.cs
+  - [x] Services/CommandExecutor/BaseCommandTests.cs
+  - [x] Services/CommandExecutor/CommandFactoryTests.cs
+  - [x] Services/CommandExecutor/CommandExecutorServiceTests.cs
+  - [x] Services/CommandExecutor/Commands/TelegramOnlyCommandTests.cs
+  - [x] Services/CommandExecutor/Adapters/ApiCommandServiceTests.cs
+  - [x] Services/CommandExecutor/PlatformCommandServiceBaseTests.cs
+  - [x] Services/CommandExecutor: platform/info/alias execution scenarios в CommandExecutorServiceTests
+  - [x] Services/Logs/LogsServiceTests.cs
+  - [x] Services/ServiceManager/ManagedServiceBaseTests.cs
+  - [x] Services/ServiceManager/ServiceManagerTests.cs
 - [x] Есть минимум 1 frontend unit-тест:
   - [x] mars.client/src/shared/Utils/faceUtils.test.ts
 - [ ] Нет системного покрытия контроллеров интеграционными тестами
@@ -24,7 +38,7 @@
 - [ ] Утвердить и зафиксировать стратегию тестирования (unit/integration/e2e/smoke)
 - [ ] Добавить тестовые фикстуры и фабрики данных для MARS.Tests
 - [ ] Вынести общие моки и helper-классы в общий каталог TestInfrastructure
-- [ ] Настроить единый запуск backend-тестов через dotnet test
+- [x] Настроить единый запуск backend-тестов через dotnet test
 - [ ] Настроить единый запуск frontend-тестов через vitest
 - [ ] Добавить сбор отчёта покрытия (coverlet + reportgenerator для .NET, vitest coverage для фронта)
 - [ ] Подготовить шаблон отчёта покрытия для PR
@@ -33,9 +47,13 @@
 
 ### 2.1 Критичные домены
 - [ ] Services/CommandExecutor: парсинг, маршрутизация, ошибки команд
+  - Прогресс: добавлены unit-тесты на парсинг параметров, кавычки/экранирование, проверку платформ и видимости, DI-создание команд (CommandFactory), Telegram-only команду, фильтрацию user/admin, alias-резолвинг, получение параметров по alias, platform-фильтрацию списков, методы CommandInfo, success/unknown/unavailable сценарии ExecuteCommandAsync и валидацию обязательных параметров, а также API-адаптер (ApiCommandService: alias execution, platform unavailable, required params, user/admin lists, validate response)
 - [ ] Services/ServiceManager: старт/стоп/рестарт, ошибки процесса
+  - Прогресс: добавлены unit-тесты lifecycle для ManagedServiceBase (start/stop, disabled, already running/stopped, error/exception ветки, LoadStateAsync и snapshot GetServiceInfo), ServiceManager read-only/guard сценарии (status/info/logs/all services, invalid/missing service для start/stop/restart/set-active), успешные managed-сценарии start/stop/restart/set-active c проверкой сохранения состояния в БД, а также mapping display/description через ServiceNameAttribute и mixed managed+hosted список сервисов
 - [ ] Services/EnvironmentVariable: чтение/валидация/апдейт переменных
+  - Прогресс: добавлены unit-тесты EnvironmentVariableController на чтение списка, получение по ключу (включая auto-create), set/create, delete, reload и валидацию пустого ключа
 - [ ] Services/Logs: фильтрация, пагинация, форматирование
+  - Прогресс: добавлены unit-тесты на фильтрацию/сортировку/пагинацию, recent logs и агрегированную статистику
 - [ ] Services/RandomMem: выборка, фильтры, fallback-сценарии
 - [ ] Services/SoundRequest: постановка/очередь/валидация
 - [ ] Services/CinemaQueue: управление очередью, конфликтные кейсы
@@ -58,9 +76,12 @@
 
 ### 3.1 API-контроллеры (через TestServer/WebApplicationFactory)
 - [ ] Controllers/CommandsController
+  - Прогресс: добавлены unit-тесты контроллера на success-контракты OperationResult для user/admin/platform/info/execute и error-ветки для всех основных endpoint-ов при исключении сервиса
 - [ ] Controllers/ServiceManagerController
 - [ ] Controllers/EnvironmentVariableController
+  - Прогресс: добавлены unit-тесты контроллера на success и negative сценарии (пустой ключ, not found, create/update/delete/reload)
 - [ ] Controllers/LogsController
+  - Прогресс: добавлены unit-тесты контроллера на success-контракт, валидацию пагинации/диапазона/count и error-ветки при исключениях сервиса (by-level/statistics)
 - [ ] Controllers/RandomMemeController
 - [ ] Controllers/SoundRequestController
 - [ ] Controllers/CinemaQueueController
