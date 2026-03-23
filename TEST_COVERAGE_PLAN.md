@@ -54,9 +54,11 @@
   - Прогресс: добавлены unit-тесты EnvironmentVariableController на чтение списка, получение по ключу (включая auto-create), set/create, delete, reload и валидацию пустого ключа
 - [ ] Services/Logs: фильтрация, пагинация, форматирование
   - Прогресс: добавлены unit-тесты на фильтрацию/сортировку/пагинацию, recent logs и агрегированную статистику
-- [ ] Services/RandomMem: выборка, фильтры, fallback-сценарии
+- [x] Services/RandomMem: выборка, фильтры, fallback-сценарии
+  - Прогресс: добавлены unit-тесты RandomMemeService на MemeType/MemeOrder CRUD, защиту удаления типа при наличии заказов, count с фильтрами, random no-data и пересортировку order
 - [ ] Services/SoundRequest: постановка/очередь/валидация
-- [ ] Services/CinemaQueue: управление очередью, конфликтные кейсы
+- [x] Services/CinemaQueue: управление очередью, конфликтные кейсы
+  - Прогресс: добавлены unit-тесты CinemaQueueService на чтение/маппинг, create/update, mark-as-next (reset флагов), смену статуса, aggregation статистики и negative-сценарии для отсутствующих сущностей
 - [ ] Services/Shikimori: rate-limit и обработка ошибок клиента
 - [ ] Services/PyroAlerts: правила алертов и граничные условия
 - [ ] Services/Scoreboard: расчёты и синхронизация состояния
@@ -86,6 +88,7 @@
 - [ ] Controllers/RandomMemeController
   - Прогресс: добавлены unit-тесты контроллера на MemeType/MemeOrder CRUD ветки (success/not found/validation/invalid-operation), random/count, file not found ветки и reorder exception-ветку
 - [ ] Controllers/SoundRequestController
+  - Прогресс: добавлены unit-тесты на ключевые guard/exception-контракты endpoint-ов state/queue/history/current-song/delete/add-track (включая empty-id и empty-query)
 - [ ] Controllers/CinemaQueueController
   - Прогресс: добавлены unit-тесты контроллера на очередь (all/by-id/next), create (validation + metadata enrichment), update model validation, delete/change status, statistics exception и metadata endpoint (empty url/not found)
 - [ ] Controllers/TwitchController
