@@ -78,16 +78,22 @@
 - [ ] Controllers/CommandsController
   - Прогресс: добавлены unit-тесты контроллера на success-контракты OperationResult для user/admin/platform/info/execute и error-ветки для всех основных endpoint-ов при исключении сервиса
 - [ ] Controllers/ServiceManagerController
+  - Прогресс: добавлены unit-тесты контроллера на success/negative/exception сценарии для endpoint-ов status, service info (found/not found), start/stop/restart, logs, set active и all services
 - [ ] Controllers/EnvironmentVariableController
   - Прогресс: добавлены unit-тесты контроллера на success и negative сценарии (пустой ключ, not found, create/update/delete/reload)
 - [ ] Controllers/LogsController
   - Прогресс: добавлены unit-тесты контроллера на success-контракт, валидацию пагинации/диапазона/count и error-ветки при исключениях сервиса (by-level/statistics)
 - [ ] Controllers/RandomMemeController
+  - Прогресс: добавлены unit-тесты контроллера на MemeType/MemeOrder CRUD ветки (success/not found/validation/invalid-operation), random/count, file not found ветки и reorder exception-ветку
 - [ ] Controllers/SoundRequestController
 - [ ] Controllers/CinemaQueueController
+  - Прогресс: добавлены unit-тесты контроллера на очередь (all/by-id/next), create (validation + metadata enrichment), update model validation, delete/change status, statistics exception и metadata endpoint (empty url/not found)
 - [ ] Controllers/TwitchController
+  - Прогресс: добавлены unit-тесты на guard-ветку (пустой auth code) и exception-контракт при сбое зависимостей
 - [ ] Controllers/TwitchRewardsController
+  - Прогресс: добавлены unit-тесты на валидацию ids для update redemption status и exception-контракт при получении наград
 - [ ] Controllers/WTelegramController
+  - Прогресс: добавлены unit-тесты error-контрактов для relogin/status (HTTP 500 + WTelegramOperationResult failure)
 
 ### 3.2 Интеграция с БД
 - [ ] Поднять тестовую БД (предпочтительно PostgreSQL в Testcontainers)
