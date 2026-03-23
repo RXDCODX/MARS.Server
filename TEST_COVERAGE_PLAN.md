@@ -68,7 +68,8 @@
   - Прогресс: добавлены unit-тесты ScoreboardService на default/get state, debounced update + force process, visibility create/update, update score/final и negative-ветки валидации входа
 
 ### 2.2 Twitch/Telegram/Bridge
-- [ ] Services/Twitch/*: расширить покрытие кроме существующих тестов
+- [x] Services/Twitch/*: расширить покрытие кроме существующих тестов
+  - Прогресс: добавлены unit-тесты TwitchUserInfoService на guard/edge-сценарии (empty user id и empty user lists), а также фильтрацию пользователей без аватаров
 - [ ] Services/TelegramBotService: обработка входящих команд/состояний
 - [ ] Services/TelegramDiscordBridge: маппинг и маршрутизация сообщений
 - [ ] Services/WaifuRoll: позитивные и негативные ветки бизнес-логики
