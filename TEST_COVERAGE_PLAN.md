@@ -56,13 +56,14 @@
   - Прогресс: добавлены unit-тесты на фильтрацию/сортировку/пагинацию, recent logs и агрегированную статистику
 - [x] Services/RandomMem: выборка, фильтры, fallback-сценарии
   - Прогресс: добавлены unit-тесты RandomMemeService на MemeType/MemeOrder CRUD, защиту удаления типа при наличии заказов, count с фильтрами, random no-data и пересортировку order
-- [ ] Services/SoundRequest: постановка/очередь/валидация
-  - Прогресс: добавлены unit-тесты StateManager на инициализацию/персистентность состояния, переходы playback state, clamp громкости и события StateChanged
+- [x] Services/SoundRequest: постановка/очередь/валидация
+  - Прогресс: добавлены unit-тесты StateManager (инициализация/персистентность, playback transitions, clamp громкости, StateChanged), CommandsService (валидация входа и получение current song) и SoundRequestUserQueue (count/current/next/get-by-id/user filtering)
 - [x] Services/CinemaQueue: управление очередью, конфликтные кейсы
   - Прогресс: добавлены unit-тесты CinemaQueueService на чтение/маппинг, create/update, mark-as-next (reset флагов), смену статуса, aggregation статистики и negative-сценарии для отсутствующих сущностей
 - [ ] Services/Shikimori: rate-limit и обработка ошибок клиента
 - [ ] Services/PyroAlerts: правила алертов и граничные условия
-- [ ] Services/Scoreboard: расчёты и синхронизация состояния
+- [x] Services/Scoreboard: расчёты и синхронизация состояния
+  - Прогресс: добавлены unit-тесты ScoreboardService на default/get state, debounced update + force process, visibility create/update, update score/final и negative-ветки валидации входа
 
 ### 2.2 Twitch/Telegram/Bridge
 - [ ] Services/Twitch/*: расширить покрытие кроме существующих тестов
