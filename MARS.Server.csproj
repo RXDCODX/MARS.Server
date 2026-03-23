@@ -28,6 +28,7 @@
     <UseLocalYoutubeReExplode Condition="'$(CI)' == 'true' or '$(GITHUB_ACTIONS)' == 'true'">false</UseLocalYoutubeReExplode>
     <UseLocalYoutubeReExplode Condition="'$(UseLocalYoutubeReExplode)' == '' and Exists('..\..\..\YoutubeReExplode\YoutubeReExplode\YoutubeReExplode.csproj')">true</UseLocalYoutubeReExplode>
     <UseLocalYoutubeReExplode Condition="'$(UseLocalYoutubeReExplode)' == ''">false</UseLocalYoutubeReExplode>
+    <RunTestsOnPublish Condition="'$(RunTestsOnPublish)' == ''">true</RunTestsOnPublish>
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="Services\TabletopGames\**" />
@@ -162,6 +163,10 @@
     <Message Importance="high" Text="Сборка фронта через yarn build..." />
     <Exec WorkingDirectory="..\mars.client" Command="yarn install" />
     <Exec WorkingDirectory="..\mars.client" Command="yarn build" />
+  </Target>
+  <Target Name="RunTestsBeforePublish" BeforeTargets="Publish" Condition="'$(RunTestsOnPublish)' == 'true'">
+    <Message Importance="high" Text="Проверка: запуск тестов перед publish..." />
+    <Exec Command="dotnet test &quot;..\MARS.Tests\MARS.Tests.csproj&quot; --configuration $(Configuration) --no-restore --verbosity minimal -p:UseLocalYoutubeReExplode=false" />
   </Target>
   <!--<Target Name="CopyClientDistToWwwroot" AfterTargets="Publish">
         <Message Importance="high" Text="Копирование dist в wwwroot..." />
