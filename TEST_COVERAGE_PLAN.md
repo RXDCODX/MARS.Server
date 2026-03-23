@@ -71,8 +71,10 @@
 - [x] Services/Twitch/*: расширить покрытие кроме существующих тестов
   - Прогресс: добавлены unit-тесты TwitchUserInfoService на guard/edge-сценарии (empty user id и empty user lists), а также фильтрацию пользователей без аватаров
 - [ ] Services/TelegramBotService: обработка входящих команд/состояний
-- [ ] Services/TelegramDiscordBridge: маппинг и маршрутизация сообщений
-- [ ] Services/WaifuRoll: позитивные и негативные ветки бизнес-логики
+- [x] Services/TelegramDiscordBridge: маппинг и маршрутизация сообщений
+  - Прогресс: добавлены unit-тесты TelegramDiscordBridgeService на CRUD/валидацию связей и состояние каналов (add invalid/new/duplicate, set enabled, delete empty/not found, get bindings/states)
+- [x] Services/WaifuRoll: позитивные и негативные ветки бизнес-логики
+  - Прогресс: добавлены unit-тесты WaifuRollService на guard/negative и базовые бизнес-ветки (TelegramRollWaifu: empty name/host not found/host found, AddNewWaifu null, MergeTheWaifu null args, cooldown default/configured)
 
 ### 2.3 Качество unit-тестов
 - [ ] Для каждого сервиса: happy-path + negative-path + exception-path
