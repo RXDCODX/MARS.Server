@@ -22,6 +22,13 @@ public class WTelegramClientService : IDisposable
 
     private readonly ITelegramBotClient _botClient;
     private TaskCompletionSource<string>? _verificationCodeTcs;
+    private int _proxyConnectivityNotificationSent;
+
+    private sealed class ProxyConfigurationInfo
+    {
+        public bool IsProxyConfigured { get; init; }
+        public string Description { get; init; } = "Без прокси";
+    }
 
     public WTelegramClientService(
         ILogger<WTelegramClientService> logger,
@@ -172,7 +179,16 @@ public class WTelegramClientService : IDisposable
         {
             _logger.LogError(ex, "Ошибка при повторной авторизации WTelegram");
 
-            await NotifyAuthFailedAsync(ex.Message);
+            if (!IsConnectivityException(ex))
+            {
+                await NotifyAuthFailedAsync(ex.Message);
+            }
+            else
+            {
+                _logger.LogInformation(
+                    "Уведомление о сетевой ошибке авторизации пропущено: диагностика прокси отправляется единично"
+                );
+            }
 
             throw;
         }
@@ -186,13 +202,61 @@ public class WTelegramClientService : IDisposable
     {
         _client = new WTelegramClient(_configuration.AppId, _configuration.ApiHash, _sessionPath);
 
-        await ApplyProxyConfigurationAsync(cancellationToken);
+        var proxyInfo = await ApplyProxyConfigurationAsync(cancellationToken);
 
+        try
+        {
+            await PerformAuthorizationAsync(cancellationToken);
+        }
+        catch (Exception ex)
+            when (proxyInfo.IsProxyConfigured && IsConnectivityException(ex))
+        {
+            _logger.LogWarning(
+                ex,
+                "Ошибка подключения к Telegram через прокси ({ProxyDescription}). Пробуем авторизацию без прокси",
+                proxyInfo.Description
+            );
+
+            var proxyErrorMessage = ex.Message;
+            var worksWithoutProxy = false;
+            string? noProxyErrorMessage = null;
+
+            try
+            {
+                if (_client != null)
+                {
+                    await _client.DisposeAsync();
+                }
+
+                _client = new WTelegramClient(_configuration.AppId, _configuration.ApiHash, _sessionPath);
+                await PerformAuthorizationAsync(cancellationToken);
+                worksWithoutProxy = true;
+            }
+            catch (Exception fallbackEx)
+            {
+                noProxyErrorMessage = fallbackEx.Message;
+                throw;
+            }
+            finally
+            {
+                await NotifyProxyConnectivityCheckOnceAsync(
+                    proxyInfo.Description,
+                    proxyErrorMessage,
+                    worksWithoutProxy,
+                    noProxyErrorMessage
+                );
+            }
+        }
+    }
+
+    private async Task PerformAuthorizationAsync(CancellationToken cancellationToken)
+    {
+        var client = _client ?? throw new InvalidOperationException("WTelegram клиент не инициализирован");
         var loginInfo = _configuration.PhoneNumber;
 
-        while (_client.User == null)
+        while (client.User == null)
         {
-            var whatIsNeeded = await _client.Login(loginInfo);
+            var whatIsNeeded = await client.Login(loginInfo);
 
             _logger.LogInformation("WTelegram требует: {WhatIsNeeded}", whatIsNeeded);
 
@@ -254,18 +318,57 @@ public class WTelegramClientService : IDisposable
             }
         }
 
-        _logger.LogInformation("Авторизация WTelegram успешна. Пользователь: {User}", _client.User);
+        _logger.LogInformation("Авторизация WTelegram успешна. Пользователь: {User}", client.User);
 
-        var username = _client.User?.username ?? _client.User?.phone ?? "Unknown";
+        var username = client.User?.username ?? client.User?.phone ?? "Unknown";
         await NotifyAuthSuccessAsync(username);
+        Interlocked.Exchange(ref _proxyConnectivityNotificationSent, 0);
     }
 
-    private async Task ApplyProxyConfigurationAsync(CancellationToken cancellationToken)
+    private async Task<ProxyConfigurationInfo> ApplyProxyConfigurationAsync(
+        CancellationToken cancellationToken
+    )
     {
         var proxyValue = await GetProxyValueFromRootStateAsync(cancellationToken);
         if (string.IsNullOrWhiteSpace(proxyValue) || _client is null)
         {
-            return;
+            return new ProxyConfigurationInfo();
+        }
+
+        if (TryParseTelegramProxyLink(proxyValue, out var mtProxyUrlFromTelegramLink))
+        {
+            _client.MTProxyUrl = mtProxyUrlFromTelegramLink;
+            _logger.LogInformation(
+                "Для WTelegram включен MTProxy из Telegram-ссылки: {RootStateKey}",
+                RootStateKeys.WTelegramMtProxyUrl
+            );
+
+            return new ProxyConfigurationInfo
+            {
+                IsProxyConfigured = true,
+                Description = "MTProxy (t.me/proxy)",
+            };
+        }
+
+        if (TryParseTelegramSocksLink(proxyValue, out var socksProxyUriFromTelegramLink))
+        {
+            _client.TcpHandler = (destinationAddress, destinationPort) =>
+                CreateTcpClientThroughProxyAsync(
+                    socksProxyUriFromTelegramLink,
+                    destinationAddress,
+                    destinationPort
+                );
+
+            _logger.LogInformation(
+                "Для WTelegram включен SOCKS5 прокси из Telegram-ссылки: {RootStateKey}",
+                RootStateKeys.WTelegramProxyUrl
+            );
+
+            return new ProxyConfigurationInfo
+            {
+                IsProxyConfigured = true,
+                Description = "SOCKS5 (t.me/socks)",
+            };
         }
 
         if (IsMtProxyUrl(proxyValue))
@@ -275,6 +378,12 @@ public class WTelegramClientService : IDisposable
                 "Для WTelegram включен MTProxy из RootState: {RootStateKey}",
                 RootStateKeys.WTelegramMtProxyUrl
             );
+
+            return new ProxyConfigurationInfo
+            {
+                IsProxyConfigured = true,
+                Description = "MTProxy",
+            };
         }
         else if (TryParseProxyUri(proxyValue, out var proxyUri))
         {
@@ -286,12 +395,20 @@ public class WTelegramClientService : IDisposable
                 proxyUri.Scheme,
                 RootStateKeys.WTelegramProxyUrl
             );
+
+            return new ProxyConfigurationInfo
+            {
+                IsProxyConfigured = true,
+                Description = $"{proxyUri.Scheme.ToUpperInvariant()} proxy",
+            };
         }
         else
         {
             _logger.LogWarning(
                 "Некорректный формат прокси для WTelegram в RootState. Ожидается MTProxy URL, socks5:// или http://"
             );
+
+            return new ProxyConfigurationInfo();
         }
     }
 
@@ -318,6 +435,168 @@ public class WTelegramClientService : IDisposable
 
         proxyUri = null!;
         return false;
+    }
+
+    private static bool TryParseTelegramProxyLink(string proxyValue, out string mtProxyUrl)
+    {
+        mtProxyUrl = string.Empty;
+
+        if (!Uri.TryCreate(proxyValue, UriKind.Absolute, out var uri))
+        {
+            return false;
+        }
+
+        if (!uri.Host.Equals("t.me", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (!uri.AbsolutePath.Trim('/').Equals("proxy", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var query = ParseQueryString(uri.Query);
+        if (
+            !query.TryGetValue("server", out var server)
+            || !query.TryGetValue("port", out var portRaw)
+            || !query.TryGetValue("secret", out var secret)
+            || string.IsNullOrWhiteSpace(server)
+            || string.IsNullOrWhiteSpace(portRaw)
+            || string.IsNullOrWhiteSpace(secret)
+            || !int.TryParse(portRaw, out var port)
+            || port <= 0
+            || port > 65535
+        )
+        {
+            return false;
+        }
+
+        mtProxyUrl = $"https://t.me/proxy?server={Uri.EscapeDataString(server)}&port={port}&secret={Uri.EscapeDataString(secret)}";
+        return true;
+    }
+
+    private static bool TryParseTelegramSocksLink(string proxyValue, out Uri proxyUri)
+    {
+        proxyUri = null!;
+
+        if (!Uri.TryCreate(proxyValue, UriKind.Absolute, out var uri))
+        {
+            return false;
+        }
+
+        if (!uri.Host.Equals("t.me", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (!uri.AbsolutePath.Trim('/').Equals("socks", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var query = ParseQueryString(uri.Query);
+        if (
+            !query.TryGetValue("server", out var server)
+            || !query.TryGetValue("port", out var portRaw)
+            || string.IsNullOrWhiteSpace(server)
+            || string.IsNullOrWhiteSpace(portRaw)
+            || !int.TryParse(portRaw, out var port)
+            || port <= 0
+            || port > 65535
+        )
+        {
+            return false;
+        }
+
+        query.TryGetValue("user", out var user);
+        query.TryGetValue("pass", out var pass);
+
+        var userInfo = string.IsNullOrWhiteSpace(user)
+            ? string.Empty
+            : $"{Uri.EscapeDataString(user)}:{Uri.EscapeDataString(pass ?? string.Empty)}@";
+
+        var normalizedProxy = $"socks5://{userInfo}{server}:{port}";
+        var isParsed = Uri.TryCreate(normalizedProxy, UriKind.Absolute, out var parsedProxyUri);
+        if (isParsed && parsedProxyUri is not null)
+        {
+            proxyUri = parsedProxyUri;
+            return true;
+        }
+
+        return false;
+    }
+
+    private static Dictionary<string, string> ParseQueryString(string queryString)
+    {
+        var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        if (string.IsNullOrWhiteSpace(queryString))
+        {
+            return result;
+        }
+
+        var query = queryString.StartsWith('?') ? queryString[1..] : queryString;
+        var pairs = query.Split('&', StringSplitOptions.RemoveEmptyEntries);
+        foreach (var pair in pairs)
+        {
+            var separatorIndex = pair.IndexOf('=');
+            var key = separatorIndex >= 0 ? pair[..separatorIndex] : pair;
+            var value = separatorIndex >= 0 ? pair[(separatorIndex + 1)..] : string.Empty;
+
+            if (string.IsNullOrWhiteSpace(key))
+            {
+                continue;
+            }
+
+            var decodedKey = Uri.UnescapeDataString(key.Replace('+', ' '));
+            var decodedValue = Uri.UnescapeDataString(value.Replace('+', ' '));
+            result[decodedKey] = decodedValue;
+        }
+
+        return result;
+    }
+
+    private static bool IsConnectivityException(Exception exception)
+    {
+        var current = exception;
+        while (current != null)
+        {
+            if (current is SocketException || current is IOException || current is TimeoutException)
+            {
+                return true;
+            }
+
+            if (
+                current is InvalidOperationException
+                && ContainsConnectivityKeywords(current.Message)
+            )
+            {
+                return true;
+            }
+
+            current = current.InnerException;
+        }
+
+        return false;
+    }
+
+    private static bool ContainsConnectivityKeywords(string message)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return false;
+        }
+
+        var normalized = message.ToLowerInvariant();
+        return normalized.Contains("connect")
+            || normalized.Contains("connection")
+            || normalized.Contains("proxy")
+            || normalized.Contains("timeout")
+            || normalized.Contains("timed out")
+            || normalized.Contains("network")
+            || normalized.Contains("socket")
+            || normalized.Contains("соедин")
+            || normalized.Contains("подключ");
     }
 
     private static async Task<TcpClient> CreateTcpClientThroughProxyAsync(
@@ -837,6 +1116,51 @@ public class WTelegramClientService : IDisposable
         {
             _logger.LogError(e, "Ошибка при отправке уведомления об ошибке авторизации");
             WTelegramOperationResult.CreateFailure("Failed to send error notification", e.Message);
+        }
+    }
+
+    private async Task NotifyProxyConnectivityCheckOnceAsync(
+        string proxyDescription,
+        string proxyErrorMessage,
+        bool worksWithoutProxy,
+        string? noProxyErrorMessage
+    )
+    {
+        if (Interlocked.CompareExchange(ref _proxyConnectivityNotificationSent, 1, 0) != 0)
+        {
+            return;
+        }
+
+        try
+        {
+            var proxyErrorEncoded = WebUtility.HtmlEncode(proxyErrorMessage);
+            var withoutProxyResult = worksWithoutProxy
+                ? "✅ Без прокси подключение к серверам Telegram успешно"
+                : $"❌ Без прокси подключение тоже не удалось: <code>{WebUtility.HtmlEncode(noProxyErrorMessage ?? "Нет деталей")}</code>";
+
+            var message = $"""
+                ⚠️ <b>Диагностика подключения WTelegram</b>
+
+                <b>Прокси:</b> {WebUtility.HtmlEncode(proxyDescription)}
+                <b>Ошибка через прокси:</b>
+                <code>{proxyErrorEncoded}</code>
+
+                {withoutProxyResult}
+                """;
+
+            await _botClient.SendMessage(
+                TelegramExstension.Rxdcodx,
+                message,
+                parseMode: ParseMode.Html
+            );
+
+            _logger.LogInformation(
+                "Отправлено единичное уведомление диагностики подключения WTelegram"
+            );
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Не удалось отправить диагностику подключения WTelegram");
         }
     }
 
