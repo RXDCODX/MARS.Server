@@ -156,6 +156,7 @@ public static class StartupEstensions
         // Регистрируем сервис-обертку для WTelegram как Singleton
         // UpdateHandler получит его через IServiceProvider
         services.AddSingleton<WTelegramClientService>();
+        services.AddSingleton<TelegramClipboardCopyService>();
 
         // Для обратной совместимости регистрируем также WTelegram.Client
         services.AddSingleton<WTelegram.Client>(sp =>

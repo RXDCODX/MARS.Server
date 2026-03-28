@@ -32,6 +32,7 @@ public class UpdateHandler : IUpdateHandler
         Tekken8FrameData frameData,
         IDbContextFactory<AppDbContext> dbContextFactory,
         TelegramCommandService telegramCommandService,
+        TelegramClipboardCopyService telegramClipboardCopyService,
         IServiceProvider serviceProvider
     )
     {
@@ -47,6 +48,7 @@ public class UpdateHandler : IUpdateHandler
             TelegramUpdate += randomMemHandler.HandMessage;
             TelegramUpdate += frameData.HandAlert;
             TelegramUpdate += telegramCommandService.HandMessage;
+            TelegramUpdate += telegramClipboardCopyService.HandMessage;
 
             // Получаем Singleton WTelegramClientService из корневого провайдера
             var wTelegramClientService =
