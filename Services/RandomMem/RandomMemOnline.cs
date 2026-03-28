@@ -1,7 +1,7 @@
-﻿using System.Collections.Frozen;
+using System.Collections.Frozen;
 using MARS.Server.ApplicationState;
 using MARS.Server.Services.MemoryStorageService;
-using MARS.Server.Services.TelegramBotService;
+using MARS.Server.Services.Telegram.BotService;
 using TL;
 using Document = TL.Document;
 using Message = TL.Message;

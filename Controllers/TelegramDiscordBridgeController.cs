@@ -1,6 +1,6 @@
 using MARS.Server.Services;
-using MARS.Server.Services.TelegramDiscordBridge;
-using MARS.Server.Services.TelegramDiscordBridge.Entitys;
+using MARS.Server.Services.Telegram.DiscordBridge;
+using MARS.Server.Services.Telegram.DiscordBridge.Entitys;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MARS.Server.Controllers;

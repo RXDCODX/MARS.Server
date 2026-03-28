@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using BooruSharp.Booru;
 using MARS.Server.CustomLoggers.SignalRLogger;
@@ -16,9 +16,9 @@ using MARS.Server.Services.SoundRequest.Interfaces;
 using MARS.Server.Services.SoundRequest.Queue;
 using MARS.Server.Services.SoundRequest.Spotify;
 using MARS.Server.Services.SoundRequest.YouTube;
-using MARS.Server.Services.TelegramBotService;
-using MARS.Server.Services.TelegramDiscordBridge;
-using MARS.Server.Services.TelegramPrivateChannelsResender;
+using MARS.Server.Services.Telegram.BotService;
+using MARS.Server.Services.Telegram.DiscordBridge;
+using MARS.Server.Services.Telegram.PrivateChannelsResender;
 using MARS.Server.Services.Twitch;
 using MARS.Server.Services.Twitch.AutoInfoFetch;
 using MARS.Server.Services.Twitch.Client;

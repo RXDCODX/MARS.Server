@@ -1,7 +1,7 @@
 using System.Text;
 using MARS.Server.Services.CommandExecutor.Entitys;
 using MARS.Server.Services.CommandExecutor.Entitys.Commands;
-using MARS.Server.Services.TelegramBotService;
+using MARS.Server.Services.Telegram.BotService;
 
 namespace MARS.Server.Services.CommandExecutor.Commands;
 

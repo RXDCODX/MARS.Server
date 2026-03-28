@@ -1,4 +1,4 @@
-using MARS.Server.Services.TelegramBotService;
+using MARS.Server.Services.Telegram.BotService;
 using MARS.Server.Services;
 using Microsoft.AspNetCore.Mvc;
 
