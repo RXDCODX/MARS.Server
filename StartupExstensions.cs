@@ -339,6 +339,7 @@ public static class StartupEstensions
         services.AddSingleton<TwitchMichaelJacksonRewardService>();
         services.AddHostedService(sp => sp.GetRequiredService<TwitchMichaelJacksonRewardService>());
 
+        services.AddSingleton<YouTubeResolver>();
         services.AddSingleton<MikuMondayTracksService>();
         services.AddSingleton<TwitchMikuMondayRewardService>();
         services.AddHostedService(sp => sp.GetRequiredService<TwitchMikuMondayRewardService>());
@@ -456,7 +457,6 @@ public static class StartupEstensions
         services.AddSingleton<InSignalRHubService>();
         services.AddSingleton<OutSignalRHubService>();
         services.AddSingleton<SoundRequestUserQueue>();
-        services.AddSingleton<YouTubeResolver>();
         services.AddSingleton<SpotifyAuthService>();
         services.AddHttpClient<SpotifyApiClient>();
         services.AddSingleton<SpotifyResolver>();
