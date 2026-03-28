@@ -26,7 +26,6 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'" />
   <PropertyGroup>
     <UseLocalYoutubeReExplode Condition="'$(CI)' == 'true' or '$(GITHUB_ACTIONS)' == 'true'">false</UseLocalYoutubeReExplode>
-    <UseLocalYoutubeReExplode Condition="'$(UseLocalYoutubeReExplode)' == '' and Exists('external\YoutubeExplode\YoutubeExplode\YoutubeExplode.csproj')">true</UseLocalYoutubeReExplode>
     <UseLocalYoutubeReExplode Condition="'$(UseLocalYoutubeReExplode)' == ''">false</UseLocalYoutubeReExplode>
     <RunTestsOnPublish Condition="'$(RunTestsOnPublish)' == ''">true</RunTestsOnPublish>
   </PropertyGroup>
