@@ -1,4 +1,5 @@
 ﻿using MARS.Server.Services.Shikimori.Entitys;
+using MARS.Server.Services.Telegram;
 using ShikimoriSharp;
 using ShikimoriSharp.Bases;
 using ShikimoriSharp.Classes;

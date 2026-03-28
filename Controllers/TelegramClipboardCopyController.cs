@@ -1,5 +1,6 @@
-using MARS.Server.Services.Telegram.BotService;
 using MARS.Server.Services;
+using MARS.Server.Services.Telegram.BotService;
+using MARS.Server.Services.Telegram.BotService.ClipboardCopy;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MARS.Server.Controllers;
@@ -13,10 +14,7 @@ public class TelegramClipboardCopyController(
     [HttpGet("{requestId}")]
     public async Task<ActionResult<OperationResult<string[]>>> GetFilesByRequestId(string requestId)
     {
-        var result = OperationResult<string[]>.Bad(
-            "ID запроса не передан",
-            []
-        );
+        var result = OperationResult<string[]>.Bad("ID запроса не передан", []);
 
         if (!string.IsNullOrWhiteSpace(requestId))
         {

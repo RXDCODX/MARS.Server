@@ -2,7 +2,7 @@ using System.Collections.Concurrent;
 using MARS.Server.Services.MemoryStorageService;
 using Telegram.Bot.Types.Enums;
 
-namespace MARS.Server.Services.Telegram.BotService;
+namespace MARS.Server.Services.Telegram.BotService.ClipboardCopy;
 
 public class TelegramClipboardCopyService(
     ILogger<TelegramClipboardCopyService> logger,
@@ -90,9 +90,7 @@ public class TelegramClipboardCopyService(
             if (Interlocked.Exchange(ref state.IsProcessed, 1) == 0)
             {
                 _mediaGroupBuffers.TryRemove(mediaGroupId, out _);
-                var orderedMessages = state
-                    .Messages.Values.OrderBy(m => m.MessageId)
-                    .ToList();
+                var orderedMessages = state.Messages.Values.OrderBy(m => m.MessageId).ToList();
                 await ProcessMessagesAsync(client, message.Chat.Id, orderedMessages, mediaGroupId);
             }
         }
@@ -160,10 +158,7 @@ public class TelegramClipboardCopyService(
 
     public async Task<OperationResult<string[]>> GetFileUrlsByRequestIdAsync(string requestId)
     {
-        var result = OperationResult<string[]>.Bad(
-            "Запрос не найден или файлы уже недоступны",
-            []
-        );
+        var result = OperationResult<string[]>.Bad("Запрос не найден или файлы уже недоступны", []);
 
         await CleanupExpiredRequestsAsync();
 
@@ -181,10 +176,7 @@ public class TelegramClipboardCopyService(
                 {
                     _clipboardRequests.TryRemove(requestId, out _);
                     await CleanupMemoryFilesAsync(files.MemoryFileNames);
-                    result = OperationResult<string[]>.Bad(
-                        "Срок действия запроса истек",
-                        []
-                    );
+                    result = OperationResult<string[]>.Bad("Срок действия запроса истек", []);
                 }
             }
         }
@@ -225,7 +217,10 @@ public class TelegramClipboardCopyService(
 
         if (memoryFileNames.Count > 0)
         {
-            var requestFiles = new ClipboardRequestFiles(memoryFileNames.ToArray(), DateTimeOffset.UtcNow);
+            var requestFiles = new ClipboardRequestFiles(
+                memoryFileNames.ToArray(),
+                DateTimeOffset.UtcNow
+            );
             _clipboardRequests[requestId] = requestFiles;
 
             var pageUrl = BuildClipboardPageUrl(requestId);
@@ -255,9 +250,9 @@ public class TelegramClipboardCopyService(
 
     private static TimeSpan ResolveRequestTtl(IConfiguration configurationValue)
     {
-        var configuredMinutes = configurationValue[
-            "AppSettings:TelegramClipboardCopy:RequestTtlMinutes"
-        ] ?? configurationValue["TelegramClipboardCopy:RequestTtlMinutes"];
+        var configuredMinutes =
+            configurationValue["AppSettings:TelegramClipboardCopy:RequestTtlMinutes"]
+            ?? configurationValue["TelegramClipboardCopy:RequestTtlMinutes"];
 
         var parsed = int.TryParse(configuredMinutes, out var minutes);
         if (!parsed || minutes <= 0)
@@ -281,7 +276,11 @@ public class TelegramClipboardCopyService(
             }
             catch (Exception ex)
             {
-                logger.LogWarning(ex, "Не удалось удалить файл {FileName} при очистке", memoryFileName);
+                logger.LogWarning(
+                    ex,
+                    "Не удалось удалить файл {FileName} при очистке",
+                    memoryFileName
+                );
             }
         }
     }
@@ -347,9 +346,10 @@ public class TelegramClipboardCopyService(
             ?? Environment.GetEnvironmentVariable("ASPNETCORE_URLS")
             ?? "http://localhost:9255/";
 
-        var firstUrl = configuredUrl
-            .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .FirstOrDefault(url => url.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+        var firstUrl =
+            configuredUrl
+                .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .FirstOrDefault(url => url.StartsWith("http", StringComparison.OrdinalIgnoreCase))
             ?? "http://localhost:9255/";
 
         firstUrl = firstUrl.Replace("+", "localhost").Replace("*", "localhost");

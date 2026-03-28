@@ -3,6 +3,7 @@ using MARS.Server.Services.CommandExecutor.Adapters;
 using MARS.Server.Services.Framedata;
 using MARS.Server.Services.PyroAlerts;
 using MARS.Server.Services.RandomMem;
+using MARS.Server.Services.Telegram.BotService.ClipboardCopy;
 using Telegram.Bot.Exceptions;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types.Enums;
