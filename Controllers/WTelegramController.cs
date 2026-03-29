@@ -1,5 +1,5 @@
-using MARS.Server.Services.Telegram.BotService;
 using MARS.Server.Services.Telegram.BotService.Entities;
+using MARS.Server.Services.Telegram.WTelegramClient;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MARS.Server.Controllers;

@@ -1,7 +1,7 @@
 using MARS.Server.Services.Discord;
-using MARS.Server.Services.Telegram.BotService;
 using MARS.Server.Services.Telegram.DiscordBridge.Entities;
 using MARS.Server.Services.Telegram.DiscordBridge.Entitys;
+using MARS.Server.Services.Telegram.WTelegramClient;
 using TL;
 using TLMessage = TL.Message;
 
@@ -53,7 +53,9 @@ public class TelegramDiscordBridgeService(
 
         try
         {
-            await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+            await using var dbContext = await dbContextFactory.CreateDbContextAsync(
+                cancellationToken
+            );
             var bindings = await dbContext
                 .TelegramDiscordChannelBindings.AsNoTracking()
                 .OrderBy(e => e.TelegramChannelId)
@@ -316,7 +318,9 @@ public class TelegramDiscordBridgeService(
 
         try
         {
-            await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+            await using var dbContext = await dbContextFactory.CreateDbContextAsync(
+                cancellationToken
+            );
             var states = await dbContext
                 .TelegramDiscordChannelStates.AsNoTracking()
                 .OrderBy(e => e.TelegramChannelId)
@@ -411,8 +415,8 @@ public class TelegramDiscordBridgeService(
             {
                 var channels = client
                     .Guilds.Values.SelectMany(guild =>
-                        guild.Channels.Values
-                            .Where(channel =>
+                        guild
+                            .Channels.Values.Where(channel =>
                             {
                                 var channelType = channel.Type.ToString();
                                 return channelType is "Text" or "Announcement";
@@ -535,7 +539,10 @@ public class TelegramDiscordBridgeService(
             var isAllDelivered = true;
             foreach (var discordChannelId in targetDiscordChannels)
             {
-                var sendResult = await discordGatewayService.SendMessageAsync(discordChannelId, payload);
+                var sendResult = await discordGatewayService.SendMessageAsync(
+                    discordChannelId,
+                    payload
+                );
                 if (!sendResult.Success)
                 {
                     isAllDelivered = false;

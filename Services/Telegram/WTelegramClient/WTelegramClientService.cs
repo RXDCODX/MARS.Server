@@ -1,11 +1,11 @@
-using MARS.Server.Services.Telegram.BotService.Entities;
-using Telegram.Bot.Types.Enums;
-using MARS.Server.ApplicationState;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using MARS.Server.ApplicationState;
+using MARS.Server.Services.Telegram.BotService.Entities;
+using Telegram.Bot.Types.Enums;
 
-namespace MARS.Server.Services.Telegram.BotService;
+namespace MARS.Server.Services.Telegram.WTelegramClient;
 
 /// <summary>
 /// Сервис-обертка для WTelegramClient с автоматической переавторизацией
@@ -208,8 +208,7 @@ public class WTelegramClientService : IDisposable
         {
             await PerformAuthorizationAsync(cancellationToken);
         }
-        catch (Exception ex)
-            when (proxyInfo.IsProxyConfigured && IsConnectivityException(ex))
+        catch (Exception ex) when (proxyInfo.IsProxyConfigured && IsConnectivityException(ex))
         {
             _logger.LogWarning(
                 ex,
@@ -228,7 +227,11 @@ public class WTelegramClientService : IDisposable
                     await _client.DisposeAsync();
                 }
 
-                _client = new WTelegramClient(_configuration.AppId, _configuration.ApiHash, _sessionPath);
+                _client = new WTelegramClient(
+                    _configuration.AppId,
+                    _configuration.ApiHash,
+                    _sessionPath
+                );
                 await PerformAuthorizationAsync(cancellationToken);
                 worksWithoutProxy = true;
             }
@@ -251,7 +254,8 @@ public class WTelegramClientService : IDisposable
 
     private async Task PerformAuthorizationAsync(CancellationToken cancellationToken)
     {
-        var client = _client ?? throw new InvalidOperationException("WTelegram клиент не инициализирован");
+        var client =
+            _client ?? throw new InvalidOperationException("WTelegram клиент не инициализирован");
         var loginInfo = _configuration.PhoneNumber;
 
         while (client.User == null)
@@ -379,11 +383,7 @@ public class WTelegramClientService : IDisposable
                 RootStateKeys.WTelegramMtProxyUrl
             );
 
-            return new ProxyConfigurationInfo
-            {
-                IsProxyConfigured = true,
-                Description = "MTProxy",
-            };
+            return new ProxyConfigurationInfo { IsProxyConfigured = true, Description = "MTProxy" };
         }
         else if (TryParseProxyUri(proxyValue, out var proxyUri))
         {
@@ -472,7 +472,8 @@ public class WTelegramClientService : IDisposable
             return false;
         }
 
-        mtProxyUrl = $"https://t.me/proxy?server={Uri.EscapeDataString(server)}&port={port}&secret={Uri.EscapeDataString(secret)}";
+        mtProxyUrl =
+            $"https://t.me/proxy?server={Uri.EscapeDataString(server)}&port={port}&secret={Uri.EscapeDataString(secret)}";
         return true;
     }
 
@@ -612,7 +613,11 @@ public class WTelegramClientService : IDisposable
                 destinationAddress,
                 destinationPort
             ),
-            "http" => await ConnectThroughHttpProxyAsync(proxyUri, destinationAddress, destinationPort),
+            "http" => await ConnectThroughHttpProxyAsync(
+                proxyUri,
+                destinationAddress,
+                destinationPort
+            ),
             _ => throw new InvalidOperationException(
                 $"Неподдерживаемая схема прокси: {proxyUri.Scheme}"
             ),
@@ -633,14 +638,20 @@ public class WTelegramClientService : IDisposable
 
             await using var stream = tcpClient.GetStream();
 
-            var connectRequest = BuildHttpConnectRequest(proxyUri, destinationAddress, destinationPort);
+            var connectRequest = BuildHttpConnectRequest(
+                proxyUri,
+                destinationAddress,
+                destinationPort
+            );
             var requestBytes = Encoding.ASCII.GetBytes(connectRequest);
             await stream.WriteAsync(requestBytes);
             await stream.FlushAsync();
 
             var responseHeaders = await ReadHttpResponseHeadersAsync(stream);
-            if (!responseHeaders.StartsWith("HTTP/1.1 200", StringComparison.OrdinalIgnoreCase)
-                && !responseHeaders.StartsWith("HTTP/1.0 200", StringComparison.OrdinalIgnoreCase))
+            if (
+                !responseHeaders.StartsWith("HTTP/1.1 200", StringComparison.OrdinalIgnoreCase)
+                && !responseHeaders.StartsWith("HTTP/1.0 200", StringComparison.OrdinalIgnoreCase)
+            )
             {
                 throw new InvalidOperationException(
                     $"HTTP proxy CONNECT отклонен. Ответ прокси: {responseHeaders.Split("\r\n")[0]}"
@@ -873,7 +884,9 @@ public class WTelegramClientService : IDisposable
             0x01 => 4,
             0x04 => 16,
             0x03 => (await ReadExactAsync(stream, 1))[0],
-            _ => throw new InvalidOperationException($"Неизвестный тип адреса SOCKS5: {addressType}"),
+            _ => throw new InvalidOperationException(
+                $"Неизвестный тип адреса SOCKS5: {addressType}"
+            ),
         };
 
         await ReadExactAsync(stream, addressLength + 2);
