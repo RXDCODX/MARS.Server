@@ -564,7 +564,11 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
             // Удаляем очень старую историю (старше 30 дней)
             var oldHistoryCount = await db
                 .SoundRequestQueueItems.Where(qi =>
-                    qi.QueueOrder < 0 && qi.RequestedAt < thirtyDaysAgo
+                    qi.QueueOrder < 0
+                    && qi.RequestedAt < thirtyDaysAgo
+                    && !db.SoundRequestPlayerState.Any(ps =>
+                        ps.CurrentQueueItemId == qi.Id || ps.NextQueueItemId == qi.Id
+                    )
                 )
                 .ExecuteDeleteAsync(_cancellationToken);
 
