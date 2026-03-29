@@ -19,4 +19,8 @@ public class SpotifySoundRequestConfiguration
     public string Market { get; set; } = "RU";
 
     public int PollingIntervalMs { get; set; } = 2000;
+
+    public bool PrioritizeUserPlayback { get; set; } = true;
+
+    public int UserPlaybackPriorityGraceMs { get; set; } = 5000;
 }

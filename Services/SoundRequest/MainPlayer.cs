@@ -25,6 +25,7 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
     private readonly SemaphoreSlim _spotifyMonitorTransitionLock = new(1, 1);
     private Task? _spotifyMonitorTask;
     private Guid? _lastSpotifyCompletedQueueItemId;
+    private DateTime _lastSpotifyTrackPlayIssuedAtUtc = DateTime.UnixEpoch;
 
     private readonly ITwitchClient _twitchClient;
 
@@ -224,6 +225,8 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
                         "Не удалось запустить трек в Spotify клиенте"
                     );
                 }
+
+                _lastSpotifyTrackPlayIssuedAtUtc = DateTime.UtcNow;
             }
 
             _logger.LogDebug("Состояние обновлено, уведомление отправлено");
@@ -1058,7 +1061,28 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
                     && playback.DurationMs > 0
                     && playback.ProgressMs >= playback.DurationMs - 1200;
 
-                if (isTrackChangedExternally || isTrackAlmostEnded)
+                var graceMs = Math.Max(0, _spotifyConfiguration.UserPlaybackPriorityGraceMs);
+                var isInsidePriorityGraceWindow =
+                    graceMs > 0
+                    && DateTime.UtcNow - _lastSpotifyTrackPlayIssuedAtUtc
+                        < TimeSpan.FromMilliseconds(graceMs);
+
+                if (
+                    _spotifyConfiguration.PrioritizeUserPlayback
+                    && isTrackChangedExternally
+                    && playback.IsPlaying
+                    && !isInsidePriorityGraceWindow
+                )
+                {
+                    _logger.LogInformation(
+                        "Обнаружено ручное воспроизведение в Spotify (TrackId={TrackId}) - SoundRequest поставлен на паузу",
+                        playback.TrackId ?? "null"
+                    );
+
+                    await _stateManager.SetPlaybackStateAsync(PlaybackState.Paused, notify: true);
+                    _lastSpotifyCompletedQueueItemId = null;
+                }
+                else if (isTrackChangedExternally || isTrackAlmostEnded)
                 {
                     await _spotifyMonitorTransitionLock.WaitAsync(ct);
                     try
