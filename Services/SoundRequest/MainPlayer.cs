@@ -1,10 +1,8 @@
-﻿using MARS.Server.Configuration;
-using MARS.Server.ApplicationState;
+﻿using MARS.Server.ApplicationState;
 using MARS.Server.Services.SoundRequest.Entities;
 using MARS.Server.Services.SoundRequest.Interfaces;
 using MARS.Server.Services.SoundRequest.Queue;
 using MARS.Server.Services.SoundRequest.Spotify;
-using Microsoft.Extensions.Options;
 
 namespace MARS.Server.Services.SoundRequest;
 
@@ -70,7 +68,10 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
 
         if (await IsSpotifyModeAsync(_cancellationToken))
         {
-            _spotifyMonitorTask = Task.Run(() => MonitorSpotifyPlaybackAsync(_cancellationToken), _cancellationToken);
+            _spotifyMonitorTask = Task.Run(
+                () => MonitorSpotifyPlaybackAsync(_cancellationToken),
+                _cancellationToken
+            );
         }
     }
 
@@ -207,12 +208,20 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
             // Обновляем состояние - начинаем воспроизведение
             await _stateManager.StartPlayingAsync(queueItem, notify: true);
 
-            if (await IsSpotifyModeAsync(_cancellationToken) && _spotifyPlaybackService.IsConfigured())
+            if (
+                await IsSpotifyModeAsync(_cancellationToken)
+                && _spotifyPlaybackService.IsConfigured()
+            )
             {
-                var started = await _spotifyPlaybackService.PlayTrackAsync(queueItem.Track, _cancellationToken);
+                var started = await _spotifyPlaybackService.PlayTrackAsync(
+                    queueItem.Track,
+                    _cancellationToken
+                );
                 if (!started)
                 {
-                    throw new InvalidOperationException("Не удалось запустить трек в Spotify клиенте");
+                    throw new InvalidOperationException(
+                        "Не удалось запустить трек в Spotify клиенте"
+                    );
                 }
             }
 
@@ -338,7 +347,10 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
         if (await IsSpotifyModeAsync(ct) && _spotifyPlaybackService.IsConfigured())
         {
             var state = await _stateManager.GetStateAsync();
-            await _spotifyPlaybackService.SetVolumeAsync((int)Math.Clamp(state.Volume, 0f, 100f), ct);
+            await _spotifyPlaybackService.SetVolumeAsync(
+                (int)Math.Clamp(state.Volume, 0f, 100f),
+                ct
+            );
         }
 
         await _stateManager.SetMutedAsync(false, notify: true);
@@ -928,11 +940,17 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
                     notify: false
                 );
 
-                var expectedTrackId = _spotifyPlaybackService.GetSpotifyTrackId(currentQueueItem.Track);
+                var expectedTrackId = _spotifyPlaybackService.GetSpotifyTrackId(
+                    currentQueueItem.Track
+                );
                 var isTrackChangedExternally =
                     !string.IsNullOrWhiteSpace(playback.TrackId)
                     && !string.IsNullOrWhiteSpace(expectedTrackId)
-                    && !string.Equals(playback.TrackId, expectedTrackId, StringComparison.OrdinalIgnoreCase);
+                    && !string.Equals(
+                        playback.TrackId,
+                        expectedTrackId,
+                        StringComparison.OrdinalIgnoreCase
+                    );
 
                 var isTrackAlmostEnded =
                     !playback.IsPlaying
@@ -973,7 +991,10 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
             .RootState.AsNoTracking()
             .SingleOrDefaultAsync(s => s.Name == RootStateKeys.SoundRequestProvider, ct);
 
-        if (providerState is { Value: not null } && TryParseProvider(providerState.Value, out var parsedProvider))
+        if (
+            providerState is { Value: not null }
+            && TryParseProvider(providerState.Value, out var parsedProvider)
+        )
         {
             provider = parsedProvider;
         }

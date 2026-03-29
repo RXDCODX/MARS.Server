@@ -1,5 +1,5 @@
-using MARS.Server.Services.Telegram.BotService;
 using MARS.Server.Services.Telegram.PrivateChannelsResender.Entities;
+using MARS.Server.Services.Telegram.WTelegram;
 using TL;
 using InputMediaType = TL.InputMedia;
 using TLDocument = TL.Document;

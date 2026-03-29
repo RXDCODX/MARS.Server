@@ -4,8 +4,12 @@ using System.Text;
 using MARS.Server.ApplicationState;
 using MARS.Server.Services.Telegram.BotService.Entities;
 using Telegram.Bot.Types.Enums;
+using WTelegram;
 
-namespace MARS.Server.Services.Telegram.WTelegramClient;
+namespace MARS.Server.Services.Telegram.WTelegram;
+
+public class WTelegramClient(int appId, string appHash, string sessionPath)
+    : Client(appId, appHash, sessionPath);
 
 /// <summary>
 /// Сервис-обертка для WTelegramClient с автоматической переавторизацией
@@ -49,8 +53,7 @@ public class WTelegramClientService : IDisposable
 
         Directory.CreateDirectory(Path.GetDirectoryName(_sessionPath)!);
 
-        WTelegram.Helpers.Log = (level, message) =>
-            _logger.Log((LogLevel)level, "{Message}", message);
+        Helpers.Log = (level, message) => _logger.Log((LogLevel)level, "{Message}", message);
     }
 
     /// <summary>
@@ -305,7 +308,6 @@ public class WTelegramClientService : IDisposable
                     _logger.LogInformation("Используется номер телефона: {PhoneNumber}", loginInfo);
                     break;
                 case WTelegramAuthenticationRequirement.Completed:
-                    break;
                 case WTelegramAuthenticationRequirement.Unknown:
                     break;
                 default:

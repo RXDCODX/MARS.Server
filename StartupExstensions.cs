@@ -20,6 +20,7 @@ using MARS.Server.Services.Telegram.BotService;
 using MARS.Server.Services.Telegram.BotService.ClipboardCopy;
 using MARS.Server.Services.Telegram.DiscordBridge;
 using MARS.Server.Services.Telegram.PrivateChannelsResender;
+using MARS.Server.Services.Telegram.WTelegram;
 using MARS.Server.Services.Twitch;
 using MARS.Server.Services.Twitch.AutoInfoFetch;
 using MARS.Server.Services.Twitch.Client;

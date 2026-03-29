@@ -35,7 +35,7 @@ public sealed class DotNetTypesDocumentFilter : IDocumentFilter
         nameof(CustomAttributeTypedArgument),
         nameof(StructLayoutAttribute),
         // Frequently leaked framework models
-        nameof(System.Drawing.Color),
+        nameof(Color),
     };
 
     public void Apply(OpenApiDocument swaggerDoc, DocumentFilterContext context)

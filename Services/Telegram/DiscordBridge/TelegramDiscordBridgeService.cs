@@ -1,7 +1,7 @@
 using MARS.Server.Services.Discord;
 using MARS.Server.Services.Telegram.DiscordBridge.Entities;
 using MARS.Server.Services.Telegram.DiscordBridge.Entitys;
-using MARS.Server.Services.Telegram.WTelegramClient;
+using MARS.Server.Services.Telegram.WTelegram;
 using TL;
 using TLMessage = TL.Message;
 

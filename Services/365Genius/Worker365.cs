@@ -4,7 +4,7 @@ using AngleSharp.Html.Dom;
 using AngleSharp.Html.Parser;
 using AngleSharp.XPath;
 using MARS.Server.Services._365Genius.Entitys;
-using MARS.Server.Services.Telegram.WTelegramClient;
+using MARS.Server.Services.Telegram.WTelegram;
 using TL;
 
 namespace MARS.Server.Services._365Genius;

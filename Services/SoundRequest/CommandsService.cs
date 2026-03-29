@@ -1,12 +1,10 @@
-﻿using MARS.Server.Configuration;
-using MARS.Server.ApplicationState;
+﻿using MARS.Server.ApplicationState;
 using MARS.Server.Services.SoundRequest.Entities;
 using MARS.Server.Services.SoundRequest.Interfaces;
 using MARS.Server.Services.SoundRequest.Queue;
 using MARS.Server.Services.SoundRequest.Spotify;
 using MARS.Server.Services.SoundRequest.YouTube;
 using MARS.Server.Services.Twitch.Entitys;
-using Microsoft.Extensions.Options;
 
 namespace MARS.Server.Services.SoundRequest;
 
@@ -73,16 +71,24 @@ public class CommandsService(
 
                 if (info == null)
                 {
-                    info = provider == SoundRequestProvider.Spotify
-                        ? await spotifyResolver.ResolveTrackAsync(normalizedQuery, cancellationToken)
-                        : await ytResolver.ResolveVideoAsync(normalizedQuery, cancellationToken);
+                    info =
+                        provider == SoundRequestProvider.Spotify
+                            ? await spotifyResolver.ResolveTrackAsync(
+                                normalizedQuery,
+                                cancellationToken
+                            )
+                            : await ytResolver.ResolveVideoAsync(
+                                normalizedQuery,
+                                cancellationToken
+                            );
                 }
             }
             else
             {
-                info = provider == SoundRequestProvider.Spotify
-                    ? await spotifyResolver.ResolveQueryAsync(query, cancellationToken)
-                    : await ytResolver.ResolveQueryAsync(query, cancellationToken);
+                info =
+                    provider == SoundRequestProvider.Spotify
+                        ? await spotifyResolver.ResolveQueryAsync(query, cancellationToken)
+                        : await ytResolver.ResolveQueryAsync(query, cancellationToken);
             }
 
             if (info != null && user != null)
@@ -130,9 +136,10 @@ public class CommandsService(
             }
             else
             {
-                result = provider == SoundRequestProvider.Spotify
-                    ? "не удалось распознать трек Spotify по запросу"
-                    : "не удалось распознать видео по ссылке";
+                result =
+                    provider == SoundRequestProvider.Spotify
+                        ? "не удалось распознать трек Spotify по запросу"
+                        : "не удалось распознать видео по ссылке";
             }
         }
         else
@@ -582,16 +589,24 @@ public class CommandsService(
         return result;
     }
 
-    private async Task<SoundRequestProvider> ResolveProviderAsync(CancellationToken cancellationToken)
+    private async Task<SoundRequestProvider> ResolveProviderAsync(
+        CancellationToken cancellationToken
+    )
     {
         var result = soundRequestOptions.Value.Provider;
 
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
         var providerState = await db
             .RootState.AsNoTracking()
-            .SingleOrDefaultAsync(s => s.Name == RootStateKeys.SoundRequestProvider, cancellationToken);
+            .SingleOrDefaultAsync(
+                s => s.Name == RootStateKeys.SoundRequestProvider,
+                cancellationToken
+            );
 
-        if (providerState is { Value: not null } && TryParseProvider(providerState.Value, out var parsedProvider))
+        if (
+            providerState is { Value: not null }
+            && TryParseProvider(providerState.Value, out var parsedProvider)
+        )
         {
             result = parsedProvider;
         }

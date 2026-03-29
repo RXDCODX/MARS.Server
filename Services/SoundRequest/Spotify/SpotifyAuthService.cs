@@ -1,9 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using MARS.Server.ApplicationState;
-using MARS.Server.Configuration;
 using Microsoft.AspNetCore.WebUtilities;
-using Microsoft.Extensions.Options;
 
 namespace MARS.Server.Services.SoundRequest.Spotify;
 
@@ -207,7 +205,10 @@ public class SpotifyAuthService(
             && !string.IsNullOrWhiteSpace(redirectUri)
         )
         {
-            var storedState = await GetRootStateValueAsync(RootStateKeys.SoundRequestSpotifyOAuthState, ct);
+            var storedState = await GetRootStateValueAsync(
+                RootStateKeys.SoundRequestSpotifyOAuthState,
+                ct
+            );
 
             if (string.Equals(storedState, state, StringComparison.Ordinal))
             {
@@ -302,9 +303,15 @@ public class SpotifyAuthService(
         };
 
         var credentials = await GetCredentialsAsync(ct);
-        var displayName = await GetRootStateValueAsync(RootStateKeys.SoundRequestSpotifyDisplayName, ct);
+        var displayName = await GetRootStateValueAsync(
+            RootStateKeys.SoundRequestSpotifyDisplayName,
+            ct
+        );
         var userId = await GetRootStateValueAsync(RootStateKeys.SoundRequestSpotifyUserId, ct);
-        var avatarUrl = await GetRootStateValueAsync(RootStateKeys.SoundRequestSpotifyAvatarUrl, ct);
+        var avatarUrl = await GetRootStateValueAsync(
+            RootStateKeys.SoundRequestSpotifyAvatarUrl,
+            ct
+        );
         var product = await GetRootStateValueAsync(RootStateKeys.SoundRequestSpotifyProduct, ct);
 
         var hasClientCredentials =
@@ -321,9 +328,10 @@ public class SpotifyAuthService(
             AvatarUrl = avatarUrl,
             Product = product,
             DeviceId = credentials.DeviceId,
-            AccessTokenExpiresAtUtc = credentials.AccessTokenExpiresAtUtc > DateTime.UnixEpoch
-                ? credentials.AccessTokenExpiresAtUtc
-                : null,
+            AccessTokenExpiresAtUtc =
+                credentials.AccessTokenExpiresAtUtc > DateTime.UnixEpoch
+                    ? credentials.AccessTokenExpiresAtUtc
+                    : null,
             Message = isLinked ? "Spotify подключен" : "Spotify не подключен",
         };
 

@@ -16,9 +16,6 @@ using WTelegram;
 
 namespace MARS.Server;
 
-public class WTelegramClient(int appId, string appHash, string sessionPath)
-    : Client(appId, appHash, sessionPath);
-
 public static class Program
 {
     public static bool IsUseSoundRequest { get; set; }

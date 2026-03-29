@@ -2,9 +2,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using MARS.Server.Configuration;
 using MARS.Server.Services.SoundRequest.Entities;
-using Microsoft.Extensions.Options;
 
 namespace MARS.Server.Services.SoundRequest.Spotify;
 
@@ -46,7 +44,10 @@ public class SpotifyApiClient(
             if (response?.IsSuccessStatusCode == true)
             {
                 var payload = await response.Content.ReadAsStringAsync(ct);
-                var dto = JsonSerializer.Deserialize<SpotifySearchResponseDto>(payload, JsonOptions);
+                var dto = JsonSerializer.Deserialize<SpotifySearchResponseDto>(
+                    payload,
+                    JsonOptions
+                );
                 var track = dto?.Tracks?.Items?.FirstOrDefault();
                 result = MapTrack(track);
             }
@@ -207,7 +208,10 @@ public class SpotifyApiClient(
                 if (uri.Host.Contains("spotify.com", StringComparison.OrdinalIgnoreCase))
                 {
                     var segments = uri.AbsolutePath.Trim('/').Split('/');
-                    if (segments.Length >= 2 && segments[0].Equals("track", StringComparison.OrdinalIgnoreCase))
+                    if (
+                        segments.Length >= 2
+                        && segments[0].Equals("track", StringComparison.OrdinalIgnoreCase)
+                    )
                     {
                         result = segments[1];
                     }
@@ -245,11 +249,7 @@ public class SpotifyApiClient(
             }
 
             var requestBody = JsonSerializer.Serialize(
-                new
-                {
-                    device_ids = new[] { resolvedDeviceId },
-                    play = false,
-                }
+                new { device_ids = new[] { resolvedDeviceId }, play = false }
             );
 
             var response = await SendAuthorizedAsync(
@@ -339,7 +339,12 @@ public class SpotifyApiClient(
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Spotify API request exception: {Method} {Url}", method.Method, url);
+                logger.LogError(
+                    ex,
+                    "Spotify API request exception: {Method} {Url}",
+                    method.Method,
+                    url
+                );
             }
         }
         else
@@ -369,14 +374,20 @@ public class SpotifyApiClient(
                     HttpMethod.Get,
                     $"{ApiBaseUrl}/me/player/devices"
                 );
-                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+                request.Headers.Authorization = new AuthenticationHeaderValue(
+                    "Bearer",
+                    accessToken
+                );
 
                 using var response = await httpClient.SendAsync(request, ct);
 
                 if (response.IsSuccessStatusCode)
                 {
                     var payload = await response.Content.ReadAsStringAsync(ct);
-                    var dto = JsonSerializer.Deserialize<SpotifyDevicesResponseDto>(payload, JsonOptions);
+                    var dto = JsonSerializer.Deserialize<SpotifyDevicesResponseDto>(
+                        payload,
+                        JsonOptions
+                    );
 
                     var activeDevice = dto?.Devices?.FirstOrDefault(d => d.IsActive == true);
                     var fallbackDevice = dto?.Devices?.FirstOrDefault();
@@ -406,8 +417,14 @@ public class SpotifyApiClient(
 
         if (track?.Id is not null)
         {
-            var artists = track.Artists?.Where(a => !string.IsNullOrWhiteSpace(a.Name)).Select(a => a.Name!).ToArray();
-            var artwork = track.Album?.Images?.OrderByDescending(i => i.Width).FirstOrDefault()?.Url;
+            var artists = track
+                .Artists?.Where(a => !string.IsNullOrWhiteSpace(a.Name))
+                .Select(a => a.Name!)
+                .ToArray();
+            var artwork = track
+                .Album?.Images?.OrderByDescending(i => i.Width)
+                .FirstOrDefault()
+                ?.Url;
 
             result = new BaseTrackInfo
             {
@@ -488,5 +505,4 @@ public class SpotifyApiClient(
 
         public SpotifyTrackDto? Item { get; set; }
     }
-
 }
