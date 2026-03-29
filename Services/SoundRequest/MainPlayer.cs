@@ -1,4 +1,5 @@
 ﻿using MARS.Server.Configuration;
+using MARS.Server.ApplicationState;
 using MARS.Server.Services.SoundRequest.Entities;
 using MARS.Server.Services.SoundRequest.Interfaces;
 using MARS.Server.Services.SoundRequest.Queue;
@@ -67,7 +68,7 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
     {
         await InitializeAsync();
 
-        if (IsSpotifyMode())
+        if (await IsSpotifyModeAsync(_cancellationToken))
         {
             _spotifyMonitorTask = Task.Run(() => MonitorSpotifyPlaybackAsync(_cancellationToken), _cancellationToken);
         }
@@ -206,7 +207,7 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
             // Обновляем состояние - начинаем воспроизведение
             await _stateManager.StartPlayingAsync(queueItem, notify: true);
 
-            if (IsSpotifyMode() && _spotifyPlaybackService.IsConfigured())
+            if (await IsSpotifyModeAsync(_cancellationToken) && _spotifyPlaybackService.IsConfigured())
             {
                 var started = await _spotifyPlaybackService.PlayTrackAsync(queueItem.Track, _cancellationToken);
                 if (!started)
@@ -242,7 +243,7 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
     /// </summary>
     public async Task PauseAsync(CancellationToken ct)
     {
-        if (IsSpotifyMode() && _spotifyPlaybackService.IsConfigured())
+        if (await IsSpotifyModeAsync(ct) && _spotifyPlaybackService.IsConfigured())
         {
             await _spotifyPlaybackService.PauseAsync(ct);
         }
@@ -255,7 +256,7 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
     /// </summary>
     public async Task ResumeAsync(CancellationToken ct)
     {
-        if (IsSpotifyMode() && _spotifyPlaybackService.IsConfigured())
+        if (await IsSpotifyModeAsync(ct) && _spotifyPlaybackService.IsConfigured())
         {
             await _spotifyPlaybackService.ResumeAsync(ct);
         }
@@ -268,7 +269,7 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
     /// </summary>
     public async Task StopAsync(CancellationToken ct)
     {
-        if (IsSpotifyMode() && _spotifyPlaybackService.IsConfigured())
+        if (await IsSpotifyModeAsync(ct) && _spotifyPlaybackService.IsConfigured())
         {
             await _spotifyPlaybackService.StopAsync(ct);
         }
@@ -308,7 +309,7 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
     /// </summary>
     public async Task SetVolumeAsync(float volume, CancellationToken ct)
     {
-        if (IsSpotifyMode() && _spotifyPlaybackService.IsConfigured())
+        if (await IsSpotifyModeAsync(ct) && _spotifyPlaybackService.IsConfigured())
         {
             await _spotifyPlaybackService.SetVolumeAsync((int)Math.Clamp(volume, 0f, 100f), ct);
         }
@@ -321,7 +322,7 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
     /// </summary>
     public async Task MuteAsync(CancellationToken ct)
     {
-        if (IsSpotifyMode() && _spotifyPlaybackService.IsConfigured())
+        if (await IsSpotifyModeAsync(ct) && _spotifyPlaybackService.IsConfigured())
         {
             await _spotifyPlaybackService.SetVolumeAsync(0, ct);
         }
@@ -334,7 +335,7 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
     /// </summary>
     public async Task UnmuteAsync(CancellationToken ct)
     {
-        if (IsSpotifyMode() && _spotifyPlaybackService.IsConfigured())
+        if (await IsSpotifyModeAsync(ct) && _spotifyPlaybackService.IsConfigured())
         {
             var state = await _stateManager.GetStateAsync();
             await _spotifyPlaybackService.SetVolumeAsync((int)Math.Clamp(state.Volume, 0f, 100f), ct);
@@ -962,11 +963,51 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
         }
     }
 
-    private bool IsSpotifyMode()
+    private async Task<bool> IsSpotifyModeAsync(CancellationToken ct)
     {
-        var result =
-            _soundRequestConfiguration.Provider == SoundRequestProvider.Spotify
-            && _spotifyConfiguration.Enabled;
+        var provider = _soundRequestConfiguration.Provider;
+        var result = false;
+
+        await using var db = await _dbFactory.CreateDbContextAsync(ct);
+        var providerState = await db
+            .RootState.AsNoTracking()
+            .SingleOrDefaultAsync(s => s.Name == RootStateKeys.SoundRequestProvider, ct);
+
+        if (providerState is { Value: not null } && TryParseProvider(providerState.Value, out var parsedProvider))
+        {
+            provider = parsedProvider;
+        }
+
+        if (provider == SoundRequestProvider.Spotify && _spotifyConfiguration.Enabled)
+        {
+            result = true;
+        }
+
+        return result;
+    }
+
+    private static bool TryParseProvider(string rawValue, out SoundRequestProvider provider)
+    {
+        var result = false;
+        provider = SoundRequestProvider.YouTube;
+
+        if (!string.IsNullOrWhiteSpace(rawValue))
+        {
+            var normalizedValue = rawValue.Trim();
+            if (Enum.TryParse<SoundRequestProvider>(normalizedValue, true, out var byName))
+            {
+                provider = byName;
+                result = true;
+            }
+            else if (int.TryParse(normalizedValue, out var numericValue))
+            {
+                if (Enum.IsDefined(typeof(SoundRequestProvider), numericValue))
+                {
+                    provider = (SoundRequestProvider)numericValue;
+                    result = true;
+                }
+            }
+        }
 
         return result;
     }

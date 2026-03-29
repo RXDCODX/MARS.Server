@@ -1,4 +1,5 @@
-﻿using MARS.Server.Configuration;
+using MARS.Server.Configuration;
+using MARS.Server.ApplicationState;
 using MARS.Server.Services.SoundRequest.Entities;
 using MARS.Server.Services.SoundRequest.Interfaces;
 using MARS.Server.Services.SoundRequest.Queue;
@@ -53,7 +54,7 @@ public class CommandsService(
             // Нормализуем URL - добавляем схему если её нет
             var normalizedQuery = NormalizeUrl(query);
 
-            var provider = ResolveProvider(soundRequestOptions.Value, spotifyOptions.Value);
+            var provider = await ResolveProviderAsync(cancellationToken);
 
             // Проверяем, является ли запрос URL
             BaseTrackInfo? info = null;
@@ -251,7 +252,7 @@ public class CommandsService(
     {
         string result;
 
-        var provider = ResolveProvider(soundRequestOptions.Value, spotifyOptions.Value);
+        var provider = await ResolveProviderAsync(cancellationToken);
 
         if (provider == SoundRequestProvider.Spotify)
         {
@@ -581,16 +582,49 @@ public class CommandsService(
         return result;
     }
 
-    private static SoundRequestProvider ResolveProvider(
-        SoundRequestConfiguration soundRequestConfiguration,
-        SpotifySoundRequestConfiguration spotifyConfiguration
-    )
+    private async Task<SoundRequestProvider> ResolveProviderAsync(CancellationToken cancellationToken)
     {
-        var result = soundRequestConfiguration.Provider;
+        var result = soundRequestOptions.Value.Provider;
 
-        if (result == SoundRequestProvider.Spotify && !spotifyConfiguration.Enabled)
+        await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+        var providerState = await db
+            .RootState.AsNoTracking()
+            .SingleOrDefaultAsync(s => s.Name == RootStateKeys.SoundRequestProvider, cancellationToken);
+
+        if (providerState is { Value: not null } && TryParseProvider(providerState.Value, out var parsedProvider))
+        {
+            result = parsedProvider;
+        }
+
+        if (result == SoundRequestProvider.Spotify && !spotifyOptions.Value.Enabled)
         {
             result = SoundRequestProvider.YouTube;
+        }
+
+        return result;
+    }
+
+    private static bool TryParseProvider(string rawValue, out SoundRequestProvider provider)
+    {
+        var result = false;
+        provider = SoundRequestProvider.YouTube;
+
+        if (!string.IsNullOrWhiteSpace(rawValue))
+        {
+            var normalizedValue = rawValue.Trim();
+            if (Enum.TryParse<SoundRequestProvider>(normalizedValue, true, out var byName))
+            {
+                provider = byName;
+                result = true;
+            }
+            else if (int.TryParse(normalizedValue, out var numericValue))
+            {
+                if (Enum.IsDefined(typeof(SoundRequestProvider), numericValue))
+                {
+                    provider = (SoundRequestProvider)numericValue;
+                    result = true;
+                }
+            }
         }
 
         return result;

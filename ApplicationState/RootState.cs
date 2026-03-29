@@ -14,6 +14,7 @@ public partial class RootState
 
 public static class RootStateKeys
 {
+    public const string SoundRequestProvider = "SoundRequestProvider";
     public const string RandomMemeOnlineIsStop = "RandomMemeOnlineIsStop";
     public const string PuntoSwitcherFilterEnabled = "PuntoSwitcherFilterEnabled";
     public const string WaifuRollCooldownMinutes = "WaifuRollCooldownMinutes";
