@@ -930,7 +930,7 @@ public class WTelegramClientService : IDisposable
                     cancellationToken
                 );
 
-            if (proxyState is null)
+            if (proxyState is null || string.IsNullOrWhiteSpace(proxyState.Value))
             {
                 proxyState = await dbContext
                     .RootState.AsNoTracking()

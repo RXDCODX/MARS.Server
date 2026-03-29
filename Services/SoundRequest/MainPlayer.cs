@@ -11,6 +11,7 @@ namespace MARS.Server.Services.SoundRequest;
 /// </summary>
 public class MainPlayer : IPlayerController, IHostedService, IDisposable
 {
+    private const int MaxHistoryEntries = 1000;
     private readonly CancellationToken _cancellationToken;
     private bool _disposed;
     private readonly StateManager _stateManager;
@@ -452,10 +453,26 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
             );
 
             previousQueueItem.QueueOrder = 0;
-            await db.SoundRequestQueueItems.ExecuteUpdateAsync(
-                e => e.SetProperty(t => t.QueueOrder, t => t.QueueOrder + 1),
-                cancellationToken: _cancellationToken
-            );
+            try
+            {
+                await db.SoundRequestQueueItems.ExecuteUpdateAsync(
+                    e => e.SetProperty(t => t.QueueOrder, t => t.QueueOrder + 1),
+                    cancellationToken: _cancellationToken
+                );
+            }
+            catch (InvalidOperationException)
+            {
+                var queueItems = await db.SoundRequestQueueItems.ToListAsync(
+                    cancellationToken: _cancellationToken
+                );
+
+                foreach (var queueItem in queueItems)
+                {
+                    queueItem.QueueOrder += 1;
+                }
+
+                await db.SaveChangesAsync(_cancellationToken);
+            }
 
             await PlayAsync(previousQueueItem, _cancellationToken);
 
@@ -551,7 +568,7 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
     }
 
     /// <summary>
-    /// Очистить старую историю (элементы с QueueOrder &lt; 0 старше 30 дней)
+    /// Ограничить историю воспроизведений до MaxHistoryEntries записей
     /// </summary>
     private async Task CleanupOldHistoryAsync()
     {
@@ -559,24 +576,49 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
         {
             await using var db = await _dbFactory.CreateDbContextAsync(_cancellationToken);
 
-            var thirtyDaysAgo = DateTime.UtcNow.AddDays(-30);
-
-            // Удаляем очень старую историю (старше 30 дней)
-            var oldHistoryCount = await db
-                .SoundRequestQueueItems.Where(qi =>
-                    qi.QueueOrder < 0
-                    && qi.RequestedAt < thirtyDaysAgo
-                    && !db.SoundRequestPlayerState.Any(ps =>
-                        ps.CurrentQueueItemId == qi.Id || ps.NextQueueItemId == qi.Id
-                    )
+            var historyQuery = db.SoundRequestQueueItems.Where(qi =>
+                qi.QueueOrder < 0
+                && !db.SoundRequestPlayerState.Any(ps =>
+                    ps.CurrentQueueItemId == qi.Id || ps.NextQueueItemId == qi.Id
                 )
-                .ExecuteDeleteAsync(_cancellationToken);
+            );
+
+            var historyCount = await historyQuery.CountAsync(_cancellationToken);
+            var historyToDeleteCount = Math.Max(0, historyCount - MaxHistoryEntries);
+
+            var oldHistoryCount = 0;
+
+            if (historyToDeleteCount > 0)
+            {
+                try
+                {
+                    oldHistoryCount = await historyQuery
+                        .OrderBy(qi => qi.QueueOrder)
+                        .Take(historyToDeleteCount)
+                        .ExecuteDeleteAsync(_cancellationToken);
+                }
+                catch (InvalidOperationException)
+                {
+                    var oldHistoryItems = await historyQuery
+                        .OrderBy(qi => qi.QueueOrder)
+                        .Take(historyToDeleteCount)
+                        .ToListAsync(_cancellationToken);
+
+                    if (oldHistoryItems.Count > 0)
+                    {
+                        db.SoundRequestQueueItems.RemoveRange(oldHistoryItems);
+                        oldHistoryCount = oldHistoryItems.Count;
+                        await db.SaveChangesAsync(_cancellationToken);
+                    }
+                }
+            }
 
             if (oldHistoryCount > 0)
             {
                 _logger.LogInformation(
-                    "Очистка истории: удалено {HistoryCount} старых элементов (старше 30 дней)",
-                    oldHistoryCount
+                    "Очистка истории: удалено {HistoryCount} элементов, лимит истории = {HistoryLimit}",
+                    oldHistoryCount,
+                    MaxHistoryEntries
                 );
             }
         }
@@ -822,11 +864,66 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
 
         if (queueItem != null)
         {
-            // Воспроизводим выбранный элемент
-            await PlayAsync(queueItem, _cancellationToken);
+            if (queueItem.QueueOrder < 0)
+            {
+                await using var db = await _dbFactory.CreateDbContextAsync(_cancellationToken);
 
-            // Удаляем из очереди
-            await _queue.RemoveFromQueueAsync(queueItemId);
+                var trackedQueueItem = await db.SoundRequestQueueItems.FirstOrDefaultAsync(
+                    qi => qi.Id == queueItemId,
+                    _cancellationToken
+                );
+
+                if (trackedQueueItem != null)
+                {
+                    var queueOrderShift = -trackedQueueItem.QueueOrder;
+
+                    try
+                    {
+                        await db
+                            .SoundRequestQueueItems.Where(qi =>
+                                qi.Id != queueItemId && qi.QueueOrder > trackedQueueItem.QueueOrder
+                            )
+                            .ExecuteUpdateAsync(
+                                e =>
+                                    e.SetProperty(
+                                        qi => qi.QueueOrder,
+                                        qi => qi.QueueOrder + queueOrderShift
+                                    ),
+                                cancellationToken: _cancellationToken
+                            );
+                    }
+                    catch (InvalidOperationException)
+                    {
+                        var forwardItems = await db
+                            .SoundRequestQueueItems.Where(qi =>
+                                qi.Id != queueItemId && qi.QueueOrder > trackedQueueItem.QueueOrder
+                            )
+                            .ToListAsync(_cancellationToken);
+
+                        foreach (var forwardItem in forwardItems)
+                        {
+                            forwardItem.QueueOrder += queueOrderShift;
+                        }
+                    }
+
+                    trackedQueueItem.QueueOrder = 0;
+                    await db.SaveChangesAsync(_cancellationToken);
+                }
+
+                var historyQueueItem = await _queue.GetQueueItemByIdAsync(queueItemId);
+                if (historyQueueItem != null)
+                {
+                    await PlayAsync(historyQueueItem, _cancellationToken);
+                }
+            }
+            else
+            {
+                // Воспроизводим выбранный элемент
+                await PlayAsync(queueItem, _cancellationToken);
+
+                // Удаляем из очереди
+                await _queue.RemoveFromQueueAsync(queueItemId);
+            }
 
             // Уведомляем об изменении очереди
             await NotifyQueueChangedAsync();

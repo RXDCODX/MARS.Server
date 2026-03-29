@@ -1,5 +1,5 @@
 using MARS.Server.Services;
-using MARS.Server.Services.Telegram.BotService.ClipboardCopy;
+using MARS.Server.Services.Telegram.ClipboardCopy;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MARS.Server.Controllers;

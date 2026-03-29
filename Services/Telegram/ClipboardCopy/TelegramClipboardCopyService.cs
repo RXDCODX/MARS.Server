@@ -2,7 +2,7 @@ using System.Collections.Concurrent;
 using MARS.Server.Services.MemoryStorageService;
 using Telegram.Bot.Types.Enums;
 
-namespace MARS.Server.Services.Telegram.BotService.ClipboardCopy;
+namespace MARS.Server.Services.Telegram.ClipboardCopy;
 
 public class TelegramClipboardCopyService(
     ILogger<TelegramClipboardCopyService> logger,
@@ -11,11 +11,13 @@ public class TelegramClipboardCopyService(
 ) : ITelegramusService
 {
     private const int MediaGroupDebounceMs = 1200;
+    private const int TriggerTimeoutMs = 1000;
     private const string ClipboardPagePath = "/telegram-copy";
     private const int DefaultRequestTtlMinutes = 30;
 
     private static readonly string[] TriggerWords = ["copy", "копи", "копипаста", "копировать"];
     private readonly ConcurrentDictionary<string, MediaGroupBuffer> _mediaGroupBuffers = new();
+    private readonly ConcurrentDictionary<long, TriggerWaitBuffer> _triggerWaitBuffers = new();
     private readonly ConcurrentDictionary<string, ClipboardRequestFiles> _clipboardRequests = new();
     private readonly TimeSpan _requestTtl = ResolveRequestTtl(configuration);
 
@@ -35,24 +37,58 @@ public class TelegramClipboardCopyService(
 
     private async Task HandleMessageAsync(ITelegramBotClient client, Message message)
     {
-        if (message.Photo is not { Length: > 0 })
-        {
-            return;
-        }
-
+        var chatId = message.Chat.Id;
         var textWithTrigger = message.Caption ?? message.Text ?? string.Empty;
         var hasTrigger = ContainsTrigger(textWithTrigger);
+        var hasPhoto = message.Photo is { Length: > 0 };
 
-        if (string.IsNullOrWhiteSpace(message.MediaGroupId))
+        logger.LogDebug(
+            "HandleMessage: chatId={ChatId}, hasTrigger={HasTrigger}, hasPhoto={HasPhoto}, mediaGroupId={MediaGroupId}",
+            chatId,
+            hasTrigger,
+            hasPhoto,
+            message.MediaGroupId ?? "null"
+        );
+
+        if (!hasPhoto)
         {
             if (hasTrigger)
             {
-                await ProcessMessagesAsync(client, message.Chat.Id, [message], null);
+                await HandleTriggerMessageAsync(chatId);
+            }
+            return;
+        }
+
+        var triggerActive = await CheckAndClearTriggerAsync(chatId);
+        var shouldProcess = triggerActive || hasTrigger;
+
+        logger.LogDebug(
+            "HandleMessage photo: chatId={ChatId}, triggerActive={TriggerActive}, hasTrigger={HasTrigger}, shouldProcess={ShouldProcess}",
+            chatId,
+            triggerActive,
+            hasTrigger,
+            shouldProcess
+        );
+
+        if (string.IsNullOrWhiteSpace(message.MediaGroupId))
+        {
+            if (shouldProcess)
+            {
+                logger.LogInformation("Processing single photo: chatId={ChatId}", chatId);
+                await ProcessMessagesAsync(client, chatId, [message], null);
             }
         }
         else
         {
-            await HandleMediaGroupMessageAsync(client, message, hasTrigger);
+            if (shouldProcess)
+            {
+                logger.LogInformation(
+                    "Processing media group: chatId={ChatId}, mediaGroupId={MediaGroupId}",
+                    chatId,
+                    message.MediaGroupId
+                );
+            }
+            await HandleMediaGroupMessageAsync(client, message, shouldProcess);
         }
     }
 
@@ -100,6 +136,57 @@ public class TelegramClipboardCopyService(
         }
     }
 
+    private async Task HandleTriggerMessageAsync(long chatId)
+    {
+        var triggerBuffer = new TriggerWaitBuffer { HasTrigger = true };
+        _triggerWaitBuffers[chatId] = triggerBuffer;
+
+        logger.LogInformation(
+            "Trigger set: chatId={ChatId}, waiting for media group for {TriggerTimeoutMs}ms",
+            chatId,
+            TriggerTimeoutMs
+        );
+
+        var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(StoppingToken);
+        triggerBuffer.TimeoutCts = timeoutCts;
+
+        try
+        {
+            await Task.Delay(TriggerTimeoutMs, timeoutCts.Token);
+            _triggerWaitBuffers.TryRemove(chatId, out _);
+            logger.LogInformation(
+                "Trigger timeout: chatId={ChatId}, no media group received",
+                chatId
+            );
+        }
+        catch (TaskCanceledException)
+        {
+            logger.LogInformation(
+                "Trigger activated: chatId={ChatId}, media group received in time",
+                chatId
+            );
+        }
+    }
+
+    private async Task<bool> CheckAndClearTriggerAsync(long chatId)
+    {
+        var result = false;
+
+        if (_triggerWaitBuffers.TryRemove(chatId, out var triggerBuffer))
+        {
+            result = triggerBuffer.HasTrigger;
+            triggerBuffer.TimeoutCts?.Cancel();
+            triggerBuffer.TimeoutCts?.Dispose();
+            logger.LogInformation(
+                "Trigger checked: chatId={ChatId}, hasTrigger={HasTrigger}",
+                chatId,
+                result
+            );
+        }
+
+        return result;
+    }
+
     private async Task ProcessMessagesAsync(
         ITelegramBotClient client,
         long chatId,
@@ -112,6 +199,14 @@ public class TelegramClipboardCopyService(
         var memoryFileNames = new List<string>();
         var fileIndex = 1;
         var requestId = BuildRequestId(mediaGroupId);
+
+        logger.LogInformation(
+            "ProcessMessages started: chatId={ChatId}, messageCount={MessageCount}, mediaGroupId={MediaGroupId}, requestId={RequestId}",
+            chatId,
+            messages.Count,
+            mediaGroupId ?? "null",
+            requestId
+        );
 
         foreach (var message in messages)
         {
@@ -144,6 +239,11 @@ public class TelegramClipboardCopyService(
                 await MemoryStorage.AddFileAsync(memoryFileName, bytes);
 
                 memoryFileNames.Add(memoryFileName);
+                logger.LogDebug(
+                    "File downloaded: {FileName}, size={FileSize}",
+                    memoryFileName,
+                    bytes.Length
+                );
                 fileIndex += 1;
             }
             catch (Exception ex)
@@ -152,8 +252,34 @@ public class TelegramClipboardCopyService(
             }
         }
 
+        logger.LogInformation(
+            "Files prepared: requestId={RequestId}, count={FileCount}",
+            requestId,
+            memoryFileNames.Count
+        );
+
+        // Сначала сохраняем в словарь, затем отправляем сообщение
         var answerText = BuildResultMessage(memoryFileNames, requestId);
-        await client.SendMessage(chatId, answerText, cancellationToken: StoppingToken);
+
+        logger.LogInformation(
+            "Request registered: requestId={RequestId}, savedCount={SavedCount}",
+            requestId,
+            _clipboardRequests.ContainsKey(requestId) ? memoryFileNames.Count : 0
+        );
+
+        try
+        {
+            await client.SendMessage(
+                chatId,
+                answerText,
+                parseMode: ParseMode.Html,
+                cancellationToken: StoppingToken
+            );
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка отправки сообщения с URL буфера обмена");
+        }
     }
 
     public async Task<OperationResult<string[]>> GetFileUrlsByRequestIdAsync(string requestId)
@@ -165,19 +291,40 @@ public class TelegramClipboardCopyService(
         if (!string.IsNullOrWhiteSpace(requestId))
         {
             var found = _clipboardRequests.TryGetValue(requestId, out var files);
+
             if (found && files is not null && files.MemoryFileNames.Length > 0)
             {
                 if (!IsExpired(files.CreatedAt))
                 {
                     var urls = files.MemoryFileNames.Select(ToMemoryUrl).ToArray();
                     result = OperationResult<string[]>.Ok("Файлы найдены", urls);
+                    logger.LogInformation(
+                        "GetFileUrls: SUCCESS - requestId={RequestId}, fileCount={FileCount}",
+                        requestId,
+                        files.MemoryFileNames.Length
+                    );
                 }
                 else
                 {
                     _clipboardRequests.TryRemove(requestId, out _);
                     await CleanupMemoryFilesAsync(files.MemoryFileNames);
                     result = OperationResult<string[]>.Bad("Срок действия запроса истек", []);
+                    logger.LogWarning(
+                        "GetFileUrls: REQUEST_EXPIRED - requestId={RequestId}, age={AgeSec}s",
+                        requestId,
+                        (DateTimeOffset.UtcNow - files.CreatedAt).TotalSeconds
+                    );
                 }
+            }
+            else
+            {
+                logger.LogDebug(
+                    "GetFileUrls: NOT_FOUND - requestId={RequestId}, found={Found}, fileCount={FileCount}, totalRequests={TotalRequests}",
+                    requestId,
+                    found,
+                    files?.MemoryFileNames.Length ?? 0,
+                    _clipboardRequests.Count
+                );
             }
         }
 
@@ -213,7 +360,7 @@ public class TelegramClipboardCopyService(
 
     private string BuildResultMessage(IReadOnlyCollection<string> memoryFileNames, string requestId)
     {
-        var result = "Не удалось скачать изображения для копирования.";
+        var result = "❌ Не удалось скачать изображения для копирования.";
 
         if (memoryFileNames.Count > 0)
         {
@@ -223,9 +370,31 @@ public class TelegramClipboardCopyService(
             );
             _clipboardRequests[requestId] = requestFiles;
 
+            logger.LogInformation(
+                "BuildResultMessage: SUCCESS - requestId={RequestId}, fileCount={FileCount}, saved={Saved}",
+                requestId,
+                memoryFileNames.Count,
+                _clipboardRequests.ContainsKey(requestId)
+            );
+
             var pageUrl = BuildClipboardPageUrl(requestId);
+            var escapedUrl = pageUrl
+                .Replace("&", "&amp;")
+                .Replace("<", "&lt;")
+                .Replace(">", "&gt;");
+
             result =
-                $"Готово. Открой страницу и нажми кнопку \"Скопировать все\":\n{pageUrl}\n\nФайлов: {memoryFileNames.Count}.";
+                $"✅ <b>Готово!</b> Файлов загружено: <b>{memoryFileNames.Count}</b>\n\n"
+                + $"Откройте ссылку и нажмите кнопку «Скопировать все»:\n"
+                + $"<a href=\"{escapedUrl}\">Открыть страницу</a>\n"
+                + $"<code>{escapedUrl}</code>";
+        }
+        else
+        {
+            logger.LogWarning(
+                "BuildResultMessage: EMPTY - requestId={RequestId}, noFiles",
+                requestId
+            );
         }
 
         return result;
@@ -242,6 +411,12 @@ public class TelegramClipboardCopyService(
                 var removed = _clipboardRequests.TryRemove(item.Key, out var removedFiles);
                 if (removed && removedFiles is not null)
                 {
+                    logger.LogInformation(
+                        "Cleanup: removing requestId={RequestId}, fileCount={FileCount}, age={AgeSec}s",
+                        item.Key,
+                        removedFiles.MemoryFileNames.Length,
+                        (DateTimeOffset.UtcNow - removedFiles.CreatedAt).TotalSeconds
+                    );
                     await CleanupMemoryFilesAsync(removedFiles.MemoryFileNames);
                 }
             }
@@ -272,6 +447,7 @@ public class TelegramClipboardCopyService(
                 if (MemoryStorage.FileExists(memoryFileName))
                 {
                     await MemoryStorage.DeleteFileAsync(memoryFileName);
+                    logger.LogDebug("Memory file deleted: {FileName}", memoryFileName);
                 }
             }
             catch (Exception ex)
@@ -360,24 +536,5 @@ public class TelegramClipboardCopyService(
         }
 
         return firstUrl.TrimEnd('/');
-    }
-
-    private sealed class MediaGroupBuffer
-    {
-        public ConcurrentDictionary<int, Message> Messages { get; } = new();
-        public CancellationTokenSource? DebounceCts { get; set; }
-        public int IsProcessed;
-
-        public void ResetDebounce()
-        {
-            DebounceCts?.Cancel();
-            DebounceCts?.Dispose();
-        }
-    }
-
-    private sealed class ClipboardRequestFiles(string[] memoryFileNames, DateTimeOffset createdAt)
-    {
-        public string[] MemoryFileNames { get; } = memoryFileNames;
-        public DateTimeOffset CreatedAt { get; } = createdAt;
     }
 }

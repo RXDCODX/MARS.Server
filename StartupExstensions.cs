@@ -17,7 +17,7 @@ using MARS.Server.Services.SoundRequest.Queue;
 using MARS.Server.Services.SoundRequest.Spotify;
 using MARS.Server.Services.SoundRequest.YouTube;
 using MARS.Server.Services.Telegram.BotService;
-using MARS.Server.Services.Telegram.BotService.ClipboardCopy;
+using MARS.Server.Services.Telegram.ClipboardCopy;
 using MARS.Server.Services.Telegram.DiscordBridge;
 using MARS.Server.Services.Telegram.PrivateChannelsResender;
 using MARS.Server.Services.Telegram.WTelegram;
