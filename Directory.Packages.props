@@ -36,6 +36,7 @@
     <PackageVersion Include="SigSpec.AspNetCore" Version="0.3.2" />
     <PackageVersion Include="SixLabors.ImageSharp" Version="3.1.12" />
     <PackageVersion Include="SoundCloudExplode" Version="1.6.7" />
+    <PackageVersion Include="SpotifyAPI.Web" Version="7.4.2" />
     <PackageVersion Include="Swashbuckle.AspNetCore" Version="10.1.7" />
     <PackageVersion Include="Swashbuckle.AspNetCore.Swagger" Version="10.1.7" />
     <PackageVersion Include="Swashbuckle.AspNetCore.SwaggerGen" Version="10.1.7" />

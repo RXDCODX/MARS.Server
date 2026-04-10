@@ -83,6 +83,7 @@
     <PackageReference Include="SigSpec.AspNetCore" />
     <PackageReference Include="SixLabors.ImageSharp" />
     <PackageReference Include="SoundCloudExplode" />
+    <PackageReference Include="SpotifyAPI.Web" />
     <PackageReference Include="Swashbuckle.AspNetCore" />
     <PackageReference Include="Swashbuckle.AspNetCore.Swagger" />
     <PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" />
