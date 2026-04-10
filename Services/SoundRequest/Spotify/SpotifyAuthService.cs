@@ -1,5 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Linq;
+using SpotifyAPI.Web;
 using MARS.Server.ApplicationState;
 using Microsoft.AspNetCore.WebUtilities;
 
@@ -7,7 +9,6 @@ namespace MARS.Server.Services.SoundRequest.Spotify;
 
 public class SpotifyAuthService(
     IDbContextFactory<AppDbContext> dbContextFactory,
-    IHttpClientFactory httpClientFactory,
     IOptions<SpotifySoundRequestConfiguration> spotifyOptions,
     ILogger<SpotifyAuthService> logger
 )
@@ -153,6 +154,15 @@ public class SpotifyAuthService(
                 ct
             );
 
+            // Сохраняем redirectUri, чтобы при callback использовать точно такой же URL при обмене кода на токен
+            await UpsertRootStateAsync(
+                RootStateKeys.SoundRequestSpotifyRedirectUri,
+                redirectUri,
+                "Spotify OAuth redirect URI для SoundRequest",
+                "string",
+                ct
+            );
+
             var scope = string.Join(' ', Scopes);
             var query = new Dictionary<string, string>
             {
@@ -221,11 +231,17 @@ public class SpotifyAuthService(
                 {
                     try
                     {
+                        // Попробуем взять redirectUri, сохранённый при старте авторизации
+                        var storedRedirect = await GetRootStateValueAsync(
+                            RootStateKeys.SoundRequestSpotifyRedirectUri,
+                            ct
+                        );
+
                         var token = await RequestAuthorizationTokenAsync(
                             credentials.ClientId,
                             credentials.ClientSecret,
                             code,
-                            redirectUri,
+                            string.IsNullOrWhiteSpace(storedRedirect) ? redirectUri : storedRedirect,
                             ct
                         );
 
@@ -559,20 +575,30 @@ public class SpotifyAuthService(
         CancellationToken ct
     )
     {
-        SpotifyTokenResponseDto? result = null;
-
-        var form = new Dictionary<string, string>
+        try
         {
-            ["grant_type"] = "authorization_code",
-            ["code"] = code,
-            ["redirect_uri"] = redirectUri,
-            ["client_id"] = clientId,
-            ["client_secret"] = clientSecret,
-        };
+            var oauth = new OAuthClient();
+            var token = await oauth.RequestToken(
+                new AuthorizationCodeTokenRequest(clientId, clientSecret, code, new Uri(redirectUri))
+            );
 
-        result = await ExecuteTokenRequestAsync(form, ct);
-
-        return result;
+            return new SpotifyTokenResponseDto
+            {
+                AccessToken = token.AccessToken,
+                RefreshToken = token.RefreshToken,
+                ExpiresIn = token.ExpiresIn,
+            };
+        }
+        catch (APIException ex)
+        {
+            logger.LogWarning(ex, "Spotify OAuth token error");
+            return null;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка выполнения запроса токена Spotify");
+            return null;
+        }
     }
 
     private async Task<SpotifyTokenResponseDto?> RefreshAccessTokenAsync(
@@ -582,51 +608,30 @@ public class SpotifyAuthService(
         CancellationToken ct
     )
     {
-        SpotifyTokenResponseDto? result = null;
-
-        var form = new Dictionary<string, string>
+        try
         {
-            ["grant_type"] = "refresh_token",
-            ["refresh_token"] = refreshToken,
-            ["client_id"] = clientId,
-            ["client_secret"] = clientSecret,
-        };
-
-        result = await ExecuteTokenRequestAsync(form, ct);
-
-        return result;
-    }
-
-    private async Task<SpotifyTokenResponseDto?> ExecuteTokenRequestAsync(
-        Dictionary<string, string> form,
-        CancellationToken ct
-    )
-    {
-        SpotifyTokenResponseDto? result = null;
-
-        var httpClient = httpClientFactory.CreateClient();
-        using var content = new FormUrlEncodedContent(form);
-        using var response = await httpClient.PostAsync(SpotifyTokenUrl, content, ct);
-
-        var body = await response.Content.ReadAsStringAsync(ct);
-
-        if (response.IsSuccessStatusCode)
-        {
-            result = JsonSerializer.Deserialize<SpotifyTokenResponseDto>(
-                body,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+            var oauth = new OAuthClient();
+            var token = await oauth.RequestToken(
+                new AuthorizationCodeRefreshRequest(clientId, clientSecret, refreshToken)
             );
-        }
-        else
-        {
-            logger.LogWarning(
-                "Spotify token endpoint error: Status={Status} Body={Body}",
-                (int)response.StatusCode,
-                body
-            );
-        }
 
-        return result;
+            return new SpotifyTokenResponseDto
+            {
+                AccessToken = token.AccessToken,
+                RefreshToken = token.RefreshToken,
+                ExpiresIn = token.ExpiresIn,
+            };
+        }
+        catch (APIException ex)
+        {
+            logger.LogWarning(ex, "Spotify OAuth refresh error");
+            return null;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка обновления Spotify токена");
+            return null;
+        }
     }
 
     private async Task<SpotifyProfileDto?> GetProfileAsync(string accessToken, CancellationToken ct)
@@ -635,22 +640,26 @@ public class SpotifyAuthService(
 
         if (!string.IsNullOrWhiteSpace(accessToken))
         {
-            var httpClient = httpClientFactory.CreateClient();
-            using var request = new HttpRequestMessage(HttpMethod.Get, SpotifyMeUrl);
-            request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(
-                "Bearer",
-                accessToken
-            );
-
-            using var response = await httpClient.SendAsync(request, ct);
-
-            if (response.IsSuccessStatusCode)
+            try
             {
-                var body = await response.Content.ReadAsStringAsync(ct);
-                result = JsonSerializer.Deserialize<SpotifyProfileDto>(
-                    body,
-                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                );
+                var spotify = new SpotifyClient(accessToken);
+                var profile = await spotify.UserProfile.Current();
+
+                result = new SpotifyProfileDto
+                {
+                    Id = profile.Id,
+                    DisplayName = profile.DisplayName,
+                    Images = profile.Images?.Select(i => new SpotifyProfileImageDto { Url = i.Url }).ToList(),
+                    Product = null,
+                };
+            }
+            catch (APIException ex)
+            {
+                logger.LogWarning(ex, "Spotify API profile error");
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Ошибка получения профиля Spotify");
             }
         }
 

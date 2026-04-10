@@ -53,7 +53,7 @@ public class SpotifyAuthController(SpotifyAuthService spotifyAuthService) : Cont
             );
         }
 
-        return Ok(result);
+        return result;
     }
 
     [HttpGet("callback")]
@@ -118,7 +118,7 @@ public class SpotifyAuthController(SpotifyAuthService spotifyAuthService) : Cont
             );
         }
 
-        return Ok(result);
+        return result;
     }
 
     [HttpGet("status")]
@@ -131,7 +131,7 @@ public class SpotifyAuthController(SpotifyAuthService spotifyAuthService) : Cont
             ? OperationResult<SpotifyAuthStatusResult>.Ok(status.Message, status)
             : OperationResult<SpotifyAuthStatusResult>.Bad(status.Message, status);
 
-        return Ok(result);
+        return result;
     }
 
     [HttpPost("disconnect")]
@@ -142,7 +142,7 @@ public class SpotifyAuthController(SpotifyAuthService spotifyAuthService) : Cont
             ? OperationResult.Ok("Spotify аккаунт отключен")
             : OperationResult.Bad("Не удалось отключить Spotify аккаунт");
 
-        return Ok(result);
+        return result;
     }
 
     private string ResolveRedirectUri(string? redirectUri)
