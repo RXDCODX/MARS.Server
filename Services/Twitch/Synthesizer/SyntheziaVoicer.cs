@@ -251,14 +251,7 @@ public class SyntheziaVoicer : IVoicer
 
         foreach (var word in input.Split(' ', StringSplitOptions.RemoveEmptyEntries))
         {
-            if (Uri.TryCreate(word, UriKind.Absolute, out var result))
-            {
-                sb.Append(result.Host);
-            }
-            else
-            {
-                sb.Append(word);
-            }
+            sb.Append(Uri.TryCreate(word, UriKind.Absolute, out var result) ? result.Host : word);
 
             sb.Append(' ');
         }
