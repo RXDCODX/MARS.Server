@@ -195,7 +195,7 @@ public class DiscordPlayRequestService(
         if (tracks.Length > 0)
         {
             var session = CreateSession(channel.Id, userId, query, tracks);
-            using var builder = BuildMessageBuilder(session);
+            var builder = BuildMessageBuilder(session);
             var message = await client.SendMessageAsync(channel, builder);
 
             session.MessageId = message.Id;
@@ -450,7 +450,7 @@ public class DiscordPlayRequestService(
                     FileAccess.Read,
                     FileShare.Read
                 );
-                using var builder = new DiscordMessageBuilder();
+                var builder = new DiscordMessageBuilder();
 
                 builder.WithContent($"Вот аудиодорожка: {TrimText(track.Title, 120)}");
                 builder.WithReply(replyMessageId, false, false);

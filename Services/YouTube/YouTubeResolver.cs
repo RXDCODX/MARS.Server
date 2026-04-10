@@ -2,8 +2,8 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Text.RegularExpressions;
 using MARS.Server.Services.SoundRequest.Entities;
-using YoutubeReExplode;
-using YoutubeReExplode.Videos.Streams;
+using YoutubeExplode;
+using YoutubeExplode.Videos.Streams;
 
 namespace MARS.Server.Services.YouTube;
 
@@ -486,7 +486,7 @@ public class YouTubeResolver(ILogger<YouTubeResolver> logger)
     {
         var result = streamInfo.Container.Name;
 
-        if (streamInfo is IAudioStreamInfo && streamInfo.Container == Container.Mp4)
+        if (streamInfo is IAudioStreamInfo && streamInfo.Container == YoutubeExplode.Videos.Streams.Container.Mp4)
         {
             result = "m4a";
         }

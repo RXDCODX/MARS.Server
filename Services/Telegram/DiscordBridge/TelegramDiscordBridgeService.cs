@@ -1,8 +1,6 @@
 using MARS.Server.Services.Discord.Gateway;
 using MARS.Server.Services.Discord;
-using MARS.Server.Services.TelegramBotService;
-using MARS.Server.Services.TelegramDiscordBridge.Entities;
-using MARS.Server.Services.TelegramDiscordBridge.Entitys;
+using MARS.Server.Services.Telegram.BotService;
 using MARS.Server.Services.Telegram.DiscordBridge.Entities;
 using MARS.Server.Services.Telegram.DiscordBridge.Entitys;
 using MARS.Server.Services.Telegram.WTelegram;
