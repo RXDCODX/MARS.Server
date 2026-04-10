@@ -269,7 +269,11 @@ public class TwitchConnectionManager : IHostedService
                     await _client.ConnectAsync();
                 }
                 catch (InvalidOperationException ex)
-                    when (ex.Message.Contains("already been started", StringComparison.OrdinalIgnoreCase))
+                    when (ex.Message.Contains(
+                            "already been started",
+                            StringComparison.OrdinalIgnoreCase
+                        )
+                    )
                 {
                     _logger.LogWarning(
                         ex,

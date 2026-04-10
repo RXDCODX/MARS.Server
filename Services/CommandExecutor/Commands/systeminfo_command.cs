@@ -42,7 +42,9 @@ public class SysteminfoCommand(
 
             try
             {
-                await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+                await using var dbContext = await dbContextFactory.CreateDbContextAsync(
+                    cancellationToken
+                );
                 await dbContext.Database.CanConnectAsync(cancellationToken);
                 info.Add("✅ База данных: Подключена");
             }

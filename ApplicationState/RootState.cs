@@ -23,7 +23,8 @@ public static class RootStateKeys
     public const string SoundRequestSpotifyClientSecret = "SoundRequestSpotifyClientSecret";
     public const string SoundRequestSpotifyRefreshToken = "SoundRequestSpotifyRefreshToken";
     public const string SoundRequestSpotifyAccessToken = "SoundRequestSpotifyAccessToken";
-    public const string SoundRequestSpotifyAccessTokenExpiresAtUtc = "SoundRequestSpotifyAccessTokenExpiresAtUtc";
+    public const string SoundRequestSpotifyAccessTokenExpiresAtUtc =
+        "SoundRequestSpotifyAccessTokenExpiresAtUtc";
     public const string SoundRequestSpotifyDisplayName = "SoundRequestSpotifyDisplayName";
     public const string SoundRequestSpotifyUserId = "SoundRequestSpotifyUserId";
     public const string SoundRequestSpotifyAvatarUrl = "SoundRequestSpotifyAvatarUrl";

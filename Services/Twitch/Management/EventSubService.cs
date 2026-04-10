@@ -156,7 +156,11 @@ public class EventSubService(
             lockTaken = true;
 
             var delayMs = 500;
-            for (var attempt = 0 ; attempt < 5 && !_cancellationToken.IsCancellationRequested ; attempt++)
+            for (
+                var attempt = 0;
+                attempt < 5 && !_cancellationToken.IsCancellationRequested;
+                attempt++
+            )
             {
                 try
                 {

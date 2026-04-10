@@ -17,8 +17,9 @@ public class DiscordPlayAudioCacheService(
     private const int MinBitrateKbps = 32;
     private static readonly TimeSpan CacheLifetime = TimeSpan.FromDays(7);
     private static readonly int[] StandardBitratesKbps = [192, 160, 128, 96, 80, 64, 48, 32];
-    private readonly ConcurrentDictionary<string, SemaphoreSlim> _cacheLocks =
-        new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, SemaphoreSlim> _cacheLocks = new(
+        StringComparer.OrdinalIgnoreCase
+    );
     private readonly string _cacheDirectoryPath = Path.Combine(
         Path.GetTempPath(),
         "mars-discord-play-cache"
@@ -440,7 +441,11 @@ public class DiscordPlayAudioCacheService(
             }
             catch (Exception ex)
             {
-                logger.LogWarning(ex, "Не удалось удалить временную директорию {DirectoryPath}", directoryPath);
+                logger.LogWarning(
+                    ex,
+                    "Не удалось удалить временную директорию {DirectoryPath}",
+                    directoryPath
+                );
             }
         }
     }

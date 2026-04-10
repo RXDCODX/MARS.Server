@@ -4,8 +4,10 @@ using MARS.Server.Services.Twitch.Management;
 
 namespace MARS.Server.Services.CommandExecutor.Commands;
 
-public class TwitcheventsTwitchEventsCommand(TokenService tokenService, EventSubService eventSubService)
-    : BaseCommand
+public class TwitcheventsTwitchEventsCommand(
+    TokenService tokenService,
+    EventSubService eventSubService
+) : BaseCommand
 {
     public override string CommandName => "twitchevents";
     public override string Description => "Показывает список активных подписок Twitch EventSub";

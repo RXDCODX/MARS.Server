@@ -25,7 +25,10 @@ public class SpotifyPlaybackService(SpotifyApiClient spotifyApiClient)
 
         if (track != null)
         {
-            if (!string.IsNullOrWhiteSpace(track.VideoId) && track.VideoId.StartsWith("spotify:", StringComparison.OrdinalIgnoreCase))
+            if (
+                !string.IsNullOrWhiteSpace(track.VideoId)
+                && track.VideoId.StartsWith("spotify:", StringComparison.OrdinalIgnoreCase)
+            )
             {
                 result = track.VideoId.Split(':').LastOrDefault();
             }

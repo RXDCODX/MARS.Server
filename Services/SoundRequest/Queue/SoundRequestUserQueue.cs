@@ -396,8 +396,9 @@ public class SoundRequestUserQueue(
         }
         catch (InvalidOperationException)
         {
-            var queueItems = await dbContext
-                .SoundRequestQueueItems.ToListAsync(cancellationToken: _cancellationToken);
+            var queueItems = await dbContext.SoundRequestQueueItems.ToListAsync(
+                cancellationToken: _cancellationToken
+            );
 
             foreach (var queueItem in queueItems)
             {

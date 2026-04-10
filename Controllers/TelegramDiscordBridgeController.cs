@@ -28,10 +28,7 @@ public class TelegramDiscordBridgeController(
         {
             logger.LogError(ex, "Ошибка получения Telegram-Discord связей");
             result = Ok(
-                OperationResult<List<TelegramDiscordBindingDto>>.Bad(
-                    "Ошибка получения связей",
-                    []
-                )
+                OperationResult<List<TelegramDiscordBindingDto>>.Bad("Ошибка получения связей", [])
             );
         }
 
@@ -124,9 +121,9 @@ public class TelegramDiscordBridgeController(
     }
 
     [HttpGet("states")]
-    public async Task<ActionResult<OperationResult<List<TelegramDiscordChannelStateDto>>>> GetStates(
-        CancellationToken cancellationToken = default
-    )
+    public async Task<
+        ActionResult<OperationResult<List<TelegramDiscordChannelStateDto>>>
+    > GetStates(CancellationToken cancellationToken = default)
     {
         ActionResult<OperationResult<List<TelegramDiscordChannelStateDto>>> result;
 
@@ -150,9 +147,9 @@ public class TelegramDiscordBridgeController(
     }
 
     [HttpGet("telegram-channels")]
-    public async Task<ActionResult<OperationResult<List<TelegramChannelOptionDto>>>> GetTelegramChannels(
-        CancellationToken cancellationToken = default
-    )
+    public async Task<
+        ActionResult<OperationResult<List<TelegramChannelOptionDto>>>
+    > GetTelegramChannels(CancellationToken cancellationToken = default)
     {
         ActionResult<OperationResult<List<TelegramChannelOptionDto>>> result;
 
@@ -176,9 +173,9 @@ public class TelegramDiscordBridgeController(
     }
 
     [HttpGet("discord-channels")]
-    public async Task<ActionResult<OperationResult<List<DiscordChannelOptionDto>>>> GetDiscordChannels(
-        CancellationToken cancellationToken = default
-    )
+    public async Task<
+        ActionResult<OperationResult<List<DiscordChannelOptionDto>>>
+    > GetDiscordChannels(CancellationToken cancellationToken = default)
     {
         ActionResult<OperationResult<List<DiscordChannelOptionDto>>> result;
 

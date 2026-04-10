@@ -245,7 +245,7 @@ public class SyntheziaVoicer : IVoicer
         return Task.CompletedTask;
     }
 
-    private string PrepareText(string input)
+    private static string PrepareText(string input)
     {
         var sb = new StringBuilder();
 

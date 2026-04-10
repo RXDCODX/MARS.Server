@@ -198,7 +198,9 @@ public class TtsVoiceController(
 
                     if (isVoiceInstalled)
                     {
-                        var blockedVoices = await repository.GetBlockedVoicesAsync(cancellationToken);
+                        var blockedVoices = await repository.GetBlockedVoicesAsync(
+                            cancellationToken
+                        );
                         var isVoiceBlocked = blockedVoices.Any(v =>
                             string.Equals(v, requestedVoiceName, StringComparison.OrdinalIgnoreCase)
                         );

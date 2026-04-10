@@ -26,7 +26,9 @@ public class EnvironmentVariableController(
 
         try
         {
-            await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+            await using var dbContext = await dbContextFactory.CreateDbContextAsync(
+                cancellationToken
+            );
             var variables = await dbContext
                 .EnvironmentVariables.AsNoTracking()
                 .ToListAsync(cancellationToken);
@@ -75,8 +77,13 @@ public class EnvironmentVariableController(
             }
             else
             {
-                await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-                var variable = await dbContext.EnvironmentVariables.FindAsync([key], cancellationToken);
+                await using var dbContext = await dbContextFactory.CreateDbContextAsync(
+                    cancellationToken
+                );
+                var variable = await dbContext.EnvironmentVariables.FindAsync(
+                    [key],
+                    cancellationToken
+                );
 
                 if (variable is null)
                 {
@@ -138,7 +145,9 @@ public class EnvironmentVariableController(
             }
             else
             {
-                await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+                await using var dbContext = await dbContextFactory.CreateDbContextAsync(
+                    cancellationToken
+                );
 
                 var key = request.Key;
                 var value = request.Value ?? string.Empty;
@@ -207,7 +216,9 @@ public class EnvironmentVariableController(
             }
             else
             {
-                await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+                await using var dbContext = await dbContextFactory.CreateDbContextAsync(
+                    cancellationToken
+                );
                 var variable = await dbContext.EnvironmentVariables.FirstOrDefaultAsync(
                     e => e.Key == key,
                     cancellationToken
@@ -254,7 +265,9 @@ public class EnvironmentVariableController(
 
         try
         {
-            await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+            await using var dbContext = await dbContextFactory.CreateDbContextAsync(
+                cancellationToken
+            );
             var variables = await dbContext
                 .EnvironmentVariables.AsNoTracking()
                 .ToListAsync(cancellationToken);

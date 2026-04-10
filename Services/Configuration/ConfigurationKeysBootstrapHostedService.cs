@@ -14,7 +14,9 @@ public sealed class ConfigurationKeysBootstrapHostedService(
     {
         try
         {
-            await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+            await using var dbContext = await dbContextFactory.CreateDbContextAsync(
+                cancellationToken
+            );
 
             await EnsureRootStateKeysAsync(dbContext, cancellationToken);
             await EnsureEnvironmentVariableKeysAsync(dbContext, cancellationToken);
@@ -102,7 +104,9 @@ public sealed class ConfigurationKeysBootstrapHostedService(
     {
         var result = typeof(RootStateKeys)
             .GetFields(BindingFlags.Public | BindingFlags.Static)
-            .Where(field => field.IsLiteral && !field.IsInitOnly && field.FieldType == typeof(string))
+            .Where(field =>
+                field.IsLiteral && !field.IsInitOnly && field.FieldType == typeof(string)
+            )
             .Select(field => field.GetRawConstantValue()?.ToString())
             .Where(value => !string.IsNullOrWhiteSpace(value))
             .Cast<string>()

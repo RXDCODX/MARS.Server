@@ -12,12 +12,15 @@ public class DiscordGatewayService(
 {
     private readonly ServerDiscordConfiguration _configuration = configuration.Value;
     private readonly List<Func<DiscordClient, MessageCreatedEventArgs, Task>> _messageHandlers = [];
-    private readonly List<Func<DiscordClient, VoiceStateUpdatedEventArgs, Task>> _voiceStateHandlers =
-        [];
-    private readonly List<Func<DiscordClient, InteractionCreatedEventArgs, Task>> _interactionHandlers =
-        [];
-    private readonly List<Func<DiscordClient, ComponentInteractionCreatedEventArgs, Task>>
-        _componentInteractionHandlers = [];
+    private readonly List<
+        Func<DiscordClient, VoiceStateUpdatedEventArgs, Task>
+    > _voiceStateHandlers = [];
+    private readonly List<
+        Func<DiscordClient, InteractionCreatedEventArgs, Task>
+    > _interactionHandlers = [];
+    private readonly List<
+        Func<DiscordClient, ComponentInteractionCreatedEventArgs, Task>
+    > _componentInteractionHandlers = [];
     private readonly Lock _handlersLock = new();
     private readonly SemaphoreSlim _connectLock = new(1, 1);
 
@@ -130,7 +133,11 @@ public class DiscordGatewayService(
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Ошибка отправки сообщения в Discord канал {ChannelId}", channelId);
+                logger.LogError(
+                    ex,
+                    "Ошибка отправки сообщения в Discord канал {ChannelId}",
+                    channelId
+                );
                 result = OperationResult.Bad($"Ошибка Discord отправки: {ex.Message}");
             }
         }

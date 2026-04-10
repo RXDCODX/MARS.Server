@@ -41,7 +41,9 @@ public class DiscordCommandService(
         {
             discordGatewayService.RegisterMessageCreatedHandler(HandleMessageCreatedAsync);
             _isHandlerRegistered = true;
-            logger.LogInformation("DiscordCommandService зарегистрировал обработчик MessageCreated");
+            logger.LogInformation(
+                "DiscordCommandService зарегистрировал обработчик MessageCreated"
+            );
         }
 
         return Task.CompletedTask;
@@ -140,10 +142,7 @@ public class DiscordCommandService(
                     else
                     {
                         var missingParam = requiredParams[inputParts.Length];
-                        var usage = string.Join(
-                            " ",
-                            requiredParams.Select(p => $"<{p.Name}>")
-                        );
+                        var usage = string.Join(" ", requiredParams.Select(p => $"<{p.Name}>"));
                         await args.Channel.SendMessageAsync(
                             $"Не хватает параметра '{missingParam.Name}'. Использование: /{commandName} {usage}"
                         );
@@ -172,7 +171,12 @@ public class DiscordCommandService(
 
         if (!string.IsNullOrWhiteSpace(commandsList))
         {
-            result = string.Concat(commandsList, Environment.NewLine, " | ", playCommandDescription);
+            result = string.Concat(
+                commandsList,
+                Environment.NewLine,
+                " | ",
+                playCommandDescription
+            );
         }
         else
         {

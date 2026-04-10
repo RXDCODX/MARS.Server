@@ -13,7 +13,10 @@ public interface ITelegramDiscordBridgeService
         CancellationToken cancellationToken = default
     );
 
-    Task<OperationResult> DeleteBindingAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<OperationResult> DeleteBindingAsync(
+        Guid id,
+        CancellationToken cancellationToken = default
+    );
 
     Task<OperationResult<TelegramDiscordBindingDto>> SetBindingEnabledAsync(
         Guid id,

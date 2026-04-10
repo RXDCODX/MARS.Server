@@ -43,7 +43,9 @@ public class TanyaCommand : BaseCommand
             case 1:
                 return new ValueTask<DateTimeOffset[]>([today, today.AddDays(3)]);
             case 2:
-                return new ValueTask<DateTimeOffset[]>([today.AddDays(cycleLength - day), today.AddDays(cycleLength - day + 1)]);
+                return new ValueTask<DateTimeOffset[]>(
+                    [today.AddDays(cycleLength - day), today.AddDays(cycleLength - day + 1)]
+                );
             case 3:
                 goto case 2;
             default:

@@ -521,7 +521,7 @@ public class WaifuRollService(
     public async Task<TimeSpan> GetWaifuRollCoolDownAsync()
     {
         await using var dbContext = await factory.CreateDbContextAsync();
-        
+
         var cooldownValue = await dbContext
             .RootState.AsNoTracking()
             .Where(e => e.Name == RootStateKeys.WaifuRollCooldownMinutes)

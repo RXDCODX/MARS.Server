@@ -24,8 +24,9 @@ public class DiscordPlayRequestService(
     private const long Tier2UploadLimitBytes = 50L * 1024 * 1024;
     private const long Tier3UploadLimitBytes = 100L * 1024 * 1024;
     private static readonly TimeSpan SessionLifetime = TimeSpan.FromMinutes(10);
-    private readonly ConcurrentDictionary<string, DiscordPlaySelectionSession> _sessions =
-        new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, DiscordPlaySelectionSession> _sessions = new(
+        StringComparer.Ordinal
+    );
 
     private bool _isHandlerRegistered;
     private bool _isSlashCommandRegistered;
@@ -190,7 +191,11 @@ public class DiscordPlayRequestService(
         CancellationToken cancellationToken
     )
     {
-        var tracks = await youTubeResolver.SearchTracksAsync(query, MaxSearchResults, cancellationToken);
+        var tracks = await youTubeResolver.SearchTracksAsync(
+            query,
+            MaxSearchResults,
+            cancellationToken
+        );
 
         if (tracks.Length > 0)
         {
@@ -277,7 +282,10 @@ public class DiscordPlayRequestService(
             );
 
             var originalMessage = await interaction.GetOriginalResponseAsync();
-            var track = await youTubeResolver.ResolveVideoAsync(normalizedYouTubeUrl, CancellationToken.None);
+            var track = await youTubeResolver.ResolveVideoAsync(
+                normalizedYouTubeUrl,
+                CancellationToken.None
+            );
 
             if (track is not null && interaction.Channel is not null)
             {
@@ -348,7 +356,12 @@ public class DiscordPlayRequestService(
 
             if (tracks.Length > 0)
             {
-                var session = CreateSession(interaction.ChannelId, interaction.User.Id, query, tracks);
+                var session = CreateSession(
+                    interaction.ChannelId,
+                    interaction.User.Id,
+                    query,
+                    tracks
+                );
                 var builder = BuildInteractionResponseBuilder(session);
 
                 await interaction.CreateResponseAsync(
@@ -460,7 +473,11 @@ public class DiscordPlayRequestService(
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Ошибка отправки Discord play аудиофайла для {VideoId}", track.VideoId);
+                logger.LogError(
+                    ex,
+                    "Ошибка отправки Discord play аудиофайла для {VideoId}",
+                    track.VideoId
+                );
 
                 if (interaction is not null)
                 {
@@ -623,12 +640,13 @@ public class DiscordPlayRequestService(
     private static DiscordSelectComponent BuildSelectComponent(DiscordPlaySelectionSession session)
     {
         var options = session
-            .Tracks.Select((track, index) =>
-                new DiscordSelectComponentOption(
-                    TrimText(string.Concat(index + 1, ". ", track.TrackName), 100),
-                    index.ToString(CultureInfo.InvariantCulture),
-                    TrimText(BuildOptionDescription(track), 100)
-                )
+            .Tracks.Select(
+                (track, index) =>
+                    new DiscordSelectComponentOption(
+                        TrimText(string.Concat(index + 1, ". ", track.TrackName), 100),
+                        index.ToString(CultureInfo.InvariantCulture),
+                        TrimText(BuildOptionDescription(track), 100)
+                    )
             )
             .ToArray();
         var result = new DiscordSelectComponent(
@@ -734,7 +752,14 @@ public class DiscordPlayRequestService(
         if (values.Count > 0)
         {
             var rawValue = values[0];
-            if (int.TryParse(rawValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out var index))
+            if (
+                int.TryParse(
+                    rawValue,
+                    NumberStyles.Integer,
+                    CultureInfo.InvariantCulture,
+                    out var index
+                )
+            )
             {
                 result = index;
             }
@@ -827,9 +852,11 @@ public class DiscordPlayRequestService(
         {
             var builder = new StringBuilder();
 
-            builder.AppendLine($"Найдено {session.Tracks.Count} треков по запросу: {session.Query}");
+            builder.AppendLine(
+                $"Найдено {session.Tracks.Count} треков по запросу: {session.Query}"
+            );
 
-            for (var index = 0 ; index < session.Tracks.Count ; index++)
+            for (var index = 0; index < session.Tracks.Count; index++)
             {
                 var track = session.Tracks[index];
                 builder.Append(index + 1);
@@ -920,9 +947,10 @@ public class DiscordPlayRequestService(
 
         if (duration > TimeSpan.Zero)
         {
-            result = duration.TotalHours >= 1
-                ? $"{(int)duration.TotalHours:D2}:{duration.Minutes:D2}:{duration.Seconds:D2}"
-                : $"{(int)duration.TotalMinutes:D2}:{duration.Seconds:D2}";
+            result =
+                duration.TotalHours >= 1
+                    ? $"{(int)duration.TotalHours:D2}:{duration.Minutes:D2}:{duration.Seconds:D2}"
+                    : $"{(int)duration.TotalMinutes:D2}:{duration.Seconds:D2}";
         }
 
         return result;

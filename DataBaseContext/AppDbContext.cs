@@ -82,7 +82,8 @@ public sealed partial class AppDbContext : DbContext
     public DbSet<EnvironmentVariable> EnvironmentVariables { get; set; } = null!;
     public DbSet<BlockedTtsVoice> BlockedTtsVoices { get; set; } = null!;
     public DbSet<ChannelProcessingState> ChannelProcessingStates { get; set; } = null!;
-    public DbSet<TelegramDiscordChannelBinding> TelegramDiscordChannelBindings { get; set; } = null!;
+    public DbSet<TelegramDiscordChannelBinding> TelegramDiscordChannelBindings { get; set; } =
+        null!;
     public DbSet<TelegramDiscordChannelState> TelegramDiscordChannelStates { get; set; } = null!;
 
     /// <summary>
@@ -293,14 +294,16 @@ public sealed partial class AppDbContext : DbContext
                     {
                         Name = RootStateKeys.WTelegramMtProxyUrl,
                         Value = string.Empty,
-                        Description = "MTProxy URL для WTelegram (например: https://t.me/proxy?server=...)",
+                        Description =
+                            "MTProxy URL для WTelegram (например: https://t.me/proxy?server=...)",
                         TypeDescription = "string",
                     },
                     new RootState
                     {
                         Name = RootStateKeys.WTelegramProxyUrl,
                         Value = string.Empty,
-                        Description = "Прокси для WTelegram: socks5://user:pass@host:port или http://user:pass@host:port",
+                        Description =
+                            "Прокси для WTelegram: socks5://user:pass@host:port или http://user:pass@host:port",
                         TypeDescription = "string",
                     },
                 ]
@@ -383,9 +386,7 @@ public sealed partial class AppDbContext : DbContext
             .Property(e => e.DiscordChannelId)
             .HasConversion(new NumberToStringConverter<ulong>());
 
-        modelBuilder
-            .Entity<TelegramDiscordChannelState>()
-            .HasKey(e => e.TelegramChannelId);
+        modelBuilder.Entity<TelegramDiscordChannelState>().HasKey(e => e.TelegramChannelId);
 
         // Конфигурация для EnvironmentVariable
         modelBuilder.Entity<EnvironmentVariable>().HasIndex(e => e.Key).IsUnique();

@@ -73,11 +73,11 @@ public class TwitchMediaAlerts(
                 mediaOld = mediaList[0];
                 break;
             case > 1:
-                {
-                    var index = Random.Shared.Next(mediaList.Count);
-                    mediaOld = mediaList[index];
-                    break;
-                }
+            {
+                var index = Random.Shared.Next(mediaList.Count);
+                mediaOld = mediaList[index];
+                break;
+            }
         }
 
         if (mediaOld != null)
@@ -129,11 +129,11 @@ public class TwitchMediaAlerts(
                 mediaOld = mediaList[0];
                 break;
             case > 1:
-                {
-                    var index = Random.Shared.Next(mediaList.Count);
-                    mediaOld = mediaList[index];
-                    break;
-                }
+            {
+                var index = Random.Shared.Next(mediaList.Count);
+                mediaOld = mediaList[index];
+                break;
+            }
         }
 
         if (mediaOld != null)

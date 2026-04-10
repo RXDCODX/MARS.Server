@@ -4,7 +4,8 @@ using MARS.Server.Services.Twitch.Client;
 
 namespace MARS.Server.Services.CommandExecutor.Commands;
 
-public class TwitchchannelstatusTwitchConnectionStatusCommand(TwitchConnectionManager manager) : BaseCommand
+public class TwitchchannelstatusTwitchConnectionStatusCommand(TwitchConnectionManager manager)
+    : BaseCommand
 {
     public override string CommandName => "twitchchannelstatus";
     public override string Description => "Показывает состояние подключения Twitch-чата";

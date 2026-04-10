@@ -556,7 +556,7 @@ public class FramedataStagingService(
                     return true;
                 }
 
-                for (var i = 0 ; i < left.GetArrayLength() ; i++)
+                for (var i = 0; i < left.GetArrayLength(); i++)
                 {
                     if (HasNonNullChanges(left[i], right[i], isSupplementMode))
                     {

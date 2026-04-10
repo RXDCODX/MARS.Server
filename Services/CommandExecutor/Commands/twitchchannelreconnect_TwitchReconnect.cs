@@ -4,7 +4,8 @@ using MARS.Server.Services.Twitch.Client;
 
 namespace MARS.Server.Services.CommandExecutor.Commands;
 
-public class TwitchchannelreconnectTwitchReconnectCommand(TwitchConnectionManager manager) : BaseCommand
+public class TwitchchannelreconnectTwitchReconnectCommand(TwitchConnectionManager manager)
+    : BaseCommand
 {
     public override string CommandName => "twitchchannelreconnect";
     public override string Description => "Выполняет реконнект к Twitch-чату";

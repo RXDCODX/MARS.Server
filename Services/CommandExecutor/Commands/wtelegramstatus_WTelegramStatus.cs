@@ -5,7 +5,8 @@ using MARS.Server.Services.Telegram.WTelegram;
 
 namespace MARS.Server.Services.CommandExecutor.Commands;
 
-public class WtelegramstatusWTelegramStatusCommand(WTelegramClientService clientService) : BaseCommand
+public class WtelegramstatusWTelegramStatusCommand(WTelegramClientService clientService)
+    : BaseCommand
 {
     public override string CommandName => "wtelegramstatus";
     public override string Description =>

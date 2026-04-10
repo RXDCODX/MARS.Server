@@ -35,10 +35,7 @@ public class SpotifyAuthController(SpotifyAuthService spotifyAuthService) : Cont
 
             if (authResult.Success)
             {
-                result = OperationResult<SpotifyAuthStartResult>.Ok(
-                    authResult.Message,
-                    authResult
-                );
+                result = OperationResult<SpotifyAuthStartResult>.Ok(authResult.Message, authResult);
             }
             else
             {
