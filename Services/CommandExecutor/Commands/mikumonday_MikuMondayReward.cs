@@ -6,7 +6,7 @@ using MARS.Server.Services.Twitch.Rewards.TwitchMikuMondayReward.Entities;
 
 namespace MARS.Server.Services.CommandExecutor.Commands;
 
-public class MikumondayMikuMondayRewardCommand(
+public class MikuMondayRewardCommand(
     MikuMondayTracksService tracksService,
     IHubContext<TelegramusHub, ITelegramusHub> hubContext,
     IDbContextFactory<AppDbContext> dbContextFactory,

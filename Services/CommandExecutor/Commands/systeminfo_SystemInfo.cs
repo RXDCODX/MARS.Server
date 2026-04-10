@@ -3,7 +3,7 @@ using MARS.Server.Services.CommandExecutor.Entitys.Commands;
 
 namespace MARS.Server.Services.CommandExecutor.Commands;
 
-public class SysteminfoSystemInfoCommand(
+public class SystemInfoCommand(
     ILogger<SystemInfoCommand> logger,
     IDbContextFactory<AppDbContext> dbContextFactory,
     IConfiguration configuration
