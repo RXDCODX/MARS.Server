@@ -131,12 +131,26 @@ public class SoundRequestUserQueue(
             dbContext.SoundRequestQueueItems.Remove(queueItemToRemove);
 
             // Сдвигаем порядок остальных элементов в очереди (только те, что были после удаленного)
-            await dbContext
-                .SoundRequestQueueItems.Where(qi => qi.QueueOrder > removedOrder)
-                .ExecuteUpdateAsync(
-                    e => e.SetProperty(qi => qi.QueueOrder, qi => qi.QueueOrder - 1),
-                    cancellationToken: _cancellationToken
-                );
+            try
+            {
+                await dbContext
+                    .SoundRequestQueueItems.Where(qi => qi.QueueOrder > removedOrder)
+                    .ExecuteUpdateAsync(
+                        e => e.SetProperty(qi => qi.QueueOrder, qi => qi.QueueOrder - 1),
+                        cancellationToken: _cancellationToken
+                    );
+            }
+            catch (InvalidOperationException)
+            {
+                var affectedItems = await dbContext
+                    .SoundRequestQueueItems.Where(qi => qi.QueueOrder > removedOrder)
+                    .ToListAsync(cancellationToken: _cancellationToken);
+
+                foreach (var affectedItem in affectedItems)
+                {
+                    affectedItem.QueueOrder -= 1;
+                }
+            }
 
             await dbContext.SaveChangesAsync(_cancellationToken);
         }
@@ -251,12 +265,26 @@ public class SoundRequestUserQueue(
         if (!string.IsNullOrWhiteSpace(requestedByTwitchId))
         {
             // Сдвигаем все существующие элементы очереди на 1 позицию вверх (только QueueOrder >= 1)
-            await dbContext
-                .SoundRequestQueueItems.Where(qi => qi.QueueOrder >= 1)
-                .ExecuteUpdateAsync(
-                    e => e.SetProperty(qi => qi.QueueOrder, qi => qi.QueueOrder + 1),
-                    cancellationToken: _cancellationToken
-                );
+            try
+            {
+                await dbContext
+                    .SoundRequestQueueItems.Where(qi => qi.QueueOrder >= 1)
+                    .ExecuteUpdateAsync(
+                        e => e.SetProperty(qi => qi.QueueOrder, qi => qi.QueueOrder + 1),
+                        cancellationToken: _cancellationToken
+                    );
+            }
+            catch (InvalidOperationException)
+            {
+                var queueItems = await dbContext
+                    .SoundRequestQueueItems.Where(qi => qi.QueueOrder >= 1)
+                    .ToListAsync(cancellationToken: _cancellationToken);
+
+                foreach (var item in queueItems)
+                {
+                    item.QueueOrder += 1;
+                }
+            }
 
             // Сначала убедимся, что трек существует в базе, или создадим новый
             BaseTrackInfo? existingTrack = null;
@@ -359,10 +387,25 @@ public class SoundRequestUserQueue(
         await using var dbContext = await contextFactory.CreateDbContextAsync(_cancellationToken);
 
         // Сдвигаем всю очередь на -1 (включая элементы с QueueOrder >= 0)
-        await dbContext.SoundRequestQueueItems.ExecuteUpdateAsync(
-            e => e.SetProperty(qi => qi.QueueOrder, qi => qi.QueueOrder - 1),
-            cancellationToken: _cancellationToken
-        );
+        try
+        {
+            await dbContext.SoundRequestQueueItems.ExecuteUpdateAsync(
+                e => e.SetProperty(qi => qi.QueueOrder, qi => qi.QueueOrder - 1),
+                cancellationToken: _cancellationToken
+            );
+        }
+        catch (InvalidOperationException)
+        {
+            var queueItems = await dbContext
+                .SoundRequestQueueItems.ToListAsync(cancellationToken: _cancellationToken);
+
+            foreach (var queueItem in queueItems)
+            {
+                queueItem.QueueOrder -= 1;
+            }
+
+            await dbContext.SaveChangesAsync(_cancellationToken);
+        }
 
         // Получаем элемент с QueueOrder = 0 (который теперь нужно воспроизвести)
         result = await dbContext

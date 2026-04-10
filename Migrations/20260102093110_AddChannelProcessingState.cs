@@ -1,4 +1,4 @@
-﻿using MARS.Server.Services.TelegramPrivateChannelsResender.Entities;
+using MARS.Server.Services.Telegram.PrivateChannelsResender.Entities;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable

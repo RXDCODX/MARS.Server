@@ -1,6 +1,8 @@
-﻿using MARS.Server.Services.SoundRequest.Entities;
+﻿using MARS.Server.ApplicationState;
+using MARS.Server.Services.SoundRequest.Entities;
 using MARS.Server.Services.SoundRequest.Interfaces;
 using MARS.Server.Services.SoundRequest.Queue;
+using MARS.Server.Services.SoundRequest.Spotify;
 
 namespace MARS.Server.Services.SoundRequest;
 
@@ -9,6 +11,7 @@ namespace MARS.Server.Services.SoundRequest;
 /// </summary>
 public class MainPlayer : IPlayerController, IHostedService, IDisposable
 {
+    private const int MaxHistoryEntries = 1000;
     private readonly CancellationToken _cancellationToken;
     private bool _disposed;
     private readonly StateManager _stateManager;
@@ -16,6 +19,13 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
     private readonly SoundRequestUserQueue _queue;
     private readonly IDbContextFactory<AppDbContext> _dbFactory;
     private readonly ILogger<MainPlayer> _logger;
+    private readonly SpotifyPlaybackService _spotifyPlaybackService;
+    private readonly SoundRequestConfiguration _soundRequestConfiguration;
+    private readonly SpotifySoundRequestConfiguration _spotifyConfiguration;
+    private readonly SemaphoreSlim _spotifyMonitorTransitionLock = new(1, 1);
+    private Task? _spotifyMonitorTask;
+    private Guid? _lastSpotifyCompletedQueueItemId;
+    private DateTime _lastSpotifyTrackPlayIssuedAtUtc = DateTime.UnixEpoch;
 
     private readonly ITwitchClient _twitchClient;
 
@@ -29,6 +39,9 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
         SoundRequestUserQueue queue,
         IDbContextFactory<AppDbContext> dbFactory,
         IHostApplicationLifetime lifetime,
+        SpotifyPlaybackService spotifyPlaybackService,
+        IOptions<SoundRequestConfiguration> soundRequestOptions,
+        IOptions<SpotifySoundRequestConfiguration> spotifyOptions,
         ITwitchClient twitchClient,
         ILogger<MainPlayer> logger
     )
@@ -37,6 +50,9 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
         _inSignalRHubService = inSignalRHubService;
         _queue = queue;
         _dbFactory = dbFactory;
+        _spotifyPlaybackService = spotifyPlaybackService;
+        _soundRequestConfiguration = soundRequestOptions.Value;
+        _spotifyConfiguration = spotifyOptions.Value;
         _twitchClient = twitchClient;
         _logger = logger;
         _cancellationToken = lifetime.ApplicationStopping;
@@ -51,11 +67,29 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
     async Task IHostedService.StartAsync(CancellationToken cancellationToken)
     {
         await InitializeAsync();
+
+        if (await IsSpotifyModeAsync(_cancellationToken))
+        {
+            _spotifyMonitorTask = Task.Run(
+                () => MonitorSpotifyPlaybackAsync(_cancellationToken),
+                _cancellationToken
+            );
+        }
     }
 
-    Task IHostedService.StopAsync(CancellationToken cancellationToken)
+    async Task IHostedService.StopAsync(CancellationToken cancellationToken)
     {
-        return Task.CompletedTask;
+        if (_spotifyMonitorTask != null)
+        {
+            try
+            {
+                await _spotifyMonitorTask;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Spotify playback monitor stopped with exception");
+            }
+        }
     }
 
     #endregion
@@ -176,6 +210,25 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
             // Обновляем состояние - начинаем воспроизведение
             await _stateManager.StartPlayingAsync(queueItem, notify: true);
 
+            if (
+                await IsSpotifyModeAsync(_cancellationToken)
+                && _spotifyPlaybackService.IsConfigured()
+            )
+            {
+                var started = await _spotifyPlaybackService.PlayTrackAsync(
+                    queueItem.Track,
+                    _cancellationToken
+                );
+                if (!started)
+                {
+                    throw new InvalidOperationException(
+                        "Не удалось запустить трек в Spotify клиенте"
+                    );
+                }
+
+                _lastSpotifyTrackPlayIssuedAtUtc = DateTime.UtcNow;
+            }
+
             _logger.LogDebug("Состояние обновлено, уведомление отправлено");
 
             // Обновляем время последнего воспроизведения в БД
@@ -203,6 +256,11 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
     /// </summary>
     public async Task PauseAsync(CancellationToken ct)
     {
+        if (await IsSpotifyModeAsync(ct) && _spotifyPlaybackService.IsConfigured())
+        {
+            await _spotifyPlaybackService.PauseAsync(ct);
+        }
+
         await _stateManager.SetPausedAsync(true, notify: true);
     }
 
@@ -211,6 +269,11 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
     /// </summary>
     public async Task ResumeAsync(CancellationToken ct)
     {
+        if (await IsSpotifyModeAsync(ct) && _spotifyPlaybackService.IsConfigured())
+        {
+            await _spotifyPlaybackService.ResumeAsync(ct);
+        }
+
         await _stateManager.SetPausedAsync(false, notify: true);
     }
 
@@ -219,6 +282,11 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
     /// </summary>
     public async Task StopAsync(CancellationToken ct)
     {
+        if (await IsSpotifyModeAsync(ct) && _spotifyPlaybackService.IsConfigured())
+        {
+            await _spotifyPlaybackService.StopAsync(ct);
+        }
+
         await _stateManager.StopPlaybackAsync(notify: true);
     }
 
@@ -254,6 +322,11 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
     /// </summary>
     public async Task SetVolumeAsync(float volume, CancellationToken ct)
     {
+        if (await IsSpotifyModeAsync(ct) && _spotifyPlaybackService.IsConfigured())
+        {
+            await _spotifyPlaybackService.SetVolumeAsync((int)Math.Clamp(volume, 0f, 100f), ct);
+        }
+
         await _stateManager.SetVolumeAsync(volume, notify: true);
     }
 
@@ -262,6 +335,11 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
     /// </summary>
     public async Task MuteAsync(CancellationToken ct)
     {
+        if (await IsSpotifyModeAsync(ct) && _spotifyPlaybackService.IsConfigured())
+        {
+            await _spotifyPlaybackService.SetVolumeAsync(0, ct);
+        }
+
         await _stateManager.SetMutedAsync(true, notify: true);
     }
 
@@ -270,6 +348,15 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
     /// </summary>
     public async Task UnmuteAsync(CancellationToken ct)
     {
+        if (await IsSpotifyModeAsync(ct) && _spotifyPlaybackService.IsConfigured())
+        {
+            var state = await _stateManager.GetStateAsync();
+            await _spotifyPlaybackService.SetVolumeAsync(
+                (int)Math.Clamp(state.Volume, 0f, 100f),
+                ct
+            );
+        }
+
         await _stateManager.SetMutedAsync(false, notify: true);
     }
 
@@ -369,10 +456,26 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
             );
 
             previousQueueItem.QueueOrder = 0;
-            await db.SoundRequestQueueItems.ExecuteUpdateAsync(
-                e => e.SetProperty(t => t.QueueOrder, t => t.QueueOrder + 1),
-                cancellationToken: _cancellationToken
-            );
+            try
+            {
+                await db.SoundRequestQueueItems.ExecuteUpdateAsync(
+                    e => e.SetProperty(t => t.QueueOrder, t => t.QueueOrder + 1),
+                    cancellationToken: _cancellationToken
+                );
+            }
+            catch (InvalidOperationException)
+            {
+                var queueItems = await db.SoundRequestQueueItems.ToListAsync(
+                    cancellationToken: _cancellationToken
+                );
+
+                foreach (var queueItem in queueItems)
+                {
+                    queueItem.QueueOrder += 1;
+                }
+
+                await db.SaveChangesAsync(_cancellationToken);
+            }
 
             await PlayAsync(previousQueueItem, _cancellationToken);
 
@@ -468,7 +571,7 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
     }
 
     /// <summary>
-    /// Очистить старую историю (элементы с QueueOrder &lt; 0 старше 30 дней)
+    /// Ограничить историю воспроизведений до MaxHistoryEntries записей
     /// </summary>
     private async Task CleanupOldHistoryAsync()
     {
@@ -476,20 +579,49 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
         {
             await using var db = await _dbFactory.CreateDbContextAsync(_cancellationToken);
 
-            var thirtyDaysAgo = DateTime.UtcNow.AddDays(-30);
-
-            // Удаляем очень старую историю (старше 30 дней)
-            var oldHistoryCount = await db
-                .SoundRequestQueueItems.Where(qi =>
-                    qi.QueueOrder < 0 && qi.RequestedAt < thirtyDaysAgo
+            var historyQuery = db.SoundRequestQueueItems.Where(qi =>
+                qi.QueueOrder < 0
+                && !db.SoundRequestPlayerState.Any(ps =>
+                    ps.CurrentQueueItemId == qi.Id || ps.NextQueueItemId == qi.Id
                 )
-                .ExecuteDeleteAsync(_cancellationToken);
+            );
+
+            var historyCount = await historyQuery.CountAsync(_cancellationToken);
+            var historyToDeleteCount = Math.Max(0, historyCount - MaxHistoryEntries);
+
+            var oldHistoryCount = 0;
+
+            if (historyToDeleteCount > 0)
+            {
+                try
+                {
+                    oldHistoryCount = await historyQuery
+                        .OrderBy(qi => qi.QueueOrder)
+                        .Take(historyToDeleteCount)
+                        .ExecuteDeleteAsync(_cancellationToken);
+                }
+                catch (InvalidOperationException)
+                {
+                    var oldHistoryItems = await historyQuery
+                        .OrderBy(qi => qi.QueueOrder)
+                        .Take(historyToDeleteCount)
+                        .ToListAsync(_cancellationToken);
+
+                    if (oldHistoryItems.Count > 0)
+                    {
+                        db.SoundRequestQueueItems.RemoveRange(oldHistoryItems);
+                        oldHistoryCount = oldHistoryItems.Count;
+                        await db.SaveChangesAsync(_cancellationToken);
+                    }
+                }
+            }
 
             if (oldHistoryCount > 0)
             {
                 _logger.LogInformation(
-                    "Очистка истории: удалено {HistoryCount} старых элементов (старше 30 дней)",
-                    oldHistoryCount
+                    "Очистка истории: удалено {HistoryCount} элементов, лимит истории = {HistoryLimit}",
+                    oldHistoryCount,
+                    MaxHistoryEntries
                 );
             }
         }
@@ -735,11 +867,66 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
 
         if (queueItem != null)
         {
-            // Воспроизводим выбранный элемент
-            await PlayAsync(queueItem, _cancellationToken);
+            if (queueItem.QueueOrder < 0)
+            {
+                await using var db = await _dbFactory.CreateDbContextAsync(_cancellationToken);
 
-            // Удаляем из очереди
-            await _queue.RemoveFromQueueAsync(queueItemId);
+                var trackedQueueItem = await db.SoundRequestQueueItems.FirstOrDefaultAsync(
+                    qi => qi.Id == queueItemId,
+                    _cancellationToken
+                );
+
+                if (trackedQueueItem != null)
+                {
+                    var queueOrderShift = -trackedQueueItem.QueueOrder;
+
+                    try
+                    {
+                        await db
+                            .SoundRequestQueueItems.Where(qi =>
+                                qi.Id != queueItemId && qi.QueueOrder > trackedQueueItem.QueueOrder
+                            )
+                            .ExecuteUpdateAsync(
+                                e =>
+                                    e.SetProperty(
+                                        qi => qi.QueueOrder,
+                                        qi => qi.QueueOrder + queueOrderShift
+                                    ),
+                                cancellationToken: _cancellationToken
+                            );
+                    }
+                    catch (InvalidOperationException)
+                    {
+                        var forwardItems = await db
+                            .SoundRequestQueueItems.Where(qi =>
+                                qi.Id != queueItemId && qi.QueueOrder > trackedQueueItem.QueueOrder
+                            )
+                            .ToListAsync(_cancellationToken);
+
+                        foreach (var forwardItem in forwardItems)
+                        {
+                            forwardItem.QueueOrder += queueOrderShift;
+                        }
+                    }
+
+                    trackedQueueItem.QueueOrder = 0;
+                    await db.SaveChangesAsync(_cancellationToken);
+                }
+
+                var historyQueueItem = await _queue.GetQueueItemByIdAsync(queueItemId);
+                if (historyQueueItem != null)
+                {
+                    await PlayAsync(historyQueueItem, _cancellationToken);
+                }
+            }
+            else
+            {
+                // Воспроизводим выбранный элемент
+                await PlayAsync(queueItem, _cancellationToken);
+
+                // Удаляем из очереди
+                await _queue.RemoveFromQueueAsync(queueItemId);
+            }
 
             // Уведомляем об изменении очереди
             await NotifyQueueChangedAsync();
@@ -806,12 +993,180 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
 
     #endregion
 
+    #region Spotify Monitoring
+
+    private async Task MonitorSpotifyPlaybackAsync(CancellationToken ct)
+    {
+        var pollingInterval = Math.Max(750, _spotifyConfiguration.PollingIntervalMs);
+
+        while (!ct.IsCancellationRequested)
+        {
+            try
+            {
+                if (_spotifyPlaybackService.IsConfigured())
+                {
+                    await HandleSpotifyPlaybackTickAsync(ct);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Ошибка Spotify playback monitor tick");
+            }
+
+            try
+            {
+                await Task.Delay(pollingInterval, ct);
+            }
+            catch (TaskCanceledException)
+            {
+                break;
+            }
+        }
+    }
+
+    private async Task HandleSpotifyPlaybackTickAsync(CancellationToken ct)
+    {
+        var state = await _stateManager.GetStateAsync();
+        var currentQueueItem = state.CurrentQueueItem;
+
+        if (
+            state.State == PlaybackState.Playing
+            && currentQueueItem?.Track != null
+            && _spotifyPlaybackService.IsSpotifyTrack(currentQueueItem.Track)
+        )
+        {
+            var playback = await _spotifyPlaybackService.GetCurrentPlaybackAsync(ct);
+
+            if (playback != null)
+            {
+                await _stateManager.UpdateCurrentTrackProgressAsync(
+                    TimeSpan.FromMilliseconds(Math.Max(0, playback.ProgressMs)),
+                    notify: false
+                );
+
+                var expectedTrackId = _spotifyPlaybackService.GetSpotifyTrackId(
+                    currentQueueItem.Track
+                );
+                var isTrackChangedExternally =
+                    !string.IsNullOrWhiteSpace(playback.TrackId)
+                    && !string.IsNullOrWhiteSpace(expectedTrackId)
+                    && !string.Equals(
+                        playback.TrackId,
+                        expectedTrackId,
+                        StringComparison.OrdinalIgnoreCase
+                    );
+
+                var isTrackAlmostEnded =
+                    !playback.IsPlaying
+                    && playback.DurationMs > 0
+                    && playback.ProgressMs >= playback.DurationMs - 1200;
+
+                var graceMs = Math.Max(0, _spotifyConfiguration.UserPlaybackPriorityGraceMs);
+                var isInsidePriorityGraceWindow =
+                    graceMs > 0
+                    && DateTime.UtcNow - _lastSpotifyTrackPlayIssuedAtUtc
+                        < TimeSpan.FromMilliseconds(graceMs);
+
+                if (
+                    _spotifyConfiguration.PrioritizeUserPlayback
+                    && isTrackChangedExternally
+                    && playback.IsPlaying
+                    && !isInsidePriorityGraceWindow
+                )
+                {
+                    _logger.LogInformation(
+                        "Обнаружено ручное воспроизведение в Spotify (TrackId={TrackId}) - SoundRequest поставлен на паузу",
+                        playback.TrackId ?? "null"
+                    );
+
+                    await _stateManager.SetPlaybackStateAsync(PlaybackState.Paused, notify: true);
+                    _lastSpotifyCompletedQueueItemId = null;
+                }
+                else if (isTrackChangedExternally || isTrackAlmostEnded)
+                {
+                    await _spotifyMonitorTransitionLock.WaitAsync(ct);
+                    try
+                    {
+                        if (_lastSpotifyCompletedQueueItemId != currentQueueItem.Id)
+                        {
+                            _lastSpotifyCompletedQueueItemId = currentQueueItem.Id;
+                            await OnTrackEndedAsync(currentQueueItem.Track);
+                        }
+                    }
+                    finally
+                    {
+                        _spotifyMonitorTransitionLock.Release();
+                    }
+                }
+            }
+        }
+        else
+        {
+            _lastSpotifyCompletedQueueItemId = null;
+        }
+    }
+
+    private async Task<bool> IsSpotifyModeAsync(CancellationToken ct)
+    {
+        var provider = _soundRequestConfiguration.Provider;
+        var result = false;
+
+        await using var db = await _dbFactory.CreateDbContextAsync(ct);
+        var providerState = await db
+            .RootState.AsNoTracking()
+            .SingleOrDefaultAsync(s => s.Name == RootStateKeys.SoundRequestProvider, ct);
+
+        if (
+            providerState is { Value: not null }
+            && TryParseProvider(providerState.Value, out var parsedProvider)
+        )
+        {
+            provider = parsedProvider;
+        }
+
+        if (provider == SoundRequestProvider.Spotify && _spotifyConfiguration.Enabled)
+        {
+            result = true;
+        }
+
+        return result;
+    }
+
+    private static bool TryParseProvider(string rawValue, out SoundRequestProvider provider)
+    {
+        var result = false;
+        provider = SoundRequestProvider.YouTube;
+
+        if (!string.IsNullOrWhiteSpace(rawValue))
+        {
+            var normalizedValue = rawValue.Trim();
+            if (Enum.TryParse<SoundRequestProvider>(normalizedValue, true, out var byName))
+            {
+                provider = byName;
+                result = true;
+            }
+            else if (int.TryParse(normalizedValue, out var numericValue))
+            {
+                if (Enum.IsDefined(typeof(SoundRequestProvider), numericValue))
+                {
+                    provider = (SoundRequestProvider)numericValue;
+                    result = true;
+                }
+            }
+        }
+
+        return result;
+    }
+
+    #endregion
+
     #region IDisposable
 
     public void Dispose()
     {
         if (!_disposed)
         {
+            _spotifyMonitorTransitionLock.Dispose();
             _disposed = true;
         }
         GC.SuppressFinalize(this);

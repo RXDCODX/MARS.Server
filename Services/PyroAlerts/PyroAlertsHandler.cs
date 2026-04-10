@@ -1,4 +1,5 @@
-﻿using Telegram.Bot.Types.Enums;
+﻿using MARS.Server.Services.Telegram;
+using Telegram.Bot.Types.Enums;
 using MemoryStorage = MARS.Server.Services.MemoryStorageService.MemoryStorage;
 
 namespace MARS.Server.Services.PyroAlerts;

@@ -1,6 +1,6 @@
-﻿using MARS.Server.Services.StreamAcrhive_UNUSED.Entitys;
+using MARS.Server.Services.StreamAcrhive_UNUSED.Entitys;
 using MARS.Server.Services.StreamAcrhive_UNUSED.Interfaces;
-using MARS.Server.Services.TelegramBotService;
+using MARS.Server.Services.Telegram.WTelegram;
 using TL;
 using InputFile = TL.InputFile;
 

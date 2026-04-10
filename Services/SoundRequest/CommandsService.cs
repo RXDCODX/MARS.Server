@@ -1,8 +1,10 @@
-﻿using MARS.Server.Services.SoundRequest.Entities;
+﻿using MARS.Server.ApplicationState;
+using MARS.Server.Services.SoundRequest.Entities;
 using MARS.Server.Services.SoundRequest.Interfaces;
 using MARS.Server.Services.SoundRequest.Queue;
+using MARS.Server.Services.SoundRequest.Spotify;
+using MARS.Server.Services.SoundRequest.YouTube;
 using MARS.Server.Services.Twitch.Entitys;
-using MARS.Server.Services.YouTube;
 
 namespace MARS.Server.Services.SoundRequest;
 
@@ -11,11 +13,14 @@ namespace MARS.Server.Services.SoundRequest;
 /// </summary>
 public class CommandsService(
     YouTubeResolver ytResolver,
+    SpotifyResolver spotifyResolver,
     SoundRequestUserQueue queue,
     IDbContextFactory<AppDbContext> dbFactory,
     IPlayerController playerController,
     StateManager stateManager,
-    InSignalRHubService inSignalRHubService
+    InSignalRHubService inSignalRHubService,
+    IOptions<SoundRequestConfiguration> soundRequestOptions,
+    IOptions<SpotifySoundRequestConfiguration> spotifyOptions
 )
 {
     /// <summary>
@@ -47,29 +52,43 @@ public class CommandsService(
             // Нормализуем URL - добавляем схему если её нет
             var normalizedQuery = NormalizeUrl(query);
 
+            var provider = await ResolveProviderAsync(cancellationToken);
+
             // Проверяем, является ли запрос URL
             BaseTrackInfo? info = null;
             if (Uri.TryCreate(normalizedQuery, UriKind.Absolute, out _))
             {
-                // Пытаемся извлечь VideoId из URL
-                var videoId = ExtractYouTubeVideoId(normalizedQuery);
+                var sourceTrackId = ExtractSourceTrackId(provider, normalizedQuery);
 
-                // Если удалось извлечь VideoId, проверяем БД
-                if (!string.IsNullOrWhiteSpace(videoId))
+                // Если удалось извлечь source ID, проверяем БД
+                if (!string.IsNullOrWhiteSpace(sourceTrackId))
                 {
                     await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
                     info = await db
                         .SoundRequestBaseTrackInfos.AsNoTracking()
-                        .FirstOrDefaultAsync(t => t.VideoId == videoId, cancellationToken);
+                        .FirstOrDefaultAsync(t => t.VideoId == sourceTrackId, cancellationToken);
                 }
 
-                // Если в БД не нашли, обращаемся к YouTube API
-                info ??= await ytResolver.ResolveVideoAsync(normalizedQuery, cancellationToken);
+                if (info == null)
+                {
+                    info =
+                        provider == SoundRequestProvider.Spotify
+                            ? await spotifyResolver.ResolveTrackAsync(
+                                normalizedQuery,
+                                cancellationToken
+                            )
+                            : await ytResolver.ResolveVideoAsync(
+                                normalizedQuery,
+                                cancellationToken
+                            );
+                }
             }
             else
             {
-                // Текстовый запрос — ищем через YouTube Music API
-                info = await ytResolver.ResolveQueryAsync(query, cancellationToken);
+                info =
+                    provider == SoundRequestProvider.Spotify
+                        ? await spotifyResolver.ResolveQueryAsync(query, cancellationToken)
+                        : await ytResolver.ResolveQueryAsync(query, cancellationToken);
             }
 
             if (info != null && user != null)
@@ -117,7 +136,10 @@ public class CommandsService(
             }
             else
             {
-                result = $"не удалось распознать видео по ссылке";
+                result =
+                    provider == SoundRequestProvider.Spotify
+                        ? "не удалось распознать трек Spotify по запросу"
+                        : "не удалось распознать видео по ссылке";
             }
         }
         else
@@ -236,6 +258,14 @@ public class CommandsService(
     )
     {
         string result;
+
+        var provider = await ResolveProviderAsync(cancellationToken);
+
+        if (provider == SoundRequestProvider.Spotify)
+        {
+            result = "Плейлисты в Spotify-режиме пока не поддерживаются";
+            return result;
+        }
 
         // Проверяем состояние плеера - если остановлен и очередь не пуста, не принимаем новые реквесты
         var playerState = await stateManager.GetStateAsync();
@@ -544,6 +574,7 @@ public class CommandsService(
                     trimmedUrl.StartsWith("www.", StringComparison.OrdinalIgnoreCase)
                     || trimmedUrl.Contains("youtube.com", StringComparison.OrdinalIgnoreCase)
                     || trimmedUrl.Contains("youtu.be", StringComparison.OrdinalIgnoreCase)
+                    || trimmedUrl.Contains("spotify.com", StringComparison.OrdinalIgnoreCase)
                 )
             )
             {
@@ -553,6 +584,82 @@ public class CommandsService(
             {
                 result = trimmedUrl;
             }
+        }
+
+        return result;
+    }
+
+    private async Task<SoundRequestProvider> ResolveProviderAsync(
+        CancellationToken cancellationToken
+    )
+    {
+        var result = soundRequestOptions.Value.Provider;
+
+        await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+        var providerState = await db
+            .RootState.AsNoTracking()
+            .SingleOrDefaultAsync(
+                s => s.Name == RootStateKeys.SoundRequestProvider,
+                cancellationToken
+            );
+
+        if (
+            providerState is { Value: not null }
+            && TryParseProvider(providerState.Value, out var parsedProvider)
+        )
+        {
+            result = parsedProvider;
+        }
+
+        if (result == SoundRequestProvider.Spotify && !spotifyOptions.Value.Enabled)
+        {
+            result = SoundRequestProvider.YouTube;
+        }
+
+        return result;
+    }
+
+    private static bool TryParseProvider(string rawValue, out SoundRequestProvider provider)
+    {
+        var result = false;
+        provider = SoundRequestProvider.YouTube;
+
+        if (!string.IsNullOrWhiteSpace(rawValue))
+        {
+            var normalizedValue = rawValue.Trim();
+            if (Enum.TryParse<SoundRequestProvider>(normalizedValue, true, out var byName))
+            {
+                provider = byName;
+                result = true;
+            }
+            else if (int.TryParse(normalizedValue, out var numericValue))
+            {
+                if (Enum.IsDefined(typeof(SoundRequestProvider), numericValue))
+                {
+                    provider = (SoundRequestProvider)numericValue;
+                    result = true;
+                }
+            }
+        }
+
+        return result;
+    }
+
+    private string? ExtractSourceTrackId(SoundRequestProvider provider, string normalizedQuery)
+    {
+        string? result = null;
+
+        if (provider == SoundRequestProvider.Spotify)
+        {
+            var spotifyTrackId = spotifyResolver.ExtractTrackId(normalizedQuery);
+            if (!string.IsNullOrWhiteSpace(spotifyTrackId))
+            {
+                result = $"spotify:{spotifyTrackId}";
+            }
+        }
+        else
+        {
+            result = ExtractYouTubeVideoId(normalizedQuery);
         }
 
         return result;

@@ -4,6 +4,7 @@ using MARS.Server.CustomLoggers.SignalRLogger;
 using MARS.Server.CustomLoggers.TelegramLogger;
 using MARS.Server.Services.CinemaQueue;
 using MARS.Server.Services.CommandExecutor;
+using MARS.Server.Services.Configuration;
 using MARS.Server.Services.KeyboardHook_UNUSED;
 using MARS.Server.Services.Logs.Interfaces;
 using MARS.Server.Services.Logs.Services;
@@ -15,8 +16,6 @@ using Swashbuckle.AspNetCore.Swagger;
 using WTelegram;
 
 namespace MARS.Server;
-
-public class WTelegramClient(int item1, string item2, string item3) : Client(item1, item2, item3);
 
 public static class Program
 {
@@ -191,12 +190,8 @@ public static class Program
             .AddSpecializedServices()
             .AddSoundRequest();
 
-        if (builder.Environment.IsProduction())
-        {
-            //services.AddChannelRewardsManager();
-        }
-
         services.AddSingleton<IDbContextFactory<AppDbContext>>(contextFactory);
+        services.AddHostedService<ConfigurationKeysBootstrapHostedService>();
 
         services.AddWindowsService(options =>
         {

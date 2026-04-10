@@ -1,4 +1,4 @@
-﻿using MARS.Server.ApplicationState;
+using MARS.Server.ApplicationState;
 using MARS.Server.Services._365Genius.Entitys;
 using MARS.Server.Services.EnvironmentVariable.Entitys;
 using MARS.Server.Services.Framedata.Entitys;
@@ -8,8 +8,8 @@ using MARS.Server.Services.Scoreboard.Entitys;
 using MARS.Server.Services.ServiceManager.Entitys;
 using MARS.Server.Services.SoundRequest.Entities;
 using MARS.Server.Services.StreamAcrhive_UNUSED.Entitys;
-using MARS.Server.Services.TelegramDiscordBridge.Entities;
-using MARS.Server.Services.TelegramPrivateChannelsResender.Entities;
+using MARS.Server.Services.Telegram.DiscordBridge.Entities;
+using MARS.Server.Services.Telegram.PrivateChannelsResender.Entities;
 using MARS.Server.Services.Twitch.ClientMessages.AutoMessages.Entitys;
 using MARS.Server.Services.Twitch.HelloVideos.Entitys;
 using MARS.Server.Services.Twitch.Management.Entitys;
@@ -288,6 +288,20 @@ public sealed partial class AppDbContext : DbContext
                         Value = 20L.ToString(),
                         Description = "Кулдаун ролла вайфу в минутах",
                         TypeDescription = "long",
+                    },
+                    new RootState
+                    {
+                        Name = RootStateKeys.WTelegramMtProxyUrl,
+                        Value = string.Empty,
+                        Description = "MTProxy URL для WTelegram (например: https://t.me/proxy?server=...)",
+                        TypeDescription = "string",
+                    },
+                    new RootState
+                    {
+                        Name = RootStateKeys.WTelegramProxyUrl,
+                        Value = string.Empty,
+                        Description = "Прокси для WTelegram: socks5://user:pass@host:port или http://user:pass@host:port",
+                        TypeDescription = "string",
                     },
                 ]
             );

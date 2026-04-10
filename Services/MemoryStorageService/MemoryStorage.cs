@@ -50,6 +50,7 @@ public static class MemoryStorage
                 MediaType = mediaType,
                 FileContent = fileContent,
                 FileName = fileName,
+                UseCount = 1,
             };
 
             FileStorage.TryAdd(fileName, content);
