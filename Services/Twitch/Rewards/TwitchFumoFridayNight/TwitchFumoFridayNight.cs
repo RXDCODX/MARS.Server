@@ -1,4 +1,5 @@
-﻿using MARS.Server.Services.Twitch.Entitys;
+﻿using MARS.Server.ApplicationState;
+using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
 using TwitchLib.Api.Helix.Models.ChannelPoints.CreateCustomReward;
 using TwitchLib.EventSub.Core.EventArgs.Channel;
@@ -10,17 +11,17 @@ public class TwitchFumoFridayNight(
     ChannelRewardsService channelRewardsService,
     ILogger<TwitchFumoFridayNight> logger,
     IHostEnvironment environment,
+    IDbContextFactory<AppDbContext> dbContextFactory,
     EventSubWebsocketClient wsClient,
     IHostApplicationLifetime lifetime,
     IHubContext<TelegramusHub, ITelegramusHub> hubContext
 ) : TemporaryReward(channelRewardsService, logger, environment)
 {
-    private readonly string _videoPath = Path.Combine(
-        environment.ContentRootPath,
-        "wwwroot",
-        "Alerts",
-        "fumoFridayNight.mp4"
-    );
+    private const string VideoPathEnvironmentVariable = "TWITCH_FUMO_FRIDAY_NIGHT_VIDEO_PATH";
+    private const string DefaultVideoRelativePath = "wwwroot/Alerts/fumoFridayNight.webm";
+
+    private readonly ILogger _logger = logger;
+    private readonly string _contentRootPath = environment.ContentRootPath;
 
     private protected override CreateCustomRewardsRequest CreateCustomRewardsRequest =>
         new()
@@ -82,7 +83,8 @@ public class TwitchFumoFridayNight(
             {
                 try
                 {
-                    var fileName = Path.GetFileName(_videoPath);
+                    var videoPath = await ResolveVideoPathAsync();
+                    var fileName = Path.GetFileName(videoPath);
                     var extension = Path.GetExtension(fileName).TrimStart('.');
                     var relativePath = $"/Alerts/{fileName}";
 
@@ -124,7 +126,7 @@ public class TwitchFumoFridayNight(
                     var mediaDto = new MediaDto(mediaInfo);
                     await hubContext.Clients.All.Alert(mediaDto);
 
-                    logger.LogInformation(
+                    _logger.LogInformation(
                         "{AlertName} активирован пользователем {UserName}",
                         AlertDisplayName,
                         twEvent.UserName
@@ -132,9 +134,46 @@ public class TwitchFumoFridayNight(
                 }
                 catch (Exception e)
                 {
-                    logger.LogError(e, "Ошибка при активации {AlertName}", AlertDisplayName);
+                    _logger.LogError(e, "Ошибка при активации {AlertName}", AlertDisplayName);
                 }
             });
         }
+    }
+
+    private async Task<string> ResolveVideoPathAsync()
+    {
+        var result = Path.Combine(_contentRootPath, DefaultVideoRelativePath);
+
+        var environmentPath = Environment.GetEnvironmentVariable(VideoPathEnvironmentVariable);
+        if (!string.IsNullOrWhiteSpace(environmentPath))
+        {
+            result = NormalizeVideoPath(environmentPath);
+        }
+        else
+        {
+            await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+            var state = await dbContext
+                .RootState.AsNoTracking()
+                .SingleOrDefaultAsync(s => s.Name == RootStateKeys.TwitchFumoFridayNightVideoPath);
+
+            if (state is not null && !string.IsNullOrWhiteSpace(state.Value))
+            {
+                result = NormalizeVideoPath(state.Value);
+            }
+        }
+
+        return result;
+    }
+
+    private string NormalizeVideoPath(string path)
+    {
+        var result = path;
+
+        if (!Path.IsPathRooted(path))
+        {
+            result = Path.Combine(_contentRootPath, path);
+        }
+
+        return result;
     }
 }

@@ -141,6 +141,13 @@ public sealed class ConfigurationKeysBootstrapHostedService(
                 Description = "Кулдаун ролла вайфу в минутах",
                 TypeDescription = "long",
             },
+            RootStateKeys.TwitchFumoFridayNightVideoPath => new RootState
+            {
+                Name = key,
+                Value = "wwwroot/Alerts/fumoFridayNight.webm",
+                Description = "Путь до видео для Fumo Friday Night",
+                TypeDescription = "string",
+            },
             RootStateKeys.SoundRequestProvider => new RootState
             {
                 Name = key,

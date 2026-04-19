@@ -10,7 +10,7 @@ public class SpotifyAuthController(SpotifyAuthService spotifyAuthService) : Cont
 {
     [HttpPost("start")]
     public async Task<ActionResult<OperationResult<SpotifyAuthStartResult>>> StartAuthorization(
-        [FromBody] SpotifyAuthStartRequest request,
+        [FromBody] SpotifyAuthStartRequest? request,
         CancellationToken ct
     )
     {
