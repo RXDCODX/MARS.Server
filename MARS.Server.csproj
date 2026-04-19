@@ -168,7 +168,7 @@
     <Exec WorkingDirectory="..\mars.client" Command="yarn install" />
     <Exec WorkingDirectory="..\mars.client" Command="yarn build" />
   </Target>
-  <Target Name="RunTestsBeforePublish" BeforeTargets="Publish" Condition="'$(RunTestsOnPublish)' == 'true'">
+  <Target Name="RunTestsBeforePublish" BeforeTargets="BuildClientApp" Condition="'$(RunTestsOnPublish)' == 'true'">
     <Message Importance="high" Text="Проверка: запуск тестов перед publish..." />
     <Exec Command="dotnet test &quot;..\MARS.Tests\MARS.Tests.csproj&quot; --configuration $(Configuration) --verbosity minimal" />
   </Target>
