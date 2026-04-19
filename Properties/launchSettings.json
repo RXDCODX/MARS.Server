@@ -3,7 +3,7 @@
     "http": {
       "commandName": "Project",
       "launchBrowser": true,
-      "launchUrl": "",
+      "launchUrl": "/",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
         "ASPNETCORE_SPA_LAUNCH": "TRUE"
@@ -14,13 +14,13 @@
     "https": {
       "commandName": "Project",
       "launchBrowser": true,
-      "launchUrl": "",
+      "launchUrl": "/",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
         "ASPNETCORE_SPA_LAUNCH": "TRUE"
       },
       "dotnetRunMessages": true,
-      "applicationUrl": "https://localhost:9256;http://localhost:9255"
+      "applicationUrl": "http://localhost:9255;https://localhost:9256"
     },
     "http (no spa)": {
       "commandName": "Project",
