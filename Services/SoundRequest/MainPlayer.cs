@@ -642,6 +642,8 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
     public async Task OnTrackEndedAsync(BaseTrackInfo track)
     {
         var currentState = await _stateManager.GetStateAsync();
+        var currentTrackId = currentState.CurrentQueueItem?.Track?.Id;
+        var isEndedForCurrentTrack = currentTrackId.HasValue && currentTrackId.Value == track.Id;
 
         _logger.LogInformation(
             "Обработка завершения трека: {TrackName} (ID: {TrackId})",
@@ -649,8 +651,9 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
             track.Id
         );
 
-        // Если плеер не остановлен и не на паузе - воспроизводим следующий
-        if (currentState.State == PlaybackState.Playing)
+        // Переключаем очередь, если завершился именно текущий трек и плеер не остановлен.
+        // Это защищает от гонки, когда FrontStateChange успел выставить Paused перед Ended.
+        if (isEndedForCurrentTrack && currentState.State != PlaybackState.Stopped)
         {
             // Проверяем, есть ли будущие треки в очереди (QueueOrder > 0)
             // Текущий трек имеет QueueOrder = 0, поэтому проверяем только > 0
