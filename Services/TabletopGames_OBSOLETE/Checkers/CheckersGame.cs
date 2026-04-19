@@ -29,10 +29,7 @@ public class CheckersGame
     /// <summary>
     /// Gets the current game board.
     /// </summary>
-    public GameBoard Board
-    {
-        get => GameBoard;
-    }
+    public GameBoard Board => GameBoard;
 
     /// <summary>
     /// Initializes a new game of checkers.

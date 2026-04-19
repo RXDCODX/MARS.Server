@@ -10,12 +10,10 @@ public class MemoryFile
     public required MediaType MediaType { get; init; }
     public required byte[] FileContent
     {
-        get
-        {
-            return field is not { Length: > 0 }
+        get =>
+            field is not { Length: > 0 }
                 ? throw new NullReferenceException("Trying get empty content")
                 : field;
-        }
         set
         {
             if (value is not { Length: > 0 })
@@ -28,7 +26,7 @@ public class MemoryFile
     }
     public required string Exstension
     {
-        get { return string.IsNullOrWhiteSpace(field) ? string.Empty : field; }
+        get => string.IsNullOrWhiteSpace(field) ? string.Empty : field;
         set
         {
             if (string.IsNullOrWhiteSpace(value))

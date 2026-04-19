@@ -34,8 +34,6 @@ public class ChannelRewardsService(
 
         try
         {
-            
-
             var response = await api.Helix.ChannelPoints.CreateCustomRewardsAsync(
                 TwitchExstension.ChannelId,
                 request,
