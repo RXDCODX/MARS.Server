@@ -2,6 +2,7 @@
 using MARS.Server.Services.Twitch.Management.Entitys;
 using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
 using TwitchLib.Api.Helix.Models.ChannelPoints.CreateCustomReward;
+using TwitchLib.Api.Helix.Models.ChannelPoints.UpdateCustomReward;
 
 namespace MARS.Server.Services.Twitch.Entitys;
 
@@ -64,8 +65,8 @@ public abstract class TemporaryReward(
             _timer = null;
         }
 
-        // Удаляем награду если она существует
-        await RemoveRewardIfExistsAsync();
+        // Награда должна сохраняться в системе, при остановке просто выключаем
+        await EnsureRewardStateAsync(false);
     }
 
     private async void OnTimerElapsed(object? state, ElapsedEventArgs elapsedEventArgs)
@@ -81,16 +82,8 @@ public abstract class TemporaryReward(
             var now = elapsedEventArgs.SignalTime;
             var shouldBeEnabled = IsRewardEnabled(now);
 
-            if (shouldBeEnabled)
-            {
-                // Награда должна быть доступна - проверяем через API и при необходимости создаём
-                await EnsureRewardExistsAsync();
-            }
-            else
-            {
-                // Награда не должна быть доступна - удаляем если существует
-                await RemoveRewardIfExistsAsync();
-            }
+            // Награда всегда должна существовать, по расписанию меняем только IsEnabled
+            await EnsureRewardStateAsync(shouldBeEnabled);
         }
         catch (Exception ex)
         {
@@ -103,9 +96,10 @@ public abstract class TemporaryReward(
     }
 
     /// <summary>
-    /// Убеждаемся, что награда существует. Ищем по названию и цене (всегда уникально).
+    /// Убеждаемся, что награда существует, и приводим IsEnabled к нужному состоянию.
+    /// Ищем по названию и цене (всегда уникально).
     /// </summary>
-    private async Task EnsureRewardExistsAsync()
+    private async Task EnsureRewardStateAsync(bool shouldBeEnabled)
     {
         // Проверяем через API, не существует ли уже такая награда
         var existingRewards = await channelRewardsService.GetRewardsAsync();
@@ -116,12 +110,43 @@ public abstract class TemporaryReward(
 
         if (existingReward != null)
         {
-            logger.LogInformation(
-                "Награда {AlertName} (Cost: {Cost}) уже существует с Id: {RewardId}. Используем её.",
-                AlertDisplayName,
-                Cost,
-                existingReward.Id
-            );
+            if (existingReward.IsEnabled != shouldBeEnabled)
+            {
+                var updated = await channelRewardsService.UpdateRewardAsync(
+                    existingReward.Id,
+                    new UpdateCustomRewardRequest { IsEnabled = shouldBeEnabled }
+                );
+
+                if (updated)
+                {
+                    logger.LogInformation(
+                        "Награда {AlertName} (Cost: {Cost}) с Id: {RewardId} обновлена. IsEnabled={IsEnabled}.",
+                        AlertDisplayName,
+                        Cost,
+                        existingReward.Id,
+                        shouldBeEnabled
+                    );
+                }
+                else
+                {
+                    logger.LogError(
+                        "Не удалось обновить существующую награду {AlertName} (Id: {RewardId}).",
+                        AlertDisplayName,
+                        existingReward.Id
+                    );
+                }
+            }
+            else
+            {
+                logger.LogInformation(
+                    "Награда {AlertName} (Cost: {Cost}) уже существует с Id: {RewardId} в нужном состоянии IsEnabled={IsEnabled}.",
+                    AlertDisplayName,
+                    Cost,
+                    existingReward.Id,
+                    shouldBeEnabled
+                );
+            }
+
             return;
         }
 
@@ -135,6 +160,7 @@ public abstract class TemporaryReward(
         var request = CreateCustomRewardsRequest;
         request.BackgroundColor = ColorToHex(Color);
         request.Cost = Cost;
+        request.IsEnabled = shouldBeEnabled;
         request.Prompt = AlertDescription;
         request.Title = AlertDisplayName;
 
@@ -152,50 +178,6 @@ public abstract class TemporaryReward(
         {
             logger.LogError("Не удалось создать временную награду: {AlertName}", AlertDisplayName);
         }
-    }
-
-    private async Task<bool> RemoveRewardIfExistsAsync()
-    {
-        // Ищем награду по названию и цене
-        var existingRewards = await channelRewardsService.GetRewardsAsync();
-
-        var rewardToDelete = existingRewards?.FirstOrDefault(r =>
-            r.Title.Equals(AlertDisplayName, StringComparison.OrdinalIgnoreCase) && r.Cost == Cost
-        );
-
-        if (rewardToDelete == null)
-        {
-            logger.LogWarning(
-                "Награда {AlertName} (Cost: {Cost}) не найдена на сервере Twitch. Возможно, она уже была удалена.",
-                AlertDisplayName,
-                Cost
-            );
-            return true;
-        }
-
-        logger.LogInformation(
-            "Удаление временной награды: {AlertName} (Id: {RewardId})",
-            AlertDisplayName,
-            rewardToDelete.Id
-        );
-
-        var deleted = await channelRewardsService.DeleteRewardAsync(rewardToDelete.Id);
-
-        if (deleted)
-        {
-            logger.LogInformation(
-                "Временная награда {AlertName} успешно удалена",
-                AlertDisplayName
-            );
-            return true;
-        }
-
-        logger.LogError(
-            "Не удалось удалить временную награду {AlertName} с Id: {RewardId}",
-            AlertDisplayName,
-            rewardToDelete.Id
-        );
-        return false;
     }
 
     private protected void TimerElapseNow()
