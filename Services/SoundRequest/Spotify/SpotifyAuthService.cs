@@ -3,7 +3,6 @@ using System.Text.Json.Serialization;
 using System.Linq;
 using SpotifyAPI.Web;
 using MARS.Server.ApplicationState;
-using Microsoft.AspNetCore.WebUtilities;
 
 namespace MARS.Server.Services.SoundRequest.Spotify;
 
@@ -131,6 +130,7 @@ public class SpotifyAuthService(
         )
         {
             var state = Guid.NewGuid().ToString("N");
+            var normalizedRedirectUri = redirectUri.Trim();
 
             await UpsertRootStateAsync(
                 RootStateKeys.SoundRequestSpotifyClientId,
@@ -157,24 +157,20 @@ public class SpotifyAuthService(
             // Сохраняем redirectUri, чтобы при callback использовать точно такой же URL при обмене кода на токен
             await UpsertRootStateAsync(
                 RootStateKeys.SoundRequestSpotifyRedirectUri,
-                redirectUri,
+                normalizedRedirectUri,
                 "Spotify OAuth redirect URI для SoundRequest",
                 "string",
                 ct
             );
 
             var scope = string.Join(' ', Scopes);
-            var query = new Dictionary<string, string>
-            {
-                ["response_type"] = "code",
-                ["client_id"] = clientId.Trim(),
-                ["scope"] = scope,
-                ["redirect_uri"] = redirectUri,
-                ["state"] = state,
-                ["show_dialog"] = "true",
-            };
-
-            var authUrl = QueryHelpers.AddQueryString(SpotifyAuthorizeUrl, query!);
+            var authUrl =
+                $"{SpotifyAuthorizeUrl}?response_type=code"
+                + $"&client_id={Uri.EscapeDataString(clientId.Trim())}"
+                + $"&scope={Uri.EscapeDataString(scope)}"
+                + $"&state={Uri.EscapeDataString(state)}"
+                + "&show_dialog=true"
+                + $"&redirect_uri={normalizedRedirectUri}";
 
             result = new SpotifyAuthStartResult
             {

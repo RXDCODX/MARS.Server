@@ -34,4 +34,11 @@ public static class RootStateKeys
     public const string SoundRequestSpotifyOAuthState = "SoundRequestSpotifyOAuthState";
     public const string SoundRequestSpotifyRedirectUri = "SoundRequestSpotifyRedirectUri";
     public const string WTelegramProxyUrl = "WTelegramProxyUrl";
+
+    // Google PhotosKeys
+    public const string GooglePhotosAccessToken = "GooglePhotosAccessToken";
+    public const string GooglePhotosRefreshToken = "GooglePhotosRefreshToken";
+    public const string GooglePhotosAccessTokenExpiresAtUtc = "GooglePhotosAccessTokenExpiresAtUtc";
+    public const string GooglePhotosOAuthState = "GooglePhotosOAuthState";
+    public const string GooglePhotosIsAuthorized = "GooglePhotosIsAuthorized";
 }

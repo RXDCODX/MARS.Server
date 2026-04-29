@@ -4,6 +4,7 @@ using MARS.Server.Services.Framedata;
 using MARS.Server.Services.PyroAlerts;
 using MARS.Server.Services.RandomMem;
 using MARS.Server.Services.Telegram.ClipboardCopy;
+using MARS.Server.Services.Telegram.GooglePhotos;
 using MARS.Server.Services.Telegram.WTelegram;
 using Telegram.Bot.Exceptions;
 using Telegram.Bot.Polling;
@@ -35,6 +36,7 @@ public class UpdateHandler : IUpdateHandler
         IDbContextFactory<AppDbContext> dbContextFactory,
         TelegramCommandService telegramCommandService,
         TelegramClipboardCopyService telegramClipboardCopyService,
+        TelegramGooglePhotosService telegramGooglePhotosService,
         IServiceProvider serviceProvider
     )
     {
@@ -51,6 +53,7 @@ public class UpdateHandler : IUpdateHandler
             TelegramUpdate += frameData.HandAlert;
             TelegramUpdate += telegramCommandService.HandMessage;
             TelegramUpdate += telegramClipboardCopyService.HandMessage;
+            TelegramUpdate += telegramGooglePhotosService.HandMessage;
 
             // Получаем Singleton WTelegramClientService из корневого провайдера
             var wTelegramClientService =

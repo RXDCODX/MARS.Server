@@ -21,6 +21,7 @@ using MARS.Server.Services.SoundRequest.YouTube;
 using MARS.Server.Services.Telegram.BotService;
 using MARS.Server.Services.Telegram.ClipboardCopy;
 using MARS.Server.Services.Telegram.DiscordBridge;
+using MARS.Server.Services.Telegram.GooglePhotos;
 using MARS.Server.Services.Telegram.PrivateChannelsResender;
 using MARS.Server.Services.Telegram.WTelegram;
 using MARS.Server.Services.Twitch;
@@ -162,6 +163,11 @@ public static class StartupEstensions
         // UpdateHandler получит его через IServiceProvider
         services.AddSingleton<WTelegramClientService>();
         services.AddSingleton<TelegramClipboardCopyService>();
+
+        // Регистрируем сервисы Google Photos
+        services.AddSingleton<GooglePhotosAuthService>();
+        services.AddSingleton<GooglePhotosApiClient>();
+        services.AddSingleton<TelegramGooglePhotosService>();
 
         // Для обратной совместимости регистрируем также WTelegram.Client
         services.AddSingleton<WTelegram.Client>(sp =>
@@ -448,6 +454,9 @@ public static class StartupEstensions
             configuration
                 .GetSection(AppBase.Base)
                 .GetSection(SpotifySoundRequestConfiguration.SectionName)
+        );
+        services.Configure<GooglePhotosConfiguration>(
+            configuration.GetSection(AppBase.Base).GetSection(GooglePhotosConfiguration.SectionName)
         );
 
         return services;

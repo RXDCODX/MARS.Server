@@ -9,7 +9,7 @@
         "ASPNETCORE_SPA_LAUNCH": "TRUE"
       },
       "dotnetRunMessages": true,
-      "applicationUrl": "http://localhost:9255"
+      "applicationUrl": "http://*:9255;http://127.0.0.1:9255"
     },
     "https": {
       "commandName": "Project",
@@ -20,7 +20,7 @@
         "ASPNETCORE_SPA_LAUNCH": "TRUE"
       },
       "dotnetRunMessages": true,
-      "applicationUrl": "https://localhost:9255"
+      "applicationUrl": "https://*:9255"
     },
     "http (no spa)": {
       "commandName": "Project",
@@ -31,7 +31,7 @@
         "ASPNETCORE_SPA_LAUNCH": "FALSE"
       },
       "dotnetRunMessages": true,
-      "applicationUrl": "http://localhost:9255"
+      "applicationUrl": "http://*:9255"
     },
     "https (no spa)": {
       "commandName": "Project",
@@ -42,7 +42,7 @@
         "ASPNETCORE_SPA_LAUNCH": "FALSE"
       },
       "dotnetRunMessages": true,
-      "applicationUrl": "https://localhost:9255"
+      "applicationUrl": "https://*:9255"
     },
     "Production": {
       "commandName": "Project",
@@ -53,7 +53,7 @@
         "ASPNETCORE_SPA_LAUNCH": "FALSE"
       },
       "dotnetRunMessages": true,
-      "applicationUrl": "https://localhost:9155"
+      "applicationUrl": "http://*:9155"
     }
   },
   "$schema": "https://json.schemastore.org/launchsettings.json"
