@@ -688,42 +688,57 @@ public class CommandsService(
         {
             try
             {
-                // Получаем элемент и проверяем, что он существует и находится в очереди
-                var queueItem = await queue.GetQueueItemByIdAsync(queueItemId);
+                // Получаем сам элемент очереди без зависимости от навигации Track
+                await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+                var queueItem = await db
+                    .SoundRequestQueueItems.AsNoTracking()
+                    .FirstOrDefaultAsync(qi => qi.Id == queueItemId, cancellationToken);
 
                 if (queueItem is null)
                 {
                     result = "❌ Трек не найден в очереди";
                 }
-                else if (queueItem.QueueOrder <= 0)
+                else if (queueItem.QueueOrder == 0)
                 {
-                    result =
-                        queueItem.QueueOrder == 0
-                            ? "❌ Этот трек уже сейчас играет"
-                            : "❌ Этот трек находится в истории";
-                }
-                else if (queueItem.Track is null)
-                {
-                    result = "❌ Информация о треке недоступна";
+                    result = "❌ Этот трек уже сейчас играет";
                 }
                 else
                 {
-                    // Перемещаем элемент на начало очереди и запускаем его
-                    var movedItem = await queue.MoveToFrontAndPlayAsync(queueItemId);
+                    var track = queueItem.Track;
 
-                    if (movedItem?.Track is not null && playerController is MainPlayer mainPlayer)
+                    if (track is null)
                     {
-                        // Запускаем трек на воспроизведение
-                        await mainPlayer.PlayAsync(movedItem, cancellationToken);
-
-                        // Уведомляем об изменении очереди
-                        await NotifyQueueChangedAsync();
-
-                        result = $"▶️ Сейчас играет: {movedItem.Track.Title}";
+                        track = await db.SoundRequestBaseTrackInfos.AsNoTracking().FirstOrDefaultAsync(
+                            trackItem => trackItem.Id == queueItem.TrackId,
+                            cancellationToken
+                        );
                     }
-                    else
+
+                    if (track is null)
                     {
-                        result = "❌ Не удалось запустить трек";
+                        result = "❌ Информация о треке недоступна";
+                    }
+                    else if (result == "❌ Ошибка при выполнении")
+                    {
+                        queueItem.Track = track;
+
+                        // Перемещаем элемент на начало очереди и запускаем его
+                        var movedItem = await queue.MoveToFrontAndPlayAsync(queueItemId);
+
+                        if (movedItem?.Track is not null && playerController is MainPlayer mainPlayer)
+                        {
+                            // Запускаем трек на воспроизведение
+                            await mainPlayer.PlayAsync(movedItem, cancellationToken);
+
+                            // Уведомляем об изменении очереди
+                            await NotifyQueueChangedAsync();
+
+                            result = $"▶️ Сейчас играет: {movedItem.Track!.Title}";
+                        }
+                        else
+                        {
+                            result = "❌ Не удалось запустить трек";
+                        }
                     }
                 }
             }
@@ -731,6 +746,43 @@ public class CommandsService(
             {
                 result = $"❌ Исключение: {ex.Message}";
             }
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Поменять позицию элемента в очереди
+    /// </summary>
+    public async Task<string> ReorderQueueItemAsync(
+        Guid queueItemId,
+        int newPosition,
+        CancellationToken cancellationToken = default
+    )
+    {
+        var result = "❌ Ошибка при выполнении";
+
+        if (queueItemId == Guid.Empty)
+        {
+            return "❌ ID элемента не может быть пустым";
+        }
+
+        try
+        {
+            var moved = await queue.MoveQueueItemToPositionAsync(queueItemId, newPosition);
+            if (moved is null)
+            {
+                result = "❌ Элемент не найден или позиция некорректна";
+            }
+            else
+            {
+                await NotifyQueueChangedAsync();
+                result = "✅ Позиция обновлена";
+            }
+        }
+        catch (Exception ex)
+        {
+            result = $"❌ Исключение: {ex.Message}";
         }
 
         return result;

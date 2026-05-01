@@ -870,65 +870,14 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
 
         if (queueItem != null)
         {
-            if (queueItem.QueueOrder < 0)
+            if (queueItem.QueueOrder != 0)
             {
-                await using var db = await _dbFactory.CreateDbContextAsync(_cancellationToken);
+                var movedQueueItem = await _queue.MoveToFrontAndPlayAsync(queueItemId);
 
-                var trackedQueueItem = await db.SoundRequestQueueItems.FirstOrDefaultAsync(
-                    qi => qi.Id == queueItemId,
-                    _cancellationToken
-                );
-
-                if (trackedQueueItem != null)
+                if (movedQueueItem != null)
                 {
-                    var queueOrderShift = -trackedQueueItem.QueueOrder;
-
-                    try
-                    {
-                        await db
-                            .SoundRequestQueueItems.Where(qi =>
-                                qi.Id != queueItemId && qi.QueueOrder > trackedQueueItem.QueueOrder
-                            )
-                            .ExecuteUpdateAsync(
-                                e =>
-                                    e.SetProperty(
-                                        qi => qi.QueueOrder,
-                                        qi => qi.QueueOrder + queueOrderShift
-                                    ),
-                                cancellationToken: _cancellationToken
-                            );
-                    }
-                    catch (InvalidOperationException)
-                    {
-                        var forwardItems = await db
-                            .SoundRequestQueueItems.Where(qi =>
-                                qi.Id != queueItemId && qi.QueueOrder > trackedQueueItem.QueueOrder
-                            )
-                            .ToListAsync(_cancellationToken);
-
-                        foreach (var forwardItem in forwardItems)
-                        {
-                            forwardItem.QueueOrder += queueOrderShift;
-                        }
-                    }
-
-                    trackedQueueItem.QueueOrder = 0;
-                    await db.SaveChangesAsync(_cancellationToken);
+                    await PlayAsync(movedQueueItem, _cancellationToken);
                 }
-
-                var historyQueueItem = await _queue.GetQueueItemByIdAsync(queueItemId);
-                if (historyQueueItem != null)
-                {
-                    await PlayAsync(historyQueueItem, _cancellationToken);
-                }
-            }
-            else
-            {
-                // Воспроизводим выбранный элемент
-                await PlayAsync(queueItem, _cancellationToken);
-
-                // Удаляем из очереди
-                await _queue.RemoveFromQueueAsync(queueItemId);
             }
 
             // Уведомляем об изменении очереди
