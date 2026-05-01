@@ -436,10 +436,7 @@ public class SoundRequestUserQueue(
         var itemToMove = await dbContext
             .SoundRequestQueueItems.Include(qi => qi.Track)
             .Include(qi => qi.RequestedByTwitchUser)
-            .FirstOrDefaultAsync(
-                qi => qi.Id == queueItemId,
-                cancellationToken: _cancellationToken
-            );
+            .FirstOrDefaultAsync(qi => qi.Id == queueItemId, cancellationToken: _cancellationToken);
 
         // Проверяем, что элемент найден и находится в очереди (не предыдущий трек и не история)
         if (itemToMove != null && itemToMove.QueueOrder > 0)
@@ -469,23 +466,19 @@ public class SoundRequestUserQueue(
             }
 
             // Переводим текущий трек (QueueOrder = 0) в историю
-            var currentItem = await dbContext
-                .SoundRequestQueueItems.FirstOrDefaultAsync(
-                    qi => qi.QueueOrder == 0,
-                    cancellationToken: _cancellationToken
-                );
+            var currentItem = await dbContext.SoundRequestQueueItems.FirstOrDefaultAsync(
+                qi => qi.QueueOrder == 0,
+                cancellationToken: _cancellationToken
+            );
 
-            if (currentItem != null)
-            {
-                currentItem.QueueOrder = -1;
-            }
+            currentItem?.QueueOrder = -1;
 
             // Сдвигаем элементы между новой позицией и текущей (QueueOrder >= 1 и < itemQueueOrder)
             try
             {
                 await dbContext
-                    .SoundRequestQueueItems.Where(
-                        qi => qi.QueueOrder >= 1 && qi.QueueOrder < itemQueueOrder
+                    .SoundRequestQueueItems.Where(qi =>
+                        qi.QueueOrder >= 1 && qi.QueueOrder < itemQueueOrder
                     )
                     .ExecuteUpdateAsync(
                         e => e.SetProperty(qi => qi.QueueOrder, qi => qi.QueueOrder + 1),
@@ -495,8 +488,8 @@ public class SoundRequestUserQueue(
             catch (InvalidOperationException)
             {
                 var affectedItems = await dbContext
-                    .SoundRequestQueueItems.Where(
-                        qi => qi.QueueOrder >= 1 && qi.QueueOrder < itemQueueOrder
+                    .SoundRequestQueueItems.Where(qi =>
+                        qi.QueueOrder >= 1 && qi.QueueOrder < itemQueueOrder
                     )
                     .ToListAsync(cancellationToken: _cancellationToken);
 
