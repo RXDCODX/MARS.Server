@@ -418,4 +418,110 @@ public class SoundRequestUserQueue(
 
         return result;
     }
+
+    /// <summary>
+    /// Переместить элемент очереди на позицию 0 (текущий) и запустить немедленно
+    /// Текущий трек (QueueOrder = 0) переходит в историю (QueueOrder = -1)
+    /// Элементы между новой позицией и 0 сдвигаются вверх на одну позицию
+    /// </summary>
+    /// <param name="queueItemId">ID элемента для воспроизведения</param>
+    /// <returns>Элемент для немедленного воспроизведения или null</returns>
+    public async Task<QueueItem?> MoveToFrontAndPlayAsync(Guid queueItemId)
+    {
+        QueueItem? result = null;
+
+        await using var dbContext = await contextFactory.CreateDbContextAsync(_cancellationToken);
+
+        // Получаем элемент, который нужно переместить
+        var itemToMove = await dbContext
+            .SoundRequestQueueItems.Include(qi => qi.Track)
+            .Include(qi => qi.RequestedByTwitchUser)
+            .FirstOrDefaultAsync(
+                qi => qi.Id == queueItemId,
+                cancellationToken: _cancellationToken
+            );
+
+        // Проверяем, что элемент найден и находится в очереди (не предыдущий трек и не история)
+        if (itemToMove != null && itemToMove.QueueOrder > 0)
+        {
+            var itemQueueOrder = itemToMove.QueueOrder;
+
+            // Сдвигаем всю историю (QueueOrder < 0) на -1
+            try
+            {
+                await dbContext
+                    .SoundRequestQueueItems.Where(qi => qi.QueueOrder < 0)
+                    .ExecuteUpdateAsync(
+                        e => e.SetProperty(qi => qi.QueueOrder, qi => qi.QueueOrder - 1),
+                        cancellationToken: _cancellationToken
+                    );
+            }
+            catch (InvalidOperationException)
+            {
+                var historyItems = await dbContext
+                    .SoundRequestQueueItems.Where(qi => qi.QueueOrder < 0)
+                    .ToListAsync(cancellationToken: _cancellationToken);
+
+                foreach (var item in historyItems)
+                {
+                    item.QueueOrder -= 1;
+                }
+            }
+
+            // Переводим текущий трек (QueueOrder = 0) в историю
+            var currentItem = await dbContext
+                .SoundRequestQueueItems.FirstOrDefaultAsync(
+                    qi => qi.QueueOrder == 0,
+                    cancellationToken: _cancellationToken
+                );
+
+            if (currentItem != null)
+            {
+                currentItem.QueueOrder = -1;
+            }
+
+            // Сдвигаем элементы между новой позицией и текущей (QueueOrder >= 1 и < itemQueueOrder)
+            try
+            {
+                await dbContext
+                    .SoundRequestQueueItems.Where(
+                        qi => qi.QueueOrder >= 1 && qi.QueueOrder < itemQueueOrder
+                    )
+                    .ExecuteUpdateAsync(
+                        e => e.SetProperty(qi => qi.QueueOrder, qi => qi.QueueOrder + 1),
+                        cancellationToken: _cancellationToken
+                    );
+            }
+            catch (InvalidOperationException)
+            {
+                var affectedItems = await dbContext
+                    .SoundRequestQueueItems.Where(
+                        qi => qi.QueueOrder >= 1 && qi.QueueOrder < itemQueueOrder
+                    )
+                    .ToListAsync(cancellationToken: _cancellationToken);
+
+                foreach (var item in affectedItems)
+                {
+                    item.QueueOrder += 1;
+                }
+            }
+
+            // Переводим нужный элемент в позицию 0
+            itemToMove.QueueOrder = 0;
+
+            await dbContext.SaveChangesAsync(_cancellationToken);
+
+            // Перезагружаем элемент для возврата (с треком)
+            result = await dbContext
+                .SoundRequestQueueItems.AsNoTracking()
+                .Include(qi => qi.Track)
+                .Include(qi => qi.RequestedByTwitchUser)
+                .FirstOrDefaultAsync(
+                    qi => qi.Id == queueItemId,
+                    cancellationToken: _cancellationToken
+                );
+        }
+
+        return result;
+    }
 }

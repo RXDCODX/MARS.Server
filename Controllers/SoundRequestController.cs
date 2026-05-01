@@ -254,4 +254,61 @@ public class SoundRequestController(
 
         return result;
     }
+
+    /// <summary>
+    /// Немедленно воспроизвести трек из очереди
+    /// Переместить указанный трек на первую позицию и запустить его
+    /// Текущий проигрываемый трек перейдёт в историю
+    /// </summary>
+    /// <param name="queueItemId">ID элемента очереди</param>
+    /// <param name="cancellationToken">Токен отмены</param>
+    [HttpPost("play-now/{queueItemId}")]
+    public async Task<ActionResult<OperationResult<string>>> PlayQueueItemNow(
+        [FromRoute] Guid queueItemId,
+        CancellationToken cancellationToken = default
+    )
+    {
+        ActionResult<OperationResult<string>> result;
+
+        try
+        {
+            if (queueItemId != Guid.Empty)
+            {
+                var message = await service.PlayQueueItemNowAsync(queueItemId, cancellationToken);
+                logger.LogInformation(
+                    "Попытка немедленного воспроизведения трека: QueueItemId={QueueItemId}, Message={Message}",
+                    queueItemId,
+                    message
+                );
+
+                result = Ok(OperationResult<string>.Ok(message, message));
+            }
+            else
+            {
+                logger.LogWarning("Попытка немедленного воспроизведения трека с пустым Id");
+                result = Ok(
+                    OperationResult<string>.Bad(
+                        "Некорректный идентификатор элемента",
+                        string.Empty
+                    )
+                );
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(
+                ex,
+                "Ошибка при немедленном воспроизведении трека: QueueItemId={QueueItemId}",
+                queueItemId
+            );
+            result = Ok(
+                OperationResult<string>.Bad(
+                    "Ошибка при воспроизведении трека",
+                    string.Empty
+                )
+            );
+        }
+
+        return result;
+    }
 }

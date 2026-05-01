@@ -664,4 +664,75 @@ public class CommandsService(
 
         return result;
     }
+
+    /// <summary>
+    /// Немедленно воспроизвести трек из очереди
+    /// Переместить указанный трек на первую позицию и запустить его
+    /// Текущий проигрываемый трек перейдёт в историю
+    /// </summary>
+    /// <param name="queueItemId">ID элемента очереди для немедленного воспроизведения</param>
+    /// <param name="cancellationToken">Токен отмены</param>
+    /// <returns>Сообщение с результатом выполнения</returns>
+    public async Task<string> PlayQueueItemNowAsync(
+        Guid queueItemId,
+        CancellationToken cancellationToken = default
+    )
+    {
+        var result = "❌ Ошибка при выполнении";
+
+        if (queueItemId == Guid.Empty)
+        {
+            result = "❌ ID трека не может быть пустым";
+        }
+        else
+        {
+            try
+            {
+                // Получаем элемент и проверяем, что он существует и находится в очереди
+                var queueItem = await queue.GetQueueItemByIdAsync(queueItemId);
+
+                if (queueItem is null)
+                {
+                    result = "❌ Трек не найден в очереди";
+                }
+                else if (queueItem.QueueOrder <= 0)
+                {
+                    result =
+                        queueItem.QueueOrder == 0
+                            ? "❌ Этот трек уже сейчас играет"
+                            : "❌ Этот трек находится в истории";
+                }
+                else if (queueItem.Track is null)
+                {
+                    result = "❌ Информация о треке недоступна";
+                }
+                else
+                {
+                    // Перемещаем элемент на начало очереди и запускаем его
+                    var movedItem = await queue.MoveToFrontAndPlayAsync(queueItemId);
+
+                    if (movedItem?.Track is not null && playerController is MainPlayer mainPlayer)
+                    {
+                        // Запускаем трек на воспроизведение
+                        await mainPlayer.PlayAsync(movedItem, cancellationToken);
+
+                        // Уведомляем об изменении очереди
+                        await NotifyQueueChangedAsync();
+
+                        result = $"▶️ Сейчас играет: {movedItem.Track.Title}";
+                    }
+                    else
+                    {
+                        result = "❌ Не удалось запустить трек";
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                result = $"❌ Исключение: {ex.Message}";
+            }
+        }
+
+        return result;
+    }
 }
