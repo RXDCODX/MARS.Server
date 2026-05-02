@@ -14,6 +14,8 @@ public class SrlistSoundRequestListCommand(CommandsService commandsService) : Ba
 
     public override Platform[] AvailablePlatforms => [Platform.Twitch];
 
+    public override string[] Aliases => ["srlists"];
+
     public override CommandVisibility Visibility => CommandVisibility.All;
 
     public override CommandParameterInfo[] Parameters =>
@@ -54,12 +56,18 @@ public class SrlistSoundRequestListCommand(CommandsService commandsService) : Ba
             var hasPermission = true;
             if (platform == Platform.Twitch)
             {
-                hasPermission = user.IsModerator || user.IsVip || user.TwitchId == "broadcaster";
+                hasPermission =
+                    user.IsModerator
+                    || user.IsVip
+                    || user.TwitchId.Equals(
+                        TwitchExstension.ChannelId,
+                        StringComparison.OrdinalIgnoreCase
+                    );
             }
 
             if (!hasPermission)
             {
-                result = "Плейлист могут заказывать только VIP/MOD";
+                result = "Плейлист могут заказывать только VIP/MOD/Broadcaster";
             }
             else
             {

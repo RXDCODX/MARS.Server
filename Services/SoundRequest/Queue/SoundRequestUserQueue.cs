@@ -157,6 +157,34 @@ public class SoundRequestUserQueue(
     }
 
     /// <summary>
+    /// Полностью очистить очередь (все элементы с QueueOrder >= 0)
+    /// История (QueueOrder < 0) не затрагивается.
+    /// </summary>
+    public async Task<int> ClearQueueAsync()
+    {
+        var result = 0;
+
+        await using var dbContext = await contextFactory.CreateDbContextAsync(_cancellationToken);
+
+        var queueItemsQuery = dbContext.SoundRequestQueueItems.Where(qi => qi.QueueOrder >= 0);
+
+        try
+        {
+            result = await queueItemsQuery.ExecuteDeleteAsync(cancellationToken: _cancellationToken);
+        }
+        catch (InvalidOperationException)
+        {
+            var queueItems = await queueItemsQuery.ToListAsync(cancellationToken: _cancellationToken);
+
+            result = queueItems.Count;
+            dbContext.SoundRequestQueueItems.RemoveRange(queueItems);
+            await dbContext.SaveChangesAsync(_cancellationToken);
+        }
+
+        return result;
+    }
+
+    /// <summary>
     /// Получить очередь элементов (QueueOrder >= 0)
     /// </summary>
     public async Task<List<QueueItem>> GetQueueAsync()

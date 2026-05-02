@@ -245,6 +245,38 @@ public class CommandsService(
     }
 
     /// <summary>
+    /// Полностью очистить очередь звуковых запросов
+    /// </summary>
+    public async Task<string> ClearQueueAsync(CancellationToken cancellationToken = default)
+    {
+        var result = "Очередь уже пуста";
+
+        try
+        {
+            var queueCount = await queue.GetQueueCountAsync();
+
+            if (queueCount > 0)
+            {
+                await stateManager.StopPlaybackAsync(notify: true);
+
+                var removedCount = await queue.ClearQueueAsync();
+                await NotifyQueueChangedAsync();
+
+                result =
+                    removedCount > 0
+                        ? $"Очередь очищена, удалено треков: {removedCount}"
+                        : "Очередь уже пуста";
+            }
+        }
+        catch (Exception ex)
+        {
+            result = $"❌ Исключение: {ex.Message}";
+        }
+
+        return result;
+    }
+
+    /// <summary>
     /// Добавить весь плейлист в очередь
     /// </summary>
     /// <param name="playlistUrl">URL плейлиста YouTube (обязательно)</param>
@@ -315,7 +347,6 @@ public class CommandsService(
             )
             {
                 await mainPlayer.PlayAsync(firstQueueItem, cancellationToken);
-                await queue.RemoveFromQueueAsync(firstQueueItem.Id);
                 await NotifyQueueChangedAsync();
             }
             else
