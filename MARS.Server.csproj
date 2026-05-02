@@ -171,7 +171,7 @@
   </Target>
   <Target Name="RunTestsBeforePublish" BeforeTargets="BuildClientApp" Condition="'$(RunTestsOnPublish)' == 'true'">
     <Message Importance="high" Text="Проверка: запуск тестов перед publish..." />
-    <Exec Command="dotnet test &quot;..\MARS.Tests\MARS.Tests.csproj&quot; --configuration $(Configuration) --verbosity minimal" />
+    <Exec Command="dotnet test &quot;..\MARS.Tests\MARS.Tests.csproj&quot; --configuration $(Configuration) --verbosity minimal -p:UseLocalYoutubeReExplode=true" />
   </Target>
   <!--<Target Name="CopyClientDistToWwwroot" AfterTargets="Publish">
         <Message Importance="high" Text="Копирование dist в wwwroot..." />
