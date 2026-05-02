@@ -105,7 +105,7 @@ public class YouTubeResolver(ILogger<YouTubeResolver> logger)
 
                 await foreach (var video in playlistVideos)
                 {
-                    if (count >= 200)
+                    if (count >= 50)
                     {
                         break;
                     }

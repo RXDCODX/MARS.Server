@@ -321,9 +321,17 @@ public class CommandsService(
             QueueItem? firstQueueItem = null;
             var maxDuration = TimeSpan.FromMinutes(12);
             var skippedTracksCount = 0;
+            var addedTracks = 0;
+            const int maxTracksToAdd = 10;
 
             foreach (var info in items)
             {
+                // Если уже добавили максимум треков — выходим
+                if (addedTracks >= maxTracksToAdd)
+                {
+                    break;
+                }
+
                 // Проверяем длительность трека (максимум 12 минут)
                 if (info.Duration > maxDuration)
                 {
@@ -336,6 +344,8 @@ public class CommandsService(
 
                 // Запоминаем первый элемент плейлиста
                 firstQueueItem ??= queueItem;
+
+                addedTracks++;
             }
 
             // Если плеер был остановлен И очередь была пуста - запускаем первый трек
@@ -363,12 +373,19 @@ public class CommandsService(
             }
             var waitTimeText = FormatWaitTime(waitTime);
 
-            var addedCount = items.Length - skippedTracksCount;
+            var addedCount = addedTracks;
             result = $"Добавлено треков: {addedCount}";
 
             if (skippedTracksCount > 0)
             {
                 result += $" (пропущено {skippedTracksCount} треков длиннее 12 мин)";
+            }
+
+            // Если в плейлисте было больше подходящих треков, чем разрешено — указываем ограничение
+            var possibleAdds = items.Count(i => i.Duration <= maxDuration);
+            if (possibleAdds > maxTracksToAdd)
+            {
+                result += " (ограничено до 10 треков)";
             }
 
             result += waitTimeText;
