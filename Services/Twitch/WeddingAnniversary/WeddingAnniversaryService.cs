@@ -59,7 +59,7 @@ public class WeddingAnniversaryService(
     /// Получить следующую непосланную годовщину для пользователя (если она уже наступила).
     /// Возвращает null, если нет непосланных годовщин или свадебной даты.
     /// </summary>
-    public async Task<(int Months, string Name)?> GetNextUnsentAnniversaryAsync(
+    public virtual async Task<(int Months, string Name)?> GetNextUnsentAnniversaryAsync(
         string twitchId,
         CancellationToken cancellationToken = default
     )
@@ -115,7 +115,7 @@ public class WeddingAnniversaryService(
     /// <summary>
     /// Отметить годовщину как поздравленную
     /// </summary>
-    public async Task MarkAnniversaryAsSentAsync(
+    public virtual async Task MarkAnniversaryAsSentAsync(
         string twitchId,
         int months,
         CancellationToken cancellationToken = default
