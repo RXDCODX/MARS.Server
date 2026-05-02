@@ -8,6 +8,14 @@ echo.
 
 dotnet tool update --global dotnet-ef
 
+echo ======================================
+echo Обновление dotnet-ef tool (локально для проекта)
+echo ======================================
+echo.
+
+cd ..
+dotnet tool update dotnet-ef
+
 echo.
 echo ======================================
 echo Готово!
