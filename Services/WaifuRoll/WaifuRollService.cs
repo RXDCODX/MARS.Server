@@ -2,6 +2,7 @@
 using MARS.Server.ApplicationState;
 using MARS.Server.Services.Twitch;
 using MARS.Server.Services.Twitch.Rewards;
+using MARS.Server.Services.Twitch.WeddingAnniversary;
 using MARS.Server.Services.WaifuRoll.helpers;
 using MARS.Server.Services.WaifuRoll.Interfaces;
 using MARS.Server.Services.WaifuRoll.Models;
@@ -13,7 +14,8 @@ public class WaifuRollService(
     IOptions<ShikimoriClientOptions> options,
     IDbContextFactory<AppDbContext> factory,
     WaifuRollEnsurenceService waifuDbHelper,
-    TwitchUserEnsureService twitchUserEnsureService
+    TwitchUserEnsureService twitchUserEnsureService,
+    WeddingAnniversaryService anniversaryService
 ) : BackgroundService, IWaifuRollService
 {
     /// <summary>
@@ -421,8 +423,34 @@ public class WaifuRollService(
 
                     if (isChecked)
                     {
-                        if (host.WaifuBrideId != null)
+                        // Проверяем наличие непоздравленной годовщины
+                        var anniversary = await anniversaryService.GetNextUnsentAnniversaryAsync(id);
+
+                        if (anniversary.HasValue && host.WaifuBrideId != null)
                         {
+                            // Если есть годовщина - отправляем поздравление от супруга
+                            Waifu? waifu = await dbContext.Waifus.FindAsync(host.WaifuBrideId);
+                            var spouseName = waifu?.Name ?? "супруг(а)";
+
+                            var message = WeddingAnniversaryService.BuildCongratulationMessageFromSpouse(
+                                displayName,
+                                spouseName,
+                                anniversary.Value
+                            );
+
+                            // Отмечаем годовщину как отправленную
+                            await anniversaryService.MarkAnniversaryAsSentAsync(id, anniversary.Value.Months);
+
+                            // Обновляем время последнего приветствия
+                            greet.Time = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
+                            dbContext.HostsGreetings.Update(greet);
+                            await dbContext.SaveChangesAsync();
+
+                            result = message;
+                        }
+                        else if (host.WaifuBrideId != null)
+                        {
+                            // Если годовщины нет - отправляем обычное AutoHello сообщение
                             Waifu? waifu = await dbContext.Waifus.FindAsync(host.WaifuBrideId);
                             var helloMsg = await GetHelloText();
                             var fixedmsg = await ConvertFixLinksInHelloMessages(helloMsg);
@@ -432,16 +460,9 @@ public class WaifuRollService(
 
                             await dbContext.SaveChangesAsync();
 
-                            var message = string.Concat(
-                                "@{user}, твой супруг, {waifuName} , оставил(-а) тебе сообщение: \"",
-                                fixedmsg,
-                                " \""
-                            );
-                            message = AnswersForTwitchRewards.ReplaceKeywordsInAnswer(
-                                displayName,
-                                message,
-                                waifu: waifu
-                            );
+                            var spouseName = waifu?.Name ?? "супруг(а)";
+                            var message = $"@{{user}}, твой супруг {spouseName} прислал(а) тебе сообщение: \"{fixedmsg}\"";
+                            message = AnswersForTwitchRewards.ReplaceKeywordsInAnswer(displayName, message, waifu: waifu);
 
                             result = message;
                         }

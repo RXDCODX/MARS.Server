@@ -36,6 +36,7 @@ using MARS.Server.Services.Twitch.HelloVideos;
 using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.Twitch.MiniGamesStats;
 using MARS.Server.Services.Twitch.PuntoSwitcher;
+using MARS.Server.Services.Twitch.WeddingAnniversary;
 using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
 using MARS.Server.Services.Twitch.Rewards.CloseGameReward;
 using MARS.Server.Services.Twitch.Rewards.MiniGames;
@@ -299,6 +300,8 @@ public static class StartupEstensions
         services.AddHostedService(sp => sp.GetRequiredService<FumoFridayWorker>());
         services.AddSingleton<HelloVideoWorker>();
         services.AddHostedService(sp => sp.GetRequiredService<HelloVideoWorker>());
+
+        services.AddSingleton<WeddingAnniversaryService>();
 
         services.AddSingleton<Confetty>();
         services.AddSingleton<Fireworks>();
