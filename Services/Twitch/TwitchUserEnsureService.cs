@@ -49,23 +49,45 @@ public class TwitchUserEnsureService(
         CancellationToken cancellationToken = default
     )
     {
-        var usersResponse = await api.Helix.Users.GetUsersAsync(
-            [twitchId],
-            null,
-            tokenService.Token?.AccessToken
-        );
+        TwitchUser? result = null;
 
-        if (usersResponse is { Users.Length: > 0 })
+        if (!string.IsNullOrWhiteSpace(twitchId))
         {
-            var userInfo = usersResponse.Users.First();
-            var twitchUser =
-                TwitchUser.FromUser(userInfo)
-                ?? throw new ArgumentException("Invalid TwitchId", nameof(twitchId));
+            await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+            var existingUser = await db.TwitchUsers.AsNoTracking().FirstOrDefaultAsync(
+                e => e.TwitchId == twitchId,
+                cancellationToken
+            );
 
-            return await EnsureUserExistsAsync(twitchUser, cancellationToken);
+            if (existingUser != null)
+            {
+                result = existingUser;
+            }
+            else
+            {
+                var usersResponse = await api.Helix.Users.GetUsersAsync(
+                    [twitchId],
+                    null,
+                    tokenService.Token?.AccessToken
+                );
+
+                if (usersResponse is { Users.Length: > 0 })
+                {
+                    var userInfo = usersResponse.Users.First();
+                    var twitchUser =
+                        TwitchUser.FromUser(userInfo)
+                        ?? throw new ArgumentException("Invalid TwitchId", nameof(twitchId));
+
+                    result = await EnsureUserExistsAsync(twitchUser, cancellationToken);
+                }
+                else
+                {
+                    throw new ArgumentException("User not found", nameof(twitchId));
+                }
+            }
         }
 
-        throw new ArgumentException("User not found", nameof(twitchId));
+        return result ?? throw new ArgumentException("User not found", nameof(twitchId));
     }
 
     /// <summary>

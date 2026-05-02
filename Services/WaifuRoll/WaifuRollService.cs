@@ -270,6 +270,17 @@ public class WaifuRollService(
                         response.Husband = husband;
                     }
 
+                    if (
+                        response.Husband is null
+                        && host.IsPrivated
+                        && !string.IsNullOrWhiteSpace(host.WaifuBrideId)
+                    )
+                    {
+                        response.Husband = await dbContext.Hosts.FirstOrDefaultAsync(e =>
+                            e.WaifuBrideId == host.WaifuBrideId
+                        );
+                    }
+
                     result = OperationResult<TelegramRollWaifuResponse>.Ok(
                         "Вайфу успешно выпала",
                         response
@@ -424,7 +435,9 @@ public class WaifuRollService(
                     if (isChecked)
                     {
                         // Проверяем наличие непоздравленной годовщины
-                        var anniversary = await anniversaryService.GetNextUnsentAnniversaryAsync(id);
+                        var anniversary = await anniversaryService.GetNextUnsentAnniversaryAsync(
+                            id
+                        );
 
                         if (anniversary.HasValue && host.WaifuBrideId != null)
                         {
@@ -439,7 +452,10 @@ public class WaifuRollService(
                             );
 
                             // Отмечаем годовщину как отправленную
-                            await anniversaryService.MarkAnniversaryAsSentAsync(id, anniversary.Value.Months);
+                            await anniversaryService.MarkAnniversaryAsSentAsync(
+                                id,
+                                anniversary.Value.Months
+                            );
 
                             // Обновляем время последнего приветствия
                             greet.Time = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
@@ -461,8 +477,13 @@ public class WaifuRollService(
                             await dbContext.SaveChangesAsync();
 
                             var spouseName = waifu?.Name ?? "супруг(а)";
-                            var message = $"@{{user}}, твой супруг {spouseName} прислал(а) тебе сообщение: \"{fixedmsg}\"";
-                            message = AnswersForTwitchRewards.ReplaceKeywordsInAnswer(displayName, message, waifu: waifu);
+                            var message =
+                                $"@{{user}}, твой супруг {spouseName} прислал(а) тебе сообщение: \"{fixedmsg}\"";
+                            message = AnswersForTwitchRewards.ReplaceKeywordsInAnswer(
+                                displayName,
+                                message,
+                                waifu: waifu
+                            );
 
                             result = message;
                         }
