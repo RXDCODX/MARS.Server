@@ -232,7 +232,13 @@ public sealed partial class AppDbContext : DbContext
 
             entity.OwnsOne(
                 e => e.StylesInfo,
-                metaInfo => metaInfo.Property(p => p.IsBorder).HasColumnName("StylesInfo_IsBorder")
+                metaInfo =>
+                {
+                    metaInfo.Property(p => p.IsBorder).HasColumnName("StylesInfo_IsBorder");
+                    metaInfo
+                        .Property(p => p.IsShowLetterbox)
+                        .HasColumnName("StylesInfo_IsShowLetterbox");
+                }
             );
         });
 
