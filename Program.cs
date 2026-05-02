@@ -13,7 +13,6 @@ using MARS.Server.Services.Twitch;
 using MARS.Server.Services.Twitch.Rewards;
 using Microsoft.OpenApi;
 using Swashbuckle.AspNetCore.Swagger;
-using WTelegram;
 
 namespace MARS.Server;
 

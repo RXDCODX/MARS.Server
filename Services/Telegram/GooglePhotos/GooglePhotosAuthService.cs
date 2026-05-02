@@ -1,7 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using MARS.Server.ApplicationState;
-using MARS.Server.Services;
 
 namespace MARS.Server.Services.Telegram.GooglePhotos;
 
@@ -13,7 +12,8 @@ public class GooglePhotosAuthService(
 )
 {
     private const string GoogleOAuthTokenUrl = "https://oauth2.googleapis.com/token";
-    private const string GooglePhotosScope = "https://www.googleapis.com/auth/photoslibrary.appendonly";
+    private const string GooglePhotosScope =
+        "https://www.googleapis.com/auth/photoslibrary.appendonly";
 
     private readonly GooglePhotosConfiguration _config = googlePhotosOptions.Value;
     private readonly IHttpClientFactory _httpClientFactory = httpClientFactory;
@@ -37,7 +37,9 @@ public class GooglePhotosAuthService(
 
         var query = string.Join(
             "&",
-            parameters.Select(kvp => $"{Uri.EscapeDataString(kvp.Key)}={Uri.EscapeDataString(kvp.Value)}")
+            parameters.Select(kvp =>
+                $"{Uri.EscapeDataString(kvp.Key)}={Uri.EscapeDataString(kvp.Value)}"
+            )
         );
 
         return $"{authUrl}?{query}";
@@ -82,7 +84,10 @@ public class GooglePhotosAuthService(
                     if (tokens is not null)
                     {
                         await SaveTokensAsync(tokens, ct);
-                        result = OperationResult<GooglePhotosTokens>.Ok("Токены успешно получены", tokens);
+                        result = OperationResult<GooglePhotosTokens>.Ok(
+                            "Токены успешно получены",
+                            tokens
+                        );
                     }
                     else
                     {
@@ -95,7 +100,9 @@ public class GooglePhotosAuthService(
                 {
                     var errorContent = await response.Content.ReadAsStringAsync(ct);
                     logger.LogError("Google OAuth error: {ErrorContent}", errorContent);
-                    result = OperationResult<GooglePhotosTokens>.Bad($"HTTP {response.StatusCode}: {errorContent}");
+                    result = OperationResult<GooglePhotosTokens>.Bad(
+                        $"HTTP {response.StatusCode}: {errorContent}"
+                    );
                 }
             }
             catch (Exception ex)
@@ -113,9 +120,15 @@ public class GooglePhotosAuthService(
         var result = "";
 
         var accessToken = await GetStateValueAsync(RootStateKeys.GooglePhotosAccessToken, ct);
-        var expiresAtRaw = await GetStateValueAsync(RootStateKeys.GooglePhotosAccessTokenExpiresAtUtc, ct);
+        var expiresAtRaw = await GetStateValueAsync(
+            RootStateKeys.GooglePhotosAccessTokenExpiresAtUtc,
+            ct
+        );
 
-        if (!string.IsNullOrWhiteSpace(accessToken) && DateTime.TryParse(expiresAtRaw, out var expiresAt))
+        if (
+            !string.IsNullOrWhiteSpace(accessToken)
+            && DateTime.TryParse(expiresAtRaw, out var expiresAt)
+        )
         {
             expiresAt = DateTime.SpecifyKind(expiresAt, DateTimeKind.Utc);
 
@@ -176,7 +189,10 @@ public class GooglePhotosAuthService(
                         // Обновляем только AccessToken, RefreshToken остаётся прежним
                         tokens.RefreshToken ??= refreshToken;
                         await SaveTokensAsync(tokens, ct);
-                        result = OperationResult<GooglePhotosTokens>.Ok("Токен успешно обновлён", tokens);
+                        result = OperationResult<GooglePhotosTokens>.Ok(
+                            "Токен успешно обновлён",
+                            tokens
+                        );
                     }
                     else
                     {
@@ -189,7 +205,9 @@ public class GooglePhotosAuthService(
                 {
                     var errorContent = await response.Content.ReadAsStringAsync(ct);
                     logger.LogError("Google refresh token error: {ErrorContent}", errorContent);
-                    result = OperationResult<GooglePhotosTokens>.Bad($"HTTP {response.StatusCode}: {errorContent}");
+                    result = OperationResult<GooglePhotosTokens>.Bad(
+                        $"HTTP {response.StatusCode}: {errorContent}"
+                    );
                 }
             }
             catch (Exception ex)
@@ -213,10 +231,18 @@ public class GooglePhotosAuthService(
         var expiresAtUtc = DateTime.UtcNow.AddSeconds(tokens.ExpiresIn - 60);
 
         await SaveStateKeyAsync(RootStateKeys.GooglePhotosAccessToken, tokens.AccessToken, ct);
-        await SaveStateKeyAsync(RootStateKeys.GooglePhotosAccessTokenExpiresAtUtc, expiresAtUtc.ToString("O"), ct);
+        await SaveStateKeyAsync(
+            RootStateKeys.GooglePhotosAccessTokenExpiresAtUtc,
+            expiresAtUtc.ToString("O"),
+            ct
+        );
         if (!string.IsNullOrWhiteSpace(tokens.RefreshToken))
         {
-            await SaveStateKeyAsync(RootStateKeys.GooglePhotosRefreshToken, tokens.RefreshToken, ct);
+            await SaveStateKeyAsync(
+                RootStateKeys.GooglePhotosRefreshToken,
+                tokens.RefreshToken,
+                ct
+            );
         }
         await SaveStateKeyAsync(RootStateKeys.GooglePhotosIsAuthorized, "true", ct);
     }
@@ -242,7 +268,9 @@ public class GooglePhotosAuthService(
     private async Task<string> GetStateValueAsync(string key, CancellationToken ct)
     {
         using var context = await dbContextFactory.CreateDbContextAsync(ct);
-        var state = await context.RootState.AsNoTracking().FirstOrDefaultAsync(s => s.Name == key, cancellationToken: ct);
+        var state = await context
+            .RootState.AsNoTracking()
+            .FirstOrDefaultAsync(s => s.Name == key, cancellationToken: ct);
         return state?.Value ?? string.Empty;
     }
 }

@@ -1,8 +1,6 @@
-using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Linq;
-using SpotifyAPI.Web;
 using MARS.Server.ApplicationState;
+using SpotifyAPI.Web;
 
 namespace MARS.Server.Services.SoundRequest.Spotify;
 
@@ -237,7 +235,9 @@ public class SpotifyAuthService(
                             credentials.ClientId,
                             credentials.ClientSecret,
                             code,
-                            string.IsNullOrWhiteSpace(storedRedirect) ? redirectUri : storedRedirect,
+                            string.IsNullOrWhiteSpace(storedRedirect)
+                                ? redirectUri
+                                : storedRedirect,
                             ct
                         );
 
@@ -575,7 +575,12 @@ public class SpotifyAuthService(
         {
             var oauth = new OAuthClient();
             var token = await oauth.RequestToken(
-                new AuthorizationCodeTokenRequest(clientId, clientSecret, code, new Uri(redirectUri))
+                new AuthorizationCodeTokenRequest(
+                    clientId,
+                    clientSecret,
+                    code,
+                    new Uri(redirectUri)
+                )
             );
 
             return new SpotifyTokenResponseDto
@@ -645,7 +650,9 @@ public class SpotifyAuthService(
                 {
                     Id = profile.Id,
                     DisplayName = profile.DisplayName,
-                    Images = profile.Images?.Select(i => new SpotifyProfileImageDto { Url = i.Url }).ToList(),
+                    Images = profile
+                        .Images?.Select(i => new SpotifyProfileImageDto { Url = i.Url })
+                        .ToList(),
                     Product = null,
                 };
             }

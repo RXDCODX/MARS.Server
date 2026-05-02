@@ -1,7 +1,5 @@
 using System.Globalization;
-using MARS.Server.Services;
 using MARS.Server.Services.Twitch.Entitys;
-using MARS.Server.Services.WaifuRoll;
 
 namespace MARS.Server.Services.Twitch.WeddingAnniversary;
 
@@ -74,8 +72,8 @@ public class WeddingAnniversaryService(
                     cancellationToken
                 );
 
-                var user = await dbContext.TwitchUsers
-                    .AsNoTracking()
+                var user = await dbContext
+                    .TwitchUsers.AsNoTracking()
                     .FirstOrDefaultAsync(u => u.TwitchId == twitchId, cancellationToken);
 
                 if (user?.WeddingDate is DateOnly weddingDate)
