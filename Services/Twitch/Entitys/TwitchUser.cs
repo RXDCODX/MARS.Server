@@ -78,25 +78,6 @@ public class TwitchUser
     public DateTime? FollowedAt { get; set; }
 
     /// <summary>
-    /// Дата свадьбы пользователя
-    /// </summary>
-    [Column(TypeName = "date")]
-    public DateOnly? WeddingDate { get; set; }
-
-    /// <summary>
-    /// Дата последнего поздравления с годовщиной свадьбы
-    /// </summary>
-    [Column(TypeName = "date")]
-    public DateOnly? LastWeddingCongratulatedOn { get; set; }
-
-    /// <summary>
-    /// Последняя отмеченная годовщина в месяцах (например, 12 = 1 год)
-    /// Используется для пометки, какие поздравления уже были отправлены,
-    /// и чтобы отправлять пропущенные поздравления позже.
-    /// </summary>
-    public int? LastWeddingCongratulatedMonths { get; set; }
-
-    /// <summary>
     /// Дата последнего обновления информации
     /// </summary>
     public DateTime LastUpdated { get; set; } = DateTime.UtcNow;

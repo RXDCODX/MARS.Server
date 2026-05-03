@@ -20,11 +20,6 @@ public class WaifuRollEnsurenceService(
             {
                 await using var dbContext = await appDbContextFactory.CreateDbContextAsync();
                 waifu.ImageUrl = character.Image.Original;
-                await dbContext
-                    .Waifus.Where(e => e.ShikiId == waifu.ShikiId)
-                    .ExecuteUpdateAsync(e =>
-                        e.SetProperty(t => t.ImageUrl, character.Image.Original)
-                    );
             }
         }
 

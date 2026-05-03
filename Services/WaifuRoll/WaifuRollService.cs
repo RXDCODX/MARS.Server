@@ -143,7 +143,10 @@ public class WaifuRollService(
                 else
                 {
                     // Гарантируем наличие пользователя в TwitchUsers перед созданием Host
-                    await twitchUserEnsureService.EnsureUserExistsAsync(id);
+                    if (twitchUserEnsureService is not null)
+                    {
+                        await twitchUserEnsureService.EnsureUserExistsAsync(id);
+                    }
 
                     cd = new HostCoolDown { HostId = id };
 

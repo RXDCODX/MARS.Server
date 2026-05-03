@@ -1,11 +1,9 @@
 using System.Globalization;
-using MARS.Server.Services.Twitch.Entitys;
 
 namespace MARS.Server.Services.Twitch.WeddingAnniversary;
 
 public class WeddingAnniversaryService(
     IDbContextFactory<AppDbContext> dbContextFactory,
-    TwitchUserEnsureService twitchUserEnsureService,
     ILogger<WeddingAnniversaryService> logger
 )
 {
@@ -55,7 +53,7 @@ public class WeddingAnniversaryService(
 
     /// <summary>
     /// Получить следующую непосланную годовщину для пользователя (если она уже наступила).
-    /// Возвращает null, если нет непосланных годовщин или свадебной даты.
+    /// Возвращает null, если нет непосланных годовщин или даты свадьбы.
     /// </summary>
     public virtual async Task<(int Months, string Name)?> GetNextUnsentAnniversaryAsync(
         string twitchId,
@@ -72,24 +70,26 @@ public class WeddingAnniversaryService(
                     cancellationToken
                 );
 
-                var user = await dbContext
-                    .TwitchUsers.AsNoTracking()
-                    .FirstOrDefaultAsync(u => u.TwitchId == twitchId, cancellationToken);
+                var host = await dbContext
+                    .Hosts.AsNoTracking()
+                    .FirstOrDefaultAsync(e => e.TwitchId == twitchId, cancellationToken);
 
-                if (user?.WeddingDate is DateOnly weddingDate)
+                if (host is { IsPrivated: true, WhenPrivated: { } weddingDate })
                 {
                     var now = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
-                    var today = DateOnly.FromDateTime(now.DateTime);
+                    var today = now.Date;
 
-                    var lastMonths = user.LastWeddingCongratulatedMonths ?? -1;
+                    var lastMonths = host.LastWeddingCongratulatedMonths ?? -1;
 
                     foreach (var anniversary in AnniversaryDefinitions.OrderBy(d => d.Months))
                     {
                         if (anniversary.Months <= lastMonths)
+                        {
                             continue;
+                        }
 
-                        var annDate = weddingDate.AddMonths(anniversary.Months);
-                        if (annDate <= today)
+                        var anniversaryDate = weddingDate.AddMonths(anniversary.Months);
+                        if (anniversaryDate.Date <= today)
                         {
                             result = anniversary;
                             break;
@@ -127,17 +127,14 @@ public class WeddingAnniversaryService(
                     cancellationToken
                 );
 
-                var user = await dbContext.TwitchUsers.FirstOrDefaultAsync(
-                    u => u.TwitchId == twitchId,
+                var twitchUser = await dbContext.Hosts.FirstOrDefaultAsync(
+                    e => e.TwitchId == twitchId,
                     cancellationToken
                 );
 
-                if (user != null)
+                if (twitchUser != null)
                 {
-                    user.LastWeddingCongratulatedMonths = months;
-                    user.LastWeddingCongratulatedOn = DateOnly.FromDateTime(
-                        DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3)).DateTime
-                    );
+                    twitchUser.LastWeddingCongratulatedMonths = months;
 
                     await dbContext.SaveChangesAsync(cancellationToken);
 
@@ -157,124 +154,6 @@ public class WeddingAnniversaryService(
                 );
             }
         }
-    }
-
-    public async Task<OperationResult<TwitchUser>> SetWeddingDateAsync(
-        string twitchId,
-        DateOnly weddingDate,
-        CancellationToken cancellationToken = default
-    )
-    {
-        var result = OperationResult<TwitchUser>.Bad("Не удалось сохранить дату свадьбы");
-
-        if (!string.IsNullOrWhiteSpace(twitchId) && weddingDate != default)
-        {
-            try
-            {
-                await twitchUserEnsureService.EnsureUserExistsAsync(twitchId, cancellationToken);
-
-                await using var dbContext = await dbContextFactory.CreateDbContextAsync(
-                    cancellationToken
-                );
-
-                var user = await dbContext.TwitchUsers.FirstOrDefaultAsync(
-                    e => e.TwitchId == twitchId,
-                    cancellationToken
-                );
-
-                if (user != null)
-                {
-                    user.WeddingDate = weddingDate;
-                    user.LastWeddingCongratulatedOn = null;
-                    user.LastWeddingCongratulatedMonths = null;
-
-                    await dbContext.SaveChangesAsync(cancellationToken);
-
-                    logger.LogInformation(
-                        "Для пользователя {UserId} сохранена дата свадьбы {WeddingDate}",
-                        twitchId,
-                        weddingDate
-                    );
-
-                    result = OperationResult<TwitchUser>.Ok("Дата свадьбы сохранена", user);
-                }
-                else
-                {
-                    result = OperationResult<TwitchUser>.Bad("Пользователь не найден");
-                }
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Ошибка при сохранении даты свадьбы для {UserId}", twitchId);
-                result = OperationResult<TwitchUser>.Bad(
-                    $"Ошибка при сохранении даты свадьбы: {ex.Message}"
-                );
-            }
-        }
-        else
-        {
-            result = OperationResult<TwitchUser>.Bad(
-                "TwitchId и дата свадьбы должны быть заполнены"
-            );
-        }
-
-        return result;
-    }
-
-    public async Task<OperationResult<TwitchUser>> ClearWeddingDateAsync(
-        string twitchId,
-        CancellationToken cancellationToken = default
-    )
-    {
-        var result = OperationResult<TwitchUser>.Bad("Не удалось удалить дату свадьбы");
-
-        if (!string.IsNullOrWhiteSpace(twitchId))
-        {
-            try
-            {
-                await using var dbContext = await dbContextFactory.CreateDbContextAsync(
-                    cancellationToken
-                );
-
-                var user = await dbContext.TwitchUsers.FirstOrDefaultAsync(
-                    e => e.TwitchId == twitchId,
-                    cancellationToken
-                );
-
-                if (user != null)
-                {
-                    user.WeddingDate = null;
-                    user.LastWeddingCongratulatedOn = null;
-                    user.LastWeddingCongratulatedMonths = null;
-
-                    await dbContext.SaveChangesAsync(cancellationToken);
-
-                    logger.LogInformation(
-                        "Для пользователя {UserId} очищена дата свадьбы",
-                        twitchId
-                    );
-
-                    result = OperationResult<TwitchUser>.Ok("Дата свадьбы удалена", user);
-                }
-                else
-                {
-                    result = OperationResult<TwitchUser>.Bad("Пользователь не найден");
-                }
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Ошибка при удалении даты свадьбы для {UserId}", twitchId);
-                result = OperationResult<TwitchUser>.Bad(
-                    $"Ошибка при удалении даты свадьбы: {ex.Message}"
-                );
-            }
-        }
-        else
-        {
-            result = OperationResult<TwitchUser>.Bad("TwitchId не может быть пустым");
-        }
-
-        return result;
     }
 
     public static string BuildCongratulationMessageFromSpouse(

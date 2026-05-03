@@ -22,4 +22,5 @@ public class Host
     public DateTimeOffset? WhenPrivated { get; set; }
     public required HostAutoHello HostGreetings { get; set; }
     public required HostCoolDown HostCoolDown { get; set; }
+    public int? LastWeddingCongratulatedMonths { get; set; }
 }
