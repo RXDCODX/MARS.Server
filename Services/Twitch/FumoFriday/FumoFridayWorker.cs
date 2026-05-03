@@ -30,8 +30,8 @@ public class FumoFridayWorker(
     public override int Cost { get; init; } = 13;
 
     // Награда доступна только по пятницам
-    public override Func<DateTime, bool> IsRewardEnabled { get; set; } =
-        date => date.DayOfWeek == DayOfWeek.Friday;
+    public override Func<bool> IsRewardEnabled { get; set; } =
+        () => DateTime.Now.DayOfWeek == DayOfWeek.Friday;
 
     public bool IsServiceActive { get; set; } = true;
 

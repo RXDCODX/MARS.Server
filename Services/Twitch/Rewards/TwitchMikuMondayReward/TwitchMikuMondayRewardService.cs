@@ -31,8 +31,8 @@ public class TwitchMikuMondayRewardService(
     public override int Cost { get; init; } = 39; // 39 - отсылка к числу Мику (3/9 - 9 марта)
 
     // Награда доступна только по понедельникам
-    public override Func<DateTime, bool> IsRewardEnabled { get; set; } =
-        date => date.DayOfWeek == DayOfWeek.Monday;
+    public override Func<bool> IsRewardEnabled { get; set; } =
+        () => DateTime.Now.DayOfWeek == DayOfWeek.Monday;
 
     public bool IsServiceActive { get; set; } = true;
 

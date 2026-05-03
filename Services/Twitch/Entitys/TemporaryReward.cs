@@ -33,7 +33,7 @@ public abstract class TemporaryReward(
     public abstract string AlertDescription { get; set; }
     public abstract Color Color { get; set; }
     public abstract int Cost { get; init; }
-    public abstract Func<DateTime, bool> IsRewardEnabled { get; set; }
+    public abstract Func<bool> IsRewardEnabled { get; set; }
 
     public virtual Task StartAsync(CancellationToken cancellationToken)
     {
@@ -77,7 +77,7 @@ public abstract class TemporaryReward(
         try
         {
             var now = elapsedEventArgs.SignalTime;
-            var shouldBeEnabled = IsRewardEnabled(now);
+            var shouldBeEnabled = IsRewardEnabled();
 
             // Награда всегда должна существовать, по расписанию меняем только IsEnabled
             await EnsureRewardStateAsync(shouldBeEnabled);

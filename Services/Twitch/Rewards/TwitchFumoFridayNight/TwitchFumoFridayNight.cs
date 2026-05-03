@@ -43,8 +43,8 @@ public class TwitchFumoFridayNight(
         "Твоя уникальная (ну почти) возможность активации Fumo Friday Night";
     public override Color Color { get; set; } = Color.Red;
     public override int Cost { get; init; } = 170;
-    public override Func<DateTime, bool> IsRewardEnabled { get; set; } =
-        time => time.DayOfWeek == DayOfWeek.Friday;
+    public override Func<bool> IsRewardEnabled { get; set; } =
+        () => DateTime.Now.DayOfWeek == DayOfWeek.Friday;
 
     public override Task StartAsync(CancellationToken cancellationToken)
     {

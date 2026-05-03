@@ -33,6 +33,7 @@ using MARS.Server.Services.Twitch.HelloVideos;
 using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.Twitch.MiniGamesStats;
 using MARS.Server.Services.Twitch.PuntoSwitcher;
+using MARS.Server.Services.Twitch.Rewards._1_AutoClipReward;
 using MARS.Server.Services.Twitch.Rewards._11_RandomMemReward.Service;
 using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
 using MARS.Server.Services.Twitch.Rewards.CloseGameReward;
@@ -40,7 +41,6 @@ using MARS.Server.Services.Twitch.Rewards.MiniGames;
 using MARS.Server.Services.Twitch.Rewards.TestReward;
 using MARS.Server.Services.Twitch.Rewards.TwitchAdhdReward;
 using MARS.Server.Services.Twitch.Rewards.TwitchAlerts;
-using MARS.Server.Services.Twitch.Rewards.TwitchClipCreator;
 using MARS.Server.Services.Twitch.Rewards.TwitchCredits;
 using MARS.Server.Services.Twitch.Rewards.TwitchFumoFridayNight;
 using MARS.Server.Services.Twitch.Rewards.TwitchGaoAlert;
@@ -335,8 +335,8 @@ public static class StartupEstensions
         services.AddSingleton<TekkenVictorinaLeaderbord>();
         services.AddHostedService(sp => sp.GetRequiredService<TekkenVictorinaLeaderbord>());
 
-        services.AddSingleton<TwitchClipCreatorService>();
-        services.AddHostedService(sp => sp.GetRequiredService<TwitchClipCreatorService>());
+        services.AddSingleton<AutoClip_TwitchReward>();
+        services.AddHostedService(sp => sp.GetRequiredService<AutoClip_TwitchReward>());
 
         services.AddSingleton<TwitchCloseTekkenService>();
         services.AddHostedService(sp => sp.GetRequiredService<TwitchCloseTekkenService>());

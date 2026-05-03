@@ -1,41 +1,47 @@
-﻿using MARS.Server.Services.Twitch.Management;
-using MARS.Server.Services.Twitch.Management.Entitys;
+﻿using MARS.Server.Services.Twitch.Entitys;
+using MARS.Server.Services.Twitch.Management;
+using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
+using TL;
 using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Websockets;
 
-namespace MARS.Server.Services.Twitch.Rewards.TwitchClipCreator;
+namespace MARS.Server.Services.Twitch.Rewards._1_AutoClipReward;
 
 /// <inheritdoc />
-public class TwitchClipCreatorService(
+public class AutoClip_TwitchReward(
     ITwitchClient client,
     ITwitchAPI api,
     IHostApplicationLifetime lifetime,
+    IHostEnvironment hostEnvironment,
     TokenService tokenService,
-    ILogger<TwitchClipCreatorService> logger,
-    EventSubWebsocketClient wsClient
-) : BackgroundService, ITwitchReward
+    ILogger<AutoClip_TwitchReward> logger,
+    EventSubWebsocketClient wsClient,
+    ChannelRewardsService channelRewardsService
+) : TemporaryReward(channelRewardsService, logger, hostEnvironment)
 {
-    public bool IsServiceActive { get; set; } = true;
-    public int Cost { get; init; } = 1;
+    public override string AlertDisplayName { get; set; } = "🎞️ Клипнуть!";
+    public override string AlertDescription { get; set; } =
+        "Сделать автоклип последних 30 секунд стрима!";
+    public override Color Color { get; set; }
+    public override int Cost { get; init; } = 1;
+    public override Func<bool> IsRewardEnabled { get; set; } = () => false;
 
     private readonly CancellationToken _cancellationToken = lifetime.ApplicationStopping;
 
-    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    public override Task StartAsync(CancellationToken stoppingToken)
     {
-        if (IsServiceActive)
-        {
-            wsClient.ChannelPointsCustomRewardRedemptionAdd +=
-                WsClientOnChannelPointsCustomRewardRedemptionAdd;
-        }
+        wsClient.ChannelPointsCustomRewardRedemptionAdd +=
+            WsClientOnChannelPointsCustomRewardRedemptionAdd;
 
-        return Task.CompletedTask;
+        return base.StartAsync(stoppingToken);
     }
 
-    public override async Task StopAsync(CancellationToken cancellationToken)
+    public override Task StopAsync(CancellationToken cancellationToken)
     {
         wsClient.ChannelPointsCustomRewardRedemptionAdd -=
             WsClientOnChannelPointsCustomRewardRedemptionAdd;
-        await base.StopAsync(cancellationToken);
+
+        return base.StopAsync(cancellationToken);
     }
 
     private async Task WsClientOnChannelPointsCustomRewardRedemptionAdd(
@@ -47,7 +53,7 @@ public class TwitchClipCreatorService(
         var userName = twEvent.UserName;
         var cost = twEvent.Reward.Cost;
 
-        if (cost == Cost && IsServiceActive)
+        if (cost == Cost && IsRewardEnabled())
         {
             await Task.Factory.StartNew(
                 async () =>
