@@ -1,21 +1,18 @@
+using System.Drawing;
 using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
 
-namespace MARS.Server.Services.Twitch.Rewards._150_TyazheloReward;
+namespace MARS.Server.Services.Twitch.Rewards._18_GaoAlert;
 
-public class Tyazhelo_TwitchReward(
+public class GaoAlert_TwitchReward(
     ChannelRewardsService channelRewardsService,
-    ILogger<Tyazhelo_TwitchReward> logger,
+    ILogger<GaoAlert_TwitchReward> logger,
     IHostEnvironment environment
 ) : TemporaryReward(channelRewardsService, logger, environment)
 {
-    public override string AlertDisplayName { get; set; } = "Тяжело...";
-
+    public override string AlertDisplayName { get; set; } = "GAO/NOT GAO";
     public override string AlertDescription { get; set; } = string.Empty;
-
-    public override Color Color { get; set; } = Color.FromArgb(255, 0, 0);
-
-    public override int Cost { get; init; } = 150;
-
+    public override Color Color { get; set; } = Color.FromArgb(0, 0, 0);
+    public override int Cost { get; init; } = 18;
     public override Func<bool> IsRewardEnabled { get; set; } = () => true;
 }

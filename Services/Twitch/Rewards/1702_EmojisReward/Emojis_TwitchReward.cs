@@ -1,4 +1,4 @@
-﻿using MARS.Server.Services.Twitch.Entitys;
+using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
 
 namespace MARS.Server.Services.Twitch.Rewards._1702_EmojisReward;

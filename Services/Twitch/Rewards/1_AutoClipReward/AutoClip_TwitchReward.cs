@@ -1,4 +1,4 @@
-﻿using MARS.Server.Services.Twitch.Entitys;
+using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
 using TL;
