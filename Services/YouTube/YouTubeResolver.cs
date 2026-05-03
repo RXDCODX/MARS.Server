@@ -445,7 +445,7 @@ public class YouTubeResolver(ILogger<YouTubeResolver> logger)
                     !path.EndsWith(".part", StringComparison.OrdinalIgnoreCase)
                     && !path.EndsWith(".ytdl", StringComparison.OrdinalIgnoreCase)
                 )
-                .OrderByDescending(path => File.GetLastWriteTimeUtc(path))
+                .OrderByDescending(File.GetLastWriteTimeUtc)
                 .ToArray();
         }
 
