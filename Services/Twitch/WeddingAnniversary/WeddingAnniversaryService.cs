@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.RegularExpressions;
 
 namespace MARS.Server.Services.Twitch.WeddingAnniversary;
 
@@ -163,18 +164,45 @@ public class WeddingAnniversaryService(
     )
     {
         var yearsText = FormatYears(anniversary.Months);
+        var declined = DeclineAnniversaryName(anniversary.Name);
+
         var result = string.Empty;
 
         if (anniversary.Months == 0)
         {
             result =
-                $"@{displayName}, твой супруг, {spouseName}, поздравляет тебя с {anniversary.Name}! Совет да любовь!";
+                $"@{displayName}, твой супруг, {spouseName}, поздравляет тебя с {declined}! Совет да любовь!";
         }
         else
         {
             result =
-                $"@{displayName}, твой супруг, {spouseName}, поздравляет тебя с {anniversary.Name} ({yearsText} лет)! Совет да любовь!";
+                $"@{displayName}, твой супруг, {spouseName}, поздравляет тебя с {declined} ({yearsText} лет)! Совет да любовь!";
         }
+
+        return result;
+    }
+
+    private static string DeclineAnniversaryName(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            return name;
+
+        // Простое правило: заменить "свадьба" на "свадьбой", а прилагательное
+        // перед словом "свадьбой" склонить из "-ая" -> "-ой" (и "-ная" -> "-ной").
+        var result = Regex.Replace(name, "\\bсвадьба\\b", "свадьбой", RegexOptions.IgnoreCase);
+
+        // Склоняем прилагательное перед "свадьбой"
+        result = Regex.Replace(result, "([А-Яа-яЁё]+)ная\\s+свадьбой", "$1ной свадьбой", RegexOptions.IgnoreCase);
+        result = Regex.Replace(result, "([А-Яа-яЁё]+)ая\\s+свадьбой", "$1ой свадьбой", RegexOptions.IgnoreCase);
+
+
+        // Также обработать случаи с закрывающей скобкой перед "свадьбой": e.g. "Стеклянная (хрустальная) свадьба"
+        result = Regex.Replace(result, "([А-Яа-яЁё]+)ная(?=\\s*\\()", "$1ной", RegexOptions.IgnoreCase);
+        result = Regex.Replace(result, "([А-Яа-яЁё]+)ая(?=\\s*\\()", "$1ой", RegexOptions.IgnoreCase);
+
+        // Склоняем прилагательные внутри скобок: (хрустальная) -> (хрустальной)
+        result = Regex.Replace(result, "\\(\\s*([А-Яа-яЁё]+)ная\\b", "($1ной", RegexOptions.IgnoreCase);
+        result = Regex.Replace(result, "\\(\\s*([А-Яа-яЁё]+)ая\\b", "($1ой", RegexOptions.IgnoreCase);
 
         return result;
     }
