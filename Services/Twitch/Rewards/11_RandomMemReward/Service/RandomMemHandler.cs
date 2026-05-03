@@ -1,10 +1,10 @@
 ﻿using MARS.Server.Services.PyroAlerts;
-using MARS.Server.Services.RandomMem.Entity;
 using MARS.Server.Services.Telegram;
+using MARS.Server.Services.Twitch.Rewards._11_RandomMemReward.Service.Entity;
 using Telegram.Bot.Types.Enums;
 using File = System.IO.File;
 
-namespace MARS.Server.Services.RandomMem;
+namespace MARS.Server.Services.Twitch.Rewards._11_RandomMemReward.Service;
 
 public class RandomMemHandler(
     IWebHostEnvironment environment,

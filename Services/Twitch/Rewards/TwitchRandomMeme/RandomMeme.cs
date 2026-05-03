@@ -1,4 +1,4 @@
-﻿using MARS.Server.Services.RandomMem.Entity;
+﻿using MARS.Server.Services.Twitch.Rewards._11_RandomMemReward.Service.Entity;
 using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Websockets;
 

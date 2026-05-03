@@ -1,6 +1,6 @@
-﻿using MARS.Server.Services.RandomMem.Entity;
+﻿using MARS.Server.Services.Twitch.Rewards._11_RandomMemReward.Service.Entity;
 
-namespace MARS.Server.Services.RandomMem;
+namespace MARS.Server.Services.Twitch.Rewards._11_RandomMemReward.Service;
 
 public class RandomMemeService(
     IDbContextFactory<AppDbContext> contextFactory,

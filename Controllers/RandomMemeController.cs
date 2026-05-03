@@ -1,7 +1,7 @@
 ﻿using MARS.Server.Services;
-using MARS.Server.Services.RandomMem;
-using MARS.Server.Services.RandomMem.DTOs;
-using MARS.Server.Services.RandomMem.Entity;
+using MARS.Server.Services.Twitch.Rewards._11_RandomMemReward.Service;
+using MARS.Server.Services.Twitch.Rewards._11_RandomMemReward.Service.DTOs;
+using MARS.Server.Services.Twitch.Rewards._11_RandomMemReward.Service.Entity;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MARS.Server.Controllers;

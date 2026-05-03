@@ -8,7 +8,7 @@ using Message = TL.Message;
 using PhotoSize = TL.PhotoSize;
 using Update = TL.Update;
 
-namespace MARS.Server.Services.RandomMem;
+namespace MARS.Server.Services.Twitch.Rewards._11_RandomMemReward.Service;
 
 public class RandomMemOnline(
     IHostApplicationLifetime lifetime,
