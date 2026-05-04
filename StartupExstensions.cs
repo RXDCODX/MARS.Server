@@ -36,7 +36,6 @@ using MARS.Server.Services.Twitch.PuntoSwitcher;
 using MARS.Server.Services.Twitch.Rewards._1_AutoClipReward;
 using MARS.Server.Services.Twitch.Rewards._11_RandomMemReward.Service;
 using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
-using MARS.Server.Services.Twitch.Rewards.CloseGameReward;
 using MARS.Server.Services.Twitch.Rewards.MiniGames;
 using MARS.Server.Services.Twitch.Rewards.TestReward;
 using MARS.Server.Services.Twitch.Rewards.TwitchAdhdReward;
@@ -337,9 +336,6 @@ public static class StartupEstensions
 
         services.AddSingleton<AutoClip_TwitchReward>();
         services.AddHostedService(sp => sp.GetRequiredService<AutoClip_TwitchReward>());
-
-        services.AddSingleton<TwitchCloseTekkenService>();
-        services.AddHostedService(sp => sp.GetRequiredService<TwitchCloseTekkenService>());
 
         services.AddSingleton<TwitchAdhdService>();
         services.AddHostedService(sp => sp.GetRequiredService<TwitchAdhdService>());
