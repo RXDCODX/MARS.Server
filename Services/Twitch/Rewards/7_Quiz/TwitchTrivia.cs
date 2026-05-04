@@ -1,8 +1,8 @@
-﻿using MARS.Server.Services.Twitch.Management.Entitys;
-using MARS.Server.Services.Twitch.Rewards.MiniGames.Entitys.Interfaces;
-using MARS.Server.Services.Twitch.Rewards.MiniGames.Entitys.Subs;
+﻿using MARS.Server.Services.Twitch.Entitys.Interfaces;
+using MARS.Server.Services.Twitch.Entitys.Subs;
+using MARS.Server.Services.Twitch.Management.Entitys;
 
-namespace MARS.Server.Services.Twitch.Rewards.MiniGames;
+namespace MARS.Server.Services.Twitch.Rewards._7_Quiz;
 
 public class TwitchTrivia(
     ITwitchClient client,

@@ -1,9 +1,12 @@
-﻿using MARS.Server.Services.Twitch.Rewards.MiniGames.Entitys.Interfaces;
+﻿using MARS.Server.Services.Twitch.Entitys.Interfaces;
+using MARS.Server.Services.Twitch.Rewards._6_RussianRoulette;
+using MARS.Server.Services.Twitch.Rewards._7_Quiz;
+using MARS.Server.Services.Twitch.Rewards._8_TekkenQuiz;
 using TwitchLib.Client.Events;
 using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Websockets;
 
-namespace MARS.Server.Services.Twitch.Rewards.MiniGames;
+namespace MARS.Server.Services.Twitch.Rewards;
 
 public class MiniGamesManager(
     IServiceProvider serviceProvider,

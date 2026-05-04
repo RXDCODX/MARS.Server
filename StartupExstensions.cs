@@ -33,11 +33,13 @@ using MARS.Server.Services.Twitch.HelloVideos;
 using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.Twitch.MiniGamesStats;
 using MARS.Server.Services.Twitch.PuntoSwitcher;
+using MARS.Server.Services.Twitch.Rewards;
 using MARS.Server.Services.Twitch.Rewards._1_AutoClipReward;
 using MARS.Server.Services.Twitch.Rewards._11_RandomMemReward.Service;
+using MARS.Server.Services.Twitch.Rewards._6_RussianRoulette;
+using MARS.Server.Services.Twitch.Rewards._7_Quiz;
+using MARS.Server.Services.Twitch.Rewards._8_TekkenQuiz;
 using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
-using MARS.Server.Services.Twitch.Rewards.MiniGames;
-using MARS.Server.Services.Twitch.Rewards.TestReward;
 using MARS.Server.Services.Twitch.Rewards.TwitchAdhdReward;
 using MARS.Server.Services.Twitch.Rewards.TwitchAlerts;
 using MARS.Server.Services.Twitch.Rewards.TwitchCredits;
@@ -361,9 +363,6 @@ public static class StartupEstensions
         services.AddHostedService(sp => sp.GetRequiredService<TwitchTikTokEditService>());
 
         services.AddHostedService<TwitchRefundService>();
-
-        services.AddSingleton<TestRewardService>();
-        services.AddHostedService(sp => sp.GetRequiredService<TestRewardService>());
 
         services.AddSingleton<TwitchGaoAlert>();
         services.AddHostedService(sp => sp.GetRequiredService<TwitchGaoAlert>());

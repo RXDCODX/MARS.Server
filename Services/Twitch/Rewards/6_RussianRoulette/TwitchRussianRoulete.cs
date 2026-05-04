@@ -1,10 +1,10 @@
-﻿using MARS.Server.Services.Twitch.Management;
+﻿using MARS.Server.Services.Twitch.Entitys.Interfaces;
+using MARS.Server.Services.Twitch.Entitys.Subs;
+using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.Twitch.Management.Entitys;
-using MARS.Server.Services.Twitch.Rewards.MiniGames.Entitys.Interfaces;
-using MARS.Server.Services.Twitch.Rewards.MiniGames.Entitys.Subs;
 using TwitchLib.Api.Helix.Models.Chat;
 
-namespace MARS.Server.Services.Twitch.Rewards.MiniGames;
+namespace MARS.Server.Services.Twitch.Rewards._6_RussianRoulette;
 
 public class TwitchRussianRoulete(
     ITwitchClient client,

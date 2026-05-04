@@ -1,4 +1,4 @@
-﻿namespace MARS.Server.Services.Twitch.Rewards.MiniGames.Entitys.Subs;
+﻿namespace MARS.Server.Services.Twitch.Entitys.Subs;
 
 public class VictorinaLetter
 {

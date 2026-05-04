@@ -1,6 +1,7 @@
 ﻿using System.Text;
+using MARS.Server.Services.Twitch.Rewards._7_Quiz;
 
-namespace MARS.Server.Services.Twitch.Rewards.MiniGames.Entitys.Subs;
+namespace MARS.Server.Services.Twitch.Entitys.Subs;
 
 public class VictorinaGame(ILogger<TwitchTrivia> logger, ITwitchClient client, TwitchTrivia trivia)
 {

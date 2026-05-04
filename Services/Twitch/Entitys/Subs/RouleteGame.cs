@@ -1,4 +1,6 @@
-﻿namespace MARS.Server.Services.Twitch.Rewards.MiniGames.Entitys.Subs;
+﻿using MARS.Server.Services.Twitch.Rewards._6_RussianRoulette;
+
+namespace MARS.Server.Services.Twitch.Entitys.Subs;
 
 public class RouleteGame(
     List<RouletePlayer> players,

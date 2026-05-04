@@ -161,7 +161,6 @@
     <Folder Include="Migrations\LoggerMigrations\" />
     <Folder Include="Services\Twitch\Rewards\TwitchTiktokEdit\Entities\" />
     <Folder Include="WTelegram\" />
-    <Folder Include="Services\Twitch\Rewards\TestReward\" />
     <Folder Include="Services\Twitch\TwitchFollowers\Entitys\" />
   </ItemGroup>
   <Target Name="BuildClientApp" BeforeTargets="Publish">

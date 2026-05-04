@@ -1,4 +1,4 @@
-﻿namespace MARS.Server.Services.Twitch.Rewards.MiniGames.Entitys.Interfaces;
+﻿namespace MARS.Server.Services.Twitch.Entitys.Interfaces;
 
 public interface ITwitchMiniGame
 {
