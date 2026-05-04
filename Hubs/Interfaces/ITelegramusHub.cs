@@ -80,4 +80,7 @@ public interface ITelegramusHub
 
     [SignalRMethod]
     Task TikTokEdit(Guid guid, string text);
+
+    [SignalRMethod]
+    Task AllRefund(TwitchUser user);
 }

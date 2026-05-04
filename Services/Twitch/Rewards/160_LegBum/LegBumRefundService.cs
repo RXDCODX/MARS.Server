@@ -15,13 +15,13 @@ public class LegBumRefundService(
     ITwitchClient client,
     ILogger<LegBumRefundService> logger,
     EventSubWebsocketClient wsClient,
-    TokenService tokenService
+    TokenService tokenService,
+    LegBum_TwitchReward reward
 ) : BackgroundService, ITwitchReward
 {
     public bool IsServiceActive { get; set; } = true;
     public int Cost { get; init; } = 160;
 
-    private const string RefundRewardId = "c6b5343c-023e-4ff1-acc4-05195a1b8872";
     private static readonly string[] AspVariations = ["asp", "ASP", "Asp", "асп", "Асп", "АСП"];
 
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
@@ -62,6 +62,7 @@ public class LegBumRefundService(
                 TwitchExstension.Channel,
                 StringComparison.OrdinalIgnoreCase
             )
+            && reward.TwitchRewardId.HasValue
         )
         {
             try
@@ -84,7 +85,7 @@ public class LegBumRefundService(
                     // Возвращаем баллы пользователю
                     await api.Helix.ChannelPoints.UpdateRedemptionStatusAsync(
                         TwitchExstension.ChannelId,
-                        RefundRewardId,
+                        reward.TwitchRewardId.Value.ToString(),
                         [args.Payload.Event.Id],
                         new UpdateCustomRewardRedemptionStatusRequest
                         {

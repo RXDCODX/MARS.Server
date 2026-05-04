@@ -36,6 +36,7 @@ public abstract class TemporaryReward(
     public abstract Color Color { get; set; }
     public abstract int Cost { get; init; }
     public abstract Func<bool> IsRewardEnabled { get; set; }
+    internal virtual Guid? TwitchRewardId { get; private set; }
 
     public virtual async Task StartAsync(CancellationToken cancellationToken)
     {
@@ -134,6 +135,8 @@ public abstract class TemporaryReward(
 
         if (existingReward != null)
         {
+            TwitchRewardId = Guid.Parse(existingReward.Id);
+
             if (existingReward.IsEnabled != shouldBeEnabled)
             {
                 var updated = await channelRewardsService.UpdateRewardAsync(
