@@ -1,5 +1,5 @@
-﻿using MARS.Server.Services.Twitch.Rewards.TwitchMikuMikuBeamReward;
-using MARS.Server.Services.Twitch.Rewards.TwitchMikuMondayReward;
+﻿using MARS.Server.Services.Twitch.Rewards._39_MikuMonday;
+using MARS.Server.Services.Twitch.Rewards.TwitchMikuMikuBeamReward;
 using MARS.Server.Services.Twitch.SoundBarService;
 using MARS.Server.Services.WaifuRoll;
 using SignalRSwaggerGen.Attributes;

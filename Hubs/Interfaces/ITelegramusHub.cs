@@ -1,6 +1,5 @@
 ﻿using MARS.Server.Services.AutoArts_OBSOLETE.Entitys;
 using MARS.Server.Services.Twitch.Entitys;
-using MARS.Server.Services.Twitch.Rewards.TwitchMikuMondayReward.Entities;
 using MARS.Server.Services.Twitch.Rewards.TwitchScreenParticles.Entitys;
 using SignalRSwaggerGen.Attributes;
 using SignalRSwaggerGen.Enums;

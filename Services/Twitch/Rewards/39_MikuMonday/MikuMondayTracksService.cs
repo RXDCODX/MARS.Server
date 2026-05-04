@@ -1,9 +1,9 @@
 ﻿using System.Globalization;
 using System.Text.Json;
-using MARS.Server.Services.Twitch.Rewards.TwitchMikuMondayReward.Entities;
+using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.YouTube;
 
-namespace MARS.Server.Services.Twitch.Rewards.TwitchMikuMondayReward;
+namespace MARS.Server.Services.Twitch.Rewards._39_MikuMonday;
 
 /// <summary>
 /// Сервис для управления треками Miku Monday

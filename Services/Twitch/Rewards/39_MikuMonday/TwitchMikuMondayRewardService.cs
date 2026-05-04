@@ -1,10 +1,9 @@
 ﻿using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
-using MARS.Server.Services.Twitch.Rewards.TwitchMikuMondayReward.Entities;
 using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Websockets;
 
-namespace MARS.Server.Services.Twitch.Rewards.TwitchMikuMondayReward;
+namespace MARS.Server.Services.Twitch.Rewards._39_MikuMonday;
 
 /// <summary>
 /// Временная награда "Miku Monday" - доступна только по понедельникам
