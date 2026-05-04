@@ -159,7 +159,6 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Migrations\LoggerMigrations\" />
-    <Folder Include="Services\Twitch\Rewards\TwitchTiktokEdit\Entities\" />
     <Folder Include="WTelegram\" />
     <Folder Include="Services\Twitch\TwitchFollowers\Entitys\" />
   </ItemGroup>

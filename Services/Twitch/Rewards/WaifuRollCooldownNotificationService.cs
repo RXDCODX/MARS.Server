@@ -3,7 +3,7 @@ using TwitchLib.Client.Events;
 using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Websockets;
 
-namespace MARS.Server.Services.Twitch.Rewards.WaifuRollCooldownNotification;
+namespace MARS.Server.Services.Twitch.Rewards;
 
 public class WaifuRollCooldownNotificationService(
     IHostApplicationLifetime lifetime,

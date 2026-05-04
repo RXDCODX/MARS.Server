@@ -2,15 +2,15 @@
 using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Websockets;
 
-namespace MARS.Server.Services.Twitch.Rewards.TwitchTiktokEdit;
+namespace MARS.Server.Services.Twitch.Rewards._337_PhonkEdit;
 
-public class TwitchTikTokEditService(
+public class TwitchPhonkEditService(
     EventSubWebsocketClient wsClient,
     IHostApplicationLifetime lifetime,
     IHubContext<TelegramusHub, ITelegramusHub> hubContext
 ) : BackgroundService, ITwitchReward
 {
-    public int Cost { get; init; } = 353;
+    public int Cost { get; init; } = 337;
 
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -47,7 +47,7 @@ public class TwitchTikTokEditService(
         {
             await Task.Factory.StartNew(async () =>
             {
-                await hubContext.Clients.All.TikTokEdit(Guid.NewGuid(), text);
+                await hubContext.Clients.All.PhonkEdit();
             });
         }
     }

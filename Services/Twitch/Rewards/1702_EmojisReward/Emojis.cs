@@ -1,6 +1,6 @@
 ﻿using TwitchLib.Client.Events;
 
-namespace MARS.Server.Services.Twitch.Rewards.TwitchScreenParticles;
+namespace MARS.Server.Services.Twitch.Rewards._1702_EmojisReward;
 
 public class Emojis(
     IHubContext<TelegramusHub, ITelegramusHub> hub,

@@ -1,4 +1,3 @@
-using System.Drawing;
 using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Rewards._11_RandomMemReward.Service.Entity;
 using MARS.Server.Services.Twitch.Rewards.ChannelRewards;

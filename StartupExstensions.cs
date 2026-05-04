@@ -35,13 +35,15 @@ using MARS.Server.Services.Twitch.MiniGamesStats;
 using MARS.Server.Services.Twitch.PuntoSwitcher;
 using MARS.Server.Services.Twitch.Rewards;
 using MARS.Server.Services.Twitch.Rewards._1_AutoClipReward;
-using MARS.Server.Services.Twitch.Rewards._10_RandomSound;
-using MARS.Server.Services.Twitch.Rewards._11_RandomMemReward;
 using MARS.Server.Services.Twitch.Rewards._11_RandomMemReward.Service;
 using MARS.Server.Services.Twitch.Rewards._155_MichaelTime;
+using MARS.Server.Services.Twitch.Rewards._160_LegBum;
 using MARS.Server.Services.Twitch.Rewards._170_FumoFridayNightReward;
+using MARS.Server.Services.Twitch.Rewards._1702_EmojisReward;
 using MARS.Server.Services.Twitch.Rewards._18_GaoAlert;
 using MARS.Server.Services.Twitch.Rewards._2002_AdhdSuperpower;
+using MARS.Server.Services.Twitch.Rewards._337_PhonkEdit;
+using MARS.Server.Services.Twitch.Rewards._353_TikTokEdit;
 using MARS.Server.Services.Twitch.Rewards._39_MikuMonday;
 using MARS.Server.Services.Twitch.Rewards._6_RussianRoulette;
 using MARS.Server.Services.Twitch.Rewards._7_Quiz;
@@ -50,11 +52,8 @@ using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
 using MARS.Server.Services.Twitch.Rewards.TwitchCredits;
 using MARS.Server.Services.Twitch.Rewards.TwitchMikuMikuBeamReward;
 using MARS.Server.Services.Twitch.Rewards.TwitchRandomArt;
-using MARS.Server.Services.Twitch.Rewards.TwitchRefundService;
 using MARS.Server.Services.Twitch.Rewards.TwitchScreenParticles;
-using MARS.Server.Services.Twitch.Rewards.TwitchTiktokEdit;
 using MARS.Server.Services.Twitch.Rewards.TwitchWaifuRolls;
-using MARS.Server.Services.Twitch.Rewards.WaifuRollCooldownNotification;
 using MARS.Server.Services.Twitch.SoundBarService;
 using MARS.Server.Services.Twitch.StreamBotNotifications;
 using MARS.Server.Services.Twitch.StreamManagement;
@@ -281,10 +280,6 @@ public static class StartupEstensions
         services.AddHostedService(sp =>
             sp.GetRequiredService<WaifuRollCooldownNotificationService>()
         );
-        services.AddSingleton<RandomMem_TwitchReward>();
-        services.AddHostedService(sp => sp.GetRequiredService<RandomMem_TwitchReward>());
-        services.AddSingleton<RandomSound_TwitchReward>();
-        services.AddHostedService(sp => sp.GetRequiredService<RandomSound_TwitchReward>());
         services.AddScoped<TwitchRussianRoulete>();
         services.AddScoped<TekkenVictorina>();
         services.AddScoped<TwitchTrivia>();
@@ -363,7 +358,7 @@ public static class StartupEstensions
         services.AddSingleton<TwitchTikTokEditService>();
         services.AddHostedService(sp => sp.GetRequiredService<TwitchTikTokEditService>());
 
-        services.AddHostedService<TwitchRefundService>();
+        services.AddHostedService<LegBumRefundService>();
 
         services.AddSingleton<TwitchGaoAlert>();
         services.AddHostedService(sp => sp.GetRequiredService<TwitchGaoAlert>());

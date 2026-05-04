@@ -5,15 +5,15 @@ using TwitchLib.Api.Helix.Models.ChannelPoints.UpdateCustomRewardRedemptionStatu
 using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Websockets;
 
-namespace MARS.Server.Services.Twitch.Rewards.TwitchRefundService;
+namespace MARS.Server.Services.Twitch.Rewards._160_LegBum;
 
 /// <summary>
 /// Сервис для возврата баллов канала при активации алерта за 160 баллов с текстом "asp"
 /// </summary>
-public class TwitchRefundService(
+public class LegBumRefundService(
     ITwitchAPI api,
     ITwitchClient client,
-    ILogger<TwitchRefundService> logger,
+    ILogger<LegBumRefundService> logger,
     EventSubWebsocketClient wsClient,
     TokenService tokenService
 ) : BackgroundService, ITwitchReward

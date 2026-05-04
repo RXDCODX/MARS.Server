@@ -1,4 +1,3 @@
-using System.Drawing;
 using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
 
@@ -11,7 +10,8 @@ public class RussianRoulette_TwitchReward(
 ) : TemporaryReward(channelRewardsService, logger, environment)
 {
     public override string AlertDisplayName { get; set; } = "Русская рулетка";
-    public override string AlertDescription { get; set; } = "Есть вариант игр на 1 игрока, на 2 игроков и на множество до 8";
+    public override string AlertDescription { get; set; } =
+        "Есть вариант игр на 1 игрока, на 2 игроков и на множество до 8";
     public override Color Color { get; set; } = Color.FromArgb(247, 0, 255);
     public override int Cost { get; init; } = 6;
     public override Func<bool> IsRewardEnabled { get; set; } = () => true;
