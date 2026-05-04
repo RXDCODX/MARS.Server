@@ -67,6 +67,7 @@ using MARS.Server.Services.Twitch.WeddingAnniversary;
 using MARS.Server.Services.WaifuRoll;
 using MARS.Server.Services.WaifuRoll.Entitys.Interfaces;
 using MARS.Server.Services.WaifuRoll.helpers;
+using MARS.Server.Services.YouTube;
 using MARS.Server.Swagger;
 using Microsoft.OpenApi;
 using TwitchLib.Api;
@@ -277,8 +278,6 @@ public static class StartupEstensions
         services.AddHostedService(sp => sp.GetRequiredService<AddNewWaifu>());
         services.AddSingleton<MergeWaifu>();
         services.AddHostedService(sp => sp.GetRequiredService<MergeWaifu>());
-        services.AddSingleton<SearchWife_TwitchReward>();
-        services.AddHostedService(sp => sp.GetRequiredService<SearchWife_TwitchReward>());
         services.AddSingleton<WaifuRollCooldownNotificationService>();
         services.AddHostedService(sp =>
             sp.GetRequiredService<WaifuRollCooldownNotificationService>()
@@ -299,15 +298,6 @@ public static class StartupEstensions
         services.AddHostedService(sp => sp.GetRequiredService<HelloVideoWorker>());
 
         services.AddSingleton<WeddingAnniversaryService>();
-
-        services.AddSingleton<Confetti_TwitchReward>();
-        services.AddHostedService(sp => sp.GetRequiredService<Confetti_TwitchReward>());
-        
-        services.AddSingleton<Fireworks_TwitchReward>();
-        services.AddHostedService(sp => sp.GetRequiredService<Fireworks_TwitchReward>());
-        
-        services.AddSingleton<Emojis_TwitchReward>();
-        services.AddHostedService(sp => sp.GetRequiredService<Emojis_TwitchReward>());
 
         services.AddSingleton<RandomArt>();
         services.AddHostedService(sp => sp.GetRequiredService<RandomArt>());
@@ -337,19 +327,7 @@ public static class StartupEstensions
         services.AddSingleton<TekkenVictorinaLeaderbord>();
         services.AddHostedService(sp => sp.GetRequiredService<TekkenVictorinaLeaderbord>());
 
-        services.AddSingleton<AutoClip_TwitchReward>();
-        services.AddHostedService(sp => sp.GetRequiredService<AutoClip_TwitchReward>());
-
-        services.AddSingleton<AdhdSuperpower_TwitchReward>();
-        services.AddHostedService(sp => sp.GetRequiredService<AdhdSuperpower_TwitchReward>());
-
-        services.AddSingleton<Credits_TwitchReward>();
-        services.AddHostedService(sp => sp.GetRequiredService<Credits_TwitchReward>());
-
-        services.AddSingleton<MichaelTime_TwitchReward>();
-        services.AddHostedService(sp => sp.GetRequiredService<MichaelTime_TwitchReward>());
-
-        services.AddSingleton<MARS.Server.Services.YouTube.YouTubeResolver>();
+        services.AddSingleton<YouTubeResolver>();
         services.AddSingleton<MikuMondayTracksService>();
         services.AddSingleton<TwitchMikuMondayRewardService>();
         services.AddHostedService(sp => sp.GetRequiredService<TwitchMikuMondayRewardService>());
@@ -357,19 +335,7 @@ public static class StartupEstensions
         services.AddSingleton<TwitchMikuBeamRewardService>();
         services.AddHostedService(sp => sp.GetRequiredService<TwitchMikuBeamRewardService>());
 
-        services.AddSingleton<PhonkEdit_TwitchReward>();
-        services.AddHostedService(sp => sp.GetRequiredService<PhonkEdit_TwitchReward>());
-
-        services.AddSingleton<TikTokEdit_TwitchReward>();
-        services.AddHostedService(sp => sp.GetRequiredService<TikTokEdit_TwitchReward>());
-
         services.AddHostedService<LegBumRefundService>();
-
-        services.AddSingleton<GaoAlert_TwitchReward>();
-        services.AddHostedService(sp => sp.GetRequiredService<GaoAlert_TwitchReward>());
-
-        services.AddSingleton<FumoFridayNight_TwitchReward>();
-        services.AddHostedService(sp => sp.GetRequiredService<FumoFridayNight_TwitchReward>());
 
         services.AddSingleton<ChannelRewardsService>();
         //services.AddHostedService<AlertInitializationService>();
