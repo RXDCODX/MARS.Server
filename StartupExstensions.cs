@@ -277,8 +277,8 @@ public static class StartupEstensions
         services.AddHostedService(sp => sp.GetRequiredService<AddNewWaifu>());
         services.AddSingleton<MergeWaifu>();
         services.AddHostedService(sp => sp.GetRequiredService<MergeWaifu>());
-        services.AddSingleton<RollWaifu>();
-        services.AddHostedService(sp => sp.GetRequiredService<RollWaifu>());
+        services.AddSingleton<SearchWife_TwitchReward>();
+        services.AddHostedService(sp => sp.GetRequiredService<SearchWife_TwitchReward>());
         services.AddSingleton<WaifuRollCooldownNotificationService>();
         services.AddHostedService(sp =>
             sp.GetRequiredService<WaifuRollCooldownNotificationService>()
@@ -300,12 +300,14 @@ public static class StartupEstensions
 
         services.AddSingleton<WeddingAnniversaryService>();
 
-        services.AddSingleton<Confetty>();
-        services.AddSingleton<Fireworks>();
-        services.AddSingleton<Emojis>();
-        services.AddHostedService(sp => sp.GetRequiredService<Confetty>());
-        services.AddHostedService(sp => sp.GetRequiredService<Fireworks>());
-        services.AddHostedService(sp => sp.GetRequiredService<Emojis>());
+        services.AddSingleton<Confetti_TwitchReward>();
+        services.AddHostedService(sp => sp.GetRequiredService<Confetti_TwitchReward>());
+        
+        services.AddSingleton<Fireworks_TwitchReward>();
+        services.AddHostedService(sp => sp.GetRequiredService<Fireworks_TwitchReward>());
+        
+        services.AddSingleton<Emojis_TwitchReward>();
+        services.AddHostedService(sp => sp.GetRequiredService<Emojis_TwitchReward>());
 
         services.AddSingleton<RandomArt>();
         services.AddHostedService(sp => sp.GetRequiredService<RandomArt>());
@@ -338,14 +340,14 @@ public static class StartupEstensions
         services.AddSingleton<AutoClip_TwitchReward>();
         services.AddHostedService(sp => sp.GetRequiredService<AutoClip_TwitchReward>());
 
-        services.AddSingleton<TwitchAdhdService>();
-        services.AddHostedService(sp => sp.GetRequiredService<TwitchAdhdService>());
+        services.AddSingleton<AdhdSuperpower_TwitchReward>();
+        services.AddHostedService(sp => sp.GetRequiredService<AdhdSuperpower_TwitchReward>());
 
-        services.AddSingleton<TwitchCreditsRewardService>();
-        services.AddHostedService(sp => sp.GetRequiredService<TwitchCreditsRewardService>());
+        services.AddSingleton<Credits_TwitchReward>();
+        services.AddHostedService(sp => sp.GetRequiredService<Credits_TwitchReward>());
 
-        services.AddSingleton<TwitchMichaelJacksonRewardService>();
-        services.AddHostedService(sp => sp.GetRequiredService<TwitchMichaelJacksonRewardService>());
+        services.AddSingleton<MichaelTime_TwitchReward>();
+        services.AddHostedService(sp => sp.GetRequiredService<MichaelTime_TwitchReward>());
 
         services.AddSingleton<MARS.Server.Services.YouTube.YouTubeResolver>();
         services.AddSingleton<MikuMondayTracksService>();
@@ -355,16 +357,16 @@ public static class StartupEstensions
         services.AddSingleton<TwitchMikuBeamRewardService>();
         services.AddHostedService(sp => sp.GetRequiredService<TwitchMikuBeamRewardService>());
 
-        services.AddSingleton<TwitchPhonkEditService>();
-        services.AddHostedService(sp => sp.GetRequiredService<TwitchPhonkEditService>());
+        services.AddSingleton<PhonkEdit_TwitchReward>();
+        services.AddHostedService(sp => sp.GetRequiredService<PhonkEdit_TwitchReward>());
 
-        services.AddSingleton<TwitchTikTokEditService>();
-        services.AddHostedService(sp => sp.GetRequiredService<TwitchTikTokEditService>());
+        services.AddSingleton<TikTokEdit_TwitchReward>();
+        services.AddHostedService(sp => sp.GetRequiredService<TikTokEdit_TwitchReward>());
 
         services.AddHostedService<LegBumRefundService>();
 
-        services.AddSingleton<TwitchGaoAlert>();
-        services.AddHostedService(sp => sp.GetRequiredService<TwitchGaoAlert>());
+        services.AddSingleton<GaoAlert_TwitchReward>();
+        services.AddHostedService(sp => sp.GetRequiredService<GaoAlert_TwitchReward>());
 
         services.AddSingleton<FumoFridayNight_TwitchReward>();
         services.AddHostedService(sp => sp.GetRequiredService<FumoFridayNight_TwitchReward>());
