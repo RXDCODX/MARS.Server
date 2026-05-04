@@ -2,7 +2,6 @@ using MARS.Server.Services.CommandExecutor.Entitys;
 using MARS.Server.Services.CommandExecutor.Entitys.Commands;
 using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Rewards._39_MikuMonday;
-using MARS.Server.Services.Twitch.Rewards.TwitchMikuMondayReward.Entities;
 
 namespace MARS.Server.Services.CommandExecutor.Commands;
 
