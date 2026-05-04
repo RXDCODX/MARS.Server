@@ -36,16 +36,14 @@ using MARS.Server.Services.Twitch.PuntoSwitcher;
 using MARS.Server.Services.Twitch.Rewards;
 using MARS.Server.Services.Twitch.Rewards._1_AutoClipReward;
 using MARS.Server.Services.Twitch.Rewards._11_RandomMemReward.Service;
+using MARS.Server.Services.Twitch.Rewards._170_FumoFridayNightReward;
+using MARS.Server.Services.Twitch.Rewards._18_GaoAlert;
 using MARS.Server.Services.Twitch.Rewards._2002_AdhdSuperpower;
 using MARS.Server.Services.Twitch.Rewards._6_RussianRoulette;
 using MARS.Server.Services.Twitch.Rewards._7_Quiz;
 using MARS.Server.Services.Twitch.Rewards._8_TekkenQuiz;
 using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
-using MARS.Server.Services.Twitch.Rewards.TwitchAlerts;
 using MARS.Server.Services.Twitch.Rewards.TwitchCredits;
-using MARS.Server.Services.Twitch.Rewards.TwitchFumoFridayNight;
-using MARS.Server.Services.Twitch.Rewards.TwitchGaoAlert;
-using MARS.Server.Services.Twitch.Rewards.TwitchHighlitedMessage;
 using MARS.Server.Services.Twitch.Rewards.TwitchMichaelJacksonReward;
 using MARS.Server.Services.Twitch.Rewards.TwitchMikuMikuBeamReward;
 using MARS.Server.Services.Twitch.Rewards.TwitchMikuMondayReward;
@@ -367,8 +365,8 @@ public static class StartupEstensions
         services.AddSingleton<TwitchGaoAlert>();
         services.AddHostedService(sp => sp.GetRequiredService<TwitchGaoAlert>());
 
-        services.AddSingleton<TwitchFumoFridayNight>();
-        services.AddHostedService(sp => sp.GetRequiredService<TwitchFumoFridayNight>());
+        services.AddSingleton<FumoFridayNight_TwitchReward>();
+        services.AddHostedService(sp => sp.GetRequiredService<FumoFridayNight_TwitchReward>());
 
         services.AddSingleton<ChannelRewardsService>();
         //services.AddHostedService<AlertInitializationService>();

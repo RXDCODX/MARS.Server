@@ -1,10 +1,10 @@
 ﻿using System.Text.RegularExpressions;
+using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Management.Entitys;
-using MARS.Server.Services.Twitch.Rewards.TwitchGaoAlert.Entitys;
 using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Websockets;
 
-namespace MARS.Server.Services.Twitch.Rewards.TwitchGaoAlert;
+namespace MARS.Server.Services.Twitch.Rewards._18_GaoAlert;
 
 public class TwitchGaoAlert(
     ITwitchAPI api,

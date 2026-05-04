@@ -1,6 +1,6 @@
 ﻿using User = TwitchLib.Api.Helix.Models.Users.GetUsers.User;
 
-namespace MARS.Server.Services.Twitch.Rewards.TwitchGaoAlert.Entitys;
+namespace MARS.Server.Services.Twitch.Entitys;
 
 public class GaoAlertDto
 {

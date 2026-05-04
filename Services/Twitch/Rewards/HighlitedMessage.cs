@@ -4,7 +4,7 @@ using MARS.Server.Services.Twitch.PuntoSwitcher;
 using TwitchLib.Client.Events;
 using TwitchLib.Client.Models;
 
-namespace MARS.Server.Services.Twitch.Rewards.TwitchHighlitedMessage;
+namespace MARS.Server.Services.Twitch.Rewards;
 
 public class HighlitedMessage : BackgroundService
 {

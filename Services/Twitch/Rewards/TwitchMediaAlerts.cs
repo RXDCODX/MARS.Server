@@ -3,7 +3,7 @@ using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Core.SubscriptionTypes.Channel;
 using TwitchLib.EventSub.Websockets;
 
-namespace MARS.Server.Services.Twitch.Rewards.TwitchAlerts;
+namespace MARS.Server.Services.Twitch.Rewards;
 
 public class TwitchMediaAlerts(
     IHubContext<TelegramusHub, ITelegramusHub> hubContext,

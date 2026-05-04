@@ -2,7 +2,7 @@
 using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Websockets;
 
-namespace MARS.Server.Services.Twitch.Rewards.TwitchMichaelJacksonReward;
+namespace MARS.Server.Services.Twitch.Rewards._155_MichaelTime;
 
 /// <summary>
 /// Сервис для обработки награды MichaelJackson на Twitch

@@ -5,11 +5,11 @@ using TwitchLib.Api.Helix.Models.ChannelPoints.CreateCustomReward;
 using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Websockets;
 
-namespace MARS.Server.Services.Twitch.Rewards.TwitchFumoFridayNight;
+namespace MARS.Server.Services.Twitch.Rewards._170_FumoFridayNightReward;
 
-public class TwitchFumoFridayNight(
+public class FumoFridayNight_TwitchReward(
     ChannelRewardsService channelRewardsService,
-    ILogger<TwitchFumoFridayNight> logger,
+    ILogger<FumoFridayNight_TwitchReward> logger,
     IHostEnvironment environment,
     IDbContextFactory<AppDbContext> dbContextFactory,
     EventSubWebsocketClient wsClient,
