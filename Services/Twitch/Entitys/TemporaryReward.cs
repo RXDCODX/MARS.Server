@@ -1,4 +1,4 @@
-﻿using System.Timers;
+﻿using System.Threading;
 using MARS.Server.Services.Twitch.Management.Entitys;
 using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
 using TwitchLib.Api.Helix.Models.ChannelPoints.CreateCustomReward;
@@ -12,7 +12,9 @@ public abstract class TemporaryReward(
     IHostEnvironment environment
 ) : IHostedService, ITwitchReward
 {
-    private Timer? _timer;
+    private PeriodicTimer? _timer;
+    private CancellationTokenSource? _cancellationTokenSource;
+    private Task? _runningTask;
     private readonly SemaphoreSlim _semaphore = new(1);
 
     private protected virtual CreateCustomRewardsRequest CreateCustomRewardsRequest =>
@@ -35,7 +37,7 @@ public abstract class TemporaryReward(
     public abstract int Cost { get; init; }
     public abstract Func<bool> IsRewardEnabled { get; set; }
 
-    public virtual Task StartAsync(CancellationToken cancellationToken)
+    public virtual async Task StartAsync(CancellationToken cancellationToken)
     {
         logger.LogInformation(
             "Запуск временной награды: {AlertName} (Cost: {Cost})",
@@ -43,43 +45,68 @@ public abstract class TemporaryReward(
             Cost
         );
 
-        // Инициализация таймера с периодичностью 5 минут
-        _timer = new Timer(TimeSpan.FromMinutes(5));
-        OnTimerElapsed(this, new ElapsedEventArgs(DateTime.Now));
-        _timer.Elapsed += OnTimerElapsed;
+        _cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(
+            cancellationToken
+        );
+        _timer = new PeriodicTimer(TimeSpan.FromMinutes(5));
 
-        return Task.CompletedTask;
+        if (environment.IsProduction())
+        {
+            await EnsureRewardStateAsync(IsRewardEnabled());
+            _runningTask = RunTimerLoopAsync(_cancellationTokenSource.Token);
+        }
+
+        return;
     }
 
     public virtual async Task StopAsync(CancellationToken cancelToken)
     {
         logger.LogInformation("Остановка временной награды: {AlertName}", AlertDisplayName);
 
-        // Останавливаем таймер
+        _cancellationTokenSource?.Cancel();
+
         if (_timer != null)
         {
             _timer?.Dispose();
             _timer = null;
         }
 
+        if (_runningTask != null)
+        {
+            try
+            {
+                await _runningTask.WaitAsync(cancelToken);
+            }
+            catch (TaskCanceledException) { }
+            catch (OperationCanceledException) { }
+
+            _runningTask = null;
+        }
+
+        _cancellationTokenSource?.Dispose();
+        _cancellationTokenSource = null;
+
         // Награда должна сохраняться в системе, при остановке просто выключаем
         await EnsureRewardStateAsync(false);
     }
 
-    private async void OnTimerElapsed(object? state, ElapsedEventArgs elapsedEventArgs)
+    private async Task RunTimerLoopAsync(CancellationToken cancellationToken)
     {
-        if (!environment.IsProduction())
+        while (_timer != null && await _timer.WaitForNextTickAsync(cancellationToken))
         {
-            return;
+            await ExecuteRewardStateAsync(IsRewardEnabled(), cancellationToken);
         }
-        await _semaphore.WaitAsync();
+    }
+
+    private async Task ExecuteRewardStateAsync(
+        bool shouldBeEnabled,
+        CancellationToken cancellationToken
+    )
+    {
+        await _semaphore.WaitAsync(cancellationToken);
 
         try
         {
-            var now = elapsedEventArgs.SignalTime;
-            var shouldBeEnabled = IsRewardEnabled();
-
-            // Награда всегда должна существовать, по расписанию меняем только IsEnabled
             await EnsureRewardStateAsync(shouldBeEnabled);
         }
         catch (Exception ex)
@@ -179,9 +206,7 @@ public abstract class TemporaryReward(
 
     private protected void TimerElapseNow()
     {
-        _timer?.Stop();
-        OnTimerElapsed(this, new ElapsedEventArgs(DateTime.Now));
-        _timer?.Start();
+        _ = ExecuteRewardStateAsync(IsRewardEnabled(), CancellationToken.None);
     }
 
     private static string ColorToHex(Color color)

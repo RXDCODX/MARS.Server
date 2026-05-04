@@ -215,6 +215,8 @@ public static class StartupEstensions
         IConfigurationManager manager
     )
     {
+        services.InitializeTwitchRewards();
+
         services.AddSingleton<TelegramTokenNotification>();
         services.AddSingleton<TokenService>();
         services.AddHostedService(sp => sp.GetRequiredService<TokenService>());
@@ -292,8 +294,6 @@ public static class StartupEstensions
         services.AddHostedService(sp => sp.GetRequiredService<PuntoSwitcherService>());
         services.AddSingleton<HighlitedMessage>();
         services.AddHostedService(sp => sp.GetRequiredService<HighlitedMessage>());
-        services.AddSingleton<FumoFridayWorker>();
-        services.AddHostedService(sp => sp.GetRequiredService<FumoFridayWorker>());
         services.AddSingleton<HelloVideoWorker>();
         services.AddHostedService(sp => sp.GetRequiredService<HelloVideoWorker>());
 
@@ -329,8 +329,6 @@ public static class StartupEstensions
 
         services.AddSingleton<YouTubeResolver>();
         services.AddSingleton<MikuMondayTracksService>();
-        services.AddSingleton<TwitchMikuMondayRewardService>();
-        services.AddHostedService(sp => sp.GetRequiredService<TwitchMikuMondayRewardService>());
 
         services.AddSingleton<TwitchMikuBeamRewardService>();
         services.AddHostedService(sp => sp.GetRequiredService<TwitchMikuBeamRewardService>());
