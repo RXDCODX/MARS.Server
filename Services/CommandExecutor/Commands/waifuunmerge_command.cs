@@ -1,6 +1,6 @@
 using MARS.Server.Services.CommandExecutor.Entitys;
 using MARS.Server.Services.CommandExecutor.Entitys.Commands;
-using MARS.Server.Services.Twitch.Rewards.TwitchWaifuRolls;
+using MARS.Server.Services.Twitch.Rewards._2_WaifuMarriage;
 
 namespace MARS.Server.Services.CommandExecutor.Commands;
 

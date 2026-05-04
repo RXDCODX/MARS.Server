@@ -6,7 +6,7 @@ using TwitchLib.Client.Events;
 using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Websockets;
 
-namespace MARS.Server.Services.Twitch.Rewards.TwitchMikuMikuBeamReward;
+namespace MARS.Server.Services.Twitch.Rewards._1580_MikuBeam;
 
 /// <summary>
 /// Сервис для обработки награды "MIKU MIKU BEAM" на Twitch

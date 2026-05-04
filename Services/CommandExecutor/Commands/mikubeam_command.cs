@@ -1,6 +1,6 @@
 using MARS.Server.Services.CommandExecutor.Entitys;
 using MARS.Server.Services.CommandExecutor.Entitys.Commands;
-using MARS.Server.Services.Twitch.Rewards.TwitchMikuMikuBeamReward;
+using MARS.Server.Services.Twitch.Rewards._1580_MikuBeam;
 
 namespace MARS.Server.Services.CommandExecutor.Commands;
 

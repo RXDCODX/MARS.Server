@@ -2,7 +2,7 @@
 using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Websockets;
 
-namespace MARS.Server.Services.Twitch.Rewards.TwitchScreenParticles;
+namespace MARS.Server.Services.Twitch.Rewards._1701_Fireworks;
 
 public class Fireworks : BackgroundService, ITwitchReward
 {

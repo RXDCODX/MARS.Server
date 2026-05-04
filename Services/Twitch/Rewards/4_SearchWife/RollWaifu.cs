@@ -6,7 +6,7 @@ using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Core.SubscriptionTypes.Channel;
 using TwitchLib.EventSub.Websockets;
 
-namespace MARS.Server.Services.Twitch.Rewards.TwitchWaifuRolls;
+namespace MARS.Server.Services.Twitch.Rewards._4_SearchWife;
 
 public class RollWaifu(
     ILogger<RollWaifu> logger,

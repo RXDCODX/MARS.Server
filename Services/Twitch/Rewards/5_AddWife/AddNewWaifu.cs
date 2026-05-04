@@ -8,7 +8,7 @@ using ShikimoriSharp.Classes;
 using TwitchLib.Api.Helix.Models.Chat;
 using TwitchLib.Client.Events;
 
-namespace MARS.Server.Services.Twitch.Rewards.TwitchWaifuRolls;
+namespace MARS.Server.Services.Twitch.Rewards._5_AddWife;
 
 public class AddNewWaifu(
     ILogger<AddNewWaifu> logger,

@@ -1,4 +1,4 @@
-﻿using MARS.Server.Services.Twitch.Rewards.TwitchWaifuRolls;
+﻿using MARS.Server.Services.Twitch.Rewards._5_AddWife;
 using MARS.Server.Services.WaifuRoll;
 using TwitchLib.Client.Events;
 

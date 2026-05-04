@@ -2,7 +2,7 @@
 using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Websockets;
 
-namespace MARS.Server.Services.Twitch.Rewards.TwitchCredits;
+namespace MARS.Server.Services.Twitch.Rewards._8005_Credits;
 
 /// <summary>
 /// Сервис для обработки награды Credits на Twitch

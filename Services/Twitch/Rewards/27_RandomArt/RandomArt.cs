@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.StaticFiles.Infrastructure;
 using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Websockets;
 
-namespace MARS.Server.Services.Twitch.Rewards.TwitchRandomArt;
+namespace MARS.Server.Services.Twitch.Rewards._27_RandomArt;
 
 public class RandomArt(
     IHubContext<TelegramusHub, ITelegramusHub> hub,
