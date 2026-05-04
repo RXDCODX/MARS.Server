@@ -2,7 +2,7 @@
 using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Websockets;
 
-namespace MARS.Server.Services.Twitch.Rewards.TwitchAdhdReward;
+namespace MARS.Server.Services.Twitch.Rewards._2002_AdhdSuperpower;
 
 /// <summary>
 /// Сервис для обработки награды ADHD на Twitch
