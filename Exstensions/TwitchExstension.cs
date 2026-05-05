@@ -85,7 +85,7 @@ public static class TwitchExstension
 
     extension(ITwitchAPI client)
     {
-        public async Task SendAnnouncementToMainTwitch<T>(
+        public async Task SendAnnouncementToMainTwitchAsync<T>(
             string message,
             TokenInfo? userToken,
             AnnouncementColors? color = null,

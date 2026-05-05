@@ -51,7 +51,7 @@ public class TwitchRussianRoulete(
                 && !tenSecAuth
             )
             {
-                await api.SendAnnouncementToMainTwitch(
+                await api.SendAnnouncementToMainTwitchAsync(
                     "Осталось меньше 10 секунд до начала рулетки!",
                     tokenService.Token,
                     AnnouncementColors.Primary,
@@ -84,7 +84,7 @@ public class TwitchRussianRoulete(
 
             var text =
                 $"@{name} запускает русскую рулетку, у вас есть {seconds.TotalSeconds} секунд! Чтобы принять участие нажмите на награду за баллы канала стоимостью {Cost}!";
-            await api.SendAnnouncementToMainTwitch(
+            await api.SendAnnouncementToMainTwitchAsync(
                 text,
                 tokenService.Token,
                 AnnouncementColors.Primary,

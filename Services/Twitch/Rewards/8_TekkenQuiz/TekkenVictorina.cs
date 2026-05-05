@@ -4,6 +4,7 @@ using MARS.Server.Services.Twitch.Entitys.Interfaces;
 using MARS.Server.Services.Twitch.Entitys.Subs;
 using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.Twitch.MiniGamesStats;
+using TwitchLib.Api.Helix.Models.Chat;
 
 namespace MARS.Server.Services.Twitch.Rewards._8_TekkenQuiz;
 
@@ -82,7 +83,12 @@ public class TekkenVictorina(
                 )} {randomMove.Command} в течении {awaitTime.TotalSeconds} секунд! Принимается ответ в формате: -14 или -14~-11 если это диапазон
                 """;
 
-            await api.SendAnnouncementToMainTwitch(prepare, tokenService.Token, null, logger);
+            await api.SendAnnouncementToMainTwitchAsync(
+                prepare,
+                tokenService.Token,
+                AnnouncementColors.Primary,
+                logger
+            );
             var answer = GetAnswer(randomMove);
             _currentGame = new TekkenVictorinaGame(answer);
             var token = _currentGame.CancellationTokenForRightAnswer.Token;

@@ -4,6 +4,7 @@ using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
 using TwitchLib.Api.Core.Enums;
 using TwitchLib.Api.Helix.Models.ChannelPoints.CreateCustomReward;
 using TwitchLib.Api.Helix.Models.ChannelPoints.UpdateCustomRewardRedemptionStatus;
+using TwitchLib.Api.Helix.Models.Chat;
 using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Websockets;
 
@@ -17,10 +18,11 @@ public class AllRefund_TwitchReward(
     EventSubWebsocketClient wsClient,
     ITwitchAPI api,
     TokenService tokenService,
-    ITwitchClient client
+    ITwitchClient client,
+    TwitchUserEnsureService twitchUserEnsureService
 ) : TemporaryReward(channelRewardsService, logger, environment)
 {
-    public override string AlertDisplayName { get; set; } = "БЕСКОНЕЧНЫЕ НАГРАДЫ";
+    public override string AlertDisplayName { get; set; } = "💣 Алармагеддон 💣";
     public override string AlertDescription { get; set; } =
         "После активации, все использованные награды на этом канале, в течении 1 минуты, возращают потраченные баллы канала";
     public override Color Color { get; set; } = Color.Aqua;
@@ -35,6 +37,7 @@ public class AllRefund_TwitchReward(
             var value = base.CreateCustomRewardsRequest;
             value.IsUserInputRequired = true;
             value.ShouldRedemptionsSkipRequestQueue = true;
+            value.MaxPerStream = 1;
             return value;
         }
     }
@@ -60,17 +63,21 @@ public class AllRefund_TwitchReward(
             && IsRewardEnabled()
         )
         {
+            var twitchUser = TwitchUser.FromChannelPointsCustomRewardRedemptionArgs(e)!;
+
+            twitchUser = await twitchUserEnsureService.EnsureUserExistsAsync(twitchUser);
+
             // Отправляем сообщение пользователю о возврате баллов
-            await client.SendMessageToMainTwitchAsync(
-                $"@{twEvent.UserName}, активировал возращалку! Начинайте тратить баллы!",
+            await api.SendAnnouncementToMainTwitchAsync(
+                $"@{twEvent.UserName}, активировал @{AlertDisplayName}! Начинайте тратить баллы через 10 секунд!",
+                tokenService.Token,
+                AnnouncementColors.Primary,
                 logger
             );
 
-            await hubContext.Clients.All.AllRefund(
-                TwitchUser.FromChannelPointsCustomRewardRedemptionArgs(e)!
-            );
+            await hubContext.Clients.All.AllRefund(twitchUser);
 
-            await Task.Delay(TimeSpan.FromSeconds(5));
+            await Task.Delay(TimeSpan.FromSeconds(10));
 
             IsRedemptionActive = true;
 
@@ -79,8 +86,10 @@ public class AllRefund_TwitchReward(
                 await Task.Delay(TimeSpan.FromMinutes(1));
 
                 // Отправляем сообщение пользователю о возврате баллов
-                await client.SendMessageToMainTwitchAsync(
-                    $"@{twEvent.UserName}, время работы возращалки закончилось! Всем спасибо за участие!",
+                await api.SendAnnouncementToMainTwitchAsync(
+                    $"@{AlertDisplayName} закончился! Всем спасибо за участие!",
+                    tokenService.Token,
+                    AnnouncementColors.Primary,
                     logger
                 );
 

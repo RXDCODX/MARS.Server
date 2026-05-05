@@ -56,8 +56,6 @@ public abstract class TemporaryReward(
             await EnsureRewardStateAsync(IsRewardEnabled());
             _runningTask = RunTimerLoopAsync(_cancellationTokenSource.Token);
         }
-
-        return;
     }
 
     public virtual async Task StopAsync(CancellationToken cancelToken)
@@ -129,9 +127,7 @@ public abstract class TemporaryReward(
         // Проверяем через API, не существует ли уже такая награда
         var existingRewards = await channelRewardsService.GetRewardsAsync();
 
-        var existingReward = existingRewards?.FirstOrDefault(r =>
-            r.Title.Equals(AlertDisplayName, StringComparison.OrdinalIgnoreCase) && r.Cost == Cost
-        );
+        var existingReward = existingRewards?.FirstOrDefault(r => r.Cost == Cost);
 
         if (existingReward != null)
         {
@@ -195,6 +191,8 @@ public abstract class TemporaryReward(
 
         if (!string.IsNullOrWhiteSpace(rewardId))
         {
+            TwitchRewardId = Guid.Parse(rewardId);
+
             logger.LogInformation(
                 "Временная награда {AlertName} успешно создана с Id: {RewardId}",
                 AlertDisplayName,
