@@ -11,7 +11,8 @@ public class MichaelTime_TwitchReward(
     IHostEnvironment environment,
     IHubContext<TelegramusHub, ITelegramusHub> hubContext,
     EventSubWebsocketClient wsClient,
-    IHostApplicationLifetime lifetime
+    IHostApplicationLifetime lifetime,
+    RickRollerService rickRollerService
 ) : TemporaryReward(channelRewardsService, logger, environment)
 {
     public override string AlertDisplayName { get; set; } = "Michael Time!";
@@ -20,12 +21,8 @@ public class MichaelTime_TwitchReward(
     public override int Cost { get; init; } = 155;
     public override Func<bool> IsRewardEnabled { get; set; } = () => true;
 
-    public bool IsServiceActive { get; set; } = true;
-
-    public override async Task StartAsync(CancellationToken cancellationToken)
+    public override Task StartAsync(CancellationToken cancellationToken)
     {
-        await base.StartAsync(cancellationToken);
-
         lifetime.ApplicationStarted.Register(() =>
         {
             wsClient.ChannelPointsCustomRewardRedemptionAdd +=
@@ -37,12 +34,14 @@ public class MichaelTime_TwitchReward(
             wsClient.ChannelPointsCustomRewardRedemptionAdd -=
                 OnChannelPointsCustomRewardRedemption;
         });
+
+        return base.StartAsync(cancellationToken);
     }
 
-    public override async Task StopAsync(CancellationToken cancellationToken)
+    public override Task StopAsync(CancellationToken cancellationToken)
     {
         wsClient.ChannelPointsCustomRewardRedemptionAdd -= OnChannelPointsCustomRewardRedemption;
-        await base.StopAsync(cancellationToken);
+        return base.StopAsync(cancellationToken);
     }
 
     private async Task OnChannelPointsCustomRewardRedemption(
@@ -50,11 +49,6 @@ public class MichaelTime_TwitchReward(
         ChannelPointsCustomRewardRedemptionArgs args
     )
     {
-        if (!IsServiceActive)
-        {
-            return;
-        }
-
         var twEvent = args.Payload.Event;
 
         if (
@@ -67,17 +61,23 @@ public class MichaelTime_TwitchReward(
         {
             try
             {
-                logger.LogInformation(
-                    "MichaelJackson награда активирована пользователем {UserName} за {Cost} баллов",
-                    twEvent.UserName,
-                    twEvent.Reward.Cost
-                );
+                await rickRollerService.TryRickRollAsync(
+                    TwitchUser.FromChannelPointsCustomRewardRedemptionArgs(args)!,
+                    async () =>
+                    {
+                        logger.LogInformation(
+                            "MichaelJackson награда активирована пользователем {UserName} за {Cost} баллов",
+                            twEvent.UserName,
+                            twEvent.Reward.Cost
+                        );
 
-                await hubContext.Clients.All.MichaelJackson();
+                        await hubContext.Clients.All.MichaelJackson();
 
-                logger.LogInformation(
-                    "MichaelJackson эффект активирован для пользователя {UserName}",
-                    twEvent.UserName
+                        logger.LogInformation(
+                            "MichaelJackson эффект активирован для пользователя {UserName}",
+                            twEvent.UserName
+                        );
+                    }
                 );
             }
             catch (Exception ex)
