@@ -13,7 +13,8 @@ public class GaoAlert_TwitchReward(
     ITwitchAPI api,
     IHubContext<TelegramusHub, ITelegramusHub> hubContext,
     EventSubWebsocketClient wsClient,
-    IHostApplicationLifetime lifetime
+    IHostApplicationLifetime lifetime,
+    RickRollerService rickRollerService
 ) : TemporaryReward(channelRewardsService, logger, environment)
 {
     public override string AlertDisplayName { get; set; } = "GAO Alert";
@@ -63,48 +64,57 @@ public class GaoAlert_TwitchReward(
             {
                 try
                 {
-                    text = text.Trim();
-                    var isJustText = text.Contains(' ');
-
-                    GaoAlertDto? gaoAlert;
-                    if (!isJustText)
-                    {
-                        text = text.StartsWith('@') ? text.Substring(1) : text;
-
-                        var isValidTwitchUsername =
-                            text.Length <= 25 && Regex.IsMatch(text, @"^[a-zA-Z0-9_]+$");
-
-                        if (isValidTwitchUsername)
+                    await rickRollerService.TryRickRollAsync(
+                        TwitchUser.FromChannelPointsCustomRewardRedemptionArgs(args)!,
+                        async () =>
                         {
-                            try
+                            text = text.Trim();
+                            var isJustText = text.Contains(' ');
+
+                            GaoAlertDto? gaoAlert;
+                            if (!isJustText)
                             {
-                                var twitchUser = await api.Helix.Users.GetUsersAsync(null, [text]);
-                                if (twitchUser is { Users.Length: > 0 })
+                                text = text.StartsWith('@') ? text.Substring(1) : text;
+
+                                var isValidTwitchUsername =
+                                    text.Length <= 25 && Regex.IsMatch(text, @"^[a-zA-Z0-9_]+$");
+
+                                if (isValidTwitchUsername)
                                 {
-                                    var user = twitchUser.Users.First();
-                                    gaoAlert = new GaoAlertDto
+                                    try
                                     {
-                                        TwitchUser = user,
-                                        IsJustText = false,
-                                    };
-                                    await hubContext.Clients.All.GaoAlert(gaoAlert);
-                                    logger.LogInformation(
-                                        "Gao alert with user {userName}",
-                                        user.DisplayName
-                                    );
-                                    return;
+                                        var twitchUser = await api.Helix.Users.GetUsersAsync(
+                                            null,
+                                            [text]
+                                        );
+                                        if (twitchUser is { Users.Length: > 0 })
+                                        {
+                                            var user = twitchUser.Users.First();
+                                            gaoAlert = new GaoAlertDto
+                                            {
+                                                TwitchUser = user,
+                                                IsJustText = false,
+                                            };
+                                            await hubContext.Clients.All.GaoAlert(gaoAlert);
+                                            logger.LogInformation(
+                                                "Gao alert with user {userName}",
+                                                user.DisplayName
+                                            );
+                                            return;
+                                        }
+                                    }
+                                    catch
+                                    {
+                                        //ignored
+                                    }
                                 }
                             }
-                            catch
-                            {
-                                //ignored
-                            }
-                        }
-                    }
 
-                    gaoAlert = new GaoAlertDto { IsJustText = true, JustText = text };
-                    await hubContext.Clients.All.GaoAlert(gaoAlert);
-                    logger.LogInformation("Gao alert with user {text}", text);
+                            gaoAlert = new GaoAlertDto { IsJustText = true, JustText = text };
+                            await hubContext.Clients.All.GaoAlert(gaoAlert);
+                            logger.LogInformation("Gao alert with user {text}", text);
+                        }
+                    );
                 }
                 catch (Exception ex)
                 {

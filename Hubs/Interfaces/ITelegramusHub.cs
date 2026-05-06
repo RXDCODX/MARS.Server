@@ -49,9 +49,6 @@ public interface ITelegramusHub
     public Task AutoMessage(string message);
 
     [SignalRMethod]
-    public Task TemplateMessage(string message);
-
-    [SignalRMethod]
     public Task Adhd(int seconds);
 
     [SignalRMethod]
