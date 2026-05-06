@@ -28,34 +28,21 @@ using MARS.Server.Services.Twitch.ClientMessages.AutoMessages;
 using MARS.Server.Services.Twitch.ClientMessages.AutoMessages.Extensions;
 using MARS.Server.Services.Twitch.ClientMessages.SignalRAlerts;
 using MARS.Server.Services.Twitch.ClientMessages.TwitchAutoHello;
-using MARS.Server.Services.Twitch.FumoFriday;
 using MARS.Server.Services.Twitch.HelloVideos;
 using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.Twitch.MiniGamesStats;
 using MARS.Server.Services.Twitch.PuntoSwitcher;
 using MARS.Server.Services.Twitch.Rewards;
-using MARS.Server.Services.Twitch.Rewards._1_AutoClipReward;
 using MARS.Server.Services.Twitch.Rewards._11_RandomMemReward.Service;
-using MARS.Server.Services.Twitch.Rewards._155_MichaelTime;
 using MARS.Server.Services.Twitch.Rewards._1580_MikuBeam;
 using MARS.Server.Services.Twitch.Rewards._160_LegBum;
-using MARS.Server.Services.Twitch.Rewards._170_FumoFridayNightReward;
-using MARS.Server.Services.Twitch.Rewards._1700_Confetti;
-using MARS.Server.Services.Twitch.Rewards._1701_Fireworks;
-using MARS.Server.Services.Twitch.Rewards._1702_EmojisReward;
-using MARS.Server.Services.Twitch.Rewards._18_GaoAlert;
 using MARS.Server.Services.Twitch.Rewards._2_WaifuMarriage;
-using MARS.Server.Services.Twitch.Rewards._2002_AdhdSuperpower;
 using MARS.Server.Services.Twitch.Rewards._27_RandomArt;
-using MARS.Server.Services.Twitch.Rewards._337_PhonkEdit;
-using MARS.Server.Services.Twitch.Rewards._353_TikTokEdit;
 using MARS.Server.Services.Twitch.Rewards._39_MikuMonday;
-using MARS.Server.Services.Twitch.Rewards._4_SearchWife;
 using MARS.Server.Services.Twitch.Rewards._5_AddWife;
 using MARS.Server.Services.Twitch.Rewards._6_RussianRoulette;
 using MARS.Server.Services.Twitch.Rewards._7_Quiz;
 using MARS.Server.Services.Twitch.Rewards._8_TekkenQuiz;
-using MARS.Server.Services.Twitch.Rewards._8005_Credits;
 using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
 using MARS.Server.Services.Twitch.SoundBarService;
 using MARS.Server.Services.Twitch.StreamBotNotifications;
@@ -350,6 +337,8 @@ public static class StartupEstensions
         // Регистрируем сервисы для работы с пользователями Twitch
         // Singleton безопасен, т.к. сервис использует IDbContextFactory и не хранит состояние
         services.AddSingleton<TwitchUserEnsureService>();
+
+        services.AddSingleton<RickRollerService>();
 
         return services;
     }

@@ -6,7 +6,6 @@ using MARS.Server.Services.WaifuRoll.helpers;
 using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Core.SubscriptionTypes.Channel;
 using TwitchLib.EventSub.Websockets;
-using WTelegram;
 
 namespace MARS.Server.Services.Twitch.Rewards._4_SearchWife;
 
