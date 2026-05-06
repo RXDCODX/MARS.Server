@@ -11,7 +11,8 @@ public class Confetti_TwitchReward(
     IHostEnvironment environment,
     IHubContext<TelegramusHub, ITelegramusHub> hubContext,
     EventSubWebsocketClient wsClient,
-    IHostApplicationLifetime lifetime
+    IHostApplicationLifetime lifetime,
+    RickRollerService rickRollerService
 ) : TemporaryReward(channelRewardsService, logger, environment)
 {
     public override string AlertDisplayName { get; set; } = "Конфетти!";
@@ -54,7 +55,13 @@ public class Confetti_TwitchReward(
             && IsServiceActive
         )
         {
-            await hubContext.Clients.All.MakeScreenParticles(Entitys.TwitchScreenParticles.Confetty);
+            await rickRollerService.TryRickRollAsync(
+                TwitchUser.FromChannelPointsCustomRewardRedemptionArgs(args)!,
+                () =>
+                    hubContext.Clients.All.MakeScreenParticles(
+                        Entitys.TwitchScreenParticles.Confetty
+                    )
+            );
         }
     }
 }
