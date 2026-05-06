@@ -1,5 +1,6 @@
 ﻿using BooruSharp.Booru;
 using BooruSharp.Search.Post;
+using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Management.Entitys;
 using Microsoft.AspNetCore.StaticFiles.Infrastructure;
 using TwitchLib.EventSub.Core.EventArgs.Channel;
@@ -13,7 +14,8 @@ public class RandomArt(
     Gelbooru site,
     ILogger<RandomArt> logger,
     EventSubWebsocketClient wsClient,
-    SharedOptions staticFilesOptions
+    SharedOptions staticFilesOptions,
+    RickRollerService rickRollerService
 ) : BackgroundService, ITwitchReward
 {
     public bool IsServiceActive { get; set; } = true;
@@ -36,94 +38,104 @@ public class RandomArt(
         {
             await Task.Factory.StartNew(async () =>
             {
-                if (twEvent.UserInput.Contains("rating", StringComparison.OrdinalIgnoreCase))
-                {
-                    await client.SendMessageToMainTwitchAsync(
-                        @$"@{twEvent.UserName}, ты охуел?",
-                        logger
-                    );
-                    return;
-                }
-
-                var result = new List<SearchResult>();
-
-                if (int.TryParse(twEvent.UserInput, out var aa))
-                {
-                    do
+                await rickRollerService.TryRickRollAsync(
+                    TwitchUser.FromChannelPointsCustomRewardRedemptionArgs(args)!,
+                    async () =>
                     {
-                        var answer = await site.GetRandomPostsAsync(10, "rating:general");
-
-                        var posts = answer.Where(e =>
-                            e.Rating is Rating.General or Rating.Questionable
-                        );
-
-                        result.AddRange(posts);
-                    } while (result.Count == 0);
-                }
-                else
-                {
-                    do
-                    {
-                        var tagParams = (twEvent.UserInput + " rating:general").Split(' ');
-                        var answer = await site.GetRandomPostsAsync(
-                            10,
-                            string.Join(' ', tagParams)
-                        );
-
-                        if (answer.Length == 0)
+                        if (
+                            twEvent.UserInput.Contains("rating", StringComparison.OrdinalIgnoreCase)
+                        )
                         {
                             await client.SendMessageToMainTwitchAsync(
-                                @$"@{twEvent.UserName}, плохой запрос, нету артов(",
+                                @$"@{twEvent.UserName}, ты охуел?",
                                 logger
                             );
                             return;
                         }
 
-                        var posts = answer.Where(e => e.Rating is Rating.General or Rating.Safe);
+                        var result = new List<SearchResult>();
 
-                        result.AddRange(posts);
-                    } while (result.Count == 0);
-                }
-
-                var mediaDtos = new MediaDto[result.Count];
-                var index = 0;
-                result = [.. result.DistinctBy(e => e.ID)];
-
-                foreach (var sr in result)
-                {
-                    var fileUrl = sr.FileUrl.AbsoluteUri;
-                    var extension = Path.GetExtension(fileUrl);
-                    var fileName = Path.GetFileName(fileUrl);
-                    var mediaType = await extension.GetFileMediaTypeAsync();
-                    var staticFilePath =
-                        staticFilesOptions.RequestPath.HasValue
-                        && staticFilesOptions.RequestPath.Value.EndsWith('/')
-                            ? staticFilesOptions.RequestPath.Value
-                            : staticFilesOptions.RequestPath.Value + '/';
-
-                    var mediaDto = new MediaDto
-                    {
-                        MediaInfo = new MediaInfo
+                        if (int.TryParse(twEvent.UserInput, out var aa))
                         {
-                            FileInfo = new MediaFileInfo
+                            do
                             {
-                                Extension = extension,
-                                FileName = fileName,
-                                FilePath = staticFilePath + fileUrl,
-                                Type = mediaType,
-                                IsLocalFile = false,
-                            },
-                            MetaInfo = new MediaMetaInfo { DisplayName = twEvent.UserName },
-                            PositionInfo = new MediaPositionInfo(),
-                            StylesInfo = new MediaStylesInfo(),
-                            TextInfo = new MediaTextInfo(),
-                        },
-                    };
+                                var answer = await site.GetRandomPostsAsync(10, "rating:general");
 
-                    mediaDtos[index++] = mediaDto;
-                }
+                                var posts = answer.Where(e =>
+                                    e.Rating is Rating.General or Rating.Questionable
+                                );
 
-                await hub.Clients.All.Alerts(mediaDtos);
+                                result.AddRange(posts);
+                            } while (result.Count == 0);
+                        }
+                        else
+                        {
+                            do
+                            {
+                                var tagParams = (twEvent.UserInput + " rating:general").Split(' ');
+                                var answer = await site.GetRandomPostsAsync(
+                                    10,
+                                    string.Join(' ', tagParams)
+                                );
+
+                                if (answer.Length == 0)
+                                {
+                                    await client.SendMessageToMainTwitchAsync(
+                                        @$"@{twEvent.UserName}, плохой запрос, нету артов(",
+                                        logger
+                                    );
+                                    return;
+                                }
+
+                                var posts = answer.Where(e =>
+                                    e.Rating is Rating.General or Rating.Safe
+                                );
+
+                                result.AddRange(posts);
+                            } while (result.Count == 0);
+                        }
+
+                        var mediaDtos = new MediaDto[result.Count];
+                        var index = 0;
+                        result = [.. result.DistinctBy(e => e.ID)];
+
+                        foreach (var sr in result)
+                        {
+                            var fileUrl = sr.FileUrl.AbsoluteUri;
+                            var extension = Path.GetExtension(fileUrl);
+                            var fileName = Path.GetFileName(fileUrl);
+                            var mediaType = await extension.GetFileMediaTypeAsync();
+                            var staticFilePath =
+                                staticFilesOptions.RequestPath.HasValue
+                                && staticFilesOptions.RequestPath.Value.EndsWith('/')
+                                    ? staticFilesOptions.RequestPath.Value
+                                    : staticFilesOptions.RequestPath.Value + '/';
+
+                            var mediaDto = new MediaDto
+                            {
+                                MediaInfo = new MediaInfo
+                                {
+                                    FileInfo = new MediaFileInfo
+                                    {
+                                        Extension = extension,
+                                        FileName = fileName,
+                                        FilePath = staticFilePath + fileUrl,
+                                        Type = mediaType,
+                                        IsLocalFile = false,
+                                    },
+                                    MetaInfo = new MediaMetaInfo { DisplayName = twEvent.UserName },
+                                    PositionInfo = new MediaPositionInfo(),
+                                    StylesInfo = new MediaStylesInfo(),
+                                    TextInfo = new MediaTextInfo(),
+                                },
+                            };
+
+                            mediaDtos[index++] = mediaDto;
+                        }
+
+                        await hub.Clients.All.Alerts(mediaDtos);
+                    }
+                );
             });
         }
     }
