@@ -10,7 +10,8 @@ public class Emojis_TwitchReward(
     IHostEnvironment environment,
     IHubContext<TelegramusHub, ITelegramusHub> hubContext,
     IHostApplicationLifetime lifetime,
-    ITwitchClient client
+    ITwitchClient client,
+    RickRollerService rickRollerService
 ) : TemporaryReward(channelRewardsService, logger, environment)
 {
     public override string AlertDisplayName { get; set; } = "Эмодзи!";
@@ -24,20 +25,12 @@ public class Emojis_TwitchReward(
 
     public override Func<bool> IsRewardEnabled { get; set; } = () => true;
 
-    public bool IsServiceActive { get; set; } = true;
-
     private readonly CancellationToken _token = lifetime.ApplicationStopping;
-
-    private readonly Guid _guid = Guid.Parse("22db3d35-1b76-4674-beb7-cc7546356a84");
 
     public override async Task StartAsync(CancellationToken cancellationToken)
     {
+        client.OnMessageReceived += ClientOnOnMessageReceived;
         await base.StartAsync(cancellationToken);
-
-        if (IsServiceActive)
-        {
-            client.OnMessageReceived += ClientOnOnMessageReceived;
-        }
     }
 
     public override async Task StopAsync(CancellationToken cancellationToken)
@@ -50,7 +43,6 @@ public class Emojis_TwitchReward(
     {
         if (
             !string.IsNullOrWhiteSpace(e.ChatMessage.CustomRewardId)
-            && IsServiceActive
             && !TwitchExstension.BlackList.Any(t =>
                 t.Equals(e.ChatMessage.Username, StringComparison.OrdinalIgnoreCase)
             )
@@ -62,14 +54,18 @@ public class Emojis_TwitchReward(
                     var message = e.ChatMessage;
 
                     if (
-                        message.CustomRewardId == _guid.ToString()
+                        TwitchRewardId.HasValue
+                        && message.CustomRewardId == TwitchRewardId.Value.ToString()
                         && message.Channel.Equals(
                             TwitchExstension.Channel,
                             StringComparison.OrdinalIgnoreCase
                         )
                     )
                     {
-                        await hubContext.Clients.All.MakeScreenEmojisParticles(message);
+                        await rickRollerService.TryRickRollAsync(
+                            TwitchUser.FromOnMessageReceivedArgs(e)!,
+                            () => hubContext.Clients.All.MakeScreenEmojisParticles(message)
+                        );
                     }
                 },
                 _token
