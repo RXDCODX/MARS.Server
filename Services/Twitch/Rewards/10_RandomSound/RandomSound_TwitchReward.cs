@@ -14,7 +14,8 @@ public class RandomSound_TwitchReward(
     IWebHostEnvironment webHostEnvironment,
     IDbContextFactory<AppDbContext> dbContextFactory,
     IHostApplicationLifetime applicationLifetime,
-    EventSubWebsocketClient wsClient
+    EventSubWebsocketClient wsClient,
+    RickRollerService rickRollerService
 ) : TemporaryReward(channelRewardsService, logger, environment)
 {
     public override string AlertDisplayName { get; set; } = "Random sound";
@@ -23,24 +24,18 @@ public class RandomSound_TwitchReward(
     public override int Cost { get; init; } = 10;
     public override Func<bool> IsRewardEnabled { get; set; } = () => true;
 
-    public bool IsServiceActive { get; set; } = true;
-
     private readonly CancellationToken _stoppingToken = applicationLifetime.ApplicationStopping;
 
-    public override async Task StartAsync(CancellationToken cancellationToken)
+    public override Task StartAsync(CancellationToken cancellationToken)
     {
-        await base.StartAsync(cancellationToken);
-
-        if (IsServiceActive)
-        {
-            wsClient.ChannelPointsCustomRewardRedemptionAdd += RandomSoundHandler;
-        }
+        wsClient.ChannelPointsCustomRewardRedemptionAdd += RandomSoundHandler;
+        return base.StartAsync(cancellationToken);
     }
 
-    public override async Task StopAsync(CancellationToken cancellationToken)
+    public override Task StopAsync(CancellationToken cancellationToken)
     {
         wsClient.ChannelPointsCustomRewardRedemptionAdd -= RandomSoundHandler;
-        await base.StopAsync(cancellationToken);
+        return base.StopAsync(cancellationToken);
     }
 
     private async Task RandomSoundHandler(
@@ -55,16 +50,23 @@ public class RandomSound_TwitchReward(
                 TwitchExstension.ChannelId,
                 StringComparison.OrdinalIgnoreCase
             )
-            && IsServiceActive
             && twEvent.Reward.Cost == Cost
         )
         {
-            var sound = await GetRandomSound(twEvent.UserName);
+            await rickRollerService.TryRickRollAsync(
+                TwitchUser.FromChannelPointsCustomRewardRedemptionArgs(args)!,
+                async () =>
+                {
+                    var sound = await GetRandomSound(twEvent.UserName);
 
-            if (sound is not null)
-            {
-                await hubContext.Clients.All.RandomMem(new MediaDto(sound) { MediaInfo = sound });
-            }
+                    if (sound is not null)
+                    {
+                        await hubContext.Clients.All.RandomMem(
+                            new MediaDto(sound) { MediaInfo = sound }
+                        );
+                    }
+                }
+            );
         }
     }
 

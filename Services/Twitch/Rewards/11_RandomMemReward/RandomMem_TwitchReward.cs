@@ -1,8 +1,8 @@
+using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Rewards._11_RandomMemReward.Service.Entity;
+using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
 using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Websockets;
-using MARS.Server.Services.Twitch.Entitys;
-using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
 
 namespace MARS.Server.Services.Twitch.Rewards._11_RandomMemReward;
 
@@ -14,7 +14,8 @@ public class RandomMem_TwitchReward(
     IWebHostEnvironment webHostEnvironment,
     IDbContextFactory<AppDbContext> dbContextFactory,
     IHostApplicationLifetime applicationLifetime,
-    EventSubWebsocketClient wsClient
+    EventSubWebsocketClient wsClient,
+    RickRollerService rickRollerService
 ) : TemporaryReward(channelRewardsService, logger, environment)
 {
     public override string AlertDisplayName { get; set; } = "Random Mem";
@@ -27,24 +28,18 @@ public class RandomMem_TwitchReward(
 
     public override Func<bool> IsRewardEnabled { get; set; } = () => true;
 
-    public bool IsServiceActive { get; set; } = true;
-
     private readonly CancellationToken _stoppingToken = applicationLifetime.ApplicationStopping;
 
-    public override async Task StartAsync(CancellationToken cancellationToken)
+    public override Task StartAsync(CancellationToken cancellationToken)
     {
-        await base.StartAsync(cancellationToken);
-
-        if (IsServiceActive)
-        {
-            wsClient.ChannelPointsCustomRewardRedemptionAdd += RandomMemeHandler;
-        }
+        wsClient.ChannelPointsCustomRewardRedemptionAdd += RandomMemeHandler;
+        return base.StartAsync(cancellationToken);
     }
 
-    public override async Task StopAsync(CancellationToken cancellationToken)
+    public override Task StopAsync(CancellationToken cancellationToken)
     {
         wsClient.ChannelPointsCustomRewardRedemptionAdd -= RandomMemeHandler;
-        await base.StopAsync(cancellationToken);
+        return base.StopAsync(cancellationToken);
     }
 
     private async Task RandomMemeHandler(
@@ -52,25 +47,31 @@ public class RandomMem_TwitchReward(
         ChannelPointsCustomRewardRedemptionArgs args
     )
     {
-        var result = Task.CompletedTask;
         var twEvent = args.Payload.Event;
 
         if (
             twEvent.BroadcasterUserId.Equals(
                 TwitchExstension.ChannelId,
                 StringComparison.OrdinalIgnoreCase
-            ) && IsServiceActive && twEvent.Reward.Cost == Cost
+            )
+            && twEvent.Reward.Cost == Cost
         )
         {
-            var media = await GetMeme(twEvent.UserName);
+            await rickRollerService.TryRickRollAsync(
+                TwitchUser.FromChannelPointsCustomRewardRedemptionArgs(args)!,
+                async () =>
+                {
+                    var media = await GetMeme(twEvent.UserName);
 
-            if (media is not null)
-            {
-                await hubContext.Clients.All.RandomMem(new MediaDto(media) { MediaInfo = media });
-            }
+                    if (media is not null)
+                    {
+                        await hubContext.Clients.All.RandomMem(
+                            new MediaDto(media) { MediaInfo = media }
+                        );
+                    }
+                }
+            );
         }
-
-        await result;
     }
 
     private Task<MediaInfo?> GetMeme(string? displayName)
