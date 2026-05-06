@@ -11,7 +11,8 @@ public class PhonkEdit_TwitchReward(
     IHostEnvironment environment,
     IHubContext<TelegramusHub, ITelegramusHub> hubContext,
     EventSubWebsocketClient wsClient,
-    IHostApplicationLifetime lifetime
+    IHostApplicationLifetime lifetime,
+    RickRollerService rickRollerService
 ) : TemporaryReward(channelRewardsService, logger, environment)
 {
     public override string AlertDisplayName { get; set; } = "Phonk Edit";
@@ -49,7 +50,6 @@ public class PhonkEdit_TwitchReward(
     )
     {
         var twEvent = args.Payload.Event;
-        var text = args.Payload.Event.UserInput;
         var channel = twEvent.BroadcasterUserId;
 
         if (
@@ -57,10 +57,10 @@ public class PhonkEdit_TwitchReward(
             && twEvent.Reward.Cost == Cost
         )
         {
-            await Task.Factory.StartNew(async () =>
-            {
-                await hubContext.Clients.All.PhonkEdit();
-            });
+            await rickRollerService.TryRickRollAsync(
+                TwitchUser.FromChannelPointsCustomRewardRedemptionArgs(args)!,
+                () => hubContext.Clients.All.PhonkEdit()
+            );
         }
     }
 }

@@ -11,7 +11,8 @@ public class TikTokEdit_TwitchReward(
     IHostEnvironment environment,
     IHubContext<TelegramusHub, ITelegramusHub> hubContext,
     EventSubWebsocketClient wsClient,
-    IHostApplicationLifetime lifetime
+    IHostApplicationLifetime lifetime,
+    RickRollerService rickRollerService
 ) : TemporaryReward(channelRewardsService, logger, environment)
 {
     public override string AlertDisplayName { get; set; } = "Make a TikTok Edit";
@@ -23,8 +24,6 @@ public class TikTokEdit_TwitchReward(
 
     public override async Task StartAsync(CancellationToken cancellationToken)
     {
-        await base.StartAsync(cancellationToken);
-
         lifetime.ApplicationStarted.Register(() =>
         {
             wsClient.ChannelPointsCustomRewardRedemptionAdd +=
@@ -36,12 +35,14 @@ public class TikTokEdit_TwitchReward(
             wsClient.ChannelPointsCustomRewardRedemptionAdd -=
                 OnChannelPointsCustomRewardRedemption;
         });
+
+        await base.StartAsync(cancellationToken);
     }
 
-    public override async Task StopAsync(CancellationToken cancellationToken)
+    public override Task StopAsync(CancellationToken cancellationToken)
     {
         wsClient.ChannelPointsCustomRewardRedemptionAdd -= OnChannelPointsCustomRewardRedemption;
-        await base.StopAsync(cancellationToken);
+        return base.StopAsync(cancellationToken);
     }
 
     private async Task OnChannelPointsCustomRewardRedemption(
@@ -58,10 +59,10 @@ public class TikTokEdit_TwitchReward(
             && twEvent.Reward.Cost == Cost
         )
         {
-            await Task.Factory.StartNew(async () =>
-            {
-                await hubContext.Clients.All.TikTokEdit(Guid.NewGuid(), text);
-            });
+            await rickRollerService.TryRickRollAsync(
+                TwitchUser.FromChannelPointsCustomRewardRedemptionArgs(args)!,
+                () => hubContext.Clients.All.TikTokEdit(Guid.NewGuid(), text)
+            );
         }
     }
 }
