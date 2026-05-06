@@ -1,35 +1,21 @@
 ﻿using System.Reflection;
 using MARS.Server.Services.AutoArts_OBSOLETE.Entitys;
+using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.PuntoSwitcher;
 using TwitchLib.Client.Events;
 using TwitchLib.Client.Models;
 
 namespace MARS.Server.Services.Twitch.Rewards;
 
-public class HighlitedMessage : BackgroundService
+public class HighlitedMessage(
+    IHubContext<TelegramusHub, ITelegramusHub> hubContext,
+    IWebHostEnvironment environment,
+    IPuntoSwitcherService puntoSwitcherService,
+    ITwitchClient client,
+    IHostApplicationLifetime applicationLifetime,
+    RickRollerService rickRollerService
+) : BackgroundService
 {
-    private readonly IHubContext<TelegramusHub, ITelegramusHub> _hubContext;
-    private readonly IWebHostEnvironment _environment;
-    private readonly IPuntoSwitcherService _puntoSwitcherService;
-
-    public HighlitedMessage(
-        IHubContext<TelegramusHub, ITelegramusHub> hubContext,
-        IWebHostEnvironment environment,
-        IPuntoSwitcherService puntoSwitcherService,
-        ITwitchClient client,
-        IHostApplicationLifetime applicationLifetime
-    )
-    {
-        _hubContext = hubContext;
-        _environment = environment;
-        _puntoSwitcherService = puntoSwitcherService;
-
-        applicationLifetime.ApplicationStarted.Register(() =>
-        {
-            client.OnMessageReceived += TwitchClientOnNormalMessage;
-        });
-    }
-
     internal async Task TwitchClientOnNormalMessage(object? sender, OnMessageReceivedArgs args)
     {
         if (
@@ -50,35 +36,39 @@ public class HighlitedMessage : BackgroundService
         {
             await Task.Factory.StartNew(async () =>
             {
-                {
-                    var color = string.IsNullOrWhiteSpace(args.ChatMessage.HexColor)
-                        ? "#ffffff"
-                        : args.ChatMessage.HexColor;
-                    var path = Path.Combine(_environment.WebRootPath, "faces");
-                    var image = GetImageByFilePath(
-                        Directory
-                            .GetFiles(path, "*", SearchOption.AllDirectories)
-                            .OrderBy(e => Random.Shared.Next())
-                            .First()
-                    );
-
-                    var message = args.ChatMessage;
-                    if (PuntoSwitcherState.IsFilterEnabled)
+                await rickRollerService.TryRickRollAsync(
+                    TwitchUser.FromOnMessageReceivedArgs(args)!,
+                    async () =>
                     {
-                        var fixedMessage = _puntoSwitcherService.TryFixMessage(
-                            args.ChatMessage.Message
+                        var color = string.IsNullOrWhiteSpace(args.ChatMessage.HexColor)
+                            ? "#ffffff"
+                            : args.ChatMessage.HexColor;
+                        var path = Path.Combine(environment.WebRootPath, "faces");
+                        var image = GetImageByFilePath(
+                            Directory
+                                .GetFiles(path, "*", SearchOption.AllDirectories)
+                                .OrderBy(e => Random.Shared.Next())
+                                .First()
                         );
-                        if (fixedMessage.Success && fixedMessage.Data.HasChanges)
-                        {
-                            message = TryOverrideMessage(
-                                message,
-                                fixedMessage.Data.CorrectedMessage
-                            );
-                        }
-                    }
 
-                    await _hubContext.Clients.All.Highlite(message, color, image);
-                }
+                        var message = args.ChatMessage;
+                        if (PuntoSwitcherState.IsFilterEnabled)
+                        {
+                            var fixedMessage = puntoSwitcherService.TryFixMessage(
+                                args.ChatMessage.Message
+                            );
+                            if (fixedMessage.Success && fixedMessage.Data.HasChanges)
+                            {
+                                message = TryOverrideMessage(
+                                    message,
+                                    fixedMessage.Data.CorrectedMessage
+                                );
+                            }
+                        }
+
+                        await hubContext.Clients.All.Highlite(message, color, image);
+                    }
+                );
             });
         }
     }
@@ -121,6 +111,11 @@ public class HighlitedMessage : BackgroundService
 
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        applicationLifetime.ApplicationStarted.Register(() =>
+        {
+            client.OnMessageReceived += TwitchClientOnNormalMessage;
+        });
+
         return Task.CompletedTask;
     }
 }
