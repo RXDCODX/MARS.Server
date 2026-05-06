@@ -83,4 +83,7 @@ public interface ITelegramusHub
 
     [SignalRMethod]
     Task AllRefund(TwitchUser user);
+
+    [SignalRMethod]
+    Task RickRoll(TwitchUser user);
 }

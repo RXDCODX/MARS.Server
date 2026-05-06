@@ -1,4 +1,5 @@
-﻿using TwitchLib.Client.Events;
+﻿using MARS.Server.Services.Twitch.Entitys;
+using TwitchLib.Client.Events;
 using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Core.SubscriptionTypes.Channel;
 using TwitchLib.EventSub.Websockets;
@@ -10,7 +11,8 @@ public class TwitchMediaAlerts(
     IDbContextFactory<AppDbContext> dbContextFactory,
     ITwitchClient client,
     IHostApplicationLifetime applicationLifetime,
-    EventSubWebsocketClient wsClient
+    EventSubWebsocketClient wsClient,
+    RickRollerService rickRollerService
 ) : BackgroundService
 {
     private readonly CancellationToken _token = applicationLifetime.ApplicationStopping;
@@ -105,7 +107,10 @@ public class TwitchMediaAlerts(
 
             if (string.IsNullOrWhiteSpace(value.UserInput))
             {
-                await SendAlert(value);
+                await rickRollerService.TryRickRollAsync(
+                    TwitchUser.FromChannelPointsCustomRewardRedemptionArgs(args)!,
+                    () => SendAlert(value)
+                );
             }
         }
     }

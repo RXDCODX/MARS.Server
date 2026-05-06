@@ -14,7 +14,8 @@ public class FumoFridayNight_TwitchReward(
     IDbContextFactory<AppDbContext> dbContextFactory,
     EventSubWebsocketClient wsClient,
     IHostApplicationLifetime lifetime,
-    IHubContext<TelegramusHub, ITelegramusHub> hubContext
+    IHubContext<TelegramusHub, ITelegramusHub> hubContext,
+    RickRollerService rickRoller
 ) : TemporaryReward(channelRewardsService, logger, environment)
 {
     private const string VideoPathEnvironmentVariable = "TWITCH_FUMO_FRIDAY_NIGHT_VIDEO_PATH";
@@ -71,7 +72,6 @@ public class FumoFridayNight_TwitchReward(
         var twEvent = args.Payload.Event;
 
         var cost = twEvent.Reward.Cost;
-        var text = args.Payload.Event.UserInput;
         var channel = twEvent.BroadcasterUserId;
 
         if (
@@ -83,53 +83,60 @@ public class FumoFridayNight_TwitchReward(
             {
                 try
                 {
-                    var videoPath = await ResolveVideoPathAsync();
-                    var fileName = Path.GetFileName(videoPath);
-                    var extension = Path.GetExtension(fileName).TrimStart('.');
-                    var relativePath = $"/Alerts/{fileName}";
-
-                    var mediaInfo = new MediaInfo
-                    {
-                        TextInfo = new MediaTextInfo
+                    await rickRoller.TryRickRollAsync(
+                        TwitchUser.FromChannelPointsCustomRewardRedemptionArgs(args)!,
+                        async () =>
                         {
-                            Text = $"🎵 {{user.name}} активировал(а) {AlertDisplayName}! 🎵",
-                            TextColor = "#FFFFFF",
-                        },
-                        FileInfo = new MediaFileInfo
-                        {
-                            Type = MediaType.Video,
-                            FilePath = relativePath,
-                            IsLocalFile = true,
-                            FileName = fileName,
-                            Extension = extension,
-                        },
-                        PositionInfo = new MediaPositionInfo
-                        {
-                            RandomCoordinates = true,
-                            Height = 500,
-                            Width = 500,
-                            IsProportion = true,
-                            IsUseOriginalWidthAndHeight = false,
-                        },
-                        MetaInfo = new MediaMetaInfo
-                        {
-                            DisplayName = twEvent.UserName,
-                            Duration = 30,
-                            Volume = 100,
-                            Priority = MediaAlertPriority.Normal,
-                        },
-                        StylesInfo = new MediaStylesInfo(),
-                    };
+                            var videoPath = await ResolveVideoPathAsync();
+                            var fileName = Path.GetFileName(videoPath);
+                            var extension = Path.GetExtension(fileName).TrimStart('.');
+                            var relativePath = $"/Alerts/{fileName}";
 
-                    mediaInfo.FixAlertText(twEvent.UserName, string.Empty);
+                            var mediaInfo = new MediaInfo
+                            {
+                                TextInfo = new MediaTextInfo
+                                {
+                                    Text =
+                                        $"🎵 {{user.name}} активировал(а) {AlertDisplayName}! 🎵",
+                                    TextColor = "#FFFFFF",
+                                },
+                                FileInfo = new MediaFileInfo
+                                {
+                                    Type = MediaType.Video,
+                                    FilePath = relativePath,
+                                    IsLocalFile = true,
+                                    FileName = fileName,
+                                    Extension = extension,
+                                },
+                                PositionInfo = new MediaPositionInfo
+                                {
+                                    RandomCoordinates = true,
+                                    Height = 500,
+                                    Width = 500,
+                                    IsProportion = true,
+                                    IsUseOriginalWidthAndHeight = false,
+                                },
+                                MetaInfo = new MediaMetaInfo
+                                {
+                                    DisplayName = twEvent.UserName,
+                                    Duration = 30,
+                                    Volume = 100,
+                                    Priority = MediaAlertPriority.Normal,
+                                },
+                                StylesInfo = new MediaStylesInfo(),
+                            };
 
-                    var mediaDto = new MediaDto(mediaInfo);
-                    await hubContext.Clients.All.Alert(mediaDto);
+                            mediaInfo.FixAlertText(twEvent.UserName, string.Empty);
 
-                    _logger.LogInformation(
-                        "{AlertName} активирован пользователем {UserName}",
-                        AlertDisplayName,
-                        twEvent.UserName
+                            var mediaDto = new MediaDto(mediaInfo);
+                            await hubContext.Clients.All.Alert(mediaDto);
+
+                            _logger.LogInformation(
+                                "{AlertName} активирован пользователем {UserName}",
+                                AlertDisplayName,
+                                twEvent.UserName
+                            );
+                        }
                     );
                 }
                 catch (Exception e)
