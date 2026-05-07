@@ -18,9 +18,9 @@ public class AutoClip_TwitchReward(
     ChannelRewardsService channelRewardsService
 ) : TemporaryReward(channelRewardsService, logger, hostEnvironment)
 {
-    public override string AlertDisplayName { get; set; } = "🎞️ Клипнуть!";
+    public override string AlertDisplayName { get; set; } = "🎬 Клипнуть!";
     public override string AlertDescription { get; set; } =
-        "Сделать автоклип последних 30 секунд стрима!";
+        "🎥 Сделать автоклип последних 30 секунд стрима!";
     public override Color Color { get; set; }
     public override int Cost { get; init; } = 1;
     public override Func<bool> IsRewardEnabled { get; set; } = () => false;

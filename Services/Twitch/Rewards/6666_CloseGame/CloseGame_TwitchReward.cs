@@ -13,8 +13,8 @@ public class CloseGame_TwitchReward(
     EventSubWebsocketClient wsClient
 ) : TemporaryReward(channelRewardsService, logger, environment)
 {
-    public override string AlertDisplayName { get; set; } = "Выключить теккен";
-    public override string AlertDescription { get; set; } = "Закрывает игрульку";
+    public override string AlertDisplayName { get; set; } = "💻 Выключить теккен";
+    public override string AlertDescription { get; set; } = "❌ Закрывает игрульку";
     public override Color Color { get; set; } = Color.FromArgb(0, 128, 255);
     public override int Cost { get; init; } = 6666;
     public override Func<bool> IsRewardEnabled { get; set; } = () => true;

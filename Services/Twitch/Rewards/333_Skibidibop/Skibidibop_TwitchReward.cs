@@ -9,7 +9,7 @@ public class Skibidibop_TwitchReward(
     IHostEnvironment environment
 ) : TemporaryReward(channelRewardsService, logger, environment)
 {
-    public override string AlertDisplayName { get; set; } = "ШКИБИДИБОП";
+    public override string AlertDisplayName { get; set; } = "🎺 ШКИБИДИБОП";
     public override string AlertDescription { get; set; } = string.Empty;
     public override Color Color { get; set; } = Color.FromArgb(255, 0, 0);
     public override int Cost { get; init; } = 333;

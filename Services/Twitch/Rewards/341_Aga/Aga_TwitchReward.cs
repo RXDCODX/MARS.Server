@@ -9,9 +9,9 @@ public class Aga_TwitchReward(
     IHostEnvironment environment
 ) : TemporaryReward(channelRewardsService, logger, environment)
 {
-    public override string AlertDisplayName { get; set; } = "AGA";
+    public override string AlertDisplayName { get; set; } = "📽️ AGA";
     public override string AlertDescription { get; set; } =
-        "текст наверху и внизу можно разделить символом `=`";
+        "📝 текст наверху и внизу можно разделить символом `=`";
     public override Color Color { get; set; } = Color.FromArgb(235, 4, 0);
     public override int Cost { get; init; } = 341;
     public override Func<bool> IsRewardEnabled { get; set; } = () => true;

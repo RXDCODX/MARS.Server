@@ -9,10 +9,10 @@ public class WaifuMarriage_TwitchReward(
     IHostEnvironment environment
 ) : TemporaryReward(channelRewardsService, logger, environment)
 {
-    public override string AlertDisplayName { get; set; } = "Свадьба";
+    public override string AlertDisplayName { get; set; } = "💒 Свадьба";
 
     public override string AlertDescription { get; set; } =
-        "Свадьба с твоим будущим супругом раз и навсегда! Чтобы работало надо сначала попробовать поискать супруга за алерт за 4 балла канала! Развод с супругом только за 500р! Подумай дважды!";
+        "💝 Свадьба с твоим будущим супругом раз и навсегда! Чтобы работало надо сначала попробовать поискать супруга за алерт за 4 балла канала! Развод с супругом только за 500р! Подумай дважды!";
 
     public override Color Color { get; set; } = Color.FromArgb(0, 18, 255);
 

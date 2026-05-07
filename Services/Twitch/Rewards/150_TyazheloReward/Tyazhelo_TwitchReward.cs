@@ -9,7 +9,7 @@ public class Tyazhelo_TwitchReward(
     IHostEnvironment environment
 ) : TemporaryReward(channelRewardsService, logger, environment)
 {
-    public override string AlertDisplayName { get; set; } = "Тяжело...";
+    public override string AlertDisplayName { get; set; } = "😩 Тяжело...";
 
     public override string AlertDescription { get; set; } = string.Empty;
 

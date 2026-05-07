@@ -9,7 +9,7 @@ public class SkibidibopLong_TwitchReward(
     IHostEnvironment environment
 ) : TemporaryReward(channelRewardsService, logger, environment)
 {
-    public override string AlertDisplayName { get; set; } = "SKIBIDIBOP LONG";
+    public override string AlertDisplayName { get; set; } = "🎺 SKIBIDIBOP LONG";
     public override string AlertDescription { get; set; } = string.Empty;
     public override Color Color { get; set; } = Color.FromArgb(245, 0, 0);
     public override int Cost { get; init; } = 1333;

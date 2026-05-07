@@ -14,8 +14,8 @@ public class AdhdSuperpower_TwitchReward(
     RickRollerService rickRollerService
 ) : TemporaryReward(channelRewardsService, logger, environment)
 {
-    public override string AlertDisplayName { get; set; } = "ADHD Superpower";
-    public override string AlertDescription { get; set; } = "Активируй ADHD режим на 60 секунд!";
+    public override string AlertDisplayName { get; set; } = "⚡ ADHD Superpower";
+    public override string AlertDescription { get; set; } = "🔥 Активируй ADHD режим на 60 секунд!";
     public override Color Color { get; set; } = Color.FromArgb(138, 43, 226);
     public override int Cost { get; init; } = 2002;
     public override Func<bool> IsRewardEnabled { get; set; } = () => true;

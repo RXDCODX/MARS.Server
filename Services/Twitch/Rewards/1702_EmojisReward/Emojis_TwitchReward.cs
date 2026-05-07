@@ -14,10 +14,10 @@ public class Emojis_TwitchReward(
     RickRollerService rickRollerService
 ) : TemporaryReward(channelRewardsService, logger, environment)
 {
-    public override string AlertDisplayName { get; set; } = "Эмодзи!";
+    public override string AlertDisplayName { get; set; } = "😀 Эмодзи!";
 
     public override string AlertDescription { get; set; } =
-        "Выстрелить в экран указанными тобой смайликами! Есть поддержка Twitch BTTV 7TV FFZ смайликов! В РФ банят некоторые смайлы, возможно не будет работать 7тв bttv ffz.";
+        "🎯 Выстрелить в экран указанными тобой смайликами! Есть поддержка Twitch BTTV 7TV FFZ смайликов! В РФ банят некоторые смайлы, возможно не будет работать 7тв bttv ffz.";
 
     public override Color Color { get; set; } = Color.FromArgb(31, 255, 72);
 

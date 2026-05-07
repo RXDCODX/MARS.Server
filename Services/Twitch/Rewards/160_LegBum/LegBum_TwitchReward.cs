@@ -9,9 +9,9 @@ public class LegBum_TwitchReward(
     IHostEnvironment environment
 ) : TemporaryReward(channelRewardsService, logger, environment)
 {
-    public override string AlertDisplayName { get; set; } = "НОГОЙ БОМЖА";
+    public override string AlertDisplayName { get; set; } = "�발 НОГОЙ БОМЖА";
     public override string AlertDescription { get; set; } =
-        "Возращает баллы за использование если топтать asp/асп'a (аспиранта)";
+        "🦵 Возращает баллы за использование если топтать asp/асп'a (аспиранта)";
     public override Color Color { get; set; } = Color.FromArgb(255, 0, 0);
     public override int Cost { get; init; } = 160;
     public override Func<bool> IsRewardEnabled { get; set; } = () => true;

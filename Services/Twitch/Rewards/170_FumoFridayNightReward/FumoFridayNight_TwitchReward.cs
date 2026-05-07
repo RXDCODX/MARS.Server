@@ -39,9 +39,9 @@ public class FumoFridayNight_TwitchReward(
             GlobalCooldownSeconds = 180,
         };
 
-    public override string AlertDisplayName { get; set; } = "Fumo Friday Night";
+    public override string AlertDisplayName { get; set; } = "🧸 Fumo Friday Night";
     public override string AlertDescription { get; set; } =
-        "Твоя уникальная (ну почти) возможность активации Fumo Friday Night";
+        "🎪 Твоя уникальная (ну почти) возможность активации Fumo Friday Night";
     public override Color Color { get; set; } = Color.Red;
     public override int Cost { get; init; } = 170;
     public override Func<bool> IsRewardEnabled { get; set; } =

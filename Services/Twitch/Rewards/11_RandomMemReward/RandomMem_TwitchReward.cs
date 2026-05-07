@@ -18,9 +18,9 @@ public class RandomMem_TwitchReward(
     RickRollerService rickRollerService
 ) : TemporaryReward(channelRewardsService, logger, environment)
 {
-    public override string AlertDisplayName { get; set; } = "Random Mem";
+    public override string AlertDisplayName { get; set; } = "😂 Random Mem";
 
-    public override string AlertDescription { get; set; } = "Рандомный мем на экране";
+    public override string AlertDescription { get; set; } = "🤣 Рандомный мем на экране";
 
     public override Color Color { get; set; } = Color.FromArgb(243, 255, 0);
 

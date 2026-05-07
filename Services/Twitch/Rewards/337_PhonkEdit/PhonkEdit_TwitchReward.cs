@@ -15,7 +15,7 @@ public class PhonkEdit_TwitchReward(
     RickRollerService rickRollerService
 ) : TemporaryReward(channelRewardsService, logger, environment)
 {
-    public override string AlertDisplayName { get; set; } = "Phonk Edit";
+    public override string AlertDisplayName { get; set; } = "🎵 Phonk Edit";
     public override string AlertDescription { get; set; } = string.Empty;
     public override Color Color { get; set; } = Color.FromArgb(255, 0, 0);
     public override int Cost { get; init; } = 337;

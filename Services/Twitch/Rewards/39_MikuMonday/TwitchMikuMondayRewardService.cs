@@ -24,7 +24,7 @@ public class TwitchMikuMondayRewardService(
     public override string AlertDisplayName { get; set; } = "🎤 Miku Monday [BETA TEST]";
 
     public override string AlertDescription { get; set; } =
-        "Мику заметила нас и решила посетить этот стрим! Активируй награду и получи от неё персональный трек! Один раз - каждый понедельник! ♪";
+        "🎵 Мику заметила нас и решила посетить этот стрим! Активируй награду и получи от неё персональный трек! Один раз - каждый понедельник! ♪";
 
     public override Color Color { get; set; } = Color.FromArgb(57, 197, 187); // Светло-салатовый/бирюзовый цвет Hatsune Miku
 
