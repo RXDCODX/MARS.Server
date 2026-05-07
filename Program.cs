@@ -264,6 +264,7 @@ public static class Program
         app.MapHub<TunaHub>("/hubs/tuna");
         //app.MapHub<SoundBarHub>("/hubs/soundbar");
         app.MapHub<ScoreboardHub>("/hubs/scoreboard");
+        app.MapHub<VoiceRecognitionHub>("/hubs/voice-recognition");
         app.AddLogerHub();
         if (IsUseSoundRequest)
         {
