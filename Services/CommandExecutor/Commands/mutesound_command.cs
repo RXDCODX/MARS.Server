@@ -1,0 +1,30 @@
+﻿using MARS.Server.Services.CommandExecutor.Entitys;
+using MARS.Server.Services.CommandExecutor.Entitys.Commands;
+using MARS.Server.Services.Twitch.SoundBarService;
+
+namespace MARS.Server.Services.CommandExecutor.Commands;
+
+public class mutesound_command(SoundBarFactory factory) : BaseCommand
+{
+    public override string CommandName => "mutesound";
+    public override string Description => "Выключить звук на компухтере";
+    public override bool IsAdminCommand => true;
+    public override Platform[] AvailablePlatforms => [Platform.Telegram, Platform.Api];
+
+    public override async Task<string> ExecuteAsync(
+        Dictionary<string, object> parameters,
+        Platform platform = Platform.None,
+        CancellationToken cancellationToken = default
+    )
+    {
+        try
+        {
+            await factory.CreateSoundBar().Mute();
+            return "Комплюхтер замучен успешно";
+        }
+        catch
+        {
+            return "Комплюхтер не удалось замутить";
+        }
+    }
+}
