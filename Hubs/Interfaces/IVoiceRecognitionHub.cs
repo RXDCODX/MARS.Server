@@ -1,4 +1,4 @@
-namespace MARS.Server.Hubs;
+namespace MARS.Server.Hubs.Interfaces;
 
 using MARS.Server.Hubs.Models.VoiceRecognition;
 using SignalRSwaggerGen.Attributes;
