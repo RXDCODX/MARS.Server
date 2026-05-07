@@ -1,15 +1,15 @@
 namespace MARS.Server.Hubs;
 
-using MARS.Server.Hubs.Models.VoiceRecognition;
+using Models.VoiceRecognition;
 using SignalRSwaggerGen.Attributes;
 using SignalRSwaggerGen.Enums;
 
 /// <summary>
 /// SignalR hub for voice recognition and speech-to-text functionality.
-/// 
+///
 /// Receives voice messages from MARS.AudioController (acting as a client)
 /// and broadcasts them to connected clients for live streaming purposes.
-/// 
+///
 /// Optimized for low-latency message delivery in streaming scenarios.
 /// </summary>
 [SignalRHub("/hubs/voice-recognition", AutoDiscover.MethodsAndParams)]
@@ -27,7 +27,10 @@ public class VoiceRecognitionHub(ILogger<VoiceRecognitionHub> logger) : Hub<IVoi
     {
         if (message == null)
         {
-            logger.LogWarning("Received null voice message from {ConnectionId}", Context.ConnectionId);
+            logger.LogWarning(
+                "Received null voice message from {ConnectionId}",
+                Context.ConnectionId
+            );
             return;
         }
 
