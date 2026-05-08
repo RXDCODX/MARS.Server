@@ -2,6 +2,8 @@ using MARS.Server.Services.CommandExecutor.Entitys;
 using MARS.Server.Services.CommandExecutor.Entitys.Commands;
 using MARS.Server.Services.YouTube;
 using YoutubeExplode;
+using YoutubeExplode.Converter;
+using YoutubeExplode.Videos.ClosedCaptions;
 using YoutubeExplode.Videos.Streams;
 
 namespace MARS.Server.Services.CommandExecutor.Commands;
@@ -34,7 +36,8 @@ public class YtdownloadCommand(
             new()
             {
                 Name = "message",
-                Description = "Message Id",
+                Description = "Message объект из телеграма",
+                Type = nameof(Message),
                 Required = true,
             },
         ];
@@ -116,39 +119,53 @@ public class YtdownloadCommand(
             );
 
             // Выбираем лучший доступный видеопоток
-            var bestStream = streamManifest.GetVideoStreams().GetWithHighestVideoQuality();
+            var bestVideoStream = streamManifest.GetVideoStreams().GetWithHighestVideoQuality();
+            var bestAudioStream = streamManifest.GetAudioStreams().GetWithHighestBitrate();
 
-            // Скачиваем видео в память
-            await using var videoStream = new MemoryStream();
-            await _youtubeClient.Videos.Streams.CopyToAsync(
-                bestStream,
-                videoStream,
-                null,
-                cancellationToken
-            );
-            videoStream.Position = 0;
+            var tempFile = Guid.NewGuid() + ".mp4";
 
-            // Генерируем имя файла
-            var sanitizedTitle = SanitizeFileName(videoTitle);
-            var fileName =
-                $"{sanitizedTitle}_{DateTime.UtcNow:yyyyMMdd_HHmmss}.{bestStream.Container.Name}";
-
-            await client.SendVideo(
-                message.Chat,
-                InputFile.FromStream(videoStream),
-                "Имя файла: " + fileName,
-                replyParameters: new ReplyParameters()
-                {
-                    ChatId = message.Chat,
-                    MessageId = message.Id,
-                },
+            await _youtubeClient.Videos.DownloadAsync(
+                [bestAudioStream, bestVideoStream],
+                new ConversionRequest(
+                    "ffmpeg",
+                    tempFile,
+                    Container.Mp4,
+                    ConversionPreset.VerySlow,
+                    new Dictionary<string, string?>()
+                ),
                 cancellationToken: cancellationToken
             );
 
-            logger.LogInformation(
-                "Видео {Title} успешно скачано и добавлено в хранилище",
-                videoTitle
-            );
+            // Скачиваем видео в память
+            await using var fileStream = File.OpenRead(tempFile);
+
+            // Генерируем имя файла
+            var sanitizedTitle = SanitizeFileName(videoTitle);
+            var fileName = $"{sanitizedTitle}_{DateTime.UtcNow:yyyyMMdd_HHmmss}.webm";
+
+            try
+            {
+                await client.SendVideo(
+                    message.Chat,
+                    InputFile.FromStream(fileStream),
+                    "Имя файла: " + fileName,
+                    replyParameters: new ReplyParameters()
+                    {
+                        ChatId = message.Chat,
+                        MessageId = message.Id,
+                    },
+                    cancellationToken: cancellationToken
+                );
+
+                logger.LogInformation(
+                    "Видео {Title} успешно скачано и добавлено в хранилище",
+                    videoTitle
+                );
+            }
+            finally
+            {
+                File.Delete(tempFile);
+            }
         }
         catch (OperationCanceledException)
         {
