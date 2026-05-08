@@ -8,7 +8,6 @@ namespace MARS.Server.Services.CommandExecutor.Adapters;
 /// Сервис для обработки команд в Telegram
 /// </summary>
 public class TelegramCommandService(
-    CommandExecutorService executor,
     ICommandService commandService,
     ITelegramBotClient botClient,
     ILogger<TelegramCommandService> logger
@@ -21,10 +20,10 @@ public class TelegramCommandService(
     public override char[] CommandPrefixes => ['/'];
 
     public override IEnumerable<string> UserCommands =>
-        executor.GetUserCommandsAsync(Platform.Telegram).GetAwaiter().GetResult();
+        commandService.GetUserCommands(Platform.Telegram);
 
     public override IEnumerable<string> AdminCommands =>
-        executor.GetAdminCommandsAsync(Platform.Telegram).GetAwaiter().GetResult();
+        commandService.GetAdminCommands(Platform.Telegram);
 
     public override Func<long, bool> IsAdmin { get; } = x => x.Equals(TelegramExstension.Rxdcodx);
 
@@ -39,11 +38,7 @@ public class TelegramCommandService(
 
         if (!string.IsNullOrWhiteSpace(commandName))
         {
-            // Используем CommandExecutorService для проверки доступности команды
-            result = executor
-                .IsCommandAvailableAsync(commandName, Platform.Telegram)
-                .GetAwaiter()
-                .GetResult();
+            result = commandService.IsCommandAvailable(commandName, Platform.Telegram);
         }
 
         return result;
@@ -128,9 +123,7 @@ public class TelegramCommandService(
                             else
                             {
                                 // Проверяем, существует ли команда
-                                var commandInfo = await commandService.GetCommandParametersAsync(
-                                    commandName
-                                );
+                                var commandInfo = commandService.GetCommandParameters(commandName);
                                 if (commandInfo is not null)
                                 {
                                     // Проверяем количество обязательных параметров
@@ -144,8 +137,9 @@ public class TelegramCommandService(
                                     if (inputParts.Length >= requiredParams.Length)
                                     {
                                         // Проверяем права доступа для админских команд
-                                        var isAdminCommand =
-                                            await commandService.IsAdminCommandAsync(commandName);
+                                        var isAdminCommand = commandService.IsAdminCommand(
+                                            commandName
+                                        );
                                         if (!isAdminCommand || IsUserAdmin(message.From?.Id ?? 0))
                                         {
                                             // Выполняем команду через новый сервис
@@ -242,21 +236,15 @@ public class TelegramCommandService(
         var commands = new List<string>();
 
         // Получаем команды через CommandExecutorService и фильтруем по видимости
-        var allCommands = executor
-            .GetUserCommandsInfoAsync(Platform.Telegram)
-            .GetAwaiter()
-            .GetResult();
-        var adminCommands = executor
-            .GetAdminCommandsInfoAsync(Platform.Telegram)
-            .GetAwaiter()
-            .GetResult();
+        var allCommands = commandService.GetUserCommandsInfo(Platform.Telegram);
+        var adminCommands = commandService.GetAdminCommandsInfo(Platform.Telegram);
 
         // Фильтруем пользовательские команды по видимости
         foreach (var command in allCommands)
         {
             if (command.IsVisibleIn(CommandVisibility.ShortList))
             {
-                commands.Add($"/{command.Name}");
+                commands.Add($"/{command.CommandName}");
             }
         }
 
@@ -267,7 +255,7 @@ public class TelegramCommandService(
             {
                 if (command.IsVisibleIn(CommandVisibility.ShortList))
                 {
-                    commands.Add($"/{command.Name}");
+                    commands.Add($"/{command.CommandName}");
                 }
             }
         }

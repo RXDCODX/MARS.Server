@@ -84,14 +84,14 @@ public class CommandsController(
     /// <param name="platform">Платформа</param>
     /// <returns>Список пользовательских команд для платформы</returns>
     [HttpGet("user/platform/{platform}")]
-    public async Task<ActionResult<OperationResult<string[]>>> GetUserCommandsForPlatform(
+    public ActionResult<OperationResult<string[]>> GetUserCommandsForPlatform(
         Platform platform
     )
     {
         ActionResult<OperationResult<string[]>> result;
         try
         {
-            var commands = await commandService.GetUserCommandsAsync(platform);
+            var commands = commandService.GetUserCommands(platform);
             result = Ok(
                 OperationResult<string[]>.Ok(
                     "Получены пользовательские команды для платформы",
@@ -120,14 +120,14 @@ public class CommandsController(
     /// <param name="platform">Платформа</param>
     /// <returns>Список админских команд для платформы</returns>
     [HttpGet("admin/platform/{platform}")]
-    public async Task<ActionResult<OperationResult<string[]>>> GetAdminCommandsForPlatform(
+    public ActionResult<OperationResult<string[]>> GetAdminCommandsForPlatform(
         Platform platform
     )
     {
         ActionResult<OperationResult<string[]>> result;
         try
         {
-            var commands = await commandService.GetAdminCommandsAsync(platform);
+            var commands = commandService.GetAdminCommands(platform);
             result = Ok(
                 OperationResult<string[]>.Ok("Получены админские команды для платформы", commands)
             );
@@ -151,16 +151,16 @@ public class CommandsController(
     /// <param name="platform">Платформа</param>
     /// <returns>Детальная информация о пользовательских командах</returns>
     [HttpGet("user/platform/{platform}/info")]
-    public async Task<ActionResult<OperationResult<CommandInfo[]>>> GetUserCommandsInfoForPlatform(
+    public ActionResult<OperationResult<BaseCommand[]>> GetUserCommandsInfoForPlatform(
         Platform platform
     )
     {
-        ActionResult<OperationResult<CommandInfo[]>> result;
+        ActionResult<OperationResult<BaseCommand[]>> result;
         try
         {
-            var commands = await commandService.GetUserCommandsInfoAsync(platform);
+            var commands = commandService.GetUserCommandsInfo(platform);
             result = Ok(
-                OperationResult<CommandInfo[]>.Ok(
+                OperationResult<BaseCommand[]>.Ok(
                     "Получена информация о пользовательских командах",
                     commands
                 )
@@ -174,7 +174,7 @@ public class CommandsController(
                 platform
             );
             result = Ok(
-                OperationResult<CommandInfo[]>.Bad("Ошибка при получении информации о командах", [])
+                OperationResult<BaseCommand[]>.Bad("Ошибка при получении информации о командах", [])
             );
         }
 
@@ -187,16 +187,16 @@ public class CommandsController(
     /// <param name="platform">Платформа</param>
     /// <returns>Детальная информация об админских командах</returns>
     [HttpGet("admin/platform/{platform}/info")]
-    public async Task<ActionResult<OperationResult<CommandInfo[]>>> GetAdminCommandsInfoForPlatform(
+    public ActionResult<OperationResult<BaseCommand[]>> GetAdminCommandsInfoForPlatform(
         Platform platform
     )
     {
-        ActionResult<OperationResult<CommandInfo[]>> result;
+        ActionResult<OperationResult<BaseCommand[]>> result;
         try
         {
-            var commands = await commandService.GetAdminCommandsInfoAsync(platform);
+            var commands = commandService.GetAdminCommandsInfo(platform);
             result = Ok(
-                OperationResult<CommandInfo[]>.Ok(
+                OperationResult<BaseCommand[]>.Ok(
                     "Получена информация об админских командах",
                     commands
                 )
@@ -210,7 +210,7 @@ public class CommandsController(
                 platform
             );
             result = Ok(
-                OperationResult<CommandInfo[]>.Bad(
+                OperationResult<BaseCommand[]>.Bad(
                     "Ошибка при получении информации об админских командах",
                     []
                 )
@@ -226,14 +226,14 @@ public class CommandsController(
     /// <param name="commandName">Название команды</param>
     /// <returns>Параметры команды</returns>
     [HttpGet("{commandName}/parameters")]
-    public async Task<ActionResult<OperationResult<CommandParameterInfo[]>>> GetCommandParameters(
+    public ActionResult<OperationResult<CommandParameterInfo[]>> GetCommandParameters(
         string commandName
     )
     {
         ActionResult<OperationResult<CommandParameterInfo[]>> result;
         try
         {
-            var parameters = await commandService.GetCommandParametersAsync(commandName);
+            var parameters = commandService.GetCommandParameters(commandName);
             result = Ok(
                 OperationResult<CommandParameterInfo[]>.Ok("Получены параметры команды", parameters)
             );

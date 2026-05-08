@@ -23,7 +23,7 @@ public class CommandExecutorService(CommandFactory commandFactory)
         }
     }
 
-    public Task<string[]> GetUserCommandsAsync(CancellationToken cancellationToken = default)
+    public string[] GetUserCommands(CancellationToken cancellationToken = default)
     {
         string[] result = [];
 
@@ -39,10 +39,10 @@ public class CommandExecutorService(CommandFactory commandFactory)
             ];
         }
 
-        return Task.FromResult(result);
+        return result;
     }
 
-    public Task<string[]> GetAdminCommandsAsync(CancellationToken cancellationToken = default)
+    public string[] GetAdminCommands(CancellationToken cancellationToken = default)
     {
         string[] result = [];
 
@@ -58,10 +58,10 @@ public class CommandExecutorService(CommandFactory commandFactory)
             ];
         }
 
-        return Task.FromResult(result);
+        return result;
     }
 
-    public Task<string[]> GetUserCommandsAsync(
+    public string[] GetUserCommands(
         Platform platforms,
         CancellationToken cancellationToken = default
     )
@@ -82,10 +82,10 @@ public class CommandExecutorService(CommandFactory commandFactory)
             ];
         }
 
-        return Task.FromResult(result);
+        return result;
     }
 
-    public Task<string[]> GetAdminCommandsAsync(
+    public string[] GetAdminCommands(
         Platform platforms,
         CancellationToken cancellationToken = default
     )
@@ -106,10 +106,10 @@ public class CommandExecutorService(CommandFactory commandFactory)
             ];
         }
 
-        return Task.FromResult(result);
+        return result;
     }
 
-    public Task<CommandParameterInfo[]?> GetCommandParametersAsync(
+    public CommandParameterInfo[]? GetCommandParameters(
         string commandName,
         CancellationToken cancellationToken = default
     )
@@ -130,120 +130,78 @@ public class CommandExecutorService(CommandFactory commandFactory)
             }
         }
 
-        return Task.FromResult(result);
+        return result;
     }
 
-    public Task<CommandInfo[]> GetUserCommandsInfoAsync(
+    public BaseCommand[] GetUserCommandsInfo(
         CancellationToken cancellationToken = default
     )
     {
-        CommandInfo[] result = [];
+        BaseCommand[] result = [];
 
         if (_commands.Count > 0)
         {
-            result =
-            [
-                .. _commands
-                    .Values.Where(c => !c.IsAdminCommand)
-                    .Select(c => new CommandInfo
-                    {
-                        Name = c.CommandName,
-                        Description = c.Description,
-                        IsAdminCommand = c.IsAdminCommand,
-                        Parameters = c.GetParameterInfo(),
-                        AvailablePlatforms = c.GetAvailablePlatforms(),
-                        Visibility = c.Visibility,
-                    }),
-            ];
+            result = [.. _commands.Values.Where(c => !c.IsAdminCommand)];
         }
 
-        return Task.FromResult(result);
+        return result;
     }
 
-    public Task<CommandInfo[]> GetAdminCommandsInfoAsync(
+    public BaseCommand[] GetAdminCommandsInfo(
         CancellationToken cancellationToken = default
     )
     {
-        CommandInfo[] result = [];
+        BaseCommand[] result = [];
 
         if (_commands.Count > 0)
         {
-            result =
-            [
-                .. _commands
-                    .Values.Where(c => c.IsAdminCommand)
-                    .Select(c => new CommandInfo
-                    {
-                        Name = c.CommandName,
-                        Description = c.Description,
-                        IsAdminCommand = c.IsAdminCommand,
-                        Parameters = c.GetParameterInfo(),
-                        AvailablePlatforms = c.GetAvailablePlatforms(),
-                        Visibility = c.Visibility,
-                    }),
-            ];
+            result = [.. _commands.Values.Where(c => c.IsAdminCommand)];
         }
 
-        return Task.FromResult(result);
+        return result;
     }
 
-    public Task<CommandInfo[]> GetUserCommandsInfoAsync(
+    public BaseCommand[] GetUserCommandsInfo(
         Platform platforms,
         CancellationToken cancellationToken = default
     )
     {
-        CommandInfo[] result = [];
+        BaseCommand[] result = [];
 
         if (_commands.Count > 0)
         {
             result =
             [
-                .. _commands
-                    .Values.Where(c => !c.IsAdminCommand && c.IsAvailableOnPlatform(platforms))
-                    .Select(c => new CommandInfo
-                    {
-                        Name = c.CommandName,
-                        Description = c.Description,
-                        IsAdminCommand = c.IsAdminCommand,
-                        Parameters = c.GetParameterInfo(),
-                        AvailablePlatforms = c.GetAvailablePlatforms(),
-                        Visibility = c.Visibility,
-                    }),
+                .. _commands.Values.Where(c =>
+                    !c.IsAdminCommand && c.IsAvailableOnPlatform(platforms)
+                ),
             ];
         }
 
-        return Task.FromResult(result);
+        return result;
     }
 
-    public Task<CommandInfo[]> GetAdminCommandsInfoAsync(
+    public BaseCommand[] GetAdminCommandsInfo(
         Platform platforms,
         CancellationToken cancellationToken = default
     )
     {
-        CommandInfo[] result = [];
+        BaseCommand[] result = [];
 
         if (_commands.Count > 0)
         {
             result =
             [
-                .. _commands
-                    .Values.Where(c => c.IsAdminCommand && c.IsAvailableOnPlatform(platforms))
-                    .Select(c => new CommandInfo
-                    {
-                        Name = c.CommandName,
-                        Description = c.Description,
-                        IsAdminCommand = c.IsAdminCommand,
-                        Parameters = c.GetParameterInfo(),
-                        AvailablePlatforms = c.GetAvailablePlatforms(),
-                        Visibility = c.Visibility,
-                    }),
+                .. _commands.Values.Where(c =>
+                    c.IsAdminCommand && c.IsAvailableOnPlatform(platforms)
+                ),
             ];
         }
 
-        return Task.FromResult(result);
+        return result;
     }
 
-    public Task<bool> IsAdminCommandAsync(
+    public bool IsAdminCommand(
         string commandName,
         CancellationToken cancellationToken = default
     )
@@ -264,10 +222,10 @@ public class CommandExecutorService(CommandFactory commandFactory)
             }
         }
 
-        return Task.FromResult(result);
+        return result;
     }
 
-    public Task<bool> IsCommandAvailableAsync(string commandName, Platform platform)
+    public bool IsCommandAvailable(string commandName, Platform platform)
     {
         var result = false;
 
@@ -285,7 +243,7 @@ public class CommandExecutorService(CommandFactory commandFactory)
             }
         }
 
-        return Task.FromResult(result);
+        return result;
     }
 
     public async Task<string> ExecuteCommandAsync(

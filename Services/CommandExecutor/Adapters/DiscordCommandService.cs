@@ -9,12 +9,11 @@ using ServerDiscordConfiguration = MARS.Server.Configuration.DiscordConfiguratio
 namespace MARS.Server.Services.CommandExecutor.Adapters;
 
 public class DiscordCommandService(
-    CommandExecutorService executor,
-    ICommandService commandService,
     DiscordPlayRequestService discordPlayRequestService,
     IDiscordGatewayService discordGatewayService,
     IOptions<ServerDiscordConfiguration> discordOptions,
-    ILogger<DiscordCommandService> logger
+    ILogger<DiscordCommandService> logger,
+    ICommandService commandService
 ) : PlatformCommandServiceBase<ulong>, IHostedService
 {
     private readonly ServerDiscordConfiguration _discordConfiguration = discordOptions.Value;
@@ -27,10 +26,10 @@ public class DiscordCommandService(
     public override char[] CommandPrefixes => ['/', '!'];
 
     public override IEnumerable<string> UserCommands =>
-        executor.GetUserCommandsAsync(Platform.Discord).GetAwaiter().GetResult();
+        commandService.GetUserCommands(Platform.Discord);
 
     public override IEnumerable<string> AdminCommands =>
-        executor.GetAdminCommandsAsync(Platform.Discord).GetAwaiter().GetResult();
+        commandService.GetAdminCommands(Platform.Discord);
 
     public override Func<ulong, bool> IsAdmin =>
         userId => _discordConfiguration.AdminIdsArray.Contains(userId);
@@ -60,10 +59,7 @@ public class DiscordCommandService(
 
         if (!string.IsNullOrWhiteSpace(commandName))
         {
-            result = executor
-                .IsCommandAvailableAsync(commandName, Platform.Discord)
-                .GetAwaiter()
-                .GetResult();
+            result = commandService.IsCommandAvailable(commandName, Platform.Discord);
         }
 
         return result;
@@ -112,7 +108,7 @@ public class DiscordCommandService(
             }
             else
             {
-                var commandInfo = await commandService.GetCommandParametersAsync(commandName);
+                var commandInfo = commandService.GetCommandParameters(commandName);
                 if (commandInfo is not null)
                 {
                     var requiredParams = commandInfo.Where(p => p.Required).ToArray();
@@ -122,7 +118,7 @@ public class DiscordCommandService(
 
                     if (inputParts.Length >= requiredParams.Length)
                     {
-                        var isAdminCommand = await commandService.IsAdminCommandAsync(commandName);
+                        var isAdminCommand = commandService.IsAdminCommand(commandName);
                         if (!isAdminCommand || IsUserAdmin(args.Author.Id))
                         {
                             var commandResult = await commandService.ExecuteCommandAsync(

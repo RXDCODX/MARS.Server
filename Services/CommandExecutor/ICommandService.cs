@@ -13,14 +13,14 @@ public interface ICommandService
     /// </summary>
     /// <param name="cancellationToken">Токен отмены</param>
     /// <returns>Массив названий пользовательских команд</returns>
-    Task<string[]> GetUserCommandsAsync(CancellationToken cancellationToken = default);
+    string[] GetUserCommands(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Получить названия админских команд
     /// </summary>
     /// <param name="cancellationToken">Токен отмены</param>
     /// <returns>Массив названий админских команд</returns>
-    Task<string[]> GetAdminCommandsAsync(CancellationToken cancellationToken = default);
+    string[] GetAdminCommands(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Получить названия пользовательских команд для указанных платформ
@@ -28,7 +28,7 @@ public interface ICommandService
     /// <param name="platforms">Платформы для фильтрации команд</param>
     /// <param name="cancellationToken">Токен отмены</param>
     /// <returns>Массив названий пользовательских команд</returns>
-    Task<string[]> GetUserCommandsAsync(
+    string[] GetUserCommands(
         Platform platforms,
         CancellationToken cancellationToken = default
     );
@@ -39,12 +39,12 @@ public interface ICommandService
     /// <param name="platforms">Платформы для фильтрации команд</param>
     /// <param name="cancellationToken">Токен отмены</param>
     /// <returns>Массив названий админских команд</returns>
-    Task<string[]> GetAdminCommandsAsync(
+    string[] GetAdminCommands(
         Platform platforms,
         CancellationToken cancellationToken = default
     );
 
-    Task<CommandParameterInfo[]?> GetCommandParametersAsync(
+    CommandParameterInfo[]? GetCommandParameters(
         string commandName,
         CancellationToken cancellationToken = default
     );
@@ -54,14 +54,14 @@ public interface ICommandService
     /// </summary>
     /// <param name="cancellationToken">Токен отмены</param>
     /// <returns>Массив информации о пользовательских командах</returns>
-    Task<CommandInfo[]> GetUserCommandsInfoAsync(CancellationToken cancellationToken = default);
+    BaseCommand[] GetUserCommandsInfo(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Получить информацию об админских командах
     /// </summary>
     /// <param name="cancellationToken">Токен отмены</param>
     /// <returns>Массив информации об админских командах</returns>
-    Task<CommandInfo[]> GetAdminCommandsInfoAsync(CancellationToken cancellationToken = default);
+    BaseCommand[] GetAdminCommandsInfo(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Получить информацию о пользовательских командах для указанных платформ
@@ -69,7 +69,7 @@ public interface ICommandService
     /// <param name="platforms">Платформы для фильтрации команд</param>
     /// <param name="cancellationToken">Токен отмены</param>
     /// <returns>Массив информации о пользовательских командах</returns>
-    Task<CommandInfo[]> GetUserCommandsInfoAsync(
+    BaseCommand[] GetUserCommandsInfo(
         Platform platforms,
         CancellationToken cancellationToken = default
     );
@@ -80,7 +80,7 @@ public interface ICommandService
     /// <param name="platforms">Платформы для фильтрации команд</param>
     /// <param name="cancellationToken">Токен отмены</param>
     /// <returns>Массив информации об админских командах</returns>
-    Task<CommandInfo[]> GetAdminCommandsInfoAsync(
+    BaseCommand[] GetAdminCommandsInfo(
         Platform platforms,
         CancellationToken cancellationToken = default
     );
@@ -91,10 +91,12 @@ public interface ICommandService
     /// <param name="commandName">Название команды</param>
     /// <param name="cancellationToken">Токен отмены</param>
     /// <returns>True если команда админская</returns>
-    Task<bool> IsAdminCommandAsync(
+    bool IsAdminCommand(
         string commandName,
         CancellationToken cancellationToken = default
     );
+
+    bool IsCommandAvailable(string commandName, Platform platform);
 
     /// <summary>
     /// Выполнить команду
@@ -110,24 +112,4 @@ public interface ICommandService
         Platform platform,
         CancellationToken cancellationToken = default
     );
-}
-
-public class CommandInfo
-{
-    public string Name { get; set; } = string.Empty;
-    public string Description { get; set; } = string.Empty;
-    public bool IsAdminCommand { get; set; }
-    public CommandParameterInfo[] Parameters { get; set; } = [];
-    public Platform[] AvailablePlatforms { get; set; } = [];
-    public CommandVisibility Visibility { get; set; } = CommandVisibility.All;
-
-    /// <summary>
-    /// Проверяет, должна ли команда отображаться в указанном контексте
-    /// </summary>
-    /// <param name="visibility">Контекст видимости</param>
-    /// <returns>True, если команда должна отображаться</returns>
-    public bool IsVisibleIn(CommandVisibility visibility)
-    {
-        return (Visibility & visibility) != 0;
-    }
 }

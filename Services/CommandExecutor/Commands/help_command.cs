@@ -98,19 +98,13 @@ public class HelpCommand(ICommandService commandService) : BaseCommand
 
         if (!string.IsNullOrWhiteSpace(commandName))
         {
-            var userCommands = await commandService.GetUserCommandsInfoAsync(
-                platform,
-                cancellationToken
-            );
-            var adminCommands = await commandService.GetAdminCommandsInfoAsync(
-                platform,
-                cancellationToken
-            );
+            var userCommands = commandService.GetUserCommandsInfo(platform, cancellationToken);
+            var adminCommands = commandService.GetAdminCommandsInfo(platform, cancellationToken);
 
             var allCommands = userCommands.Concat(adminCommands).ToArray();
 
             var command = allCommands.FirstOrDefault(c =>
-                c.Name.Equals(commandName, StringComparison.OrdinalIgnoreCase)
+                c.CommandName.Equals(commandName, StringComparison.OrdinalIgnoreCase)
             );
 
             if (command != null)
@@ -122,7 +116,7 @@ public class HelpCommand(ICommandService commandService) : BaseCommand
         return result;
     }
 
-    private static string FormatCommandHelp(CommandInfo command, Platform platform)
+    private static string FormatCommandHelp(BaseCommand command, Platform platform)
     {
         var result = string.Empty;
 
@@ -160,13 +154,13 @@ public class HelpCommand(ICommandService commandService) : BaseCommand
 
             var usage =
                 command.Parameters.Length > 0
-                    ? $"\n\n💡 Использование:\n{prefix}{command.Name} {string.Join(" ", command.Parameters.Select(p => p.Required ? $"<{p.Name}>" : $"[{p.Name}]"))}"
-                    : $"\n\n💡 Использование:\n{prefix}{command.Name}";
+                    ? $"\n\n💡 Использование:\n{prefix}{command.CommandName} {string.Join(" ", command.Parameters.Select(p => p.Required ? $"<{p.Name}>" : $"[{p.Name}]"))}"
+                    : $"\n\n💡 Использование:\n{prefix}{command.CommandName}";
 
             var platforms = string.Join(", ", command.AvailablePlatforms.Select(p => p.ToString()));
 
             result = $"""
-                {commandType}: {prefix}{command.Name}
+                {commandType}: {prefix}{command.CommandName}
 
                 📝 Описание:
                 {command.Description}
