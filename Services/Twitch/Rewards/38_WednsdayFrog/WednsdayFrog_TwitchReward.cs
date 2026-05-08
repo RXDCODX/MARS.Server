@@ -1,7 +1,7 @@
 ﻿using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
 
-namespace MARS.Server.Services.Twitch.Rewards._38_FridayFrog;
+namespace MARS.Server.Services.Twitch.Rewards._38_WednsdayFrog;
 
 public class WednsdayFrog_TwitchReward(
     ChannelRewardsService channelRewardsService,
