@@ -133,9 +133,7 @@ public class CommandExecutorService(CommandFactory commandFactory)
         return result;
     }
 
-    public BaseCommand[] GetUserCommandsInfo(
-        CancellationToken cancellationToken = default
-    )
+    public BaseCommand[] GetUserCommandsInfo(CancellationToken cancellationToken = default)
     {
         BaseCommand[] result = [];
 
@@ -147,9 +145,7 @@ public class CommandExecutorService(CommandFactory commandFactory)
         return result;
     }
 
-    public BaseCommand[] GetAdminCommandsInfo(
-        CancellationToken cancellationToken = default
-    )
+    public BaseCommand[] GetAdminCommandsInfo(CancellationToken cancellationToken = default)
     {
         BaseCommand[] result = [];
 
@@ -201,10 +197,7 @@ public class CommandExecutorService(CommandFactory commandFactory)
         return result;
     }
 
-    public bool IsAdminCommand(
-        string commandName,
-        CancellationToken cancellationToken = default
-    )
+    public bool IsAdminCommand(string commandName, CancellationToken cancellationToken = default)
     {
         var result = false;
 
@@ -291,6 +284,60 @@ public class CommandExecutorService(CommandFactory commandFactory)
                         // Разбираем параметры из входной строки
                         var parameters = command.ParseParameters(input);
 
+                        // Выполняем команду
+                        result = await ExecuteCommandAsync(
+                            commandName,
+                            parameters,
+                            platform,
+                            cancellationToken
+                        );
+                    }
+                }
+            }
+        }
+
+        return result;
+    }
+
+    public async Task<string> ExecuteCommandAsync(
+        string commandName,
+        Dictionary<string, object> parameters,
+        Platform platform,
+        CancellationToken cancellationToken = default
+    )
+    {
+        var result =
+            $"Команда '{commandName}' не найдена. Используйте /commands или /c для списка доступных команд.";
+
+        if (!string.IsNullOrWhiteSpace(commandName))
+        {
+            // Проверяем алиасы
+            if (_aliases.TryGetValue(commandName, out var actualCommandName))
+            {
+                commandName = actualCommandName;
+            }
+
+            if (_commands.TryGetValue(commandName, out var command))
+            {
+                // Проверяем доступность команды для платформы
+                if (!command.IsAvailableOnPlatform(platform))
+                {
+                    result = $"Команда '{commandName}' недоступна на текущей платформе.";
+                }
+                else
+                {
+                    // Проверяем количество обязательных параметров
+                    var commandInfo = command.GetParameterInfo();
+                    var requiredParams = commandInfo.Where(p => p.Required).ToArray();
+
+                    if (parameters.Count < requiredParams.Length)
+                    {
+                        var missingParam = requiredParams[parameters.Count];
+                        result =
+                            $"Не хватает параметра '{missingParam.Name}'. Использование: {commandName} {string.Join(" ", requiredParams.Select(p => $"<{p.Name}>"))}";
+                    }
+                    else
+                    {
                         // Выполняем команду
                         result = await command.ExecuteAsync(
                             parameters,

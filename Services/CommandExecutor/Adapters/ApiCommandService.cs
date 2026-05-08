@@ -92,7 +92,7 @@ public class ApiCommandService(ICommandService commandService, ILogger<ApiComman
     /// </summary>
     /// <param name="commandName">Название команды</param>
     /// <returns>True если команда доступна</returns>
-    public override bool IsCommandAvailable(string commandName)
+    public virtual bool IsCommandAvailable(string commandName)
     {
         return commandService.IsCommandAvailable(commandName, Platform.Api);
     }

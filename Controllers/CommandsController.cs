@@ -231,18 +231,12 @@ public class CommandsController(
         {
             var parameters = commandService.GetCommandParameters(commandName);
 
-            result = parameters is { Length: > 0 }
-                ? Ok(
-                    OperationResult<CommandParameterInfo[]>.Ok(
-                        "Получены параметры команды",
-                        parameters
-                    )
+            result = Ok(
+                OperationResult<CommandParameterInfo[]>.Ok(
+                    "Получены параметры команды",
+                    parameters ?? []
                 )
-                : BadRequest(
-                    OperationResult<CommandParameterInfo>.Bad(
-                        "Не удалось получить параметры команды"
-                    )
-                );
+            );
         }
         catch (Exception ex)
         {

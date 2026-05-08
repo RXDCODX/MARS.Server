@@ -1,4 +1,5 @@
-﻿using MARS.Server.Services.CommandExecutor.Entitys;
+﻿using MARS.Server.Services.CommandExecutor;
+using MARS.Server.Services.CommandExecutor.Entitys;
 using MARS.Server.Services.CommandExecutor.Entitys.Commands;
 using MARS.Server.Services.Twitch;
 using TwitchLib.Client.Events;
@@ -10,12 +11,10 @@ namespace MARS.Server.Services.CommandExecutor.Adapters;
 /// </summary>
 public class TwitchCommandService : PlatformCommandServiceBase<string>, IHostedService
 {
-    private readonly CommandFactory _commandFactory;
+    private readonly ICommandService _commandService;
     private readonly ITwitchClient _client;
     private readonly ILogger<TwitchCommandService> _logger;
     private readonly IServiceProvider _serviceProvider;
-    private readonly Dictionary<string, BaseCommand> _commands;
-    private readonly Dictionary<string, string> _aliases;
 
     public override Platform Platform => Platform.Twitch;
 
@@ -24,14 +23,10 @@ public class TwitchCommandService : PlatformCommandServiceBase<string>, IHostedS
     public override char[] CommandPrefixes => ['!'];
 
     public override IEnumerable<string> UserCommands =>
-        _commands
-            .Values.Where(c => !c.IsAdminCommand && c.IsAvailableOnPlatform(Platform.Twitch))
-            .Select(c => $"!{c.CommandName}");
+        _commandService.GetUserCommands(Platform.Twitch).Select(c => $"!{c}");
 
     public override IEnumerable<string> AdminCommands =>
-        _commands
-            .Values.Where(c => c.IsAdminCommand && c.IsAvailableOnPlatform(Platform.Twitch))
-            .Select(c => $"!{c.CommandName}");
+        _commandService.GetAdminCommands(Platform.Twitch).Select(c => $"!{c}");
 
     public override Func<string, bool> IsAdmin =>
         (userId) => userId.Equals(TwitchExstension.ChannelId, StringComparison.OrdinalIgnoreCase);
@@ -40,21 +35,17 @@ public class TwitchCommandService : PlatformCommandServiceBase<string>, IHostedS
     /// Сервис для обработки команд в Twitch
     /// </summary>
     public TwitchCommandService(
-        CommandFactory commandFactory,
+        ICommandService commandService,
         ITwitchClient client,
         IServiceProvider serviceProviderProvider,
         IHostApplicationLifetime lifetime,
         ILogger<TwitchCommandService> logger
     )
     {
-        _commandFactory = commandFactory;
+        _commandService = commandService;
         _client = client;
         _serviceProvider = serviceProviderProvider;
         _logger = logger;
-        _commands = new Dictionary<string, BaseCommand>(StringComparer.OrdinalIgnoreCase);
-        _aliases = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-
-        InitializeCommands();
 
         lifetime.ApplicationStarted.Register(() =>
         {
@@ -65,28 +56,6 @@ public class TwitchCommandService : PlatformCommandServiceBase<string>, IHostedS
         {
             client.OnMessageReceived -= ClientOnOnMessageReceived;
         });
-    }
-
-    private void InitializeCommands()
-    {
-        // Создаем все команды через фабрику
-        var allCommands = _commandFactory.CreateAllCommands();
-
-        foreach (var command in allCommands)
-        {
-            RegisterCommand(command.Value);
-        }
-    }
-
-    private void RegisterCommand(BaseCommand command)
-    {
-        _commands[command.CommandName] = command;
-
-        // Добавляем алиасы из свойства Aliases
-        foreach (var alias in command.Aliases)
-        {
-            _aliases[alias] = command.CommandName;
-        }
     }
 
     private async Task ClientOnOnMessageReceived(object? sender, OnMessageReceivedArgs e)
@@ -146,24 +115,20 @@ public class TwitchCommandService : PlatformCommandServiceBase<string>, IHostedS
                         return;
                     }
 
-                    // Проверяем, существует ли команда
-                    if (!_commands.TryGetValue(commandName, out var command))
+                    // Проверяем, доступна ли команда
+                    if (!_commandService.IsCommandAvailable(commandName, Platform.Twitch))
                     {
-                        if (!_aliases.TryGetValue(commandName, out var commandAlias))
-                        {
-                            return;
-                        }
-                        else
-                        {
-                            command = _commands[commandAlias];
-                        }
+                        return;
                     }
 
-                    // Проверяем количество обязательных параметров
-                    var commandInfo = command.GetParameterInfo();
-                    var requiredParams = commandInfo.Where(p => p.Required).ToArray();
+                    // Получаем описание параметров команды
+                    var commandInfo = _commandService.GetCommandParameters(commandName);
+                    var requiredParams = (commandInfo ?? Array.Empty<CommandParameterInfo>())
+                        .Where(p => p.Required)
+                        .ToArray();
+
                     var inputParts = string.IsNullOrWhiteSpace(input)
-                        ? []
+                        ? Array.Empty<string>()
                         : BaseCommand.ParseParametersWithQuotes(input);
 
                     if (inputParts.Length < requiredParams.Length)
@@ -175,8 +140,8 @@ public class TwitchCommandService : PlatformCommandServiceBase<string>, IHostedS
                         return;
                     }
 
-                    // Проверяем права доступа для админских команд
-                    if (command.IsAdminCommand && !IsUserAdmin(userId))
+                    // Проверяем права доступа для админских команд (если параметр показывает admin)
+                    if (_commandService.IsAdminCommand(commandName) && !IsUserAdmin(userId))
                     {
                         await SendMessage(
                             $"Команда '{commandName}' доступна только администраторам."
@@ -184,20 +149,11 @@ public class TwitchCommandService : PlatformCommandServiceBase<string>, IHostedS
                         return;
                     }
 
-                    // Проверяем доступность команды для платформы Twitch
-                    if (!command.IsAvailableOnPlatform(Platform.Twitch))
-                    {
-                        await SendMessage(
-                            $"Команда '{commandName}' недоступна на платформе Twitch."
-                        );
-                        return;
-                    }
-
-                    // Выполняем команду
+                    // Выполняем команду через ICommandService, собрав параметры
                     string result;
                     try
                     {
-                        var parameters = command.ParseParameters(input);
+                        var parameters = _commandService.ParseParameters(input, commandInfo);
 
                         // Гарантируем наличие пользователя в БД и добавляем в параметры
                         var userEnsureService = _serviceProvider
@@ -208,8 +164,19 @@ public class TwitchCommandService : PlatformCommandServiceBase<string>, IHostedS
                         );
                         parameters["user"] = twitchUser;
 
-                        // Выполняем команду
-                        result = await command.ExecuteAsync(parameters, Platform.Twitch);
+                        // Дополнительные контекстные параметры для адаптера
+                        parameters["username"] = username;
+                        parameters["userId"] = userId;
+                        parameters["channel"] = e.ChatMessage.Channel;
+                        parameters["rawMessage"] = message;
+                        parameters["platform"] = Platform.Twitch;
+
+                        // Выполняем команду через сервис
+                        result = await _commandService.ExecuteCommandAsync(
+                            commandName,
+                            parameters,
+                            Platform.Twitch
+                        );
 
                         // Валидируем ответ для платформы
                         result = ValidateResponse(result);
@@ -262,35 +229,24 @@ public class TwitchCommandService : PlatformCommandServiceBase<string>, IHostedS
             return "У вас нет прав для просмотра админских команд.";
         }
 
-        var commands = new List<string>();
+        var commands = (
+            _commandService
+                .GetUserCommandsInfo(Platform.Twitch)
+                .Where(command => command.IsVisibleIn(CommandVisibility.ShortList))
+                .Select(command => $"!{command.CommandName}")
+        ).ToList();
 
         // Фильтруем команды по видимости и добавляем только названия
-        foreach (
-            var command in _commands.Values.Where(c =>
-                !c.IsAdminCommand && c.IsAvailableOnPlatform(Platform.Twitch)
-            )
-        )
-        {
-            if (command.IsVisibleIn(CommandVisibility.ShortList))
-            {
-                commands.Add($"!{command.CommandName}");
-            }
-        }
 
         // Добавляем админские команды если запрошено и пользователь админ
         if (includeAdminCommands && isAdmin)
         {
-            foreach (
-                var command in _commands.Values.Where(c =>
-                    c.IsAdminCommand && c.IsAvailableOnPlatform(Platform.Twitch)
-                )
-            )
-            {
-                if (command.IsVisibleIn(CommandVisibility.ShortList))
-                {
-                    commands.Add($"!{command.CommandName}");
-                }
-            }
+            commands.AddRange(
+                _commandService
+                    .GetAdminCommandsInfo(Platform.Twitch)
+                    .Where(command => command.IsVisibleIn(CommandVisibility.ShortList))
+                    .Select(command => $"!{command.CommandName}")
+            );
         }
 
         if (commands.Count == 0)
@@ -316,32 +272,6 @@ public class TwitchCommandService : PlatformCommandServiceBase<string>, IHostedS
         {
             _logger.LogError(ex, "Ошибка при отправке сообщения в Twitch");
         }
-    }
-
-    /// <summary>
-    /// Проверить, доступна ли команда на платформе Twitch
-    /// </summary>
-    /// <param name="commandName">Название команды</param>
-    /// <returns>True если команда доступна</returns>
-    public override bool IsCommandAvailable(string commandName)
-    {
-        var result = false;
-
-        if (!string.IsNullOrWhiteSpace(commandName))
-        {
-            // Проверяем алиасы
-            if (_aliases.TryGetValue(commandName, out var actualCommandName))
-            {
-                commandName = actualCommandName;
-            }
-
-            if (_commands.TryGetValue(commandName, out var command))
-            {
-                result = command.IsAvailableOnPlatform(Platform.Twitch);
-            }
-        }
-
-        return result;
     }
 
     /// <summary>

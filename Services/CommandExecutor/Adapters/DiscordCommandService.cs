@@ -53,7 +53,7 @@ public class DiscordCommandService(
         return Task.CompletedTask;
     }
 
-    public override bool IsCommandAvailable(string commandName)
+    public virtual bool IsCommandAvailable(string commandName)
     {
         var result = false;
 

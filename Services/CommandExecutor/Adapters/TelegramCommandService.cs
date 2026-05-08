@@ -32,7 +32,7 @@ public class TelegramCommandService(
     /// </summary>
     /// <param name="commandName">Название команды</param>
     /// <returns>True если команда доступна</returns>
-    public override bool IsCommandAvailable(string commandName)
+    public virtual bool IsCommandAvailable(string commandName)
     {
         var result = false;
 
@@ -130,11 +130,12 @@ public class TelegramCommandService(
                                     var requiredParams = commandInfo
                                         .Where(p => p.Required)
                                         .ToArray();
-                                    var inputParts = string.IsNullOrWhiteSpace(input)
-                                        ? []
-                                        : BaseCommand.ParseParametersWithQuotes(input);
+                                    var parameters = commandService.ParseParameters(
+                                        input,
+                                        commandInfo
+                                    );
 
-                                    if (inputParts.Length >= requiredParams.Length)
+                                    if (parameters.Count >= requiredParams.Length)
                                     {
                                         // Проверяем права доступа для админских команд
                                         var isAdminCommand = commandService.IsAdminCommand(
@@ -143,6 +144,9 @@ public class TelegramCommandService(
                                         if (!isAdminCommand || IsUserAdmin(message.From?.Id ?? 0))
                                         {
                                             // Выполняем команду через новый сервис
+
+                                            parameters["message"] = message;
+
                                             try
                                             {
                                                 var result =
@@ -188,7 +192,7 @@ public class TelegramCommandService(
                                     }
                                     else
                                     {
-                                        var missingParam = requiredParams[inputParts.Length];
+                                        var missingParam = requiredParams[parameters.Count];
                                         await SendMessage(
                                             message.Chat.Id,
                                             $"Не хватает параметра '{missingParam.Name}'. Использование: /{commandName} {string.Join(" ", requiredParams.Select(p => $"<{p.Name}>"))}"

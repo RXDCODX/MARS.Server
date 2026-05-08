@@ -33,16 +33,8 @@ public class YtdownloadCommand(
             },
             new()
             {
-                Name = "chatid",
-                Description = "Id Telegram чата",
-                Type = "long",
-                Required = true,
-            },
-            new()
-            {
-                Name = "messageid",
+                Name = "message",
                 Description = "Message Id",
-                Type = "int",
                 Required = true,
             },
         ];
@@ -61,10 +53,8 @@ public class YtdownloadCommand(
 
         if (
             hasUrl
-            && parameters.TryGetValue("chatid", out var chatIdObj)
-            && long.TryParse(chatIdObj.ToString(), out var chatId)
-            && parameters.TryGetValue("messageid", out var messaageIdObj)
-            && int.TryParse(messaageIdObj.ToString(), out var messageId)
+            && parameters.TryGetValue("message", out var messageObj)
+            && messageObj is Message message
         )
         {
             var url = urlObj!.ToString()!.Trim();
@@ -85,8 +75,7 @@ public class YtdownloadCommand(
                             DownloadAndSendVideoAsync(
                                 url,
                                 videoInfo.Title,
-                                chatId,
-                                messageId,
+                                message,
                                 CancellationToken.None
                             ),
                         cancellationToken
@@ -114,8 +103,7 @@ public class YtdownloadCommand(
     private async Task DownloadAndSendVideoAsync(
         string url,
         string videoTitle,
-        long chatId,
-        int mesageId,
+        Message message,
         CancellationToken cancellationToken
     )
     {
@@ -146,10 +134,14 @@ public class YtdownloadCommand(
                 $"{sanitizedTitle}_{DateTime.UtcNow:yyyyMMdd_HHmmss}.{bestStream.Container.Name}";
 
             await client.SendVideo(
-                chatId,
+                message.Chat,
                 InputFile.FromStream(videoStream),
                 "Имя файла: " + fileName,
-                replyParameters: new ReplyParameters() { ChatId = chatId, MessageId = mesageId },
+                replyParameters: new ReplyParameters()
+                {
+                    ChatId = message.Chat,
+                    MessageId = message.Id,
+                },
                 cancellationToken: cancellationToken
             );
 

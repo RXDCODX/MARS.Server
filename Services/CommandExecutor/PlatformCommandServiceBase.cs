@@ -168,13 +168,6 @@ public abstract class PlatformCommandServiceBase<T>
     }
 
     /// <summary>
-    /// Проверить, доступна ли команда на платформе
-    /// </summary>
-    /// <param name="commandName">Название команды</param>
-    /// <returns>True если команда доступна</returns>
-    public abstract bool IsCommandAvailable(string commandName);
-
-    /// <summary>
     /// Валидировать ответ для платформы
     /// </summary>
     /// <param name="response">Ответ команды</param>

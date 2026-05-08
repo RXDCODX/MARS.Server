@@ -1,5 +1,6 @@
 ﻿using MARS.Server.Services.CommandExecutor.Entitys;
 using MARS.Server.Services.CommandExecutor.Entitys.Commands;
+using MARS.Server.Services.Twitch.Rewards;
 
 namespace MARS.Server.Services.CommandExecutor;
 
@@ -89,6 +90,30 @@ public interface ICommandService
 
     bool IsCommandAvailable(string commandName, Platform platform);
 
+    Dictionary<string, object> ParseParameters(string input, CommandParameterInfo[]? commandInfo)
+    {
+        var parameters = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+
+        var inputParts = string.IsNullOrWhiteSpace(input)
+            ? Array.Empty<string>()
+            : BaseCommand.ParseParametersWithQuotes(input);
+
+        // Заполняем именованные параметры по порядку, если они есть
+        if (commandInfo is not null && commandInfo.Length > 0)
+        {
+            for (var i = 0; i < commandInfo.Length; i++)
+            {
+                var p = commandInfo[i];
+                if (i < inputParts.Length)
+                {
+                    parameters[p.Name] = inputParts[i];
+                }
+            }
+        }
+
+        return parameters;
+    }
+
     /// <summary>
     /// Выполнить команду
     /// </summary>
@@ -100,6 +125,21 @@ public interface ICommandService
     Task<string> ExecuteCommandAsync(
         string commandName,
         string input,
+        Platform platform,
+        CancellationToken cancellationToken = default
+    );
+
+    /// <summary>
+    /// Выполнить команду
+    /// </summary>
+    /// <param name="commandName">Название команды</param>
+    /// <param name="parameters">Входные параметры</param>
+    /// <param name="platform">Платформа</param>
+    /// <param name="cancellationToken">Токен отмены</param>
+    /// <returns>Результат выполнения команды</returns>
+    Task<string> ExecuteCommandAsync(
+        string commandName,
+        Dictionary<string, object> parameters,
         Platform platform,
         CancellationToken cancellationToken = default
     );
