@@ -29,7 +29,11 @@ public class TelegramGooglePhotosService(
         var isAuthorized = await authService.IsAuthorizedAsync(StoppingToken);
         if (!isAuthorized)
         {
-            await client.SendMessage(message.Chat.Id, "❌ Google Photos не авторизован", cancellationToken: StoppingToken);
+            await client.SendMessage(
+                message.Chat.Id,
+                "❌ Google Photos не авторизован",
+                cancellationToken: StoppingToken
+            );
             return;
         }
 
@@ -47,17 +51,25 @@ public class TelegramGooglePhotosService(
     {
         try
         {
-                if (message.Photo == null || message.Photo.Length == 0)
-                {
-                    await client.SendMessage(message.Chat.Id, "❌ Нет фото", cancellationToken: StoppingToken);
-                    return;
-                }
-                var largestPhoto = message.Photo.OrderByDescending(p => p.FileSize ?? 0).First();
+            if (message.Photo == null || message.Photo.Length == 0)
+            {
+                await client.SendMessage(
+                    message.Chat.Id,
+                    "❌ Нет фото",
+                    cancellationToken: StoppingToken
+                );
+                return;
+            }
+            var largestPhoto = message.Photo.OrderByDescending(p => p.FileSize ?? 0).First();
             var fileInfo = await client.GetFile(largestPhoto.FileId, StoppingToken);
 
             if (fileInfo?.FilePath == null)
             {
-                await client.SendMessage(message.Chat.Id, "❌ Ошибка файла", cancellationToken: StoppingToken);
+                await client.SendMessage(
+                    message.Chat.Id,
+                    "❌ Ошибка файла",
+                    cancellationToken: StoppingToken
+                );
                 return;
             }
 
@@ -66,23 +78,39 @@ public class TelegramGooglePhotosService(
             photoStream.Position = 0;
 
             var fileName = $"telegram_{message.MessageId}_{DateTime.UtcNow:yyyyMMdd_HHmmss}.jpg";
-            var uploadResult = await apiClient.UploadPhotoAsync(photoStream, fileName, StoppingToken);
+            var uploadResult = await apiClient.UploadPhotoAsync(
+                photoStream,
+                fileName,
+                StoppingToken
+            );
 
             if (uploadResult.Success)
             {
                 logger.LogInformation("Фото загружено: {MediaItemId}", uploadResult.Data);
-                await client.SendMessage(message.Chat.Id, $"✅ {uploadResult.Message}", cancellationToken: StoppingToken);
+                await client.SendMessage(
+                    message.Chat.Id,
+                    $"✅ {uploadResult.Message}",
+                    cancellationToken: StoppingToken
+                );
             }
             else
             {
                 logger.LogError("Ошибка загрузки: {Error}", uploadResult.Message);
-                await client.SendMessage(message.Chat.Id, $"❌ {uploadResult.Message}", cancellationToken: StoppingToken);
+                await client.SendMessage(
+                    message.Chat.Id,
+                    $"❌ {uploadResult.Message}",
+                    cancellationToken: StoppingToken
+                );
             }
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка обработки фото");
-            await client.SendMessage(message.Chat.Id, $"❌ Ошибка: {ex.Message}", cancellationToken: StoppingToken);
+            await client.SendMessage(
+                message.Chat.Id,
+                $"❌ Ошибка: {ex.Message}",
+                cancellationToken: StoppingToken
+            );
         }
     }
 
@@ -102,7 +130,11 @@ public class TelegramGooglePhotosService(
             documentStream.Position = 0;
 
             var fileName = document.FileName ?? $"document_{DateTime.UtcNow:yyyyMMdd_HHmmss}";
-            var uploadResult = await apiClient.UploadPhotoAsync(documentStream, fileName, StoppingToken);
+            var uploadResult = await apiClient.UploadPhotoAsync(
+                documentStream,
+                fileName,
+                StoppingToken
+            );
 
             if (uploadResult.Success)
             {
@@ -115,4 +147,3 @@ public class TelegramGooglePhotosService(
         }
     }
 }
-

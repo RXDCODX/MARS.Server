@@ -21,8 +21,6 @@ public class Confetti_TwitchReward(
     public override int Cost { get; init; } = 1700;
     public override Func<bool> IsRewardEnabled { get; set; } = () => true;
 
-    public bool IsServiceActive { get; set; } = true;
-
     public override async Task StartAsync(CancellationToken cancellationToken)
     {
         await base.StartAsync(cancellationToken);
@@ -52,15 +50,11 @@ public class Confetti_TwitchReward(
                 TwitchExstension.Channel,
                 StringComparison.OrdinalIgnoreCase
             )
-            && IsServiceActive
         )
         {
             await rickRollerService.TryRickRollAsync(
                 TwitchUser.FromChannelPointsCustomRewardRedemptionArgs(args)!,
-                () =>
-                    hubContext.Clients.All.MakeScreenParticles(
-                        Entitys.TwitchScreenParticles.Confetty
-                    )
+                () => hubContext.Clients.All.MakeScreenParticles(TwitchScreenParticles.Confetty)
             );
         }
     }

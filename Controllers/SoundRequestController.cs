@@ -120,16 +120,12 @@ public class SoundRequestController(
         try
         {
             var historyItems = await player.GetHistoryQueueItemsAsync(count);
-            result = Ok(
-                OperationResult<List<QueueItem>>.Ok("История получена", historyItems)
-            );
+            result = Ok(OperationResult<List<QueueItem>>.Ok("История получена", historyItems));
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при получении истории как QueueItem");
-            result = Ok(
-                OperationResult<List<QueueItem>>.Bad("Ошибка при получении истории", [])
-            );
+            result = Ok(OperationResult<List<QueueItem>>.Bad("Ошибка при получении истории", []));
         }
 
         return result;
@@ -315,7 +311,9 @@ public class SoundRequestController(
             else
             {
                 logger.LogWarning("Попытка немедленного воспроизведения трека с пустым Id");
-                result = Ok(OperationResult<string>.Bad("Некорректный идентификатор элемента", string.Empty));
+                result = Ok(
+                    OperationResult<string>.Bad("Некорректный идентификатор элемента", string.Empty)
+                );
             }
         }
         catch (Exception ex)
@@ -325,7 +323,9 @@ public class SoundRequestController(
                 "Ошибка при немедленном воспроизведении трека: QueueItemId={QueueItemId}",
                 queueItemId
             );
-            result = Ok(OperationResult<string>.Bad("Ошибка при воспроизведении трека", string.Empty));
+            result = Ok(
+                OperationResult<string>.Bad("Ошибка при воспроизведении трека", string.Empty)
+            );
         }
 
         return result;
@@ -356,7 +356,11 @@ public class SoundRequestController(
             }
             else
             {
-                var message = await service.ReorderQueueItemAsync(request.QueueItemId, request.NewPosition, cancellationToken);
+                var message = await service.ReorderQueueItemAsync(
+                    request.QueueItemId,
+                    request.NewPosition,
+                    cancellationToken
+                );
                 logger.LogInformation(
                     "Reorder queue item: Id={Id}, NewPosition={NewPosition}, Message={Message}",
                     request.QueueItemId,
@@ -369,8 +373,17 @@ public class SoundRequestController(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Ошибка при перестановке элемента очереди: Id={Id}", request?.QueueItemId);
-            result = Ok(OperationResult<string>.Bad("Ошибка при перестановке элемента очереди", string.Empty));
+            logger.LogError(
+                ex,
+                "Ошибка при перестановке элемента очереди: Id={Id}",
+                request?.QueueItemId
+            );
+            result = Ok(
+                OperationResult<string>.Bad(
+                    "Ошибка при перестановке элемента очереди",
+                    string.Empty
+                )
+            );
         }
 
         return result;

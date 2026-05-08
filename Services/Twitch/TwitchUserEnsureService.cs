@@ -54,10 +54,9 @@ public class TwitchUserEnsureService(
         if (!string.IsNullOrWhiteSpace(twitchId))
         {
             await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
-            var existingUser = await db.TwitchUsers.AsNoTracking().FirstOrDefaultAsync(
-                e => e.TwitchId == twitchId,
-                cancellationToken
-            );
+            var existingUser = await db
+                .TwitchUsers.AsNoTracking()
+                .FirstOrDefaultAsync(e => e.TwitchId == twitchId, cancellationToken);
 
             if (existingUser != null)
             {

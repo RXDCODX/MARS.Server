@@ -44,11 +44,10 @@ public class SrClearCommand(CommandsService commandsService) : BaseCommand
             var hasPermission = true;
             if (platform == Platform.Twitch)
             {
-                hasPermission =
-                    user.TwitchId.Equals(
-                        TwitchExstension.ChannelId,
-                        StringComparison.OrdinalIgnoreCase
-                    );
+                hasPermission = user.TwitchId.Equals(
+                    TwitchExstension.ChannelId,
+                    StringComparison.OrdinalIgnoreCase
+                );
             }
 
             if (!hasPermission)

@@ -170,11 +170,15 @@ public class SoundRequestUserQueue(
 
         try
         {
-            result = await queueItemsQuery.ExecuteDeleteAsync(cancellationToken: _cancellationToken);
+            result = await queueItemsQuery.ExecuteDeleteAsync(
+                cancellationToken: _cancellationToken
+            );
         }
         catch (InvalidOperationException)
         {
-            var queueItems = await queueItemsQuery.ToListAsync(cancellationToken: _cancellationToken);
+            var queueItems = await queueItemsQuery.ToListAsync(
+                cancellationToken: _cancellationToken
+            );
 
             result = queueItems.Count;
             dbContext.SoundRequestQueueItems.RemoveRange(queueItems);
@@ -605,7 +609,10 @@ public class SoundRequestUserQueue(
         }
 
         // Count current queue items (QueueOrder >= 0)
-        var queueCount = await dbContext.SoundRequestQueueItems.CountAsync(qi => qi.QueueOrder >= 0, cancellationToken: _cancellationToken);
+        var queueCount = await dbContext.SoundRequestQueueItems.CountAsync(
+            qi => qi.QueueOrder >= 0,
+            cancellationToken: _cancellationToken
+        );
 
         // If moving from queue -> allowed range: 0..queueCount-1
         // If moving from history -> allowed range: 0..queueCount (inserting at end)
@@ -629,7 +636,9 @@ public class SoundRequestUserQueue(
                 try
                 {
                     await dbContext
-                        .SoundRequestQueueItems.Where(qi => qi.QueueOrder >= targetPos && qi.QueueOrder < oldPos)
+                        .SoundRequestQueueItems.Where(qi =>
+                            qi.QueueOrder >= targetPos && qi.QueueOrder < oldPos
+                        )
                         .ExecuteUpdateAsync(
                             e => e.SetProperty(qi => qi.QueueOrder, qi => qi.QueueOrder + 1),
                             cancellationToken: _cancellationToken
@@ -638,7 +647,9 @@ public class SoundRequestUserQueue(
                 catch (InvalidOperationException)
                 {
                     var affected = await dbContext
-                        .SoundRequestQueueItems.Where(qi => qi.QueueOrder >= targetPos && qi.QueueOrder < oldPos)
+                        .SoundRequestQueueItems.Where(qi =>
+                            qi.QueueOrder >= targetPos && qi.QueueOrder < oldPos
+                        )
                         .ToListAsync(cancellationToken: _cancellationToken);
 
                     foreach (var a in affected)
@@ -653,7 +664,9 @@ public class SoundRequestUserQueue(
                 try
                 {
                     await dbContext
-                        .SoundRequestQueueItems.Where(qi => qi.QueueOrder > oldPos && qi.QueueOrder <= targetPos)
+                        .SoundRequestQueueItems.Where(qi =>
+                            qi.QueueOrder > oldPos && qi.QueueOrder <= targetPos
+                        )
                         .ExecuteUpdateAsync(
                             e => e.SetProperty(qi => qi.QueueOrder, qi => qi.QueueOrder - 1),
                             cancellationToken: _cancellationToken
@@ -662,7 +675,9 @@ public class SoundRequestUserQueue(
                 catch (InvalidOperationException)
                 {
                     var affected = await dbContext
-                        .SoundRequestQueueItems.Where(qi => qi.QueueOrder > oldPos && qi.QueueOrder <= targetPos)
+                        .SoundRequestQueueItems.Where(qi =>
+                            qi.QueueOrder > oldPos && qi.QueueOrder <= targetPos
+                        )
                         .ToListAsync(cancellationToken: _cancellationToken);
 
                     foreach (var a in affected)

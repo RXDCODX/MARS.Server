@@ -756,10 +756,12 @@ public class CommandsService(
 
                     if (track is null)
                     {
-                        track = await db.SoundRequestBaseTrackInfos.AsNoTracking().FirstOrDefaultAsync(
-                            trackItem => trackItem.Id == queueItem.TrackId,
-                            cancellationToken
-                        );
+                        track = await db
+                            .SoundRequestBaseTrackInfos.AsNoTracking()
+                            .FirstOrDefaultAsync(
+                                trackItem => trackItem.Id == queueItem.TrackId,
+                                cancellationToken
+                            );
                     }
 
                     if (track is null)
@@ -773,7 +775,10 @@ public class CommandsService(
                         // Перемещаем элемент на начало очереди и запускаем его
                         var movedItem = await queue.MoveToFrontAndPlayAsync(queueItemId);
 
-                        if (movedItem?.Track is not null && playerController is MainPlayer mainPlayer)
+                        if (
+                            movedItem?.Track is not null
+                            && playerController is MainPlayer mainPlayer
+                        )
                         {
                             // Запускаем трек на воспроизведение
                             await mainPlayer.PlayAsync(movedItem, cancellationToken);

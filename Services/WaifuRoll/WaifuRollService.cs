@@ -448,11 +448,12 @@ public class WaifuRollService(
                             Waifu? waifu = await dbContext.Waifus.FindAsync(host.WaifuBrideId);
                             var spouseName = waifu?.Name ?? "супруг(а)";
 
-                            var message = WeddingAnniversaryService.BuildCongratulationMessageFromSpouse(
-                                displayName,
-                                spouseName,
-                                anniversary.Value
-                            );
+                            var message =
+                                WeddingAnniversaryService.BuildCongratulationMessageFromSpouse(
+                                    displayName,
+                                    spouseName,
+                                    anniversary.Value
+                                );
 
                             // Отмечаем годовщину как отправленную
                             await anniversaryService.MarkAnniversaryAsSentAsync(

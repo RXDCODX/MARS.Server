@@ -17,7 +17,8 @@ public class GooglePhotosAuthorizeCommand(
 
     public override bool IsAdminCommand => true;
 
-    public override Platform[] AvailablePlatforms => [Platform.Telegram, Platform.Api, Platform.Discord];
+    public override Platform[] AvailablePlatforms =>
+        [Platform.Telegram, Platform.Api, Platform.Discord];
 
     public override async Task<string> ExecuteAsync(
         Dictionary<string, object> parameters,
@@ -37,7 +38,8 @@ public class GooglePhotosAuthorizeCommand(
             || string.IsNullOrWhiteSpace(_config.RedirectUri)
         )
         {
-            result = "Google Photos ClientId, ClientSecret или RedirectUri не установлены в конфигурации";
+            result =
+                "Google Photos ClientId, ClientSecret или RedirectUri не установлены в конфигурации";
         }
         else
         {

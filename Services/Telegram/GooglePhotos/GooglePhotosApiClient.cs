@@ -22,7 +22,9 @@ public class GooglePhotosApiClient(
         var accessToken = await authService.GetValidAccessTokenAsync(ct);
         if (string.IsNullOrWhiteSpace(accessToken))
         {
-            result = OperationResult<string>.Bad("Отсутствует действительный токен доступа. Требуется авторизация.");
+            result = OperationResult<string>.Bad(
+                "Отсутствует действительный токен доступа. Требуется авторизация."
+            );
         }
         else
         {
@@ -32,10 +34,8 @@ public class GooglePhotosApiClient(
                 var uploadUrl = $"{GooglePhotosBaseUrl}/uploads";
 
                 using var httpClient = httpClientFactory.CreateClient();
-                httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(
-                    "Bearer",
-                    accessToken
-                );
+                httpClient.DefaultRequestHeaders.Authorization =
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
 
                 // Копируем поток в байты перед использованием
                 var memoryStream = new MemoryStream();
@@ -43,7 +43,9 @@ public class GooglePhotosApiClient(
                 var photoBytes = memoryStream.ToArray();
 
                 var content = new ByteArrayContent(photoBytes);
-                content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/jpeg");
+                content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(
+                    "image/jpeg"
+                );
                 content.Headers.Add("X-Goog-Upload-File-Name", fileName);
 
                 var uploadResponse = await httpClient.PostAsync(uploadUrl, content, ct);
@@ -81,7 +83,10 @@ public class GooglePhotosApiClient(
 
                     var jsonRequest = JsonSerializer.Serialize(
                         batchCreateRequest,
-                        new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }
+                        new JsonSerializerOptions
+                        {
+                            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                        }
                     );
                     var httpContent = new StringContent(
                         jsonRequest,
@@ -94,10 +99,14 @@ public class GooglePhotosApiClient(
                     if (createResponse.IsSuccessStatusCode)
                     {
                         var responseContent = await createResponse.Content.ReadAsStringAsync(ct);
-                        var batchResponse = JsonSerializer.Deserialize<GooglePhotosBatchCreateResponse>(
-                            responseContent,
-                            new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }
-                        );
+                        var batchResponse =
+                            JsonSerializer.Deserialize<GooglePhotosBatchCreateResponse>(
+                                responseContent,
+                                new JsonSerializerOptions
+                                {
+                                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                                }
+                            );
 
                         if (batchResponse?.Results?.Length > 0)
                         {
@@ -111,17 +120,22 @@ public class GooglePhotosApiClient(
                             }
                             else
                             {
-                                var errorMsg = mediaItemResult?.Status?.Message ?? "Неизвестная ошибка";
+                                var errorMsg =
+                                    mediaItemResult?.Status?.Message ?? "Неизвестная ошибка";
                                 logger.LogError(
                                     "Google Photos batch create error: {ErrorMessage}",
                                     errorMsg
                                 );
-                                result = OperationResult<string>.Bad($"Ошибка при создании медиаэлемента: {errorMsg}");
+                                result = OperationResult<string>.Bad(
+                                    $"Ошибка при создании медиаэлемента: {errorMsg}"
+                                );
                             }
                         }
                         else
                         {
-                            result = OperationResult<string>.Bad("Пустой ответ от Google Photos API");
+                            result = OperationResult<string>.Bad(
+                                "Пустой ответ от Google Photos API"
+                            );
                         }
                     }
                     else

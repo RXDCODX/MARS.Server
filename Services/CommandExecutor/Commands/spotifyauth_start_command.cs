@@ -17,7 +17,8 @@ public class SpotifyAuthStartCommand(
 
     public override bool IsAdminCommand => true;
 
-    public override Platform[] AvailablePlatforms => [Platform.Telegram, Platform.Api, Platform.Discord];
+    public override Platform[] AvailablePlatforms =>
+        [Platform.Telegram, Platform.Api, Platform.Discord];
 
     public override CommandParameterInfo[] Parameters =>
         [
@@ -38,7 +39,10 @@ public class SpotifyAuthStartCommand(
     {
         var result = "Spotify авторизация недоступна";
 
-        if (string.IsNullOrWhiteSpace(_spotifyConfig.ClientId) || string.IsNullOrWhiteSpace(_spotifyConfig.ClientSecret))
+        if (
+            string.IsNullOrWhiteSpace(_spotifyConfig.ClientId)
+            || string.IsNullOrWhiteSpace(_spotifyConfig.ClientSecret)
+        )
         {
             result = "Spotify ClientId или ClientSecret не установлены в конфигурации";
         }
