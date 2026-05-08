@@ -23,7 +23,7 @@ public class AutoClip_TwitchReward(
         "🎥 Сделать автоклип последних 30 секунд стрима!";
     public override Color Color { get; set; }
     public override int Cost { get; init; } = 1;
-    public override Func<bool> IsRewardEnabled { get; set; } = () => false;
+    public override Func<bool> IsRewardEnabled { get; set; } = () => true;
 
     private readonly CancellationToken _cancellationToken = lifetime.ApplicationStopping;
 
