@@ -5,7 +5,7 @@ namespace MARS.Server.Services.Twitch.Rewards._38_FridayFrog;
 
 public class WednsdayFrog_TwitchReward(
     ChannelRewardsService channelRewardsService,
-    ILogger logger,
+    ILogger<WednsdayFrog_TwitchReward> logger,
     IHostEnvironment environment
 ) : TemporaryReward(channelRewardsService, logger, environment)
 {
