@@ -128,12 +128,24 @@ public class TelegramCommandService(
                                 {
                                     // Проверяем количество обязательных параметров
                                     var requiredParams = commandInfo
-                                        .Where(p => p.Required)
+                                        .Where(p =>
+                                            p.Required
+                                            && !(
+                                                p.Type == nameof(Message)
+                                                && p.Name.Equals(
+                                                    "message",
+                                                    StringComparison.OrdinalIgnoreCase
+                                                )
+                                            )
+                                        )
                                         .ToArray();
+
                                     var parameters = commandService.ParseParameters(
                                         input,
                                         commandInfo
                                     );
+
+                                    parameters["message"] = message;
 
                                     if (parameters.Count >= requiredParams.Length)
                                     {
@@ -144,15 +156,12 @@ public class TelegramCommandService(
                                         if (!isAdminCommand || IsUserAdmin(message.From?.Id ?? 0))
                                         {
                                             // Выполняем команду через новый сервис
-
-                                            parameters["message"] = message;
-
                                             try
                                             {
                                                 var result =
                                                     await commandService.ExecuteCommandAsync(
                                                         commandName,
-                                                        input,
+                                                        parameters,
                                                         Platform.Telegram
                                                     );
 
