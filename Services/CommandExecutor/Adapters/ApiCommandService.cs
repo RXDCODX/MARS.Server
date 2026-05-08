@@ -6,11 +6,9 @@ namespace MARS.Server.Services.CommandExecutor.Adapters;
 /// <summary>
 /// Адаптер для выполнения команд через API
 /// </summary>
-public class ApiCommandService : PlatformCommandServiceBase<string>
+public class ApiCommandService(ICommandService commandService, ILogger<ApiCommandService> logger)
+    : PlatformCommandServiceBase<string>
 {
-    private readonly ICommandService _commandService;
-    private readonly ILogger<ApiCommandService> _logger;
-
     public override Platform Platform => Platform.Api;
 
     protected override int DefaultMaxResponseLength => 10000; // API может поддерживать более длинные ответы
@@ -18,18 +16,12 @@ public class ApiCommandService : PlatformCommandServiceBase<string>
     public override char[] CommandPrefixes => ['/', '!'];
 
     public override IEnumerable<string> UserCommands =>
-        _commandService.GetUserCommands(Platform.Api);
+        commandService.GetUserCommands(Platform.Api);
 
     public override IEnumerable<string> AdminCommands =>
-        _commandService.GetAdminCommands(Platform.Api);
+        commandService.GetAdminCommands(Platform.Api);
 
-    public override Func<string, bool> IsAdmin => (userId) => true; // Для API все пользователи считаются администраторами
-
-    public ApiCommandService(ICommandService commandService, ILogger<ApiCommandService> logger)
-    {
-        _commandService = commandService;
-        _logger = logger;
-    }
+    public override Func<string, bool> IsAdmin => _ => true; // Для API все пользователи считаются администраторами
 
     /// <summary>
     /// Выполнить команду через API
@@ -51,7 +43,7 @@ public class ApiCommandService : PlatformCommandServiceBase<string>
         {
             try
             {
-                result = await _commandService.ExecuteCommandAsync(
+                result = await commandService.ExecuteCommandAsync(
                     commandName,
                     input,
                     Platform.Api,
@@ -60,7 +52,7 @@ public class ApiCommandService : PlatformCommandServiceBase<string>
 
                 result = ValidateResponse(result);
 
-                _logger.LogInformation(
+                logger.LogInformation(
                     "Команда '{CommandName}' выполнена через API с результатом: {Result}",
                     commandName,
                     result.Length > 100 ? string.Concat(result.AsSpan(0, 100), "...") : result
@@ -68,16 +60,12 @@ public class ApiCommandService : PlatformCommandServiceBase<string>
             }
             catch (ArgumentException ex)
             {
-                _logger.LogWarning(
-                    ex,
-                    "Ошибка параметров для команды '{CommandName}'",
-                    commandName
-                );
+                logger.LogWarning(ex, "Ошибка параметров для команды '{CommandName}'", commandName);
                 result = $"Ошибка параметров: {ex.Message}";
             }
             catch (Exception ex)
             {
-                _logger.LogError(
+                logger.LogError(
                     ex,
                     "Ошибка при выполнении команды '{CommandName}' через API",
                     commandName
@@ -96,7 +84,7 @@ public class ApiCommandService : PlatformCommandServiceBase<string>
     /// <returns>True если команда админская</returns>
     public bool IsAdminCommand(string commandName)
     {
-        return _commandService.IsAdminCommand(commandName);
+        return commandService.IsAdminCommand(commandName);
     }
 
     /// <summary>
@@ -106,7 +94,7 @@ public class ApiCommandService : PlatformCommandServiceBase<string>
     /// <returns>True если команда доступна</returns>
     public override bool IsCommandAvailable(string commandName)
     {
-        return _commandService.IsCommandAvailable(commandName, Platform.Api);
+        return commandService.IsCommandAvailable(commandName, Platform.Api);
     }
 
     /// <summary>
@@ -140,7 +128,7 @@ public class ApiCommandService : PlatformCommandServiceBase<string>
     /// <returns>Массив названий пользовательских команд</returns>
     public string[] GetUserCommands(Platform platforms)
     {
-        return _commandService.GetUserCommands(platforms);
+        return commandService.GetUserCommands(platforms);
     }
 
     /// <summary>
@@ -150,7 +138,7 @@ public class ApiCommandService : PlatformCommandServiceBase<string>
     /// <returns>Массив названий админских команд</returns>
     public string[] GetAdminCommands(Platform platforms)
     {
-        return _commandService.GetAdminCommands(platforms);
+        return commandService.GetAdminCommands(platforms);
     }
 
     /// <summary>
@@ -160,6 +148,22 @@ public class ApiCommandService : PlatformCommandServiceBase<string>
     /// <returns>Массив параметров команды</returns>
     public CommandParameterInfo[]? GetCommandParameters(string commandName)
     {
-        return _commandService.GetCommandParameters(commandName);
+        return commandService.GetCommandParameters(commandName);
+    }
+
+    public BaseCommand[] GetUserCommandsInfo(Platform platform)
+    {
+        return commandService
+            .GetUserCommandsInfo()
+            .Where(e => e.AvailablePlatforms.Contains(Platform.Api))
+            .ToArray();
+    }
+
+    public BaseCommand[] GetAdminCommandsInfo(Platform platform)
+    {
+        return commandService
+            .GetAdminCommandsInfo()
+            .Where(e => e.AvailablePlatforms.Contains(Platform.Api))
+            .ToArray();
     }
 }

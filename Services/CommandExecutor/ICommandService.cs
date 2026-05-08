@@ -28,10 +28,7 @@ public interface ICommandService
     /// <param name="platforms">Платформы для фильтрации команд</param>
     /// <param name="cancellationToken">Токен отмены</param>
     /// <returns>Массив названий пользовательских команд</returns>
-    string[] GetUserCommands(
-        Platform platforms,
-        CancellationToken cancellationToken = default
-    );
+    string[] GetUserCommands(Platform platforms, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Получить названия админских команд для указанных платформ
@@ -39,10 +36,7 @@ public interface ICommandService
     /// <param name="platforms">Платформы для фильтрации команд</param>
     /// <param name="cancellationToken">Токен отмены</param>
     /// <returns>Массив названий админских команд</returns>
-    string[] GetAdminCommands(
-        Platform platforms,
-        CancellationToken cancellationToken = default
-    );
+    string[] GetAdminCommands(Platform platforms, CancellationToken cancellationToken = default);
 
     CommandParameterInfo[]? GetCommandParameters(
         string commandName,
@@ -91,10 +85,7 @@ public interface ICommandService
     /// <param name="commandName">Название команды</param>
     /// <param name="cancellationToken">Токен отмены</param>
     /// <returns>True если команда админская</returns>
-    bool IsAdminCommand(
-        string commandName,
-        CancellationToken cancellationToken = default
-    );
+    bool IsAdminCommand(string commandName, CancellationToken cancellationToken = default);
 
     bool IsCommandAvailable(string commandName, Platform platform);
 

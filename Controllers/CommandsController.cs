@@ -84,9 +84,7 @@ public class CommandsController(
     /// <param name="platform">Платформа</param>
     /// <returns>Список пользовательских команд для платформы</returns>
     [HttpGet("user/platform/{platform}")]
-    public ActionResult<OperationResult<string[]>> GetUserCommandsForPlatform(
-        Platform platform
-    )
+    public ActionResult<OperationResult<string[]>> GetUserCommandsForPlatform(Platform platform)
     {
         ActionResult<OperationResult<string[]>> result;
         try
@@ -120,9 +118,7 @@ public class CommandsController(
     /// <param name="platform">Платформа</param>
     /// <returns>Список админских команд для платформы</returns>
     [HttpGet("admin/platform/{platform}")]
-    public ActionResult<OperationResult<string[]>> GetAdminCommandsForPlatform(
-        Platform platform
-    )
+    public ActionResult<OperationResult<string[]>> GetAdminCommandsForPlatform(Platform platform)
     {
         ActionResult<OperationResult<string[]>> result;
         try
@@ -234,9 +230,19 @@ public class CommandsController(
         try
         {
             var parameters = commandService.GetCommandParameters(commandName);
-            result = Ok(
-                OperationResult<CommandParameterInfo[]>.Ok("Получены параметры команды", parameters)
-            );
+
+            result = parameters is { Length: > 0 }
+                ? Ok(
+                    OperationResult<CommandParameterInfo[]>.Ok(
+                        "Получены параметры команды",
+                        parameters
+                    )
+                )
+                : BadRequest(
+                    OperationResult<CommandParameterInfo>.Bad(
+                        "Не удалось получить параметры команды"
+                    )
+                );
         }
         catch (Exception ex)
         {
