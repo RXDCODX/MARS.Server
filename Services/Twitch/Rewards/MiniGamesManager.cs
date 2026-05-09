@@ -149,12 +149,9 @@ public class MiniGamesManager(
         var message = e.ChatMessage.Message;
         var userId = e.ChatMessage.UserId;
 
-        foreach (var game in MiniGames.Values)
+        foreach (var game in MiniGames.Values.Where(game => game.IsGameRunning))
         {
-            if (game.IsGameRunning)
-            {
-                await game.OnChatMessage(userName, userId, message);
-            }
+            await game.OnChatMessage(userName, userId, message);
         }
     }
 }

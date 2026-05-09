@@ -192,6 +192,10 @@ public class DiscordGatewayService(
                     logger.LogInformation("Discord клиент подключен");
                 }
             }
+            catch
+            {
+                // ignore
+            }
             finally
             {
                 _connectLock.Release();
