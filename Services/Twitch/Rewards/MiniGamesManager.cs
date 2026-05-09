@@ -2,6 +2,7 @@
 using MARS.Server.Services.Twitch.Rewards._6_RussianRoulette;
 using MARS.Server.Services.Twitch.Rewards._7_Quiz;
 using MARS.Server.Services.Twitch.Rewards._8_TekkenQuiz;
+using MARS.Server.Services.Twitch.Rewards._9_AudioQuiz;
 using TwitchLib.Client.Events;
 using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Websockets;
@@ -91,6 +92,13 @@ public class MiniGamesManager(
                     tekkenVictorina.IsGameRunning = true;
                     MiniGames.Add(8, tekkenVictorina);
                     await tekkenVictorina.GameStart(name, userId, _cancellationToken);
+                    break;
+                case 9:
+                    var audioTrivia =
+                        asyncServiceScope.ServiceProvider.GetRequiredService<AudioTriviaMiniGame>();
+                    audioTrivia.IsGameRunning = true;
+                    MiniGames.Add(9, audioTrivia);
+                    await audioTrivia.GameStart(name, userId, _cancellationToken);
                     break;
                 case 7:
                     var twitchTrivia =

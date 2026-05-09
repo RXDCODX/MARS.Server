@@ -2,6 +2,7 @@
 using MARS.Server.Services.SoundRequest.Entities;
 using MARS.Server.Services.SoundRequest.Interfaces;
 using MARS.Server.Services.SoundRequest.Queue;
+using MARS.Server.Services.SoundRequest.SoundCloud;
 using MARS.Server.Services.SoundRequest.Spotify;
 using MARS.Server.Services.SoundRequest.YouTube;
 using MARS.Server.Services.Twitch.Entitys;
@@ -14,6 +15,7 @@ namespace MARS.Server.Services.SoundRequest;
 public class CommandsService(
     YouTubeResolver ytResolver,
     SpotifyResolver spotifyResolver,
+    SoundCloudResolver soundCloudResolver,
     SoundRequestUserQueue queue,
     IDbContextFactory<AppDbContext> dbFactory,
     IPlayerController playerController,
@@ -51,6 +53,7 @@ public class CommandsService(
 
             // Нормализуем URL - добавляем схему если её нет
             var normalizedQuery = NormalizeUrl(query);
+            var isSoundCloudUrl = IsSoundCloudUrl(normalizedQuery);
 
             var provider = await ResolveProviderAsync(cancellationToken);
 
@@ -69,18 +72,39 @@ public class CommandsService(
                         .FirstOrDefaultAsync(t => t.VideoId == sourceTrackId, cancellationToken);
                 }
 
+                if (info == null && isSoundCloudUrl)
+                {
+                    await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+                    if (Uri.TryCreate(normalizedQuery, UriKind.Absolute, out var trackUri))
+                    {
+                        info = await db
+                            .SoundRequestBaseTrackInfos.AsNoTracking()
+                            .FirstOrDefaultAsync(t => t.Url == trackUri, cancellationToken);
+                    }
+                }
+
                 if (info == null)
                 {
-                    info =
-                        provider == SoundRequestProvider.Spotify
-                            ? await spotifyResolver.ResolveTrackAsync(
-                                normalizedQuery,
-                                cancellationToken
-                            )
-                            : await ytResolver.ResolveVideoAsync(
-                                normalizedQuery,
-                                cancellationToken
-                            );
+                    if (isSoundCloudUrl)
+                    {
+                        info = await soundCloudResolver.ResolveTrackAsync(
+                            normalizedQuery,
+                            cancellationToken
+                        );
+                    }
+                    else
+                    {
+                        info =
+                            provider == SoundRequestProvider.Spotify
+                                ? await spotifyResolver.ResolveTrackAsync(
+                                    normalizedQuery,
+                                    cancellationToken
+                                )
+                                : await ytResolver.ResolveVideoAsync(
+                                    normalizedQuery,
+                                    cancellationToken
+                                );
+                    }
                 }
             }
             else
@@ -137,7 +161,9 @@ public class CommandsService(
             else
             {
                 result =
-                    provider == SoundRequestProvider.Spotify
+                    isSoundCloudUrl
+                        ? "не удалось распознать трек SoundCloud по ссылке"
+                        : provider == SoundRequestProvider.Spotify
                         ? "не удалось распознать трек Spotify по запросу"
                         : "не удалось распознать видео по ссылке";
             }
@@ -697,7 +723,15 @@ public class CommandsService(
     {
         string? result = null;
 
-        if (provider == SoundRequestProvider.Spotify)
+        if (IsSoundCloudUrl(normalizedQuery))
+        {
+            var soundCloudTrackId = ExtractSoundCloudTrackId(normalizedQuery);
+            if (!string.IsNullOrWhiteSpace(soundCloudTrackId))
+            {
+                result = $"soundcloud:{soundCloudTrackId}";
+            }
+        }
+        else if (provider == SoundRequestProvider.Spotify)
         {
             var spotifyTrackId = spotifyResolver.ExtractTrackId(normalizedQuery);
             if (!string.IsNullOrWhiteSpace(spotifyTrackId))
@@ -708,6 +742,36 @@ public class CommandsService(
         else
         {
             result = ExtractYouTubeVideoId(normalizedQuery);
+        }
+
+        return result;
+    }
+
+    private static bool IsSoundCloudUrl(string url)
+    {
+        var result = false;
+
+        if (Uri.TryCreate(url, UriKind.Absolute, out var uri))
+        {
+            result =
+                uri.Host.Contains("soundcloud.com", StringComparison.OrdinalIgnoreCase)
+                || uri.Host.Contains("snd.sc", StringComparison.OrdinalIgnoreCase);
+        }
+
+        return result;
+    }
+
+    private static string? ExtractSoundCloudTrackId(string url)
+    {
+        string? result = null;
+
+        if (Uri.TryCreate(url, UriKind.Absolute, out var uri))
+        {
+            var host = uri.Host.ToLowerInvariant();
+            if (host.Contains("soundcloud.com") || host.Contains("snd.sc"))
+            {
+                result = uri.AbsoluteUri.TrimEnd('/');
+            }
         }
 
         return result;

@@ -15,6 +15,7 @@ using MARS.Server.Services.Shikimori.Entitys;
 using MARS.Server.Services.SoundRequest;
 using MARS.Server.Services.SoundRequest.Interfaces;
 using MARS.Server.Services.SoundRequest.Queue;
+using MARS.Server.Services.SoundRequest.SoundCloud;
 using MARS.Server.Services.SoundRequest.Spotify;
 using MARS.Server.Services.Telegram.BotService;
 using MARS.Server.Services.Telegram.ClipboardCopy;
@@ -44,6 +45,7 @@ using MARS.Server.Services.Twitch.Rewards._5_AddWife;
 using MARS.Server.Services.Twitch.Rewards._6_RussianRoulette;
 using MARS.Server.Services.Twitch.Rewards._7_Quiz;
 using MARS.Server.Services.Twitch.Rewards._8_TekkenQuiz;
+using MARS.Server.Services.Twitch.Rewards._9_AudioQuiz;
 using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
 using MARS.Server.Services.Twitch.SoundBarService;
 using MARS.Server.Services.Twitch.StreamBotNotifications;
@@ -278,6 +280,7 @@ public static class StartupEstensions
         services.AddScoped<TwitchRussianRoulete>();
         services.AddScoped<TekkenVictorina>();
         services.AddScoped<TwitchTrivia>();
+        services.AddScoped<AudioTriviaMiniGame>();
         services.AddSingleton<PuntoSwitcherService>();
         services.AddSingleton<IPuntoSwitcherService>(sp =>
             sp.GetRequiredService<PuntoSwitcherService>()
@@ -436,6 +439,7 @@ public static class StartupEstensions
         services.AddHttpClient<SpotifyApiClient>();
         services.AddSingleton<SpotifyResolver>();
         services.AddSingleton<SpotifyPlaybackService>();
+        services.AddSingleton<SoundCloudResolver>();
 
         // Регистрируем плеер и CommandsService
         services.AddSingleton<MainPlayer>();

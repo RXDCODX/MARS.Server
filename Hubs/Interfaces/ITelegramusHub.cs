@@ -1,4 +1,5 @@
 ﻿using MARS.Server.Services.AutoArts_OBSOLETE.Entitys;
+using MARS.Server.Hubs.Models.AudioQuiz;
 using MARS.Server.Services.Twitch.Entitys;
 using SignalRSwaggerGen.Attributes;
 using SignalRSwaggerGen.Enums;
@@ -80,4 +81,10 @@ public interface ITelegramusHub
 
     [SignalRMethod]
     Task AllRefund(TwitchUser user);
+
+    [SignalRMethod]
+    Task AudioQuizStart(AudioQuizRoundDto round);
+
+    [SignalRMethod]
+    Task AudioQuizStop();
 }
