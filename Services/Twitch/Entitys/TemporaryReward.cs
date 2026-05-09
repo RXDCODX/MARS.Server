@@ -132,12 +132,44 @@ public abstract class TemporaryReward(
         {
             TwitchRewardId = Guid.Parse(existingReward.Id);
 
-            if (existingReward.IsEnabled != shouldBeEnabled)
+            // Сравниваем текущие значения с желаемыми
+            var desiredTitle = AlertDisplayName ?? string.Empty;
+            var desiredPrompt = AlertDescription ?? string.Empty;
+            var desiredCost = Cost;
+            var desiredBg = ColorToHex(Color);
+
+            var needUpdate = false;
+            var updateRequest = new UpdateCustomRewardRequest { IsEnabled = shouldBeEnabled };
+
+            if (!string.Equals(existingReward.Title ?? string.Empty, desiredTitle, StringComparison.Ordinal))
             {
-                var updated = await channelRewardsService.UpdateRewardAsync(
-                    existingReward.Id,
-                    new UpdateCustomRewardRequest { IsEnabled = shouldBeEnabled }
-                );
+                updateRequest.Title = desiredTitle;
+                needUpdate = true;
+            }
+
+            if (!string.Equals(existingReward.Prompt ?? string.Empty, desiredPrompt, StringComparison.Ordinal))
+            {
+                updateRequest.Prompt = desiredPrompt;
+                needUpdate = true;
+            }
+
+            if (existingReward.Cost != desiredCost)
+            {
+                updateRequest.Cost = desiredCost;
+                needUpdate = true;
+            }
+
+            // BackgroundColor может быть null
+            if (!string.Equals(existingReward.BackgroundColor ?? string.Empty, desiredBg, StringComparison.OrdinalIgnoreCase))
+            {
+                updateRequest.BackgroundColor = desiredBg;
+                needUpdate = true;
+            }
+
+            // Если нужно обновить либо состояние IsEnabled, либо другие поля
+            if (needUpdate || existingReward.IsEnabled != shouldBeEnabled)
+            {
+                var updated = await channelRewardsService.UpdateRewardAsync(existingReward.Id, updateRequest);
 
                 if (updated)
                 {
@@ -161,11 +193,10 @@ public abstract class TemporaryReward(
             else
             {
                 logger.LogInformation(
-                    "Награда {AlertName} (Cost: {Cost}) уже существует с Id: {RewardId} в нужном состоянии IsEnabled={IsEnabled}.",
+                    "Награда {AlertName} (Cost: {Cost}) уже существует с Id: {RewardId} в нужном состоянии и значениях.",
                     AlertDisplayName,
                     Cost,
-                    existingReward.Id,
-                    shouldBeEnabled
+                    existingReward.Id
                 );
             }
 

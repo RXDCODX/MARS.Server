@@ -23,7 +23,7 @@ public class SrlistSoundRequestListCommand(CommandsService commandsService) : Ba
             new()
             {
                 Name = "playlistUrl",
-                Description = "URL плейлиста YouTube",
+                Description = "URL плейлиста YouTube или SoundCloud",
                 Type = "string",
                 Required = true,
             },

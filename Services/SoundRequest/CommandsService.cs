@@ -160,12 +160,18 @@ public class CommandsService(
             }
             else
             {
-                result =
-                    isSoundCloudUrl
-                        ? "не удалось распознать трек SoundCloud по ссылке"
-                        : provider == SoundRequestProvider.Spotify
-                        ? "не удалось распознать трек Spotify по запросу"
-                        : "не удалось распознать видео по ссылке";
+                if (isSoundCloudUrl)
+                {
+                    result = "не удалось распознать трек SoundCloud по ссылке";
+                }
+                else if (provider == SoundRequestProvider.Spotify)
+                {
+                    result = "не удалось распознать трек Spotify по запросу";
+                }
+                else
+                {
+                    result = "не удалось распознать видео по ссылке";
+                }
             }
         }
         else
@@ -335,7 +341,16 @@ public class CommandsService(
             return result;
         }
 
-        var items = await ytResolver.ResolvePlaylistAsync(playlistUrl);
+        BaseTrackInfo[]? items = null;
+
+        if (IsSoundCloudUrl(playlistUrl))
+        {
+            items = await soundCloudResolver.ResolvePlaylistAsync(playlistUrl, cancellationToken);
+        }
+        else
+        {
+            items = await ytResolver.ResolvePlaylistAsync(playlistUrl);
+        }
 
         if (items is { Length: > 0 } && user != null)
         {

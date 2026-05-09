@@ -11,7 +11,7 @@ public class AddWife_TwitchReward(
 {
     public override string AlertDisplayName { get; set; } = "👰 Добавить супруга";
     public override string AlertDescription { get; set; } =
-        "✨ Есть шанс получить VIP если выбить число >= 95!"
+        "✨ Есть шанс получить VIP если выбить число >= 95! (Гарант на 200 крутках)"
         + Environment.NewLine
         + "Добавляет супруга в рулетку, ссылка на персонажа должна быть с https://shikimori.one/characters. "
         + Environment.NewLine

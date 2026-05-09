@@ -1,4 +1,5 @@
-﻿using MARS.Server.Services.CommandExecutor.Entitys;
+﻿using System.Text;
+using MARS.Server.Services.CommandExecutor.Entitys;
 
 namespace MARS.Server.Services.CommandExecutor;
 
@@ -157,14 +158,17 @@ public abstract class PlatformCommandServiceBase<T>
             return "Нет доступных команд для вашей роли.";
         }
 
-        var result =
+        StringBuilder result = new(
             includeAdminCommands && isAdmin
                 ? "Доступные команды (включая админские): "
-                : "Доступные команды: ";
+                    + Environment.NewLine
+                    + Environment.NewLine
+                : "Доступные команды: " + Environment.NewLine + Environment.NewLine
+        );
 
-        result += string.Join(Environment.NewLine + " | ", commands);
+        result.AppendJoin(Environment.NewLine + Environment.NewLine, commands.Order());
 
-        return result;
+        return result.ToString();
     }
 
     /// <summary>
