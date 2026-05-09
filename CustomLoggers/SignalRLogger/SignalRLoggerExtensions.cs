@@ -16,9 +16,12 @@ public static class SignalRLoggerExtensions
         var options = new SignalRLoggerOptions();
         configure?.Invoke(options);
 
+        builder.Services.AddSingleton<LoggerHubRecursionGuard>();
+
         builder.Services.AddSingleton<ILoggerProvider>(serviceProvider => new SignalRLoggerProvider(
             options,
-            null
+            null,
+            serviceProvider.GetRequiredService<LoggerHubRecursionGuard>()
         ));
 
         return builder;
@@ -40,9 +43,12 @@ public static class SignalRLoggerExtensions
         var options = new SignalRLoggerOptions();
         configure?.Invoke(options);
 
+        builder.Services.AddSingleton<LoggerHubRecursionGuard>();
+
         builder.Services.AddSingleton<ILoggerProvider>(serviceProvider => new SignalRLoggerProvider(
             options,
-            filter
+            filter,
+            serviceProvider.GetRequiredService<LoggerHubRecursionGuard>()
         ));
 
         return builder;

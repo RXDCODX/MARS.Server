@@ -4,7 +4,8 @@ namespace MARS.Server.CustomLoggers.SignalRLogger;
 
 public class SignalRLoggerProvider(
     SignalRLoggerOptions options,
-    Func<string, LogLevel, bool>? filter
+    Func<string, LogLevel, bool>? filter,
+    LoggerHubRecursionGuard recursionGuard
 ) : ILoggerProvider
 {
     private readonly ConcurrentDictionary<string, SignalRLogger> _loggers = new();
@@ -16,7 +17,7 @@ public class SignalRLoggerProvider(
 
     private SignalRLogger CreateLoggerImplementation(string categoryName)
     {
-        return new SignalRLogger(categoryName, options, filter);
+        return new SignalRLogger(categoryName, options, filter, recursionGuard);
     }
 
     public void Dispose()

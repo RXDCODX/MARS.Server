@@ -151,6 +151,7 @@ public static class Program
                     "Microsoft.AspNetCore.Hosting.Diagnostics",
                     "Microsoft.AspNetCore.Routing.EndpointMiddleware",
                     "Microsoft.AspNetCore.StaticFiles.StaticFileMiddleware",
+                    "AspNetCore.SpaYarp.SpaProxyMiddleware",
                 ];
             });
         });

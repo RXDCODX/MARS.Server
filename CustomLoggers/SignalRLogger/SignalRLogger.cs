@@ -5,7 +5,8 @@ namespace MARS.Server.CustomLoggers.SignalRLogger;
 public class SignalRLogger(
     string category,
     SignalRLoggerOptions options,
-    Func<string, LogLevel, bool>? filter
+    Func<string, LogLevel, bool>? filter,
+    LoggerHubRecursionGuard recursionGuard
 ) : ILogger
 {
     public static IHubContext<LoggerHub, ILoggerHub>? HubContext { get; set; }
@@ -29,6 +30,11 @@ public class SignalRLogger(
 
         var message = formatter(state, exception);
         if (string.IsNullOrEmpty(message) && exception == null)
+        {
+            return;
+        }
+
+        if (recursionGuard.ShouldSkipLog(category, message))
         {
             return;
         }
@@ -75,7 +81,16 @@ public class SignalRLogger(
         {
             try
             {
-                await HubContext.Clients.All.Log(logMessage);
+                var suppressionScope = recursionGuard.BeginSuppression();
+
+                try
+                {
+                    await HubContext.Clients.All.Log(logMessage);
+                }
+                finally
+                {
+                    suppressionScope.Dispose();
+                }
             }
             catch (Exception ex)
             {

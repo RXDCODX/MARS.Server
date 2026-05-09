@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using BooruSharp.Booru;
 using MARS.Server.CustomLoggers.SignalRLogger;
+using MARS.Server.Hubs.Filters;
 using MARS.Server.Services._365Genius;
 using MARS.Server.Services.Discord.Gateway;
 using MARS.Server.Services.Discord.PlayRequest;
@@ -94,6 +95,7 @@ public static class StartupEstensions
             .AddSignalR(options =>
             {
                 options.EnableDetailedErrors = true;
+                options.AddFilter<LoggerHubRecursionFilter>();
             })
             .AddJsonProtocol(options =>
             {
@@ -101,6 +103,8 @@ public static class StartupEstensions
                 options.PayloadSerializerOptions.DictionaryKeyPolicy = JsonNamingPolicy.CamelCase;
                 options.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter());
             });
+
+        services.AddSingleton<LoggerHubRecursionGuard>();
 
         services
             .AddControllers()
