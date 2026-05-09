@@ -1,3 +1,4 @@
+using Cyrillic.Convert;
 using MARS.Server.Hubs;
 using MARS.Server.Hubs.Interfaces;
 using MARS.Server.Hubs.Models.AudioQuiz;
@@ -17,6 +18,7 @@ public class AudioTriviaMiniGame(
 {
     private const int GameCost = 9;
     private const int RoundSeconds = 30;
+    private const double MinSimilarityThreshold = 0.8;
 
     private readonly SemaphoreSlim _semaphore = new(1, 1);
 
@@ -246,23 +248,246 @@ public class AudioTriviaMiniGame(
     {
         var result = false;
 
-        var normalizedMessage = NormalizeText(message);
-        var normalizedTrackName = NormalizeText(track.TrackName);
-        var normalizedTitle = NormalizeText(track.Title);
+        var messageVariants = BuildComparableVariants(message);
+        var expectedVariants = BuildTrackExpectedVariants(track);
 
-        if (!string.IsNullOrWhiteSpace(normalizedMessage))
+        if (messageVariants.Count > 0 && expectedVariants.Count > 0)
         {
-            var trackNameLongEnough = normalizedTrackName.Length >= 4;
-            var titleLongEnough = normalizedTitle.Length >= 4;
+            foreach (var messageVariant in messageVariants)
+            {
+                foreach (var expectedVariant in expectedVariants)
+                {
+                    if (IsVariantMatch(messageVariant, expectedVariant))
+                    {
+                        result = true;
+                        break;
+                    }
+                }
 
-            if (trackNameLongEnough && normalizedMessage.Contains(normalizedTrackName))
+                if (result)
+                {
+                    break;
+                }
+            }
+        }
+
+        return result;
+    }
+
+    private static HashSet<string> BuildTrackExpectedVariants(BaseTrackInfo track)
+    {
+        var result = new HashSet<string>(StringComparer.Ordinal);
+
+        AddComparableVariants(track.TrackName, result);
+        AddComparableVariants(track.Title, result);
+
+        if (track.Authors is { Length: > 0 })
+        {
+            foreach (var author in track.Authors)
+            {
+                AddComparableVariants(author, result);
+            }
+
+            var joinedAuthors = string.Join(
+                ' ',
+                track.Authors.Where(a => !string.IsNullOrWhiteSpace(a))
+            );
+            if (
+                !string.IsNullOrWhiteSpace(joinedAuthors)
+                && !string.IsNullOrWhiteSpace(track.TrackName)
+            )
+            {
+                AddComparableVariants(string.Concat(joinedAuthors, ' ', track.TrackName), result);
+                AddComparableVariants(string.Concat(track.TrackName, ' ', joinedAuthors), result);
+            }
+        }
+
+        return result;
+    }
+
+    private static HashSet<string> BuildComparableVariants(string source)
+    {
+        var result = new HashSet<string>(StringComparer.Ordinal);
+
+        AddComparableVariants(source, result);
+
+        return result;
+    }
+
+    private static void AddComparableVariants(string? source, HashSet<string> variants)
+    {
+        if (string.IsNullOrWhiteSpace(source))
+        {
+            return;
+        }
+
+        var normalized = NormalizeText(source);
+        if (normalized.Length >= 2)
+        {
+            variants.Add(normalized);
+        }
+
+        // Поддержка NuGet Cyrillic.Convert (транслитерация)
+        var cyrillicPackageVariants = ConvertWithCyrillicPackage(source);
+        foreach (var cyrillicVariant in cyrillicPackageVariants)
+        {
+            var normalizedCyrillicVariant = NormalizeText(cyrillicVariant);
+            if (normalizedCyrillicVariant.Length >= 2)
+            {
+                variants.Add(normalizedCyrillicVariant);
+            }
+        }
+
+        // Поддержка keyboard-layout ошибок (переключатель раскладки)
+        var layoutConverted = ConvertKeyboardLayout(source);
+        var normalizedLayoutConverted = NormalizeText(layoutConverted);
+        if (normalizedLayoutConverted.Length >= 2)
+        {
+            variants.Add(normalizedLayoutConverted);
+        }
+
+        // Комбинированная конвертация на случай конфликта с PuntoSwitcher
+        var combinedCyrillicVariants = ConvertWithCyrillicPackage(layoutConverted);
+        foreach (var combinedCyrillicVariant in combinedCyrillicVariants)
+        {
+            var normalizedCombinedVariant = NormalizeText(combinedCyrillicVariant);
+            if (normalizedCombinedVariant.Length >= 2)
+            {
+                variants.Add(normalizedCombinedVariant);
+            }
+        }
+    }
+
+    private static IReadOnlyCollection<string> ConvertWithCyrillicPackage(string value)
+    {
+        var result = new HashSet<string>(StringComparer.Ordinal);
+
+        if (!string.IsNullOrWhiteSpace(value))
+        {
+            // В пакете доступны extension-методы для направления Russian<->Latin.
+            var toLatin = value.ToRussianLatin();
+            if (!string.IsNullOrWhiteSpace(toLatin))
+            {
+                result.Add(toLatin);
+            }
+
+            var toCyrillic = value.ToRussianCyrillic();
+            if (!string.IsNullOrWhiteSpace(toCyrillic))
+            {
+                result.Add(toCyrillic);
+            }
+        }
+
+        return result;
+    }
+
+    private static bool IsVariantMatch(string messageVariant, string expectedVariant)
+    {
+        var result = false;
+
+        if (
+            !string.IsNullOrWhiteSpace(messageVariant)
+            && !string.IsNullOrWhiteSpace(expectedVariant)
+        )
+        {
+            if (messageVariant.Contains(expectedVariant, StringComparison.Ordinal))
             {
                 result = true;
             }
-            else if (titleLongEnough && normalizedMessage.Contains(normalizedTitle))
+            else if (expectedVariant.Contains(messageVariant, StringComparison.Ordinal))
             {
                 result = true;
             }
+            else
+            {
+                var similarity = CalculateSimilarity(messageVariant, expectedVariant);
+                result = similarity >= MinSimilarityThreshold;
+            }
+        }
+
+        return result;
+    }
+
+    private static string ConvertKeyboardLayout(string value)
+    {
+        var result = value ?? string.Empty;
+
+        if (!string.IsNullOrWhiteSpace(value))
+        {
+            var lower = value.ToLowerInvariant();
+            var latinCount = lower.Count(ch => ch is >= 'a' and <= 'z');
+            var cyrillicCount = lower.Count(ch => ch is >= 'а' and <= 'я' || ch == 'ё');
+
+            if (latinCount > 0 && cyrillicCount == 0)
+            {
+                result = lower.ToRussianCyrillic() ?? string.Empty;
+            }
+            else if (cyrillicCount > 0 && latinCount == 0)
+            {
+                result = lower.ToRussianLatin() ?? string.Empty;
+            }
+        }
+
+        return result;
+    }
+
+    private static double CalculateSimilarity(string left, string right)
+    {
+        var result = 0d;
+
+        if (!string.IsNullOrWhiteSpace(left) && !string.IsNullOrWhiteSpace(right))
+        {
+            var maxLength = Math.Max(left.Length, right.Length);
+            if (maxLength > 0)
+            {
+                var distance = CalculateLevenshteinDistance(left, right);
+                result = 1d - (double)distance / maxLength;
+            }
+        }
+
+        return result;
+    }
+
+    private static int CalculateLevenshteinDistance(string left, string right)
+    {
+        var result = 0;
+
+        if (string.IsNullOrEmpty(left))
+        {
+            result = right.Length;
+        }
+        else if (string.IsNullOrEmpty(right))
+        {
+            result = left.Length;
+        }
+        else
+        {
+            var matrix = new int[left.Length + 1, right.Length + 1];
+
+            for (var i = 0; i <= left.Length; i++)
+            {
+                matrix[i, 0] = i;
+            }
+
+            for (var j = 0; j <= right.Length; j++)
+            {
+                matrix[0, j] = j;
+            }
+
+            for (var i = 1; i <= left.Length; i++)
+            {
+                for (var j = 1; j <= right.Length; j++)
+                {
+                    var substitutionCost = left[i - 1] == right[j - 1] ? 0 : 1;
+
+                    matrix[i, j] = Math.Min(
+                        Math.Min(matrix[i - 1, j] + 1, matrix[i, j - 1] + 1),
+                        matrix[i - 1, j - 1] + substitutionCost
+                    );
+                }
+            }
+
+            result = matrix[left.Length, right.Length];
         }
 
         return result;
