@@ -644,7 +644,7 @@ public class SpotifyAuthService(
             try
             {
                 var spotify = new SpotifyClient(accessToken);
-                var profile = await spotify.UserProfile.Current();
+                var profile = await spotify.UserProfile.Current(ct);
 
                 result = new SpotifyProfileDto
                 {

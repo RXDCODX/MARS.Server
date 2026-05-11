@@ -14,5 +14,5 @@ public class AudioQuiz_TwitchReward(
         "🔊 Нужно угадать трек по фрагменту. В это время SoundRequest ставится на паузу";
     public override Color Color { get; set; } = Color.FromArgb(247, 0, 255);
     public override int Cost { get; init; } = 9;
-    public override Func<bool> IsRewardEnabled { get; set; } = () => true;
+    public override Func<bool> IsRewardEnabled { get; set; } = () => false;
 }
