@@ -72,7 +72,7 @@ public class DownloadCommand(
                     var track = await soundCloudResolver.ResolveTrackAsync(url, cancellationToken);
                     if (track is not null)
                     {
-                        var title = track.TrackName ?? track.Title;
+                        var title = track.TrackName;
                         result =
                             $"✅ Загрузка аудио начата: {title}\n⏳ Скачивание может занять время...";
 

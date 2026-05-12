@@ -84,9 +84,11 @@ public class SoundCloudResolver(ILogger<SoundCloudResolver> logger)
                     var sourceId = track.Id.ToString();
                     var permalinkUrl = track.PermalinkUrl;
                     var trackTitle = string.IsNullOrWhiteSpace(track.Title)
-                        ? (string.IsNullOrWhiteSpace(track.PlaylistName)
-                            ? "Unknown SoundCloud Track"
-                            : track.PlaylistName)
+                        ? (
+                            string.IsNullOrWhiteSpace(track.PlaylistName)
+                                ? "Unknown SoundCloud Track"
+                                : track.PlaylistName
+                        )
                         : track.Title;
                     var duration = track.Duration.HasValue
                         ? TimeSpan.FromMilliseconds(track.Duration.Value)

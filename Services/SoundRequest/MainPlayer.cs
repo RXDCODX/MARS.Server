@@ -1076,7 +1076,11 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
             provider = parsedProvider;
         }
 
-        if (provider == SoundRequestProvider.Spotify && _spotifyConfiguration.Enabled)
+        if (
+            provider == SoundRequestProvider.Spotify
+            && _spotifyConfiguration.Enabled
+            && IsPlatformAllowed("Spotify")
+        )
         {
             result = true;
         }
@@ -1103,6 +1107,28 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
                 {
                     provider = (SoundRequestProvider)numericValue;
                     result = true;
+                }
+            }
+        }
+
+        return result;
+    }
+
+    private bool IsPlatformAllowed(string platformName)
+    {
+        var result = false;
+        var enabledPlatforms = _soundRequestConfiguration.EnabledPlatforms;
+
+        if (enabledPlatforms.Length > 0)
+        {
+            foreach (var enabledPlatform in enabledPlatforms)
+            {
+                if (
+                    enabledPlatform.Trim().Equals(platformName, StringComparison.OrdinalIgnoreCase)
+                )
+                {
+                    result = true;
+                    break;
                 }
             }
         }

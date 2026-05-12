@@ -21,8 +21,7 @@ public class CommandsService(
     IPlayerController playerController,
     StateManager stateManager,
     InSignalRHubService inSignalRHubService,
-    IOptions<SoundRequestConfiguration> soundRequestOptions,
-    IOptions<SpotifySoundRequestConfiguration> spotifyOptions
+    IOptions<SoundRequestConfiguration> soundRequestOptions
 )
 {
     /// <summary>
@@ -54,6 +53,16 @@ public class CommandsService(
             // Нормализуем URL - добавляем схему если её нет
             var normalizedQuery = NormalizeUrl(query);
             var isSoundCloudUrl = IsSoundCloudUrl(normalizedQuery);
+            var isSpotifyUrl = IsSpotifyUrl(normalizedQuery);
+            var isYouTubeAllowed = IsPlatformAllowed("YouTube");
+            var isSpotifyAllowed = IsPlatformAllowed("Spotify");
+            var isSoundCloudAllowed = IsPlatformAllowed("SoundCloud");
+
+            if (!isYouTubeAllowed && !isSpotifyAllowed && !isSoundCloudAllowed)
+            {
+                result = "SoundRequest отключен в конфигурации";
+                return result;
+            }
 
             var provider = await ResolveProviderAsync(cancellationToken);
 
@@ -87,32 +96,43 @@ public class CommandsService(
                 {
                     if (isSoundCloudUrl)
                     {
-                        info = await soundCloudResolver.ResolveTrackAsync(
+                        if (isSoundCloudAllowed)
+                        {
+                            info = await soundCloudResolver.ResolveTrackAsync(
+                                normalizedQuery,
+                                cancellationToken
+                            );
+                        }
+                    }
+                    else if (isSpotifyUrl)
+                    {
+                        if (isSpotifyAllowed)
+                        {
+                            info = await spotifyResolver.ResolveTrackAsync(
+                                normalizedQuery,
+                                cancellationToken
+                            );
+                        }
+                    }
+                    else if (isYouTubeAllowed)
+                    {
+                        info = await ytResolver.ResolveVideoAsync(
                             normalizedQuery,
                             cancellationToken
                         );
-                    }
-                    else
-                    {
-                        info =
-                            provider == SoundRequestProvider.Spotify
-                                ? await spotifyResolver.ResolveTrackAsync(
-                                    normalizedQuery,
-                                    cancellationToken
-                                )
-                                : await ytResolver.ResolveVideoAsync(
-                                    normalizedQuery,
-                                    cancellationToken
-                                );
                     }
                 }
             }
             else
             {
-                info =
-                    provider == SoundRequestProvider.Spotify
-                        ? await spotifyResolver.ResolveQueryAsync(query, cancellationToken)
-                        : await ytResolver.ResolveQueryAsync(query, cancellationToken);
+                if (provider == SoundRequestProvider.Spotify && isSpotifyAllowed)
+                {
+                    info = await spotifyResolver.ResolveQueryAsync(query, cancellationToken);
+                }
+                else if (isYouTubeAllowed)
+                {
+                    info = await ytResolver.ResolveQueryAsync(query, cancellationToken);
+                }
             }
 
             if (info != null && user != null)
@@ -162,15 +182,21 @@ public class CommandsService(
             {
                 if (isSoundCloudUrl)
                 {
-                    result = "не удалось распознать трек SoundCloud по ссылке";
+                    result = isSoundCloudAllowed
+                        ? "не удалось распознать трек SoundCloud по ссылке"
+                        : "SoundCloud отключен в конфигурации SoundRequest";
                 }
-                else if (provider == SoundRequestProvider.Spotify)
+                else if (isSpotifyUrl || provider == SoundRequestProvider.Spotify)
                 {
-                    result = "не удалось распознать трек Spotify по запросу";
+                    result = isSpotifyAllowed
+                        ? "не удалось распознать трек Spotify по запросу"
+                        : "Spotify отключен в конфигурации SoundRequest";
                 }
                 else
                 {
-                    result = "не удалось распознать видео по ссылке";
+                    result = isYouTubeAllowed
+                        ? "не удалось распознать видео по ссылке"
+                        : "YouTube отключен в конфигурации SoundRequest";
                 }
             }
         }
@@ -700,9 +726,17 @@ public class CommandsService(
             result = parsedProvider;
         }
 
-        if (result == SoundRequestProvider.Spotify && !spotifyOptions.Value.Enabled)
+        if (result == SoundRequestProvider.Spotify && !IsPlatformAllowed("Spotify"))
         {
             result = SoundRequestProvider.YouTube;
+        }
+
+        if (result == SoundRequestProvider.YouTube && !IsPlatformAllowed("YouTube"))
+        {
+            if (IsPlatformAllowed("Spotify"))
+            {
+                result = SoundRequestProvider.Spotify;
+            }
         }
 
         return result;
@@ -738,7 +772,7 @@ public class CommandsService(
     {
         string? result = null;
 
-        if (IsSoundCloudUrl(normalizedQuery))
+        if (IsSoundCloudUrl(normalizedQuery) && IsPlatformAllowed("SoundCloud"))
         {
             var soundCloudTrackId = ExtractSoundCloudTrackId(normalizedQuery);
             if (!string.IsNullOrWhiteSpace(soundCloudTrackId))
@@ -746,7 +780,7 @@ public class CommandsService(
                 result = $"soundcloud:{soundCloudTrackId}";
             }
         }
-        else if (provider == SoundRequestProvider.Spotify)
+        else if (IsSpotifyUrl(normalizedQuery) && IsPlatformAllowed("Spotify"))
         {
             var spotifyTrackId = spotifyResolver.ExtractTrackId(normalizedQuery);
             if (!string.IsNullOrWhiteSpace(spotifyTrackId))
@@ -787,6 +821,44 @@ public class CommandsService(
             {
                 result = uri.AbsoluteUri.TrimEnd('/');
             }
+        }
+
+        return result;
+    }
+
+    private bool IsPlatformAllowed(string platformName)
+    {
+        var result = false;
+        var enabledPlatforms = soundRequestOptions.Value.EnabledPlatforms;
+
+        if (enabledPlatforms.Length > 0)
+        {
+            foreach (var enabledPlatform in enabledPlatforms)
+            {
+                if (
+                    enabledPlatform.Trim().Equals(platformName, StringComparison.OrdinalIgnoreCase)
+                )
+                {
+                    result = true;
+                    break;
+                }
+            }
+        }
+
+        return result;
+    }
+
+    private static bool IsSpotifyUrl(string url)
+    {
+        var result = false;
+
+        if (!string.IsNullOrWhiteSpace(url))
+        {
+            result =
+                url.Contains("spotify.com", StringComparison.OrdinalIgnoreCase)
+                || url.StartsWith("spotify:track:", StringComparison.OrdinalIgnoreCase)
+                || url.StartsWith("spotify:album:", StringComparison.OrdinalIgnoreCase)
+                || url.StartsWith("spotify:playlist:", StringComparison.OrdinalIgnoreCase);
         }
 
         return result;

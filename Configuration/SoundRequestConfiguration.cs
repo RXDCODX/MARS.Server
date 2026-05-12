@@ -5,6 +5,8 @@ public class SoundRequestConfiguration
     public const string SectionName = "SoundRequest";
 
     public SoundRequestProvider Provider { get; set; } = SoundRequestProvider.YouTube;
+
+    public string[] EnabledPlatforms { get; set; } = Array.Empty<string>();
 }
 
 public enum SoundRequestProvider
