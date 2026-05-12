@@ -36,7 +36,7 @@
     <PackageVersion Include="SignalRSwaggerGen.Core" Version="1.6.0" />
     <PackageVersion Include="SignalRSwaggerGen.Utils" Version="1.8.0" />
     <PackageVersion Include="SigSpec.AspNetCore" Version="0.3.2" />
-    <PackageVersion Include="SixLabors.ImageSharp" Version="4.0.0" />
+    <PackageVersion Include="SixLabors.ImageSharp" Version="3.1.12" />
     <PackageVersion Include="SoundCloudExplode" Version="1.6.7" />
     <PackageVersion Include="SpotifyAPI.Web" Version="7.4.2" />
     <PackageVersion Include="Swashbuckle.AspNetCore" Version="10.1.7" />
