@@ -1,5 +1,6 @@
 using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
+using TwitchLib.Api.Helix.Models.ChannelPoints.CreateCustomReward;
 
 namespace MARS.Server.Services.Twitch.Rewards._341_Aga;
 
@@ -15,4 +16,14 @@ public class Aga_TwitchReward(
     public override Color Color { get; set; } = Color.FromArgb(235, 4, 0);
     public override int Cost { get; init; } = 341;
     public override Func<bool> IsRewardEnabled { get; set; } = () => true;
+
+    private protected override CreateCustomRewardsRequest CreateCustomRewardsRequest
+    {
+        get
+        {
+            var values = base.CreateCustomRewardsRequest;
+            values.IsUserInputRequired = true;
+            return values;
+        }
+    }
 }

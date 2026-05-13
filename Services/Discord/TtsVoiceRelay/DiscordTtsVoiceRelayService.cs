@@ -2,6 +2,7 @@ using System.Runtime.Versioning;
 using System.Speech.AudioFormat;
 using System.Speech.Synthesis;
 using DSharpPlus;
+using DSharpPlus.Entities;
 using DSharpPlus.EventArgs;
 using DSharpPlus.VoiceNext;
 using MARS.Server.Services.Discord.Gateway;
@@ -15,22 +16,45 @@ public class DiscordTtsVoiceRelayService(
 {
     private const ulong TargetDiscordUserId = 260383142903414785;
     private const ulong TargetDiscordVoiceChannelId = 1406679380369080481;
+    private static readonly TimeSpan GuildCachePollInterval = TimeSpan.FromSeconds(1);
+    private static readonly TimeSpan RoutingRefreshInterval = TimeSpan.FromSeconds(5);
 
     private readonly SemaphoreSlim _playbackLock = new(1, 1);
     private readonly SemaphoreSlim _stateLock = new(1, 1);
 
     private VoiceNextConnection? _voiceConnection;
+    private CancellationTokenSource? _monitorCancellationSource;
+    private Task? _monitorTask;
 
     public bool IsVoiceRoutingEnabled { get; private set; }
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         gatewayService.RegisterVoiceStateUpdatedHandler(HandleVoiceStateUpdatedAsync);
+        _monitorCancellationSource = CancellationTokenSource.CreateLinkedTokenSource(
+            cancellationToken
+        );
+        _monitorTask = MonitorRoutingStateAsync(_monitorCancellationSource.Token);
         await RefreshRoutingStateAsync(cancellationToken);
     }
 
     public async Task StopAsync(CancellationToken cancellationToken)
     {
+        await _monitorCancellationSource?.CancelAsync()!;
+
+        if (_monitorTask is not null)
+        {
+            try
+            {
+                await _monitorTask;
+            }
+            catch (OperationCanceledException) { }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Ошибка остановки фоновой проверки Discord TTS routing");
+            }
+        }
+
         await _stateLock.WaitAsync(cancellationToken);
         try
         {
@@ -88,6 +112,16 @@ public class DiscordTtsVoiceRelayService(
         }
     }
 
+    private async Task MonitorRoutingStateAsync(CancellationToken cancellationToken)
+    {
+        using var periodicTimer = new PeriodicTimer(RoutingRefreshInterval);
+
+        while (await periodicTimer.WaitForNextTickAsync(cancellationToken))
+        {
+            await RefreshRoutingStateAsync(cancellationToken);
+        }
+    }
+
     private async Task HandleVoiceStateUpdatedAsync(
         DiscordClient client,
         VoiceStateUpdatedEventArgs args
@@ -138,10 +172,34 @@ public class DiscordTtsVoiceRelayService(
         var client = gatewayService.Client;
         if (client is not null)
         {
-            var channel = await client.GetChannelAsync(TargetDiscordVoiceChannelId);
+            var channel = await WaitForTargetVoiceChannelAsync(client, cancellationToken);
             if (channel is not null)
             {
                 result = channel.Users.Any(x => x.Id == TargetDiscordUserId);
+            }
+        }
+
+        return result;
+    }
+
+    private static async Task<DiscordChannel?> WaitForTargetVoiceChannelAsync(
+        DiscordClient client,
+        CancellationToken cancellationToken = default
+    )
+    {
+        DiscordChannel? result = null;
+
+        while (result is null && !cancellationToken.IsCancellationRequested)
+        {
+            result = client
+                .Guilds.Values.Select(guild =>
+                    guild.Channels.GetValueOrDefault(TargetDiscordVoiceChannelId)
+                )
+                .FirstOrDefault(channel => channel is not null);
+
+            if (result is null)
+            {
+                await Task.Delay(GuildCachePollInterval, cancellationToken);
             }
         }
 
@@ -159,7 +217,7 @@ public class DiscordTtsVoiceRelayService(
             var client = gatewayService.Client;
             if (client is not null)
             {
-                var channel = await client.GetChannelAsync(TargetDiscordVoiceChannelId);
+                var channel = await WaitForTargetVoiceChannelAsync(client, cancellationToken);
                 if (channel is not null)
                 {
                     result = await channel.ConnectAsync();

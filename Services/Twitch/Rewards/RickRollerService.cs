@@ -42,8 +42,14 @@ public class RickRollerService(
         Id = Guid.NewGuid(),
     };
 
-    public double RickRollChance =>
-        double.Parse(configuration["AppSettings:RickRoll:Chance"] ?? "0.05");
+    public double RickRollChance
+    {
+        get
+        {
+            var confValue = configuration["AppSettings:RickRoll:Chance"];
+            return double.TryParse(confValue, out var value) ? value : 0.05D;
+        }
+    }
 
     public async Task<bool> TryRickRollAsync(TwitchUser user, Func<Task> whenNotRickRolled)
     {
@@ -53,12 +59,10 @@ public class RickRollerService(
             user = await userEnsureService.EnsureUserExistsAsync(user);
 
             var newDto = _baseMediaDto.CloneTo();
+            newDto.FixAlertText(user.DisplayName, string.Empty);
             newDto.TextInfo.KeyWordsColor = user.ChatColor;
 
             await hubContext.Clients.All.Alert(new MediaDto(newDto));
-            //await client.SendMessageToMainTwitchAsync(
-            //    $"@{user.UserLogin}, прости, но награда тебя рикрольнула! Ничего личного, просто рандом!"
-            //);
             return true;
         }
         else

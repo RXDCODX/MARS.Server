@@ -22,7 +22,7 @@ public class LegBumRefundService(
     public bool IsServiceActive { get; set; } = true;
     public int Cost { get; init; } = 160;
 
-    private static readonly string[] AspVariations = ["asp", "ASP", "Asp", "асп", "Асп", "АСП"];
+    private static readonly string[] AspVariations = ["asp", "асп"];
 
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {

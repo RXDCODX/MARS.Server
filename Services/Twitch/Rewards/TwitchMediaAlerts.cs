@@ -123,7 +123,7 @@ public class TwitchMediaAlerts(
         var mediaList = dbContext
             .Alerts.AsNoTracking()
             .AsEnumerable()
-            .Where(e => e.MetaInfo.TwitchGuid == Guid.Parse(message.Reward.Id))
+            .Where(e => e.MetaInfo.TwitchPointsCost == message.Reward.Cost)
             .ToList();
 
         MediaInfo? mediaOld = null;
@@ -150,7 +150,7 @@ public class TwitchMediaAlerts(
         }
     }
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
         if (IsServiceActive)
         {
@@ -158,8 +158,7 @@ public class TwitchMediaAlerts(
             wsClient.ChannelPointsCustomRewardRedemptionAdd += TwitchClientOnOnMessageSend;
         }
 
-        // Ждем остановки сервиса
-        await Task.Delay(Timeout.Infinite, stoppingToken);
+        return Task.CompletedTask;
     }
 
     public override async Task StopAsync(CancellationToken cancellationToken)
