@@ -133,21 +133,53 @@ public abstract class TemporaryReward(
             TwitchRewardId = Guid.Parse(existingReward.Id);
 
             // Сравниваем текущие значения с желаемыми
-            var desiredTitle = AlertDisplayName ?? string.Empty;
-            var desiredPrompt = AlertDescription ?? string.Empty;
+            var desiredTitle = AlertDisplayName;
+            var desiredPrompt = AlertDescription;
             var desiredCost = Cost;
             var desiredBg = ColorToHex(Color);
+            var desiredIsUserRequest = CreateCustomRewardsRequest.IsUserInputRequired;
+            var desiredGlobalCooldown = CreateCustomRewardsRequest.GlobalCooldownSeconds;
+            var desiredIsGLobalCooldownEnabled = CreateCustomRewardsRequest.IsGlobalCooldownEnabled;
+            var desiredIsMaxPerStreamEnabled = CreateCustomRewardsRequest.IsMaxPerStreamEnabled;
+            var desiredIsMaxPerUserPerStreamEnabled =
+                CreateCustomRewardsRequest.IsMaxPerUserPerStreamEnabled;
+            var desiredShouldRedemptionsSkipRequestQueue =
+                CreateCustomRewardsRequest.ShouldRedemptionsSkipRequestQueue;
 
             var needUpdate = false;
             var updateRequest = new UpdateCustomRewardRequest { IsEnabled = shouldBeEnabled };
 
-            if (!string.Equals(existingReward.Title ?? string.Empty, desiredTitle, StringComparison.Ordinal))
+            if (desiredIsGLobalCooldownEnabled != existingReward.GlobalCooldownSetting.IsEnabled)
+            {
+                updateRequest.IsGlobalCooldownEnabled = desiredIsGLobalCooldownEnabled;
+                needUpdate = true;
+            }
+
+            if (existingReward.GlobalCooldownSetting.GlobalCooldownSeconds != desiredGlobalCooldown)
+            {
+                updateRequest.GlobalCooldownSeconds = desiredGlobalCooldown;
+                needUpdate = true;
+            }
+
+            if (
+                !string.Equals(
+                    existingReward.Title ?? string.Empty,
+                    desiredTitle,
+                    StringComparison.Ordinal
+                )
+            )
             {
                 updateRequest.Title = desiredTitle;
                 needUpdate = true;
             }
 
-            if (!string.Equals(existingReward.Prompt ?? string.Empty, desiredPrompt, StringComparison.Ordinal))
+            if (
+                !string.Equals(
+                    existingReward.Prompt ?? string.Empty,
+                    desiredPrompt,
+                    StringComparison.Ordinal
+                )
+            )
             {
                 updateRequest.Prompt = desiredPrompt;
                 needUpdate = true;
@@ -159,17 +191,57 @@ public abstract class TemporaryReward(
                 needUpdate = true;
             }
 
+            if (existingReward.IsUserInputRequired != desiredIsUserRequest)
+            {
+                updateRequest.IsUserInputRequired = desiredIsUserRequest;
+                needUpdate = true;
+            }
+
             // BackgroundColor может быть null
-            if (!string.Equals(existingReward.BackgroundColor ?? string.Empty, desiredBg, StringComparison.OrdinalIgnoreCase))
+            if (
+                !string.Equals(
+                    existingReward.BackgroundColor ?? string.Empty,
+                    desiredBg,
+                    StringComparison.OrdinalIgnoreCase
+                )
+            )
             {
                 updateRequest.BackgroundColor = desiredBg;
+                needUpdate = true;
+            }
+
+            if (existingReward.MaxPerStreamSetting.IsEnabled != desiredIsMaxPerStreamEnabled)
+            {
+                updateRequest.IsMaxPerStreamEnabled = desiredIsMaxPerStreamEnabled;
+                needUpdate = true;
+            }
+
+            if (
+                existingReward.MaxPerUserPerStreamSetting.IsEnabled
+                != desiredIsMaxPerUserPerStreamEnabled
+            )
+            {
+                updateRequest.IsMaxPerUserPerStreamEnabled = desiredIsMaxPerUserPerStreamEnabled;
+                needUpdate = true;
+            }
+
+            if (
+                existingReward.ShouldRedemptionsSkipQueue
+                != desiredShouldRedemptionsSkipRequestQueue
+            )
+            {
+                updateRequest.ShouldRedemptionsSkipRequestQueue =
+                    desiredShouldRedemptionsSkipRequestQueue;
                 needUpdate = true;
             }
 
             // Если нужно обновить либо состояние IsEnabled, либо другие поля
             if (needUpdate || existingReward.IsEnabled != shouldBeEnabled)
             {
-                var updated = await channelRewardsService.UpdateRewardAsync(existingReward.Id, updateRequest);
+                var updated = await channelRewardsService.UpdateRewardAsync(
+                    existingReward.Id,
+                    updateRequest
+                );
 
                 if (updated)
                 {
