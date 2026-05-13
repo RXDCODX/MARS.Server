@@ -6,7 +6,8 @@ public class TwitchMessagesHubAwaker(
     ITwitchClient client,
     IHubContext<TelegramusHub, ITelegramusHub> hubContext,
     IHostApplicationLifetime lifetime,
-    IDbContextFactory<AppDbContext> dbContextFactory
+    IDbContextFactory<AppDbContext> dbContextFactory,
+    ILogger<TwitchMessagesHubAwaker> logger
 ) : BackgroundService
 {
     private readonly CancellationToken _token = lifetime.ApplicationStopping;
@@ -19,6 +20,14 @@ public class TwitchMessagesHubAwaker(
             client.OnMessageReceived += ClientKeyTriggerAlert;
 
             client.OnMessageCleared += ClientOnOnMessageCleared;
+        });
+
+        lifetime.ApplicationStopping.Register(() =>
+        {
+            client.OnMessageReceived -= ClientOnOnMessageReceived;
+            client.OnMessageReceived -= ClientKeyTriggerAlert;
+
+            client.OnMessageCleared -= ClientOnOnMessageCleared;
         });
 
         return Task.CompletedTask;
@@ -36,92 +45,104 @@ public class TwitchMessagesHubAwaker(
             )
         )
         {
-            await Task.Factory.StartNew(
-                async () =>
+            try
+            {
+                await using var dbContext = await dbContextFactory.CreateDbContextAsync(_token);
+
+                var listAlerts = new List<MediaInfo>(
+                    await dbContext.Alerts.CountAsync(cancellationToken: _token)
+                );
+
+                await foreach (
+                    var info in dbContext
+                        .Alerts.AsNoTracking()
+                        .AsAsyncEnumerable()
+                        .WithCancellation(_token)
+                )
                 {
-                    await using var dbContext = await dbContextFactory.CreateDbContextAsync(_token);
-
-                    var alerts = (
-                        await dbContext
-                            .Alerts.AsNoTracking()
-                            .Where(mediaInfo =>
-                                !string.IsNullOrWhiteSpace(mediaInfo.TextInfo.TriggerWord)
-                            )
-                            .ToListAsync(cancellationToken: _token)
-                    )
-                        .Where(info =>
-                        {
-                            var message = e.ChatMessage.Message.Trim();
-                            var words = info.TextInfo.TriggerWord?.Trim().SplitWithQuotes();
-                            if (words is null || words.Length == 0)
-                            {
-                                return false;
-                            }
-
-                            // Ваш метод для разделения с учетом кавычек
-                            var chatMessageWords = message.Split(
-                                ' ',
-                                StringSplitOptions.RemoveEmptyEntries
-                            );
-
-                            // Проверяем отдельные слова (обычный случай)
-                            var singleWordMatch = chatMessageWords.Any(t =>
-                                words.Any(r => r.Equals(t, StringComparison.OrdinalIgnoreCase))
-                            );
-
-                            if (singleWordMatch)
-                            {
-                                return true;
-                            }
-
-                            // Проверяем фразы (если есть триггеры с пробелами)
-                            var phraseTriggers = words.Where(w => w.Contains(' ')).ToArray();
-                            if (phraseTriggers.Length == 0)
-                            {
-                                return false;
-                            }
-
-                            // Собираем сообщение в одну строку для проверки фраз
-                            var fullMessage = string.Join(" ", chatMessageWords);
-
-                            // Проверяем каждую фразу-триггер
-                            foreach (var phrase in phraseTriggers)
-                            {
-                                if (
-                                    fullMessage.Contains(phrase, StringComparison.OrdinalIgnoreCase)
-                                )
-                                {
-                                    return true;
-                                }
-                            }
-
-                            return false;
-                        })
-                        .ToArray();
-
-                    switch (alerts.Length)
+                    if (!string.IsNullOrWhiteSpace(info.TextInfo.TriggerWord))
                     {
-                        case > 1:
+                        var message = e.ChatMessage.Message.Trim();
+                        var words = info.TextInfo.TriggerWord?.Trim().SplitWithQuotes();
+                        if (words is null || words.Length == 0)
                         {
-                            Random.Shared.Shuffle(alerts);
-                            var info = alerts[0];
-
-                            var alert = new MediaDto { MediaInfo = info };
-
-                            await hubContext.Clients.All.Alert(alert);
-                            break;
+                            continue;
                         }
-                        case 1:
-                        {
-                            var alert = new MediaDto { MediaInfo = alerts[0] };
 
-                            await hubContext.Clients.All.Alert(alert);
-                            break;
+                        // Ваш метод для разделения с учетом кавычек
+                        var chatMessageWords = message.Split(
+                            ' ',
+                            StringSplitOptions.RemoveEmptyEntries
+                        );
+
+                        // Проверяем отдельные слова (обычный случай)
+                        var singleWordMatch = chatMessageWords.Any(t =>
+                            words.Any(r => r.Equals(t, StringComparison.OrdinalIgnoreCase))
+                        );
+
+                        if (singleWordMatch)
+                        {
+                            listAlerts.Add(info);
+                        }
+
+                        // Проверяем фразы (если есть триггеры с пробелами)
+                        var phraseTriggers = words.Where(w => w.Contains(' ')).ToArray();
+                        if (phraseTriggers.Length == 0)
+                        {
+                            continue;
+                        }
+
+                        // Собираем сообщение в одну строку для проверки фраз
+                        var fullMessage = string.Join(" ", chatMessageWords);
+
+                        // Проверяем каждую фразу-триггер
+                        foreach (var phrase in phraseTriggers)
+                        {
+                            if (fullMessage.Contains(phrase, StringComparison.OrdinalIgnoreCase))
+                            {
+                                listAlerts.Add(info);
+                            }
                         }
                     }
-                },
-                _token
-            );
+                }
+
+                MediaInfo[] alerts = listAlerts.ToArray();
+
+                switch (alerts.Length)
+                {
+                    case > 1:
+                    {
+                        Random.Shared.Shuffle(alerts);
+                        var info = alerts[0];
+
+                        var alert = new MediaDto { MediaInfo = info };
+
+                        alert.MediaInfo.FixAlertText(
+                            e.ChatMessage.DisplayName,
+                            e.ChatMessage.Message
+                        );
+
+                        await hubContext.Clients.All.Alert(alert);
+                        break;
+                    }
+                    case 1:
+                    {
+                        var alert = new MediaDto { MediaInfo = alerts[0] };
+
+                        alert.MediaInfo.FixAlertText(
+                            e.ChatMessage.DisplayName,
+                            e.ChatMessage.Message
+                        );
+
+                        await hubContext.Clients.All.Alert(alert);
+                        break;
+                    }
+                }
+            }
+            catch (Exception exception)
+            {
+                logger.LogException(exception);
+            }
         }
     }
 
