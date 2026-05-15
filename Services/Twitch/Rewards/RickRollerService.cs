@@ -47,7 +47,7 @@ public class RickRollerService(
         get
         {
             var confValue = configuration["AppSettings:RickRoll:Chance"];
-            return double.TryParse(confValue, out var value) ? value : 0.05D;
+            return double.TryParse(confValue, out var value) ? value : 0.03;
         }
     }
 

@@ -1,7 +1,6 @@
 ﻿using MARS.Server.Services.Twitch.Entitys;
 using TwitchLib.Client.Events;
 using TwitchLib.EventSub.Core.EventArgs.Channel;
-using TwitchLib.EventSub.Core.SubscriptionTypes.Channel;
 using TwitchLib.EventSub.Websockets;
 
 namespace MARS.Server.Services.Twitch.Rewards;
@@ -107,46 +106,43 @@ public class TwitchMediaAlerts(
 
             if (string.IsNullOrWhiteSpace(value.UserInput))
             {
-                await rickRollerService.TryRickRollAsync(
-                    TwitchUser.FromChannelPointsCustomRewardRedemptionArgs(args)!,
-                    () => SendAlert(value)
-                );
+                var message = value;
+
+                await using AppDbContext dbContext = await dbContextFactory.CreateDbContextAsync(_token);
+                var mediaList = dbContext
+                    .Alerts.AsNoTracking()
+                    .AsEnumerable()
+                    .Where(e => e.MetaInfo.TwitchPointsCost == message.Reward.Cost)
+                    .ToList();
+
+                MediaInfo? mediaOld = null;
+
+                switch (mediaList.Count)
+                {
+                    case 1:
+                        mediaOld = mediaList[0];
+                        break;
+                    case > 1:
+                        {
+                            var index = Random.Shared.Next(mediaList.Count);
+                            mediaOld = mediaList[index];
+                            break;
+                        }
+                }
+
+                if (mediaOld != null)
+                {
+                    await rickRollerService.TryRickRollAsync(
+                        TwitchUser.FromChannelPointsCustomRewardRedemptionArgs(args)!,
+                        async () =>
+                        {
+                            var mediaClone = mediaOld.CloneTo();
+                            mediaClone.FixAlertText(message.UserName, message.UserInput);
+
+                            await hubContext.Clients.All.Alert(new MediaDto { MediaInfo = mediaClone });
+                        });
+                }
             }
-        }
-    }
-
-    private async Task SendAlert(ChannelPointsCustomRewardRedemption value)
-    {
-        var message = value;
-
-        await using AppDbContext dbContext = await dbContextFactory.CreateDbContextAsync(_token);
-        var mediaList = dbContext
-            .Alerts.AsNoTracking()
-            .AsEnumerable()
-            .Where(e => e.MetaInfo.TwitchPointsCost == message.Reward.Cost)
-            .ToList();
-
-        MediaInfo? mediaOld = null;
-
-        switch (mediaList.Count)
-        {
-            case 1:
-                mediaOld = mediaList[0];
-                break;
-            case > 1:
-            {
-                var index = Random.Shared.Next(mediaList.Count);
-                mediaOld = mediaList[index];
-                break;
-            }
-        }
-
-        if (mediaOld != null)
-        {
-            var mediaClone = mediaOld.CloneTo();
-            mediaClone.FixAlertText(message.UserName, message.UserInput);
-
-            await hubContext.Clients.All.Alert(new MediaDto { MediaInfo = mediaClone });
         }
     }
 
