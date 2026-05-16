@@ -1,4 +1,5 @@
 ﻿using MARS.Server.Services.Twitch.Management;
+using Microsoft.Extensions.Options;
 using TwitchLib.Api.Helix.Models.ChannelPoints;
 using TwitchLib.Api.Helix.Models.ChannelPoints.CreateCustomReward;
 using TwitchLib.Api.Helix.Models.ChannelPoints.UpdateCustomReward;
@@ -8,10 +9,14 @@ namespace MARS.Server.Services.Twitch.Rewards.ChannelRewards;
 public class ChannelRewardsService(
     ITwitchAPI api,
     TokenService tokenService,
-    ILogger<ChannelRewardsService> logger
+    ILogger<ChannelRewardsService> logger,
+    IOptionsMonitor<TwitchRewardsOptions> rewardsOptionsMonitor
 ) : BackgroundService
 {
     public bool IsServiceActive { get; set; } = true;
+
+    private readonly IOptionsMonitor<TwitchRewardsOptions> _rewardsOptionsMonitor =
+        rewardsOptionsMonitor ?? throw new ArgumentNullException(nameof(rewardsOptionsMonitor));
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -192,5 +197,15 @@ public class ChannelRewardsService(
             logger.LogException(ex);
             return false;
         }
+    }
+
+    /// <summary>
+    /// Возвращает переопределение включения награды по её цене, либо null если нет записи.
+    /// </summary>
+    public bool? GetEnabledOverrideForCost(int cost)
+    {
+        var dict = _rewardsOptionsMonitor.CurrentValue?.EnabledByCost;
+        if (dict == null) return null;
+        return dict.TryGetValue(cost, out var val) ? val : null;
     }
 }

@@ -52,7 +52,9 @@ public abstract class TemporaryReward(
 
         if (environment.IsProduction())
         {
-            await EnsureRewardStateAsync(IsRewardEnabled());
+            var custom = IsRewardEnabled();
+            var effective = ComputeEffectiveEnabled(custom);
+            await EnsureRewardStateAsync(effective);
             _runningTask = RunTimerLoopAsync(_cancellationTokenSource.Token);
         }
     }
@@ -92,7 +94,9 @@ public abstract class TemporaryReward(
     {
         while (_timer != null && await _timer.WaitForNextTickAsync(cancellationToken))
         {
-            await ExecuteRewardStateAsync(IsRewardEnabled(), cancellationToken);
+            var custom = IsRewardEnabled();
+            var effective = ComputeEffectiveEnabled(custom);
+            await ExecuteRewardStateAsync(effective, cancellationToken);
         }
     }
 
@@ -309,7 +313,22 @@ public abstract class TemporaryReward(
 
     private protected void TimerElapseNow()
     {
-        _ = ExecuteRewardStateAsync(IsRewardEnabled(), CancellationToken.None);
+        var custom = IsRewardEnabled();
+        var effective = ComputeEffectiveEnabled(custom);
+        _ = ExecuteRewardStateAsync(effective, CancellationToken.None);
+    }
+
+    private bool ComputeEffectiveEnabled(bool customValue)
+    {
+        try
+        {
+            var overrideVal = channelRewardsService.GetEnabledOverrideForCost(Cost);
+            return overrideVal.HasValue ? (customValue && overrideVal.Value) : customValue;
+        }
+        catch
+        {
+            return customValue;
+        }
     }
 
     private static string ColorToHex(Color color)

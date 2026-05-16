@@ -1,4 +1,43 @@
-﻿# Channel Rewards Management and Refunds
+﻿# Настройки временных наград (TwitchRewards)
+
+Этот файл описывает конфигурацию включения/отключения временных наград через `appsettings`.
+
+Путь в конфиге: `AppSettings:TwitchRewards:EnabledByCost`.
+
+Формат:
+
+- `EnabledByCost` — объект (словарь), где ключ — цена награды (целое число, представленное строкой в JSON), значение — `true|false`.
+
+Пример (JSON):
+
+```json
+"AppSettings": {
+  "TwitchRewards": {
+    "EnabledByCost": {
+      "38": true,
+      "170": false
+    }
+  }
+}
+```
+
+Семантика и порядок принятия решения:
+
+- Для каждой временной награды сначала вызывается её кастомная логика `IsRewardEnabled()`.
+- После этого система проверяет, есть ли в `EnabledByCost` запись для этой `Cost`.
+  - Если запись есть — итоговый результат = `IsRewardEnabled() && EnabledByCost[Cost]`.
+  - Если записи нет — итоговый результат = `IsRewardEnabled()`.
+
+Примечания:
+
+- Конфигурация читается через `IOptionsMonitor<TwitchRewardsOptions>`, поэтому изменения в `appsettings` (или в источнике конфигурации) применяются динамически без перезапуска приложения.
+- Ключи в JSON обязаны быть строками (например, "38"), но в коде они соответствуют целочисленной цене награды.
+
+Где смотреть/изменять:
+
+- Пример в `appsettings.Development.json` и `appsettings.json` в корне репозитория.
+- Код, реализующий поведение: `ChannelRewardsService.GetEnabledOverrideForCost(int cost)` и `TemporaryReward`.
+# Channel Rewards Management and Refunds
 
 ## Создание/Удаление наград канала
 

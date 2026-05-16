@@ -306,8 +306,14 @@ public static class StartupEstensions
         services.AddHostedService(sp => sp.GetRequiredService<AutoRewardInfoFetcher>());
 
         services.AddSingleton<FramedataStagingService>();
+        services.AddSingleton<FramedataStagingService>();
         services.Configure<FramedataConfiguration>(
             manager.GetSection(AppBase.Base).GetSection(FramedataConfiguration.SectionName)
+        );
+
+        // Настройки временных наград: словарь Cost -> enabled
+        services.Configure<TwitchRewardsOptions>(
+            manager.GetSection(AppBase.Base).GetSection(TwitchRewardsOptions.SectionName)
         );
         services.AddSingleton<Tekken8FrameData>();
         services.AddHostedService(sp => sp.GetRequiredService<Tekken8FrameData>());

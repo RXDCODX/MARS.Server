@@ -1,6 +1,7 @@
 using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
 using TwitchLib.Client.Events;
+using TwitchLib.Api.Helix.Models.ChannelPoints.CreateCustomReward;
 
 namespace MARS.Server.Services.Twitch.Rewards._1702_EmojisReward;
 
@@ -26,6 +27,16 @@ public class Emojis_TwitchReward(
     public override Func<bool> IsRewardEnabled { get; set; } = () => true;
 
     private readonly CancellationToken _token = lifetime.ApplicationStopping;
+
+    private protected override CreateCustomRewardsRequest CreateCustomRewardsRequest
+    {
+        get
+        {
+            var values = base.CreateCustomRewardsRequest;
+            values.IsUserInputRequired = true;
+            return values;
+        }
+    }
 
     public override async Task StartAsync(CancellationToken cancellationToken)
     {
