@@ -290,6 +290,48 @@ public class MediaInfoApiController(
                 }
                 else
                 {
+                    var oldPath = existingAlert.FileInfo.FilePath ?? string.Empty;
+                    var newPath = alert.FileInfo.FilePath ?? string.Empty;
+
+                    if (
+                        !string.IsNullOrWhiteSpace(oldPath)
+                        && !string.IsNullOrWhiteSpace(newPath)
+                        && !string.Equals(oldPath, newPath, StringComparison.OrdinalIgnoreCase)
+                        && !oldPath.StartsWith("memory/", StringComparison.OrdinalIgnoreCase)
+                        && !newPath.StartsWith("memory/", StringComparison.OrdinalIgnoreCase)
+                    )
+                    {
+                        var sourceRelativePath = oldPath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
+                        var targetRelativePath = newPath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
+                        var baseRoots = new[] { Directory.GetCurrentDirectory(), AppContext.BaseDirectory };
+
+                        var sourceRoot = baseRoots.FirstOrDefault(root =>
+                            System.IO.File.Exists(Path.Combine(root, "wwwroot", sourceRelativePath))
+                        );
+
+                        if (string.IsNullOrWhiteSpace(sourceRoot))
+                        {
+                            result = Ok(
+                                OperationResult<ApiMediaInfo?>.Bad(
+                                    "Файл для перемещения не найден",
+                                    null
+                                )
+                            );
+                            return result;
+                        }
+
+                        var oldFullPath = Path.Combine(sourceRoot, "wwwroot", sourceRelativePath);
+                        var newFullPath = Path.Combine(sourceRoot, "wwwroot", targetRelativePath);
+
+                        var newDirectory = Path.GetDirectoryName(newFullPath);
+                        if (!string.IsNullOrWhiteSpace(newDirectory))
+                        {
+                            Directory.CreateDirectory(newDirectory);
+                        }
+
+                        System.IO.File.Move(oldFullPath, newFullPath, true);
+                    }
+
                     // Создаем новый объект MediaInfo с обновленными данными
                     var updatedAlert = new MediaInfo
                     {

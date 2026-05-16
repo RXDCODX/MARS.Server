@@ -77,7 +77,7 @@ public class WeddingAnniversaryService(
 
                 if (host is { IsPrivated: true, WhenPrivated: { } weddingDate })
                 {
-                    var now = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
+                    var now = DateTimeOffset.Now.ToLocalTime();
                     var today = now.Date;
 
                     var lastMonths = host.LastWeddingCongratulatedMonths ?? -1;
