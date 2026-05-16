@@ -144,6 +144,7 @@ public class SoundRequestUserQueue(
 
             // Физически удаляем элемент из БД
             dbContext.SoundRequestQueueItems.Remove(queueItemToRemove);
+            await dbContext.SaveChangesAsync(_cancellationToken);
 
             // Сдвигаем порядок остальных элементов в очереди (только те, что были после удаленного)
             try
@@ -182,6 +183,12 @@ public class SoundRequestUserQueue(
         await using var dbContext = await contextFactory.CreateDbContextAsync(_cancellationToken);
 
         var queueItemsQuery = dbContext.SoundRequestQueueItems.Where(qi => qi.QueueOrder >= 0);
+        var hasQueueItems = await queueItemsQuery.AnyAsync(cancellationToken: _cancellationToken);
+
+        if (hasQueueItems && stateManager != null)
+        {
+            await stateManager.StopPlaybackAsync(notify: true);
+        }
 
         try
         {
