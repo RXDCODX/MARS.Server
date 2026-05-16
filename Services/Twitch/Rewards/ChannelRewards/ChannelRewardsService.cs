@@ -30,7 +30,7 @@ public class ChannelRewardsService : BackgroundService
         _logger = logger;
         _rewardsOptionsMonitor =
             rewardsOptionsMonitor ?? throw new ArgumentNullException(nameof(rewardsOptionsMonitor));
-        RewardsCacheService = new RewardsCacheService(this, logger);
+        RewardsCacheService = new RewardsCacheService(GetRewardsDirectAsync, logger);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -84,10 +84,9 @@ public class ChannelRewardsService : BackgroundService
     }
 
     /// <summary>
-    /// Получает все награды канала (с кешированием если доступен).
+    /// Получает все награды канала (с кешированием).
     /// </summary>
-    public Task<IEnumerable<CustomReward>?> GetRewardsAsync() =>
-        RewardsCacheService.GetRewardsAsync();
+    public Task<IEnumerable<CustomReward>?> GetRewardsAsync() => RewardsCacheService.GetRewardsAsync();
 
     /// <summary>
     /// Получает награды напрямую из API (без кеша).

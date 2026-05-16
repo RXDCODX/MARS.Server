@@ -7,9 +7,13 @@ namespace MARS.Server.Services.Twitch.Rewards.ChannelRewards;
 /// Реализация кеширования наград канала.
 /// Кеширует результаты запросов на 2 минуты для снижения нагрузки на Twitch API.
 /// </summary>
-public class RewardsCacheService(ChannelRewardsService channelRewardsService, ILogger logger)
-    : IRewardsCacheService
+public class RewardsCacheService(
+    Func<Task<IEnumerable<CustomReward>?>> getRewardsAsync,
+    ILogger logger
+) : IRewardsCacheService
 {
+    private readonly Func<Task<IEnumerable<CustomReward>?>> _getRewardsAsync =
+        getRewardsAsync ?? throw new ArgumentNullException(nameof(getRewardsAsync));
     private readonly SemaphoreSlim _semaphore = new(1);
     private ImmutableList<CustomReward>? _cachedRewards;
     private DateTime? _cacheExpirationTime;
@@ -40,7 +44,7 @@ public class RewardsCacheService(ChannelRewardsService channelRewardsService, IL
 
         try
         {
-            var rewards = await channelRewardsService.GetRewardsAsync();
+            var rewards = await _getRewardsAsync();
             rewards = rewards?.ToArray();
             if (rewards is not null)
             {
