@@ -1,5 +1,9 @@
-﻿using MARS.Server.Services;
+﻿using System;
+using System.IO;
+using System.Linq;
+using MARS.Server.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http;
 
 namespace MARS.Server.Controllers;
 
@@ -139,6 +143,55 @@ public class MediaInfoApiController(
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Загрузить файл для алерта (возвращает информацию о файле)
+    /// </summary>
+    [HttpPost("upload")]
+    public async Task<ActionResult<OperationResult<object>>> UploadFile()
+    {
+        try
+        {
+            var file = Request.Form.Files.FirstOrDefault();
+            if (file == null)
+            {
+                return Ok(OperationResult<object>.Bad("Файл не передан"));
+            }
+
+            var originalName = Path.GetFileName(file.FileName);
+            var extension = Path.GetExtension(originalName);
+
+            var generated = $"{Guid.NewGuid()}{extension}";
+            var relative = Path.Combine("media", "uploads", generated).Replace('\\', '/');
+            var fullPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", relative.Replace('/', Path.DirectorySeparatorChar));
+
+            var dir = Path.GetDirectoryName(fullPath);
+            if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+            {
+                Directory.CreateDirectory(dir);
+            }
+
+            await using (var stream = System.IO.File.Create(fullPath))
+            {
+                await file.CopyToAsync(stream);
+            }
+
+            var fileInfo = new
+            {
+                fileName = originalName,
+                extension = extension,
+                filePath = "/" + relative,
+                isLocalFile = true,
+            };
+
+            return Ok(OperationResult<object>.Ok("Файл загружен", fileInfo));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при загрузке файла");
+            return StatusCode(500, "Ошибка при загрузке файла");
+        }
     }
 
     /// <summary>
