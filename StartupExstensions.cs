@@ -31,6 +31,7 @@ using MARS.Server.Services.Twitch.ClientMessages.AutoMessages;
 using MARS.Server.Services.Twitch.ClientMessages.AutoMessages.Extensions;
 using MARS.Server.Services.Twitch.ClientMessages.SignalRAlerts;
 using MARS.Server.Services.Twitch.ClientMessages.TwitchAutoHello;
+using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.HelloVideos;
 using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.Twitch.MiniGamesStats;
@@ -209,6 +210,8 @@ public static class StartupEstensions
         IConfigurationManager manager
     )
     {
+        // Регистрируем сервис управления наградами и кеш наград перед инициализацией временных наград
+        services.AddChannelRewardsManager();
         services.InitializeTwitchRewards();
 
         services.AddSingleton<TelegramTokenNotification>();
@@ -335,9 +338,6 @@ public static class StartupEstensions
         services.AddHostedService(sp => sp.GetRequiredService<TwitchMikuBeamRewardService>());
 
         services.AddHostedService<LegBumRefundService>();
-
-        services.AddSingleton<ChannelRewardsService>();
-        //services.AddHostedService<AlertInitializationService>();
 
         services.AddSingleton<ServiceManager>();
         services.AddSingleton<IServiceManager>(sp => sp.GetRequiredService<ServiceManager>());

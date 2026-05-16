@@ -108,7 +108,9 @@ public class TwitchMediaAlerts(
             {
                 var message = value;
 
-                await using AppDbContext dbContext = await dbContextFactory.CreateDbContextAsync(_token);
+                await using AppDbContext dbContext = await dbContextFactory.CreateDbContextAsync(
+                    _token
+                );
                 var mediaList = dbContext
                     .Alerts.AsNoTracking()
                     .AsEnumerable()
@@ -123,11 +125,11 @@ public class TwitchMediaAlerts(
                         mediaOld = mediaList[0];
                         break;
                     case > 1:
-                        {
-                            var index = Random.Shared.Next(mediaList.Count);
-                            mediaOld = mediaList[index];
-                            break;
-                        }
+                    {
+                        var index = Random.Shared.Next(mediaList.Count);
+                        mediaOld = mediaList[index];
+                        break;
+                    }
                 }
 
                 if (mediaOld != null)
@@ -139,8 +141,11 @@ public class TwitchMediaAlerts(
                             var mediaClone = mediaOld.CloneTo();
                             mediaClone.FixAlertText(message.UserName, message.UserInput);
 
-                            await hubContext.Clients.All.Alert(new MediaDto { MediaInfo = mediaClone });
-                        });
+                            await hubContext.Clients.All.Alert(
+                                new MediaDto { MediaInfo = mediaClone }
+                            );
+                        }
+                    );
                 }
             }
         }

@@ -127,7 +127,7 @@ public abstract class TemporaryReward(
     /// </summary>
     private async Task EnsureRewardStateAsync(bool shouldBeEnabled)
     {
-        // Проверяем через API, не существует ли уже такая награда
+        // Проверяем через кеш (оптимизировано для снижения нагрузки на API)
         var existingRewards = await channelRewardsService.GetRewardsAsync();
 
         var existingReward = existingRewards?.FirstOrDefault(r => r.Cost == Cost);
@@ -256,6 +256,8 @@ public abstract class TemporaryReward(
                         existingReward.Id,
                         shouldBeEnabled
                     );
+                    // Инвалидируем кеш после обновления (если доступен)
+                    await InvalidateRewardsCacheAsync();
                 }
                 else
                 {
@@ -304,6 +306,8 @@ public abstract class TemporaryReward(
                 AlertDisplayName,
                 rewardId
             );
+            // Инвалидируем кеш после создания новой награды (если доступен)
+            await InvalidateRewardsCacheAsync();
         }
         else
         {
@@ -335,5 +339,27 @@ public abstract class TemporaryReward(
     {
         var result = $"#{color.R:X2}{color.G:X2}{color.B:X2}";
         return result;
+    }
+
+    /// <summary>
+    /// Инвалидирует кеш наград если доступен через ChannelRewardsService.
+    /// </summary>
+    private async Task InvalidateRewardsCacheAsync()
+    {
+        // Получаем сервис кеша через DI через рефлексию
+        var cacheServiceField = typeof(ChannelRewardsService).GetField(
+            "_rewardsCacheService",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance
+        );
+
+        if (cacheServiceField != null)
+        {
+            var cacheService =
+                cacheServiceField.GetValue(channelRewardsService) as IRewardsCacheService;
+            if (cacheService != null)
+            {
+                await cacheService.InvalidateCacheAsync();
+            }
+        }
     }
 }

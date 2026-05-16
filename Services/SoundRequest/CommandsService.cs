@@ -835,9 +835,7 @@ public class CommandsService(
         {
             foreach (var enabledPlatform in enabledPlatforms)
             {
-                if (
-                    enabledPlatform.Trim().Equals(platformName, StringComparison.OrdinalIgnoreCase)
-                )
+                if (enabledPlatform.Trim().Equals(platformName, StringComparison.OrdinalIgnoreCase))
                 {
                     result = true;
                     break;

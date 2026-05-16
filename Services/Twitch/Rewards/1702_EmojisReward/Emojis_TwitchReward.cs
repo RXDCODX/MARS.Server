@@ -1,7 +1,7 @@
 using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
-using TwitchLib.Client.Events;
 using TwitchLib.Api.Helix.Models.ChannelPoints.CreateCustomReward;
+using TwitchLib.Client.Events;
 
 namespace MARS.Server.Services.Twitch.Rewards._1702_EmojisReward;
 

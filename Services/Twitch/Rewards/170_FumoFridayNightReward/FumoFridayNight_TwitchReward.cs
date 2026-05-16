@@ -1,4 +1,4 @@
-﻿using MARS.Server.ApplicationState;
+using MARS.Server.ApplicationState;
 using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
 using TwitchLib.Api.Helix.Models.ChannelPoints.CreateCustomReward;

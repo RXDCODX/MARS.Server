@@ -1,4 +1,5 @@
-﻿using MARS.Server.Services.Twitch.Management;
+﻿using System.Runtime.CompilerServices;
+using MARS.Server.Services.Twitch.Management;
 using Microsoft.Extensions.Options;
 using TwitchLib.Api.Helix.Models.ChannelPoints;
 using TwitchLib.Api.Helix.Models.ChannelPoints.CreateCustomReward;
@@ -6,17 +7,31 @@ using TwitchLib.Api.Helix.Models.ChannelPoints.UpdateCustomReward;
 
 namespace MARS.Server.Services.Twitch.Rewards.ChannelRewards;
 
-public class ChannelRewardsService(
-    ITwitchAPI api,
-    TokenService tokenService,
-    ILogger<ChannelRewardsService> logger,
-    IOptionsMonitor<TwitchRewardsOptions> rewardsOptionsMonitor
-) : BackgroundService
+public class ChannelRewardsService : BackgroundService
 {
+    public IRewardsCacheService RewardsCacheService;
     public bool IsServiceActive { get; set; } = true;
 
-    private readonly IOptionsMonitor<TwitchRewardsOptions> _rewardsOptionsMonitor =
-        rewardsOptionsMonitor ?? throw new ArgumentNullException(nameof(rewardsOptionsMonitor));
+    private readonly IOptionsMonitor<TwitchRewardsOptions> _rewardsOptionsMonitor;
+
+    private readonly ITwitchAPI _api;
+    private readonly TokenService _tokenService;
+    private readonly ILogger<ChannelRewardsService> _logger;
+
+    public ChannelRewardsService(
+        ITwitchAPI api,
+        TokenService tokenService,
+        ILogger<ChannelRewardsService> logger,
+        IOptionsMonitor<TwitchRewardsOptions> rewardsOptionsMonitor
+    )
+    {
+        _api = api;
+        _tokenService = tokenService;
+        _logger = logger;
+        _rewardsOptionsMonitor =
+            rewardsOptionsMonitor ?? throw new ArgumentNullException(nameof(rewardsOptionsMonitor));
+        RewardsCacheService = new RewardsCacheService(this, logger);
+    }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -31,28 +46,28 @@ public class ChannelRewardsService(
     {
         if (!IsServiceActive)
         {
-            logger.LogWarning("ChannelRewardsService выключен");
+            _logger.LogWarning("ChannelRewardsService выключен");
             return null;
         }
 
-        ArgumentException.ThrowIfNullOrWhiteSpace(tokenService.Token?.AccessToken);
+        ArgumentException.ThrowIfNullOrWhiteSpace(_tokenService.Token?.AccessToken);
 
         try
         {
-            var response = await api.Helix.ChannelPoints.CreateCustomRewardsAsync(
+            var response = await _api.Helix.ChannelPoints.CreateCustomRewardsAsync(
                 TwitchExstension.ChannelId,
                 request,
-                tokenService.Token.AccessToken
+                _tokenService.Token.AccessToken
             );
 
             var created = response.Data.FirstOrDefault();
             if (created == null)
             {
-                logger.LogError("Не удалось создать награду канала: пустой ответ");
+                _logger.LogError("Не удалось создать награду канала: пустой ответ");
                 return null;
             }
 
-            logger.LogInformation(
+            _logger.LogInformation(
                 "Создана награда канала: {Title} (Id: {Id}, Cost: {Cost})",
                 created.Title,
                 created.Id,
@@ -63,39 +78,45 @@ public class ChannelRewardsService(
         }
         catch (Exception ex)
         {
-            logger.LogException(ex);
+            _logger.LogException(ex);
             return null;
         }
     }
 
     /// <summary>
-    /// Получает все награды канала.
+    /// Получает все награды канала (с кешированием если доступен).
     /// </summary>
-    public async Task<IEnumerable<CustomReward>?> GetRewardsAsync()
+    public Task<IEnumerable<CustomReward>?> GetRewardsAsync() =>
+        RewardsCacheService.GetRewardsAsync();
+
+    /// <summary>
+    /// Получает награды напрямую из API (без кеша).
+    /// </summary>
+    private async Task<IEnumerable<CustomReward>?> GetRewardsDirectAsync()
     {
         if (!IsServiceActive)
         {
-            logger.LogWarning("ChannelRewardsService выключен");
+            _logger.LogWarning("ChannelRewardsService выключен");
             return null;
         }
 
-        ArgumentException.ThrowIfNullOrWhiteSpace(tokenService.Token?.AccessToken);
+        ArgumentException.ThrowIfNullOrWhiteSpace(_tokenService.Token?.AccessToken);
 
         try
         {
-            var response = await api.Helix.ChannelPoints.GetCustomRewardAsync(
+            var response = await _api.Helix.ChannelPoints.GetCustomRewardAsync(
                 TwitchExstension.ChannelId,
                 null,
                 false,
-                tokenService.Token.AccessToken
+                _tokenService.Token.AccessToken
             );
 
-            logger.LogInformation("Получено {Count} наград канала", response.Data.Length);
+            _logger.LogInformation("Получено {Count} наград канала", response.Data.Length);
             return response.Data;
         }
         catch (Exception ex)
         {
-            logger.LogException(ex);
+            _logger.LogException(ex);
             return null;
         }
     }
@@ -107,27 +128,27 @@ public class ChannelRewardsService(
     {
         if (!IsServiceActive)
         {
-            logger.LogWarning("ChannelRewardsService выключен");
+            _logger.LogWarning("ChannelRewardsService выключен");
             return false;
         }
 
         ArgumentException.ThrowIfNullOrWhiteSpace(rewardId);
-        ArgumentException.ThrowIfNullOrWhiteSpace(tokenService.Token?.AccessToken);
+        ArgumentException.ThrowIfNullOrWhiteSpace(_tokenService.Token?.AccessToken);
 
         try
         {
-            await api.Helix.ChannelPoints.DeleteCustomRewardAsync(
+            await _api.Helix.ChannelPoints.DeleteCustomRewardAsync(
                 TwitchExstension.ChannelId,
                 rewardId,
-                tokenService.Token.AccessToken
+                _tokenService.Token.AccessToken
             );
 
-            logger.LogInformation("Удалена награда канала: {RewardId}", rewardId);
+            _logger.LogInformation("Удалена награда канала: {RewardId}", rewardId);
             return true;
         }
         catch (Exception ex)
         {
-            logger.LogException(ex);
+            _logger.LogException(ex);
             return false;
         }
     }
@@ -139,28 +160,28 @@ public class ChannelRewardsService(
     {
         if (!IsServiceActive)
         {
-            logger.LogWarning("ChannelRewardsService выключен");
+            _logger.LogWarning("ChannelRewardsService выключен");
             return null;
         }
 
         ArgumentException.ThrowIfNullOrWhiteSpace(rewardId);
 
-        ArgumentException.ThrowIfNullOrWhiteSpace(tokenService.Token?.AccessToken);
+        ArgumentException.ThrowIfNullOrWhiteSpace(_tokenService.Token?.AccessToken);
 
         try
         {
-            var response = await api.Helix.ChannelPoints.GetCustomRewardAsync(
+            var response = await _api.Helix.ChannelPoints.GetCustomRewardAsync(
                 TwitchExstension.ChannelId,
                 [rewardId],
                 true,
-                tokenService.Token.AccessToken
+                _tokenService.Token.AccessToken
             );
 
             return response.Data.FirstOrDefault();
         }
         catch (Exception ex)
         {
-            logger.LogException(ex);
+            _logger.LogException(ex);
             return null;
         }
     }
@@ -172,29 +193,29 @@ public class ChannelRewardsService(
     {
         if (!IsServiceActive)
         {
-            logger.LogWarning("ChannelRewardsService выключен");
+            _logger.LogWarning("ChannelRewardsService выключен");
             return false;
         }
 
         ArgumentException.ThrowIfNullOrWhiteSpace(rewardId);
 
-        ArgumentException.ThrowIfNullOrWhiteSpace(tokenService.Token?.AccessToken);
+        ArgumentException.ThrowIfNullOrWhiteSpace(_tokenService.Token?.AccessToken);
 
         try
         {
-            await api.Helix.ChannelPoints.UpdateCustomRewardAsync(
+            await _api.Helix.ChannelPoints.UpdateCustomRewardAsync(
                 TwitchExstension.ChannelId,
                 rewardId,
                 request,
-                tokenService.Token?.AccessToken
+                _tokenService.Token?.AccessToken
             );
 
-            logger.LogInformation("Обновлена награда канала: {RewardId}", rewardId);
+            _logger.LogInformation("Обновлена награда канала: {RewardId}", rewardId);
             return true;
         }
         catch (Exception ex)
         {
-            logger.LogException(ex);
+            _logger.LogException(ex);
             return false;
         }
     }
@@ -205,7 +226,8 @@ public class ChannelRewardsService(
     public bool? GetEnabledOverrideForCost(int cost)
     {
         var dict = _rewardsOptionsMonitor.CurrentValue?.EnabledByCost;
-        if (dict == null) return null;
+        if (dict == null)
+            return null;
         return dict.TryGetValue(cost, out var val) ? val : null;
     }
 }
