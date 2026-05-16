@@ -7,7 +7,8 @@ namespace MARS.Server.Services.SoundRequest.Queue;
 public class SoundRequestUserQueue(
     IDbContextFactory<AppDbContext> contextFactory,
     IHostApplicationLifetime lifetime,
-    TwitchUserEnsureService twitchUserEnsureService
+    TwitchUserEnsureService twitchUserEnsureService,
+    StateManager? stateManager = null
 )
 {
     private readonly CancellationToken _cancellationToken = lifetime.ApplicationStopping;
@@ -125,6 +126,20 @@ public class SoundRequestUserQueue(
 
         if (queueItemToRemove != null)
         {
+            if (stateManager != null)
+            {
+                var currentState = await stateManager.GetStateAsync();
+
+                if (currentState.CurrentQueueItemId == queueItemToRemove.Id)
+                {
+                    await stateManager.StopPlaybackAsync(notify: true);
+                }
+                else if (currentState.NextQueueItemId == queueItemToRemove.Id)
+                {
+                    await stateManager.SetNextQueueItemAsync(null, notify: true);
+                }
+            }
+
             var removedOrder = queueItemToRemove.QueueOrder;
 
             // Физически удаляем элемент из БД
