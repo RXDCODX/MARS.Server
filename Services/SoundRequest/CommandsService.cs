@@ -513,12 +513,12 @@ public class CommandsService(
             if (currentState is { State: PlaybackState.Playing, CurrentQueueItem.Track: not null })
             {
                 var currentTrack = currentState.CurrentQueueItem.Track;
-                var progress = currentState.CurrentTrackProgress ?? TimeSpan.Zero;
-                var remaining = currentTrack.Duration - progress;
+                var progress = currentState.CurrentTrackProgress.GetValueOrDefault();
+                var remainingTicks = currentTrack.Duration.Ticks - progress.Ticks;
 
-                if (remaining > TimeSpan.Zero)
+                if (remainingTicks > 0)
                 {
-                    result += remaining;
+                    result += TimeSpan.FromTicks(remainingTicks);
                 }
             }
 
@@ -531,9 +531,11 @@ public class CommandsService(
             // Суммируем длительность всех треков в очереди
             foreach (var queueItem in tracksBeforeCurrent)
             {
-                if (queueItem.Track?.Duration > TimeSpan.Zero)
+                var track = queueItem.Track;
+
+                if (track is not null && track.Duration > TimeSpan.Zero)
                 {
-                    result += queueItem.Track.Duration;
+                    result += track.Duration;
                 }
             }
         }
