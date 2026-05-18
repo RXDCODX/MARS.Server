@@ -1,4 +1,10 @@
-﻿using MARS.Server.ApplicationState;
+﻿using System;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using MARS.Server.ApplicationState;
+using MARS.Server.Configuration;
+using MARS.Server.DataBaseContext;
 using MARS.Server.Services.SoundRequest.Entities;
 using MARS.Server.Services.SoundRequest.Interfaces;
 using MARS.Server.Services.SoundRequest.Queue;
@@ -6,6 +12,14 @@ using MARS.Server.Services.SoundRequest.SoundCloud;
 using MARS.Server.Services.SoundRequest.Spotify;
 using MARS.Server.Services.SoundRequest.YouTube;
 using MARS.Server.Services.Twitch.Entitys;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using DateTime = System.DateTime;
+using Exception = System.Exception;
+using Math = System.Math;
+using TimeSpan = System.TimeSpan;
+using Uri = System.Uri;
+using UriKind = System.UriKind;
 
 namespace MARS.Server.Services.SoundRequest;
 
@@ -156,12 +170,7 @@ public class CommandsService(
 
                 // Добавляем трек в очередь
                 var requestedAt = DateTime.UtcNow;
-                var queueItem = await queue.AddToQueueAsync(
-                    info,
-                    user.TwitchId,
-                    user,
-                    requestedAt
-                );
+                var queueItem = await queue.AddToQueueAsync(info, user.TwitchId, user, requestedAt);
 
                 // Пытаемся запустить воспроизведение если нужно
                 await TryAutoPlayQueueItemAsync(
@@ -300,7 +309,7 @@ public class CommandsService(
                     .OrderByDescending(qi => qi.QueueOrder)
                     .ToListAsync(cancellationToken);
 
-                if (itemsToCancel.Count > 0)
+                if (itemsToCancel is not { Count: 0 })
                 {
                     foreach (var queueItem in itemsToCancel)
                     {
@@ -311,7 +320,7 @@ public class CommandsService(
 
                     if (itemsToCancel.Count == 1 && itemsToCancel[0].Track != null)
                     {
-                        result = $"Отменён трек: {itemsToCancel[0].Track.Title}";
+                        result = $"Отменён трек: {itemsToCancel[0].Track?.Title ?? "Пусто"}";
                     }
                     else
                     {
@@ -439,12 +448,7 @@ public class CommandsService(
                 }
 
                 // Добавляем трек в очередь
-                var queueItem = await queue.AddToQueueAsync(
-                    info,
-                    user.TwitchId,
-                    user,
-                    requestedAt
-                );
+                var queueItem = await queue.AddToQueueAsync(info, user.TwitchId, user, requestedAt);
 
                 // Запоминаем первый элемент плейлиста
                 firstQueueItem ??= queueItem;
