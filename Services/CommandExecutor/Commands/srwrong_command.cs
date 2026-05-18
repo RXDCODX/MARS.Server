@@ -5,10 +5,10 @@ using MARS.Server.Services.Twitch.Entitys;
 
 namespace MARS.Server.Services.CommandExecutor.Commands;
 
-public class WrongCommand(CommandsService commandsService) : BaseCommand
+public class SrWrongCommand(CommandsService commandsService) : BaseCommand
 {
-    public override string CommandName => "wrong";
-    public override string Description => "Отменить последний заказанный трек";
+    public override string CommandName => "srwrong";
+    public override string Description => "Отменить последний заказанный трек или плейлист";
     public override bool IsAdminCommand => false;
 
     public override Platform[] AvailablePlatforms => [Platform.Twitch];

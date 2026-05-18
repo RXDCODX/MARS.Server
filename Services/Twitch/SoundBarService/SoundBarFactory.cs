@@ -1,12 +1,17 @@
 ﻿using System.Diagnostics;
+using System.Linq;
 using MARS.Server.Services.Twitch.SoundBarService.Entitys;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace MARS.Server.Services.Twitch.SoundBarService;
 
 public class SoundBarFactory(
     IHostEnvironment environment,
     IHttpClientFactory factory,
-    ILogger<SoundBarFactory> logger
+    ILogger<SoundBarFactory> logger,
+    IOptions<MARS.Server.Configuration.HttpClientsConfiguration> httpClientsOptions
 )
 {
     private static readonly SoundBarServiceLocal SoundBarService = new();
@@ -24,7 +29,15 @@ public class SoundBarFactory(
 
     private string GetAudioControllerUrl()
     {
-        return environment.IsProduction() ? "http://localhost:30695" : "http://localhost:30691";
+        var config = httpClientsOptions.Value;
+        var port = environment.IsProduction() ? config.AudioControllerProdPort : config.AudioControllerDevPort;
+        if (port <= 0)
+        {
+            // Fallback to hardcoded ports if configuration not present
+            port = environment.IsProduction() ? 30695 : 30691;
+        }
+
+        return $"http://127.0.0.1:{port}";
     }
 
     private static bool IsRunningAsWindowsService()

@@ -19,7 +19,8 @@ public class SoundRequestUserQueue(
     public async Task<QueueItem> AddToQueueAsync(
         BaseTrackInfo track,
         string requestedByTwitchId,
-        TwitchUser requestedByTwitchUser
+        TwitchUser requestedByTwitchUser,
+        DateTime? requestedAt = null
     )
     {
         QueueItem result = null!;
@@ -97,7 +98,7 @@ public class SoundRequestUserQueue(
                 Track = existingTrack ?? track,
                 QueueOrder = maxOrder + 1,
                 RequestedByTwitchId = requestedByTwitchId,
-                RequestedAt = DateTime.Now,
+                RequestedAt = requestedAt ?? DateTime.UtcNow,
             };
 
             dbContext.SoundRequestQueueItems.Add(queueItem);

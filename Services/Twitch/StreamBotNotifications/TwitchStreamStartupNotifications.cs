@@ -1,24 +1,34 @@
-﻿using TwitchLib.EventSub.Core.EventArgs.Stream;
+﻿using System.Net.Http;
+using MARS.Server.Configuration;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
+using TwitchLib.EventSub.Core.EventArgs.Stream;
 using TwitchLib.EventSub.Websockets;
 
 namespace MARS.Server.Services.Twitch.StreamBotNotifications;
 
-public class TwitchStreamStartupNotifications
+public class TwitchStreamStartupNotifications : IHostedService
 {
     private readonly ILogger<TwitchStreamStartupNotifications> _logger;
     private readonly ITwitchClient _twitchClient;
     private readonly EventSubWebsocketClient _wsClient;
+    private readonly IOptions<HttpClientsConfiguration> _httpClientsConfiguration;
+    private readonly IHostEnvironment _environment;
 
     public TwitchStreamStartupNotifications(
         ILogger<TwitchStreamStartupNotifications> logger,
         ITwitchClient twitchClient,
         IHostApplicationLifetime lifetime,
-        EventSubWebsocketClient wsClient
+        EventSubWebsocketClient wsClient,
+        IOptions<HttpClientsConfiguration> httpClientsConfiguration,
+        IHostEnvironment environment
     )
     {
         _logger = logger;
         _twitchClient = twitchClient;
         _wsClient = wsClient;
+        _httpClientsConfiguration = httpClientsConfiguration;
+        _environment = environment;
 
         lifetime.ApplicationStarted.Register(() =>
         {
@@ -29,7 +39,7 @@ public class TwitchStreamStartupNotifications
 
     internal Task PubSubOnlineOnStreamUp(object? sender, StreamOnlineArgs streamOnlineArgs)
     {
-        return _twitchClient.SendMessageToMainTwitchAsync("Online", _logger);
+        return HandleStreamOnlineAsync();
     }
 
     internal Task PubSibOfflineStream(object? sender, StreamOfflineArgs args)
@@ -38,5 +48,49 @@ public class TwitchStreamStartupNotifications
             "Та куда стрим вырубил Stressed",
             _logger
         );
+    }
+
+    public Task StartAsync(CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
+    }
+
+    public Task StopAsync(CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
+    }
+
+    private async Task HandleStreamOnlineAsync()
+    {
+        var audioControllerAvailable = await IsAudioControllerAvailableAsync();
+
+        if (!audioControllerAvailable)
+        {
+            var reminderMessage = "Аудиоконтроллер не запущен. Проверь его запуск, чтобы звуковые запросы работали корректно.";
+            await _twitchClient.SendMessageToMainTwitchAsync(reminderMessage, _logger);
+        }
+    }
+
+    private async Task<bool> IsAudioControllerAvailableAsync()
+    {
+        try
+        {
+            var config = _httpClientsConfiguration.Value;
+            var port = _environment.IsProduction() ? config.AudioControllerProdPort : config.AudioControllerDevPort;
+            if (port <= 0)
+            {
+                port = _environment.IsProduction() ? 30695 : 30691;
+            }
+
+            using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(2) };
+            var healthUrl = $"http://127.0.0.1:{port}/api/health";
+            using var response = await httpClient.GetAsync(healthUrl);
+            return response.IsSuccessStatusCode;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Audio controller health-check failed");
+            return false;
+        }
     }
 }

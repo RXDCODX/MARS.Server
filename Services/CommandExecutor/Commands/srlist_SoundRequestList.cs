@@ -9,7 +9,7 @@ public class SrlistSoundRequestListCommand(CommandsService commandsService) : Ba
 {
     public override string CommandName => "srlist";
     public override string Description =>
-        "Добавить весь плейлист в очередь звуковых запросов (только для VIP/MOD)";
+        "Добавить плейлист в очередь звуковых запросов с опциональным лимитом треков (только для VIP/MOD)";
     public override bool IsAdminCommand => false;
 
     public override Platform[] AvailablePlatforms => [Platform.Twitch];
@@ -26,6 +26,14 @@ public class SrlistSoundRequestListCommand(CommandsService commandsService) : Ba
                 Description = "URL плейлиста YouTube или SoundCloud",
                 Type = "string",
                 Required = true,
+            },
+            new()
+            {
+                Name = "tracksCount",
+                Description = "Сколько треков добавить из плейлиста. 0 или меньше - добавить максимум",
+                Type = "int",
+                Required = false,
+                DefaultValue = "10",
             },
         ];
 
@@ -59,10 +67,7 @@ public class SrlistSoundRequestListCommand(CommandsService commandsService) : Ba
                 hasPermission =
                     user.IsModerator
                     || user.IsVip
-                    || user.TwitchId.Equals(
-                        TwitchExstension.ChannelId,
-                        StringComparison.OrdinalIgnoreCase
-                    );
+                    || user.IsBroadcaster;
             }
 
             if (!hasPermission)
@@ -78,10 +83,17 @@ public class SrlistSoundRequestListCommand(CommandsService commandsService) : Ba
                 if (hasPlaylistUrl)
                 {
                     var playlistUrl = playlistUrlObj!.ToString()!.Trim();
+                    var tracksCount = 10;
+
+                    if (parameters.TryGetValue("tracksCount", out var tracksCountObj))
+                    {
+                        tracksCount = Convert.ToInt32(tracksCountObj);
+                    }
 
                     result = await commandsService.AddPlaylistAsync(
                         playlistUrl,
                         user,
+                        tracksCount,
                         cancellationToken
                     );
                 }

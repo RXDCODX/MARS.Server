@@ -73,6 +73,11 @@ public class TwitchUser
     public bool IsVip { get; set; }
 
     /// <summary>
+    /// Является ли пользователь стримером (broadcaster)
+    /// </summary>
+    public bool IsBroadcaster => TwitchId == TwitchExstension.ChannelId;
+
+    /// <summary>
     /// Дата подписки на канал
     /// </summary>
     public DateTime? FollowedAt { get; set; }
@@ -91,7 +96,7 @@ public class TwitchUser
     /// Проверить, является ли пользователь просто фоловером
     /// </summary>
     [NotMapped]
-    public bool IsSimpleUser => !IsModerator && !IsVip;
+    public bool IsSimpleUser => !IsModerator && !IsVip && !IsBroadcaster;
 
     public override string ToString()
     {

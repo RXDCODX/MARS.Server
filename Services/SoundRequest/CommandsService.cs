@@ -155,7 +155,13 @@ public class CommandsService(
                 var queueCountBefore = await queue.GetQueueCountAsync();
 
                 // Добавляем трек в очередь
-                var queueItem = await queue.AddToQueueAsync(info, user.TwitchId, user);
+                var requestedAt = DateTime.UtcNow;
+                var queueItem = await queue.AddToQueueAsync(
+                    info,
+                    user.TwitchId,
+                    user,
+                    requestedAt
+                );
 
                 // Пытаемся запустить воспроизведение если нужно
                 await TryAutoPlayQueueItemAsync(
@@ -258,7 +264,7 @@ public class CommandsService(
     }
 
     /// <summary>
-    /// Отменить последний заказанный трек пользователя
+    /// Отменить последнее действие пользователя в очереди (один трек или целый плейлист)
     /// </summary>
     /// <param name="user">Пользователь Twitch (обязательно)</param>
     /// <param name="cancellationToken">Токен отмены</param>
@@ -277,21 +283,45 @@ public class CommandsService(
         {
             await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
 
-            var lastQueueItem = await db
+            var userQueueItemsQuery = db
                 .SoundRequestQueueItems.Include(qi => qi.Track)
                 .Where(qi => qi.RequestedByTwitchId == user.TwitchId && qi.QueueOrder >= 0)
-                .OrderByDescending(qi => qi.QueueOrder)
-                .FirstOrDefaultAsync(cancellationToken);
+                .AsQueryable();
 
-            if (lastQueueItem is { Track: not null })
+            if (await userQueueItemsQuery.AnyAsync(cancellationToken))
             {
-                // Удаляем из очереди
-                await queue.RemoveFromQueueAsync(lastQueueItem.Id);
+                var lastRequestedAt = await userQueueItemsQuery.MaxAsync(
+                    qi => qi.RequestedAt,
+                    cancellationToken
+                );
 
-                // Уведомляем об изменении очереди
-                await NotifyQueueChangedAsync();
+                var itemsToCancel = await userQueueItemsQuery
+                    .Where(qi => qi.RequestedAt == lastRequestedAt)
+                    .OrderByDescending(qi => qi.QueueOrder)
+                    .ToListAsync(cancellationToken);
 
-                result = $"Отменён трек: {lastQueueItem.Track.Title}";
+                if (itemsToCancel.Count > 0)
+                {
+                    foreach (var queueItem in itemsToCancel)
+                    {
+                        await queue.RemoveFromQueueAsync(queueItem.Id);
+                    }
+
+                    await NotifyQueueChangedAsync();
+
+                    if (itemsToCancel.Count == 1 && itemsToCancel[0].Track != null)
+                    {
+                        result = $"Отменён трек: {itemsToCancel[0].Track.Title}";
+                    }
+                    else
+                    {
+                        result = $"Отменён плейлист из {itemsToCancel.Count} треков";
+                    }
+                }
+                else
+                {
+                    result = "Нечего отменять";
+                }
             }
             else
             {
@@ -344,6 +374,7 @@ public class CommandsService(
     public async Task<string> AddPlaylistAsync(
         string playlistUrl,
         TwitchUser? user,
+        int maxTracksToAdd = 10,
         CancellationToken cancellationToken = default
     )
     {
@@ -389,12 +420,13 @@ public class CommandsService(
             var maxDuration = TimeSpan.FromMinutes(12);
             var skippedTracksCount = 0;
             var addedTracks = 0;
-            const int maxTracksToAdd = 10;
+            var effectiveMaxTracksToAdd = maxTracksToAdd > 0 ? maxTracksToAdd : int.MaxValue;
+            var requestedAt = DateTime.UtcNow;
 
             foreach (var info in items)
             {
                 // Если уже добавили максимум треков — выходим
-                if (addedTracks >= maxTracksToAdd)
+                if (addedTracks >= effectiveMaxTracksToAdd)
                 {
                     break;
                 }
@@ -407,7 +439,12 @@ public class CommandsService(
                 }
 
                 // Добавляем трек в очередь
-                var queueItem = await queue.AddToQueueAsync(info, user.TwitchId, user);
+                var queueItem = await queue.AddToQueueAsync(
+                    info,
+                    user.TwitchId,
+                    user,
+                    requestedAt
+                );
 
                 // Запоминаем первый элемент плейлиста
                 firstQueueItem ??= queueItem;
@@ -450,9 +487,9 @@ public class CommandsService(
 
             // Если в плейлисте было больше подходящих треков, чем разрешено — указываем ограничение
             var possibleAdds = items.Count(i => i.Duration <= maxDuration);
-            if (possibleAdds > maxTracksToAdd)
+            if (maxTracksToAdd > 0 && possibleAdds > maxTracksToAdd)
             {
-                result += " (ограничено до 10 треков)";
+                result += $" (ограничено до {maxTracksToAdd} треков)";
             }
 
             result += waitTimeText;
