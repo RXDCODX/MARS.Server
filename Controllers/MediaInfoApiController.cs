@@ -2,8 +2,8 @@
 using System.IO;
 using System.Linq;
 using MARS.Server.Services;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 
 namespace MARS.Server.Controllers;
 
@@ -164,7 +164,11 @@ public class MediaInfoApiController(
 
             var generated = $"{Guid.NewGuid()}{extension}";
             var relative = Path.Combine("media", "uploads", generated).Replace('\\', '/');
-            var fullPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", relative.Replace('/', Path.DirectorySeparatorChar));
+            var fullPath = Path.Combine(
+                Directory.GetCurrentDirectory(),
+                "wwwroot",
+                relative.Replace('/', Path.DirectorySeparatorChar)
+            );
 
             var dir = Path.GetDirectoryName(fullPath);
             if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
@@ -301,9 +305,17 @@ public class MediaInfoApiController(
                         && !newPath.StartsWith("memory/", StringComparison.OrdinalIgnoreCase)
                     )
                     {
-                        var sourceRelativePath = oldPath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
-                        var targetRelativePath = newPath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
-                        var baseRoots = new[] { Directory.GetCurrentDirectory(), AppContext.BaseDirectory };
+                        var sourceRelativePath = oldPath
+                            .TrimStart('/')
+                            .Replace('/', Path.DirectorySeparatorChar);
+                        var targetRelativePath = newPath
+                            .TrimStart('/')
+                            .Replace('/', Path.DirectorySeparatorChar);
+                        var baseRoots = new[]
+                        {
+                            Directory.GetCurrentDirectory(),
+                            AppContext.BaseDirectory,
+                        };
 
                         var sourceRoot = baseRoots.FirstOrDefault(root =>
                             System.IO.File.Exists(Path.Combine(root, "wwwroot", sourceRelativePath))

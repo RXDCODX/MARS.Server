@@ -1,10 +1,12 @@
-﻿namespace MARS.Server.Exstensions;
+﻿using MARS.Server.Services.Twitch.Entitys;
+
+namespace MARS.Server.Exstensions;
 
 public static class MediaInfoExtension
 {
     extension(MediaInfo media)
     {
-        public MediaInfo FixAlertText(string username, string usertext)
+        public MediaInfo FixAlertText(string username, string usertext, string? usercolor = "white")
         {
             if (
                 media
@@ -25,7 +27,17 @@ public static class MediaInfoExtension
                 media.TextInfo.Text = media.TextInfo.Text.Replace("{user.name}", username);
             }
 
+            if (media.TextInfo.Text?.Contains("{user.color}", StringComparison.OrdinalIgnoreCase) ?? false)
+            {
+                media.TextInfo.Text = media.TextInfo.Text.Replace("{user.color}", usercolor);
+            }
+
             return media;
+        }
+
+        public MediaInfo FixAlertText(TwitchUser user, string message)
+        {
+            return media.FixAlertText(user.DisplayName, message, user.ChatColor);
         }
     }
 }
