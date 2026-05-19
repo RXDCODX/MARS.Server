@@ -59,10 +59,6 @@ public class StateManager(
                 .ThenInclude(qi => qi!.Track)
                 .Include(s => s.CurrentQueueItem)
                 .ThenInclude(qi => qi!.RequestedByTwitchUser)
-                .Include(s => s.NextQueueItem)
-                .ThenInclude(qi => qi!.Track)
-                .Include(s => s.NextQueueItem)
-                .ThenInclude(qi => qi!.RequestedByTwitchUser)
                 .FirstOrDefaultAsync(_cancellationToken);
 
             if (dbState != null)
@@ -75,14 +71,12 @@ public class StateManager(
                 }
 
                 logger.LogInformation(
-                    "Загружено состояние плеера из БД: ID={StateId}, State={State}, Volume={Volume}, CurrentQueueItem={CurrentQueueItem}, NextQueueItem={NextQueueItem}, CurrentQueueItemId={CurrentQueueItemId}, NextQueueItemId={NextQueueItemId}",
+                    "Загружено состояние плеера из БД: ID={StateId}, State={State}, Volume={Volume}, CurrentQueueItem={CurrentQueueItem}, CurrentQueueItemId={CurrentQueueItemId}",
                     dbState.Id,
                     dbState.State,
                     dbState.Volume,
                     dbState.CurrentQueueItem?.Track?.TrackName ?? "null",
-                    dbState.NextQueueItem?.Track?.TrackName ?? "null",
-                    dbState.CurrentQueueItemId?.ToString() ?? "null",
-                    dbState.NextQueueItemId?.ToString() ?? "null"
+                    dbState.CurrentQueueItemId?.ToString() ?? "null"
                 );
                 _currentState = dbState;
             }
@@ -124,9 +118,7 @@ public class StateManager(
                 Id = _currentState.Id,
                 StateVersion = _currentState.StateVersion,
                 CurrentQueueItemId = _currentState.CurrentQueueItemId,
-                NextQueueItemId = _currentState.NextQueueItemId,
                 CurrentQueueItem = _currentState.CurrentQueueItem,
-                NextQueueItem = _currentState.NextQueueItem,
                 CurrentTrackProgress = _currentState.CurrentTrackProgress,
                 State = _currentState.State,
                 VideoState = _currentState.VideoState,
@@ -153,9 +145,7 @@ public class StateManager(
                 Id = _currentState.Id,
                 StateVersion = _currentState.StateVersion,
                 CurrentQueueItemId = _currentState.CurrentQueueItemId,
-                NextQueueItemId = _currentState.NextQueueItemId,
                 CurrentQueueItem = _currentState.CurrentQueueItem,
-                NextQueueItem = _currentState.NextQueueItem,
                 CurrentTrackProgress = _currentState.CurrentTrackProgress,
                 State = _currentState.State,
                 VideoState = _currentState.VideoState,
@@ -188,7 +178,6 @@ public class StateManager(
             {
                 // Обновляем существующую запись
                 existingState.CurrentQueueItemId = _currentState.CurrentQueueItemId;
-                existingState.NextQueueItemId = _currentState.NextQueueItemId;
                 existingState.CurrentTrackProgress = _currentState.CurrentTrackProgress;
                 existingState.State = _currentState.State;
                 existingState.VideoState = _currentState.VideoState;
@@ -246,9 +235,7 @@ public class StateManager(
                     Id = _currentState.Id,
                     StateVersion = _currentState.StateVersion,
                     CurrentQueueItemId = _currentState.CurrentQueueItemId,
-                    NextQueueItemId = _currentState.NextQueueItemId,
                     CurrentQueueItem = _currentState.CurrentQueueItem,
-                    NextQueueItem = _currentState.NextQueueItem,
                     CurrentTrackProgress = _currentState.CurrentTrackProgress,
                     State = _currentState.State,
                     VideoState = _currentState.VideoState,
@@ -294,27 +281,6 @@ public class StateManager(
         );
     }
 
-    /// <summary>
-    /// Установить следующий элемент очереди
-    /// </summary>
-    public async Task SetNextQueueItemAsync(
-        QueueItem? queueItem,
-        bool notify = true,
-        string? excludeConnectionId = null
-    )
-    {
-        await UpdateStateAsync(
-            state =>
-            {
-                state.NextQueueItemId = queueItem?.Id;
-                state.NextQueueItem = queueItem;
-            },
-            notify,
-            excludeConnectionId
-        );
-    }
-
-    /// <summary>
     /// Установить состояние воспроизведения
     /// </summary>
     public async Task SetPlaybackStateAsync(
@@ -455,9 +421,7 @@ public class StateManager(
             state =>
             {
                 state.CurrentQueueItemId = null;
-                state.NextQueueItemId = null;
                 state.CurrentQueueItem = null;
-                state.NextQueueItem = null;
                 state.CurrentTrackProgress = null;
                 state.State = PlaybackState.Stopped;
             },
@@ -487,5 +451,27 @@ public class StateManager(
             _disposed = true;
         }
         GC.SuppressFinalize(this);
+    }
+
+    private async Task<QueueItem?> GetNextQueueItemAsync()
+    {
+        await using var db = await dbFactory.CreateDbContextAsync(_cancellationToken);
+
+        return await db
+            .SoundRequestQueueItems.AsNoTracking()
+            .Include(qi => qi.Track)
+            .Include(qi => qi.RequestedByTwitchUser)
+            .FirstOrDefaultAsync(qi => qi.QueueOrder == 1, _cancellationToken);
+    }
+
+    private QueueItem? GetNextQueueItem()
+    {
+        using var db = dbFactory.CreateDbContext();
+
+        return db
+            .SoundRequestQueueItems.AsNoTracking()
+            .Include(qi => qi.Track)
+            .Include(qi => qi.RequestedByTwitchUser)
+            .FirstOrDefault(qi => qi.QueueOrder == 1);
     }
 }

@@ -32,10 +32,9 @@ public class SoundRequestController(
         {
             var state = player.GetState();
             logger.LogInformation(
-                "[GetPlayerState] Состояние плеера: State={State}, CurrentQueueItem={CurrentQueueItem}, NextQueueItem={NextQueueItem}, Volume={Volume}",
+                "[GetPlayerState] Состояние плеера: State={State}, CurrentQueueItem={CurrentQueueItem}, Volume={Volume}",
                 state.State,
                 state.CurrentQueueItem?.Track?.TrackName ?? "null",
-                state.NextQueueItem?.Track?.TrackName ?? "null",
                 state.Volume
             );
 
@@ -342,7 +341,7 @@ public class SoundRequestController(
     /// </summary>
     [HttpPost("queue/reorder")]
     public async Task<ActionResult<OperationResult<string>>> ReorderQueueItem(
-        [FromBody] QueueReorderRequest request,
+        [FromBody] QueueReorderRequest? request,
         CancellationToken cancellationToken = default
     )
     {

@@ -1,4 +1,5 @@
-﻿using MARS.Server.Services.SoundRequest.Entities;
+﻿using System.Linq.Dynamic.Core.Exceptions;
+using MARS.Server.Services.SoundRequest.Entities;
 using MARS.Server.Services.Twitch;
 using MARS.Server.Services.Twitch.Entitys;
 
@@ -134,10 +135,6 @@ public class SoundRequestUserQueue(
                 if (currentState.CurrentQueueItemId == queueItemToRemove.Id)
                 {
                     await stateManager.StopPlaybackAsync(notify: true);
-                }
-                else if (currentState.NextQueueItemId == queueItemToRemove.Id)
-                {
-                    await stateManager.SetNextQueueItemAsync(null, notify: true);
                 }
             }
 
@@ -605,12 +602,27 @@ public class SoundRequestUserQueue(
     }
 
     /// <summary>
-    /// Переместить элемент очереди на указанную позицию (включая вставку из истории в очередь)
-    /// Поддерживает вставку в любую позицию очереди (newPosition >= 0).
+    /// Переместить элемент очереди на указанную позицию в видимой очереди (без текущего трека)
+    /// Поддерживает вставку в любую позицию очереди, где newPosition >= 0.
     /// Возвращает перемещённый элемент или null.
     /// </summary>
     public async Task<QueueItem?> MoveQueueItemToPositionAsync(Guid queueItemId, int newPosition)
     {
+        var state = stateManager?.GetState().State;
+        if (
+            newPosition == 0
+            && (
+                state == PlaybackState.Playing
+                || state == PlaybackState.SwitchingTrack
+                || state == PlaybackState.Paused
+            )
+        )
+        {
+            throw new Exception(
+                "Ты не можешь менять текущий трек, вместо этого вызови другй метод для проигрывания своего трека!"
+            );
+        }
+
         QueueItem? result = null;
 
         await using var dbContext = await contextFactory.CreateDbContextAsync(_cancellationToken);
@@ -631,6 +643,11 @@ public class SoundRequestUserQueue(
             return null;
         }
 
+        var hasCurrentQueueItem = await dbContext.SoundRequestQueueItems.AnyAsync(
+            qi => qi.QueueOrder == 0 && qi.Id != queueItemId,
+            cancellationToken: _cancellationToken
+        );
+
         // Count current queue items (QueueOrder >= 0)
         var queueCount = await dbContext.SoundRequestQueueItems.CountAsync(
             qi => qi.QueueOrder >= 0,
@@ -640,9 +657,11 @@ public class SoundRequestUserQueue(
         // If moving from queue -> allowed range: 0..queueCount-1
         // If moving from history -> allowed range: 0..queueCount (inserting at end)
         var oldPos = itemToMove.QueueOrder;
-        var maxPos = oldPos >= 0 ? Math.Max(queueCount - 1, 0) : queueCount;
-        var targetPos = Math.Min(newPosition, maxPos);
+        var maxPos = oldPos > 0 ? Math.Max(queueCount - 1, 0) : queueCount;
 
+        var targetPos = newPosition;
+
+        targetPos = Math.Min(targetPos, maxPos);
         if (oldPos == targetPos)
         {
             // Nothing to do

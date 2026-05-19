@@ -154,14 +154,6 @@ public sealed partial class AppDbContext : DbContext
             .HasForeignKey(ps => ps.CurrentQueueItemId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // PlayerState: связь с следующим QueueItem
-        modelBuilder
-            .Entity<PlayerState>()
-            .HasOne(ps => ps.NextQueueItem)
-            .WithMany()
-            .HasForeignKey(ps => ps.NextQueueItemId)
-            .OnDelete(DeleteBehavior.Restrict);
-
         modelBuilder.Entity<MediaInfo>(entity =>
         {
             entity.OwnsOne(

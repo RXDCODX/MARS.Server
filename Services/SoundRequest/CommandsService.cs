@@ -1005,7 +1005,7 @@ public class CommandsService(
         CancellationToken cancellationToken = default
     )
     {
-        var result = "❌ Ошибка при выполнении";
+        string result;
 
         if (queueItemId == Guid.Empty)
         {

@@ -1,6 +1,8 @@
 ﻿using MARS.Server.Services.Twitch.Management.Entitys;
 using TwitchLib.Api.Auth;
 using TwitchLib.Api.Helix.Models.Chat;
+using TwitchLib.Api.Interfaces;
+using TwitchLib.Client.Interfaces;
 using TwitchLib.Client.Models;
 
 namespace MARS.Server.Exstensions;

@@ -25,11 +25,6 @@ public class PlayerState
     public Guid? CurrentQueueItemId { get; set; }
 
     /// <summary>
-    /// ID следующего элемента очереди (foreign key)
-    /// </summary>
-    public Guid? NextQueueItemId { get; set; }
-
-    /// <summary>
     /// Текущая позиция воспроизведения трека (прогресс)
     /// </summary>
     public TimeSpan? CurrentTrackProgress { get; set; }
@@ -60,9 +55,4 @@ public class PlayerState
     [ForeignKey(nameof(CurrentQueueItemId))]
     public QueueItem? CurrentQueueItem { get; set; }
 
-    /// <summary>
-    /// Ссылка на следующий элемент очереди
-    /// </summary>
-    [ForeignKey(nameof(NextQueueItemId))]
-    public QueueItem? NextQueueItem { get; set; }
 }

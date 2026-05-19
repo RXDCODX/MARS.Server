@@ -161,26 +161,19 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
         var queueCount = (await _queue.GetQueueAsync()).Count;
 
         _logger.LogInformation(
-            "[InitializeAsync] Текущее состояние: State={State}, CurrentQueueItem={CurrentQueueItem}, NextQueueItem={NextQueueItem}, QueueCount={QueueCount}",
+            "[InitializeAsync] Текущее состояние: State={State}, CurrentQueueItem={CurrentQueueItem}, QueueCount={QueueCount}",
             currentState.State,
             currentState.CurrentQueueItem?.Track?.TrackName ?? "null",
-            currentState.NextQueueItem?.Track?.TrackName ?? "null",
             queueCount
         );
 
-        if (currentState.NextQueueItem == null && queueCount > 0)
+        if (queueCount > 0)
         {
             _logger.LogInformation(
                 "[InitializeAsync] Следующий элемент очереди не установлен, но в очереди есть {QueueCount} элементов, загружаем...",
                 queueCount
             );
-            await LoadNextQueueItemAsync();
-
             var updatedState = await _stateManager.GetStateAsync();
-            _logger.LogInformation(
-                "[InitializeAsync] После загрузки: NextQueueItem={NextQueueItem}",
-                updatedState.NextQueueItem?.Track?.TrackName ?? "null"
-            );
         }
         else if (queueCount == 0)
         {
@@ -233,9 +226,6 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
 
             // Обновляем время последнего воспроизведения в БД
             await UpdateQueueItemLastPlayedAsync(queueItem);
-
-            // Загружаем следующий элемент из очереди
-            await LoadNextQueueItemAsync();
 
             _logger.LogInformation("Трек успешно запущен: {TrackName}", queueItem.Track.TrackName);
         }
@@ -478,9 +468,6 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
             }
 
             await PlayAsync(previousQueueItem, _cancellationToken);
-
-            // Загружаем следующий элемент из очереди
-            await LoadNextQueueItemAsync();
         }
         else
         {
@@ -489,15 +476,6 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
                 targetQueueOrder
             );
         }
-    }
-
-    /// <summary>
-    /// Загрузить информацию о следующем элементе очереди в состояние
-    /// </summary>
-    private async Task LoadNextQueueItemAsync()
-    {
-        var nextQueueItem = await _queue.GetNextQueueItemAsync();
-        await _stateManager.SetNextQueueItemAsync(nextQueueItem, notify: true);
     }
 
     /// <summary>
@@ -527,13 +505,9 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
                 // Устанавливаем его как текущий
                 await _stateManager.SetCurrentQueueItemAsync(currentQueueItem, notify: true);
 
-                // Загружаем следующий элемент (QueueOrder = 1)
-                await LoadNextQueueItemAsync();
-
                 _logger.LogInformation(
-                    "[EnsureCurrentQueueItemLoaded] Текущий трек загружен: {CurrentTrack}, следующий трек: {NextTrack}",
-                    currentQueueItem.Track?.TrackName ?? "null",
-                    (await _stateManager.GetStateAsync()).NextQueueItem?.Track?.TrackName ?? "null"
+                    "[EnsureCurrentQueueItemLoaded] Текущий трек загружен: {CurrentTrack}",
+                    currentQueueItem.Track?.TrackName ?? "null"
                 );
             }
             else
@@ -550,14 +524,7 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
                 currentState.CurrentQueueItem.Track?.TrackName ?? "null"
             );
 
-            // Проверяем, загружен ли NextQueueItem
-            if (currentState.NextQueueItem == null)
-            {
-                _logger.LogInformation(
-                    "[EnsureCurrentQueueItemLoaded] NextQueueItem пуст, пытаемся загрузить"
-                );
-                await LoadNextQueueItemAsync();
-            }
+            _logger.LogDebug("[EnsureCurrentQueueItemLoaded] Текущий трек уже загружен");
         }
     }
 
@@ -581,9 +548,7 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
 
             var historyQuery = db.SoundRequestQueueItems.Where(qi =>
                 qi.QueueOrder < 0
-                && !db.SoundRequestPlayerState.Any(ps =>
-                    ps.CurrentQueueItemId == qi.Id || ps.NextQueueItemId == qi.Id
-                )
+                && !db.SoundRequestPlayerState.Any(ps => ps.CurrentQueueItemId == qi.Id)
             );
 
             var historyCount = await historyQuery.CountAsync(_cancellationToken);

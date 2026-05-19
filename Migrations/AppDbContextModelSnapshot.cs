@@ -765,9 +765,6 @@ namespace MARS.Server.Migrations
                     b.Property<bool>("IsMuted")
                         .HasColumnType("boolean");
 
-                    b.Property<Guid?>("NextQueueItemId")
-                        .HasColumnType("uuid");
-
                     b.Property<int>("State")
                         .HasColumnType("integer");
 
@@ -780,8 +777,6 @@ namespace MARS.Server.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CurrentQueueItemId");
-
-                    b.HasIndex("NextQueueItemId");
 
                     b.ToTable("SoundRequestPlayerState");
                 });
@@ -1854,14 +1849,7 @@ namespace MARS.Server.Migrations
                         .HasForeignKey("CurrentQueueItemId")
                         .OnDelete(DeleteBehavior.Restrict);
 
-                    b.HasOne("MARS.Server.Services.SoundRequest.Entities.QueueItem", "NextQueueItem")
-                        .WithMany()
-                        .HasForeignKey("NextQueueItemId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.Navigation("CurrentQueueItem");
-
-                    b.Navigation("NextQueueItem");
                 });
 
             modelBuilder.Entity("MARS.Server.Services.SoundRequest.Entities.QueueItem", b =>
