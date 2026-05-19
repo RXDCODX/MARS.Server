@@ -29,34 +29,30 @@ public static class MemoryStorage
     /// <returns>Relative url for file download</returns>
     public static async Task<string> AddFileAsync(string fileName, byte[] fileContent)
     {
-        await Task.Factory.StartNew(() =>
+        if (string.IsNullOrWhiteSpace(fileName))
         {
-            if (string.IsNullOrWhiteSpace(fileName))
-            {
-                throw new ArgumentNullException(nameof(fileName), "Имя файла не может быть пустым");
-            }
+            throw new ArgumentNullException(nameof(fileName), "Имя файла не может быть пустым");
+        }
 
-            if (FileExists(fileName))
-            {
-                return IncrementUseCounterAsync(fileName);
-            }
+        if (FileExists(fileName))
+        {
+            await IncrementUseCounterAsync(fileName);
+            return "/memory" + fileName;
+        }
 
-            var extension = Path.GetExtension(fileName);
-            var mediaType = extension.GetFileMediaType();
+        var extension = Path.GetExtension(fileName);
+        var mediaType = await extension.GetFileMediaTypeAsync();
 
-            var content = new MemoryFile
-            {
-                Exstension = extension,
-                MediaType = mediaType,
-                FileContent = fileContent,
-                FileName = fileName,
-                UseCount = 1,
-            };
+        var content = new MemoryFile
+        {
+            Exstension = extension,
+            MediaType = mediaType,
+            FileContent = fileContent,
+            FileName = fileName,
+            UseCount = 1,
+        };
 
-            FileStorage.TryAdd(fileName, content);
-
-            return Task.CompletedTask;
-        });
+        FileStorage.TryAdd(fileName, content);
 
         return "/memory" + fileName;
     }
