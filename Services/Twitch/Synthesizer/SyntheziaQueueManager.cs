@@ -1,6 +1,6 @@
-﻿using System.Collections.Concurrent;
-using MARS.Server.Services.Twitch.Synthesizer.Enitity;
+﻿using MARS.Server.Services.Twitch.Synthesizer.Enitity;
 using TwitchLib.Client.Events;
+using TwitchUserModel = MARS.Server.Services.Twitch.Entitys.TwitchUser;
 
 namespace MARS.Server.Services.Twitch.Synthesizer;
 
@@ -10,41 +10,7 @@ public class SyntheziaQueueManager(
     ILogger<SyntheziaQueueManager> logger
 ) : BackgroundService
 {
-    private readonly ConcurrentQueue<MessageToSynthezid?> _queue = new();
     public bool IsServiceActive { get; set; } = true;
-
-    private string _lastMessage = string.Empty;
-    private bool _isRepeatMessageSad = false;
-    private MessageToSynthezid _repeatSynthezid = new()
-    {
-        CreationDateTime = DateTimeOffset.Now,
-        Guid = Guid.NewGuid(),
-        Message = "Не хочу повторять ваши пасты",
-        Name = "CatisaAi",
-    };
-
-    private async Task ProcessMessages()
-    {
-        do
-        {
-            if (IsServiceActive)
-            {
-                bool isDequeued;
-                do
-                {
-                    isDequeued = _queue.TryDequeue(out var result);
-                    if (isDequeued && result is not null)
-                    {
-                        await voicer.Sound(result);
-                    }
-
-                    await Task.Delay(500);
-                } while (!isDequeued);
-            }
-
-            await Task.Delay(500);
-        } while (!_queue.IsEmpty);
-    }
 
     /// <summary>
     /// Мгновенно останавливает озвучку и блокирует возможность озвучивать новые сообщения
@@ -73,36 +39,17 @@ public class SyntheziaQueueManager(
             {
                 var currentMessage = args.ChatMessage.Message;
 
-                MessageToSynthezid message;
+                var twitchUser = TwitchUserModel.FromChatMessage(args.ChatMessage);
+                var message = currentMessage
+                    .Trim()
+                    .CutTooLongText()
+                    .ReplaceLinks()
+                    .ReplaceTooLongWords();
 
-                if (_lastMessage.Equals(currentMessage))
+                if (twitchUser is not null)
                 {
-                    message = _repeatSynthezid;
-                    _isRepeatMessageSad = true;
-                }
-                else
-                {
-                    message = new MessageToSynthezid
-                    {
-                        CreationDateTime = DateTimeOffset.Now,
-                        Guid = Guid.Empty,
-                        Message = currentMessage
-                            .Trim()
-                            .CutTooLongText()
-                            .ReplaceLinks()
-                            .ReplaceTooLongWords(),
-                        Name = args.ChatMessage.Username,
-                    };
-
-                    _repeatSynthezid = message;
-                    _lastMessage = currentMessage;
-                    _isRepeatMessageSad = false;
-                }
-
-                if (!_isRepeatMessageSad)
-                {
-                    _queue.Enqueue(message);
-                    await ProcessMessages();
+                    // Forward immediately to voicer which now broadcasts to AudioController
+                    await voicer.Sound(twitchUser, message);
                 }
             });
         }
@@ -115,7 +62,7 @@ public class SyntheziaQueueManager(
             client.OnMessageReceived += HandMessageToVoice;
         }
 
-        // Ждем остановки сервиса
+        // wait until shutdown
         await Task.Delay(Timeout.Infinite, stoppingToken);
     }
 

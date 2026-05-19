@@ -545,6 +545,7 @@ public static class StartupEstensions
 
     internal static IServiceCollection AddSyntheziaServices(this IServiceCollection services)
     {
+        services.AddSingleton<TtsHubBroadcaster>();
         services.AddSingleton<ITtsVoiceRepository, TtsVoiceRepository>();
         services.AddSingleton(sp =>
             VoicerFactory.CreateVoicer(

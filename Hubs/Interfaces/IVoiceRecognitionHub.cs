@@ -1,32 +1,17 @@
 namespace MARS.Server.Hubs.Interfaces;
 
-using MARS.Server.Hubs.Models.VoiceRecognition;
+using MARS.Server.Services.Twitch.Entitys;
 
 /// <summary>
-/// Interface for voice recognition hub client methods.
-/// Defines messages that can be sent from server to clients.
+/// Interface for TTS hub client methods.
+/// Defines messages that can be sent from the server to AudioController consumers.
 /// </summary>
 public interface IVoiceRecognitionHub
 {
     /// <summary>
-    /// Notify that voice recognition session has started.
+    /// Request a client to play a TTS message for a given Twitch user payload.
     /// </summary>
-    Task VoiceRecognitionStarted();
-
-    /// <summary>
-    /// Notify that voice recognition session has stopped.
-    /// </summary>
-    Task VoiceRecognitionStopped();
-
-    /// <summary>
-    /// Send voice activity detection status to clients.
-    /// </summary>
-    /// <param name="activity">Voice activity information</param>
-    Task VoiceActivityUpdated(VoiceActivityDto activity);
-
-    /// <summary>
-    /// Broadcast recognized voice message to all connected clients.
-    /// </summary>
-    /// <param name="message">Recognized voice message</param>
-    Task VoiceMessageRecognized(VoiceRecognitionMessageDto message);
+    /// <param name="user">Twitch user payload.</param>
+    /// <param name="message">Text to speak.</param>
+    Task PlayTts(TwitchUser user, string message);
 }

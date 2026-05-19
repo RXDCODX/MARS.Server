@@ -1,4 +1,5 @@
 ﻿using MARS.Server.Services.Twitch.Synthesizer.Enitity;
+using TwitchUserModel = MARS.Server.Services.Twitch.Entitys.TwitchUser;
 
 namespace MARS.Server.Services.Twitch.Synthesizer;
 
@@ -64,6 +65,11 @@ public class NullVoicer(ILogger<IVoicer> logger) : IVoicer
     {
         logger.LogWarning("Speech synthesis is not supported on this platform.");
         return Task.FromResult(new List<string>());
+    }
+
+    public Task Sound(TwitchUserModel twitchUser, string message)
+    {
+        return Task.CompletedTask;
     }
 
     public Task Sound(MessageToSynthezid message)

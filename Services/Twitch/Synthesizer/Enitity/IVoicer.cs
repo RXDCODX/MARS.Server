@@ -1,10 +1,13 @@
 ﻿namespace MARS.Server.Services.Twitch.Synthesizer.Enitity;
 
+using TwitchUserModel = MARS.Server.Services.Twitch.Entitys.TwitchUser;
+
 public interface IVoicer
 {
     bool IsActive { get; set; }
     int GetVolume();
     void ChangeVolume(int volume);
+    Task Sound(TwitchUserModel twitchUser, string message);
     Task Sound(MessageToSynthezid message);
     Task Stop();
     Task Block();

@@ -1,103 +1,88 @@
 namespace MARS.Server.Hubs;
 
-using Models.VoiceRecognition;
 using SignalRSwaggerGen.Attributes;
 using SignalRSwaggerGen.Enums;
 
 /// <summary>
-/// SignalR hub for voice recognition and speech-to-text functionality.
+/// SignalR hub for TTS delivery to AudioController.
 ///
-/// Receives voice messages from MARS.AudioController (acting as a client)
-/// and broadcasts them to connected clients for live streaming purposes.
+/// AudioController connects as a consumer client and receives TTS playback requests.
 ///
-/// Optimized for low-latency message delivery in streaming scenarios.
+/// The route is preserved for compatibility while the semantics now belong to TTS.
 /// </summary>
 [SignalRHub("/hubs/voice-recognition", AutoDiscover.MethodsAndParams)]
 public class VoiceRecognitionHub(ILogger<VoiceRecognitionHub> logger) : Hub<IVoiceRecognitionHub>
 {
-    private const string AudioControllerGroupName = "audio-controller";
-    private const string ClientsGroupName = "clients";
+    private const string TtsConsumersGroupName = "tts-consumers";
 
     /// <summary>
-    /// Receive voice message from AudioController.
-    /// Called when speech has been recognized and should be broadcast to clients.
+    /// Register the current connection as a TTS consumer.
     /// </summary>
-    /// <param name="message">The recognized voice message</param>
-    public async Task ReceiveVoiceMessage(VoiceRecognitionMessageDto message)
+    public async Task RegisterAsTtsConsumer()
     {
-        if (message == null)
-        {
-            logger.LogWarning(
-                "Received null voice message from {ConnectionId}",
-                Context.ConnectionId
-            );
-            return;
-        }
-
-        // Ensure timestamp is set
-        if (string.IsNullOrWhiteSpace(message.Timestamp))
-        {
-            message.Timestamp = DateTime.UtcNow.ToString("O");
-        }
+        await Groups.AddToGroupAsync(Context.ConnectionId, TtsConsumersGroupName);
 
         logger.LogInformation(
-            "Voice message received from AudioController: text='{Text}', language={Language}, confidence={Confidence}",
-            message.Text,
-            message.Language,
-            message.Confidence
-        );
-
-        // Broadcast to all connected clients except the sender
-        await Clients.Others.VoiceMessageRecognized(message);
-
-        // Also send acknowledgment to sender
-        await Clients.Caller.VoiceMessageRecognized(message);
-    }
-
-    /// <summary>
-    /// Receive voice activity detection event from AudioController.
-    /// </summary>
-    /// <param name="isActive">Whether voice activity is detected</param>
-    public async Task VoiceActivityDetected(bool isActive)
-    {
-        var activity = new VoiceActivityDto { IsActive = isActive };
-
-        logger.LogDebug(
-            "Voice activity detected from AudioController: isActive={IsActive}",
-            isActive
-        );
-
-        // Broadcast activity to all clients for real-time feedback
-        await Clients.All.VoiceActivityUpdated(activity);
-    }
-
-    /// <summary>
-    /// Called when AudioController joins as the voice source client.
-    /// </summary>
-    public async Task RegisterAsAudioSource()
-    {
-        await Groups.AddToGroupAsync(Context.ConnectionId, AudioControllerGroupName);
-
-        logger.LogInformation(
-            "AudioController registered as voice source: {ConnectionId}",
+            "TTS consumer registered: {ConnectionId}",
             Context.ConnectionId
         );
-
-        // Notify all clients that voice recognition is available
-        await Clients.Group(ClientsGroupName).VoiceRecognitionStarted();
     }
 
     /// <summary>
-    /// Called when a regular client joins to listen for voice messages.
+    /// Unregister the current connection from the TTS consumer group.
     /// </summary>
-    public async Task RegisterAsClient()
+    public async Task UnregisterAsTtsConsumer()
     {
-        await Groups.AddToGroupAsync(Context.ConnectionId, ClientsGroupName);
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, TtsConsumersGroupName);
 
         logger.LogInformation(
-            "Client registered for voice messages: {ConnectionId}",
+            "TTS consumer unregistered: {ConnectionId}",
             Context.ConnectionId
         );
+    }
+
+    /// <summary>
+    /// Report that TTS playback has started on the consumer.
+    /// </summary>
+    public Task ReportTtsPlaybackStarted(string text)
+    {
+        logger.LogInformation(
+            "TTS playback started by consumer {ConnectionId}: {Text}",
+            Context.ConnectionId,
+            text
+        );
+
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Report that TTS playback has completed on the consumer.
+    /// </summary>
+    public Task ReportTtsPlaybackCompleted(string text, TimeSpan duration)
+    {
+        logger.LogInformation(
+            "TTS playback completed by consumer {ConnectionId}: {Text}, duration={Duration}",
+            Context.ConnectionId,
+            text,
+            duration
+        );
+
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Report that TTS playback has failed on the consumer.
+    /// </summary>
+    public Task ReportTtsPlaybackFailed(string text, string error)
+    {
+        logger.LogWarning(
+            "TTS playback failed on consumer {ConnectionId}: {Text}, error={Error}",
+            Context.ConnectionId,
+            text,
+            error
+        );
+
+        return Task.CompletedTask;
     }
 
     /// <summary>
@@ -106,7 +91,7 @@ public class VoiceRecognitionHub(ILogger<VoiceRecognitionHub> logger) : Hub<IVoi
     public override async Task OnConnectedAsync()
     {
         logger.LogInformation(
-            "Client connected to VoiceRecognitionHub: {ConnectionId}",
+            "Client connected to TtsHub: {ConnectionId}",
             Context.ConnectionId
         );
 
@@ -118,13 +103,12 @@ public class VoiceRecognitionHub(ILogger<VoiceRecognitionHub> logger) : Hub<IVoi
     /// </summary>
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, TtsConsumersGroupName);
+
         logger.LogInformation(
-            "Client disconnected from VoiceRecognitionHub: {ConnectionId}",
+            "Client disconnected from TtsHub: {ConnectionId}",
             Context.ConnectionId
         );
-
-        // Notify clients that voice recognition session might be affected
-        await Clients.Group(ClientsGroupName).VoiceRecognitionStopped();
 
         await base.OnDisconnectedAsync(exception);
     }

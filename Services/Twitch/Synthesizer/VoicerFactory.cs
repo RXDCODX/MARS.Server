@@ -1,4 +1,5 @@
 ﻿using MARS.Server.Services.Twitch.Synthesizer.Enitity;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace MARS.Server.Services.Twitch.Synthesizer;
 
@@ -11,7 +12,11 @@ public static class VoicerFactory
     )
     {
         return OperatingSystem.IsWindows()
-            ? new SyntheziaVoicer(logger, repository, serviceProvider)
+            ? new SyntheziaVoicer(
+                logger,
+                serviceProvider.GetRequiredService<TtsHubBroadcaster>(),
+                serviceProvider
+            )
             : new NullVoicer(logger);
     }
 }

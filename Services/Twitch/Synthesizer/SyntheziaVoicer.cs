@@ -1,26 +1,28 @@
 ﻿using System.Globalization;
 using System.Runtime.Versioning;
-using System.Speech.Synthesis;
 using System.Text;
 using MARS.Server.Services.Discord.TtsVoiceRelay;
 using MARS.Server.Services.Twitch.Synthesizer.Enitity;
+using TwitchUserModel = MARS.Server.Services.Twitch.Entitys.TwitchUser;
 
 namespace MARS.Server.Services.Twitch.Synthesizer;
 
-[SupportedOSPlatform("windows")]
 public class SyntheziaVoicer : IVoicer
 {
-    private readonly Dictionary<string, InstalledVoice> _linkedVoices = new(
-        StringComparer.OrdinalIgnoreCase
-    );
     private readonly ILogger<IVoicer> _logger;
-    private readonly ITtsVoiceRepository _voiceRepository;
-    private readonly IDiscordTtsVoiceRelayService? _discordVoiceRelayService;
-    private readonly SpeechSynthesizer _speechSynthesizer = new();
-    private readonly SemaphoreSlim _semaphore = new(1);
-    private HashSet<string> _blockedVoices = new(StringComparer.OrdinalIgnoreCase);
+    private readonly TtsHubBroadcaster? _ttsHubBroadcaster;
 
     public bool IsActive { get; set; } = true;
+
+    public SyntheziaVoicer(
+        ILogger<IVoicer> logger,
+        TtsHubBroadcaster ttsHubBroadcaster,
+        IServiceProvider serviceProvider
+    )
+    {
+        _logger = logger;
+        _ttsHubBroadcaster = ttsHubBroadcaster;
+    }
 
     public SyntheziaVoicer(
         ILogger<IVoicer> logger,
@@ -29,192 +31,74 @@ public class SyntheziaVoicer : IVoicer
     )
     {
         _logger = logger;
-        _voiceRepository = voiceRepository;
-        _discordVoiceRelayService = serviceProvider.GetService<IDiscordTtsVoiceRelayService>();
-        if (OperatingSystem.IsWindows())
-        {
-            _speechSynthesizer.SetOutputToDefaultAudioDevice();
-            try
-            {
-                RefreshBlockedVoicesAsync().GetAwaiter().GetResult();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to preload blocked voices list");
-            }
-        }
+        _ttsHubBroadcaster = serviceProvider.GetService<TtsHubBroadcaster>();
+        _ = voiceRepository;
+    }
+
+    public SyntheziaVoicer(
+        ILogger<IVoicer> logger,
+        ITtsVoiceRepository voiceRepository,
+        TtsHubBroadcaster ttsHubBroadcaster,
+        IServiceProvider serviceProvider
+    ) : this(logger, ttsHubBroadcaster, serviceProvider)
+    {
+        _ = voiceRepository;
     }
 
     public int GetVolume()
     {
-        return _speechSynthesizer.Volume;
+        return 100;
     }
 
     public void ChangeVolume(int volume)
     {
-        if (OperatingSystem.IsWindows())
-        {
-            _speechSynthesizer.Volume = volume;
-        }
+        // Volume is controlled in AudioController now.
     }
 
-    public async Task RefreshBlockedVoicesAsync(CancellationToken cancellationToken = default)
+    public Task RefreshBlockedVoicesAsync(CancellationToken cancellationToken = default)
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
-        var blocked = await _voiceRepository.GetBlockedVoicesAsync(cancellationToken);
-        _blockedVoices = new HashSet<string>(blocked, StringComparer.OrdinalIgnoreCase);
+        // Moved to AudioController. Server no longer tracks blocked voices.
+        return Task.CompletedTask;
     }
 
-    public async Task ResetVoiceAsync(string name, CancellationToken cancellationToken = default)
+    public Task ResetVoiceAsync(string name, CancellationToken cancellationToken = default)
     {
-        await _semaphore.WaitAsync(cancellationToken);
-        try
-        {
-            _linkedVoices.Remove(name);
-        }
-        finally
-        {
-            _semaphore.Release();
-        }
+        // Voice mapping moved to AudioController
+        return Task.CompletedTask;
     }
 
-    public async Task ResetAllVoicesAsync(CancellationToken cancellationToken = default)
+    public Task ResetAllVoicesAsync(CancellationToken cancellationToken = default)
     {
-        await _semaphore.WaitAsync(cancellationToken);
-        try
-        {
-            _linkedVoices.Clear();
-        }
-        finally
-        {
-            _semaphore.Release();
-        }
+        // Voice mapping moved to AudioController
+        return Task.CompletedTask;
     }
 
     public Task<IReadOnlyDictionary<string, string>> GetLinkedVoicesAsync(
         CancellationToken cancellationToken = default
     )
     {
-        IReadOnlyDictionary<string, string> result = _linkedVoices.ToDictionary(
-            x => x.Key,
-            x => x.Value.VoiceInfo.Name,
-            StringComparer.OrdinalIgnoreCase
-        );
-        return Task.FromResult(result);
+        // No server-side linked voices after migration
+        return Task.FromResult((IReadOnlyDictionary<string, string>)new Dictionary<string, string>());
     }
 
     public Task<List<string>> GetInstalledVoicesAsync(CancellationToken cancellationToken = default)
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return Task.FromResult(new List<string>());
-        }
-
-        var voices = _speechSynthesizer
-            .GetInstalledVoices(new CultureInfo("ru-RU"))
-            .Select(v => v.VoiceInfo.Name)
-            .ToList();
-        return Task.FromResult(voices);
+        // Installed/system voices are not used by AudioController TTS engine
+        return Task.FromResult(new List<string>());
     }
 
-    public async Task Sound(MessageToSynthezid message)
+    public async Task Sound(TwitchUserModel twitchUser, string message)
     {
-        if (!OperatingSystem.IsWindows() || !IsActive)
+        if (!IsActive)
         {
             return;
         }
 
         try
         {
-            var preparedText = PrepareText(message.Message);
-
-            await _semaphore.WaitAsync();
-            try
+            if (_ttsHubBroadcaster is not null)
             {
-                var hasRequestedVoice = !string.IsNullOrWhiteSpace(message.VoiceName);
-                if (hasRequestedVoice)
-                {
-                    var requestedVoice = FindAllowedVoiceByName(message.VoiceName!);
-                    if (requestedVoice is not null)
-                    {
-                        if (_discordVoiceRelayService?.IsVoiceRoutingEnabled ?? false)
-                        {
-                            _speechSynthesizer.SpeakAsyncCancelAll();
-                            await _discordVoiceRelayService.PlaySpeechAsync(
-                                requestedVoice.VoiceInfo.Name,
-                                preparedText
-                            );
-                        }
-                        else
-                        {
-                            SpeakWithVoice(requestedVoice, preparedText);
-                        }
-                    }
-                }
-                else
-                {
-                    var hasVoice = _linkedVoices.TryGetValue(message.Name, out var voice);
-
-                    if (hasVoice && voice is not null && IsVoiceBlocked(voice))
-                    {
-                        _linkedVoices.Remove(message.Name);
-                        hasVoice = false;
-                        voice = null;
-                    }
-
-                    if (hasVoice && voice is not null)
-                    {
-                        if (_discordVoiceRelayService?.IsVoiceRoutingEnabled ?? false)
-                        {
-                            _speechSynthesizer.SpeakAsyncCancelAll();
-                            await _discordVoiceRelayService.PlaySpeechAsync(
-                                voice.VoiceInfo.Name,
-                                preparedText
-                            );
-                        }
-                        else
-                        {
-                            SpeakWithVoice(voice, preparedText);
-                        }
-                    }
-                    else
-                    {
-                        var randomVoice = GetRandomAllowedVoice();
-                        if (randomVoice is null)
-                        {
-                            _logger.LogWarning(
-                                "No available voices to assign (all blocked or missing)."
-                            );
-                            return;
-                        }
-
-                        _linkedVoices[message.Name] = randomVoice;
-                        var greeting =
-                            $"Привет, {message.Name}! Для тебя был выбран голос {randomVoice.VoiceInfo.Name}";
-
-                        if (_discordVoiceRelayService?.IsVoiceRoutingEnabled ?? false)
-                        {
-                            _speechSynthesizer.SpeakAsyncCancelAll();
-                            await _discordVoiceRelayService.PlaySpeechAsync(
-                                randomVoice.VoiceInfo.Name,
-                                greeting,
-                                preparedText
-                            );
-                        }
-                        else
-                        {
-                            SpeakWithVoice(randomVoice, greeting, preparedText);
-                        }
-                    }
-                }
-            }
-            finally
-            {
-                _semaphore.Release();
+                await _ttsHubBroadcaster.BroadcastAsync(twitchUser, PrepareText(message));
             }
         }
         catch (Exception ex)
@@ -223,13 +107,30 @@ public class SyntheziaVoicer : IVoicer
         }
     }
 
-    public Task Stop()
+    public Task Sound(MessageToSynthezid message)
     {
-        if (OperatingSystem.IsWindows())
+        if (!IsActive)
         {
-            _speechSynthesizer.SpeakAsyncCancelAll();
+            return Task.CompletedTask;
         }
 
+        var twitchUser = new TwitchUserModel
+        {
+            TwitchId = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString(),
+            UserLogin = message.Name,
+            DisplayName = message.Name,
+            IsModerator = false,
+            IsVip = false,
+            CreatedAt = DateTime.UtcNow,
+            LastUpdated = DateTime.UtcNow,
+        };
+
+        return Sound(twitchUser, message.Message);
+    }
+
+    public Task Stop()
+    {
+        // No local synthesizer to stop after migration.
         return Task.CompletedTask;
     }
 
@@ -259,49 +160,23 @@ public class SyntheziaVoicer : IVoicer
         return sb.ToString();
     }
 
-    private void SpeakWithVoice(InstalledVoice voice, string text, string? additional = null)
+    private async Task SpeakWithVoice(string text, string? additional = null)
     {
-        var builder = new PromptBuilder();
-        builder.StartVoice(voice.VoiceInfo.Name);
-        builder.AppendText(text);
-        if (!string.IsNullOrWhiteSpace(additional))
+        var twitchUser = new TwitchUserModel
         {
-            builder.AppendBreak(TimeSpan.FromSeconds(1));
-            builder.AppendText(additional);
-        }
-        builder.EndVoice();
-        _speechSynthesizer.SpeakAsync(builder);
-    }
+            TwitchId = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString(),
+            UserLogin = "Unknown",
+            DisplayName = "Unknown",
+            IsModerator = false,
+            IsVip = false,
+            CreatedAt = DateTime.UtcNow,
+            LastUpdated = DateTime.UtcNow,
+        };
 
-    private InstalledVoice? GetRandomAllowedVoice()
-    {
-        var voices = _speechSynthesizer
-            .GetInstalledVoices(new CultureInfo("ru-RU"))
-            .Where(v => !IsVoiceBlocked(v))
-            .ToList();
-
-        if (voices.Count == 0)
+        if (_ttsHubBroadcaster is not null)
         {
-            return null;
+            await _ttsHubBroadcaster.BroadcastAsync(twitchUser, text);
         }
-
-        var index = Random.Shared.Next(voices.Count);
-        return voices[index];
-    }
-
-    private InstalledVoice? FindAllowedVoiceByName(string voiceName)
-    {
-        return _speechSynthesizer
-            .GetInstalledVoices(new CultureInfo("ru-RU"))
-            .FirstOrDefault(v =>
-                string.Equals(v.VoiceInfo.Name, voiceName, StringComparison.OrdinalIgnoreCase)
-                && !IsVoiceBlocked(v)
-            );
-    }
-
-    private bool IsVoiceBlocked(InstalledVoice voice)
-    {
-        return _blockedVoices.Contains(NormalizeVoiceName(voice.VoiceInfo.Name));
     }
 
     private static string NormalizeVoiceName(string voiceName)
