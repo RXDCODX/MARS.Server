@@ -932,6 +932,7 @@ public class CommandsService(
                 await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
                 var queueItem = await db
                     .SoundRequestQueueItems.AsNoTracking()
+                    .Include(queueItem => queueItem.Track)
                     .FirstOrDefaultAsync(qi => qi.Id == queueItemId, cancellationToken);
 
                 if (queueItem is null)

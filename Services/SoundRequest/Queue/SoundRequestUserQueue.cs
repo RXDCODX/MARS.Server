@@ -732,6 +732,13 @@ public class SoundRequestUserQueue(
         else
         {
             // Moving from history (oldPos < 0) into queue
+            // Moving from history: log current debug info
+            // If there's a current queue item, we should not insert a history item into position 0
+            // (making it the current playing track). Instead, insert after current (position 1).
+            if (targetPos == 0 && hasCurrentQueueItem)
+            {
+                targetPos = 1;
+            }
             // 1) Close gap in history: items older than oldPos (QueueOrder < oldPos) should +1
             try
             {
@@ -782,11 +789,8 @@ public class SoundRequestUserQueue(
 
         await dbContext.SaveChangesAsync(_cancellationToken);
 
-        result = await dbContext
-            .SoundRequestQueueItems.AsNoTracking()
-            .Include(qi => qi.Track)
-            .Include(qi => qi.RequestedByTwitchUser)
-            .FirstOrDefaultAsync(qi => qi.Id == queueItemId, cancellationToken: _cancellationToken);
+        // Return the tracked item (already updated) to ensure QueueOrder reflects saved state
+        result = itemToMove;
 
         return result;
     }
