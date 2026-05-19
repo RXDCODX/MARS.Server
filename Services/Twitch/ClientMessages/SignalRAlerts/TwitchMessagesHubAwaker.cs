@@ -1,4 +1,5 @@
-﻿using TwitchLib.Client.Events;
+﻿using MARS.Server.Services.Twitch.Entitys;
+using TwitchLib.Client.Events;
 
 namespace MARS.Server.Services.Twitch.ClientMessages.SignalRAlerts;
 
@@ -7,7 +8,8 @@ public class TwitchMessagesHubAwaker(
     IHubContext<TelegramusHub, ITelegramusHub> hubContext,
     IHostApplicationLifetime lifetime,
     IDbContextFactory<AppDbContext> dbContextFactory,
-    ILogger<TwitchMessagesHubAwaker> logger
+    ILogger<TwitchMessagesHubAwaker> logger,
+    TwitchUserEnsureService twitchUserEnsureService
 ) : BackgroundService
 {
     private readonly CancellationToken _token = lifetime.ApplicationStopping;
@@ -117,10 +119,13 @@ public class TwitchMessagesHubAwaker(
 
                         var alert = new MediaDto { MediaInfo = info };
 
-                        alert.MediaInfo.FixAlertText(
-                            e.ChatMessage.DisplayName,
-                            e.ChatMessage.Message
+                        var user = await twitchUserEnsureService.EnsureUserExistsAsync(
+                            TwitchUser.FromChatMessage(e.ChatMessage)!,
+                            _token
                         );
+
+                        alert.MediaInfo.FixAlertText(user, e.ChatMessage.Message);
+                        alert.MediaInfo.FixAlertColor(user);
 
                         await hubContext.Clients.All.Alert(alert);
                         break;
@@ -129,10 +134,13 @@ public class TwitchMessagesHubAwaker(
                     {
                         var alert = new MediaDto { MediaInfo = alerts[0] };
 
-                        alert.MediaInfo.FixAlertText(
-                            e.ChatMessage.DisplayName,
-                            e.ChatMessage.Message
+                        var user = await twitchUserEnsureService.EnsureUserExistsAsync(
+                            TwitchUser.FromChatMessage(e.ChatMessage)!,
+                            _token
                         );
+
+                        alert.MediaInfo.FixAlertText(user, e.ChatMessage.Message);
+                        alert.MediaInfo.FixAlertColor(user);
 
                         await hubContext.Clients.All.Alert(alert);
                         break;

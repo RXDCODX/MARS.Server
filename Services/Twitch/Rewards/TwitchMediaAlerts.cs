@@ -11,7 +11,8 @@ public class TwitchMediaAlerts(
     ITwitchClient client,
     IHostApplicationLifetime applicationLifetime,
     EventSubWebsocketClient wsClient,
-    RickRollerService rickRollerService
+    RickRollerService rickRollerService,
+    TwitchUserEnsureService twitchUserEnsureService
 ) : BackgroundService
 {
     private readonly CancellationToken _token = applicationLifetime.ApplicationStopping;
@@ -84,7 +85,14 @@ public class TwitchMediaAlerts(
         if (mediaOld != null)
         {
             var mediaClone = mediaOld.CloneTo();
-            mediaClone.FixAlertText(message.DisplayName, message.Message);
+
+            var user = await twitchUserEnsureService.EnsureUserExistsAsync(
+                TwitchUser.FromOnMessageReceivedArgs(args)!,
+                _token
+            );
+
+            mediaClone.FixAlertText(user, message.Message);
+            mediaClone.FixAlertColor(user);
 
             await hubContext.Clients.All.Alert(new MediaDto { MediaInfo = mediaClone });
         }
@@ -139,7 +147,14 @@ public class TwitchMediaAlerts(
                         async () =>
                         {
                             var mediaClone = mediaOld.CloneTo();
-                            mediaClone.FixAlertText(message.UserName, message.UserInput);
+
+                            var user = await twitchUserEnsureService.EnsureUserExistsAsync(
+                                TwitchUser.FromChannelPointsCustomRewardRedemptionArgs(args)!,
+                                _token
+                            );
+
+                            mediaClone.FixAlertText(user, string.Empty);
+                            mediaClone.FixAlertColor(user);
 
                             await hubContext.Clients.All.Alert(
                                 new MediaDto { MediaInfo = mediaClone }

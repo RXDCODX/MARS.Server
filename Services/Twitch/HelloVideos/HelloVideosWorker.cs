@@ -1,4 +1,5 @@
-﻿using TwitchLib.Client.Events;
+﻿using MARS.Server.Services.Twitch.Entitys;
+using TwitchLib.Client.Events;
 
 namespace MARS.Server.Services.Twitch.HelloVideos;
 
@@ -51,7 +52,7 @@ public class HelloVideoWorker(
                             _token
                         );
                         var user = await dbContext.FumoUsers.FindAsync(
-                            args.ChatMessage.UserId,
+                            [args.ChatMessage.UserId],
                             _token
                         );
 
@@ -82,6 +83,9 @@ public class HelloVideoWorker(
                                 notifUser.MediaInfo.FixAlertText(
                                     args.ChatMessage.DisplayName,
                                     args.ChatMessage.Message
+                                );
+                                notifUser.MediaInfo.FixAlertColor(
+                                    TwitchUser.FromOnMessageReceivedArgs(args)!
                                 );
 
                                 notifUser.MediaInfo.MetaInfo.Priority = MediaAlertPriority.High;

@@ -6,7 +6,7 @@ public static class MediaInfoExtension
 {
     extension(MediaInfo media)
     {
-        public MediaInfo FixAlertText(string username, string usertext, string? usercolor = "white")
+        public MediaInfo FixAlertText(string username, string usertext)
         {
             if (
                 media
@@ -27,17 +27,27 @@ public static class MediaInfoExtension
                 media.TextInfo.Text = media.TextInfo.Text.Replace("{user.name}", username);
             }
 
-            if (media.TextInfo.Text?.Contains("{user.color}", StringComparison.OrdinalIgnoreCase) ?? false)
-            {
-                media.TextInfo.Text = media.TextInfo.Text.Replace("{user.color}", usercolor);
-            }
-
             return media;
         }
 
         public MediaInfo FixAlertText(TwitchUser user, string message)
         {
-            return media.FixAlertText(user.DisplayName, message, user.ChatColor);
+            return media.FixAlertText(user.DisplayName, message);
+        }
+
+        public MediaInfo FixAlertColor(TwitchUser user)
+        {
+            if (media.TextInfo.KeyWordsColor?.Contains("{user.color}") ?? false)
+            {
+                media.TextInfo.KeyWordsColor = media.TextInfo.KeyWordsColor.Replace("{user.color}", user.ChatColor);
+            }
+
+            if (media.TextInfo.TextColor?.Contains("{user.color}") ?? false)
+            {
+                media.TextInfo.TextColor = media.TextInfo.TextColor?.Replace("{user.color}", user.ChatColor);
+            }
+
+            return media;
         }
     }
 }

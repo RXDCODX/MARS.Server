@@ -15,7 +15,8 @@ public class FumoFridayNight_TwitchReward(
     EventSubWebsocketClient wsClient,
     IHostApplicationLifetime lifetime,
     IHubContext<TelegramusHub, ITelegramusHub> hubContext,
-    RickRollerService rickRoller
+    RickRollerService rickRoller,
+    TwitchUserEnsureService twitchUserEnsureService
 ) : TemporaryReward(channelRewardsService, logger, environment)
 {
     private const string VideoPathEnvironmentVariable = "TWITCH_FUMO_FRIDAY_NIGHT_VIDEO_PATH";
@@ -97,8 +98,10 @@ public class FumoFridayNight_TwitchReward(
                                 TextInfo = new MediaTextInfo
                                 {
                                     Text =
-                                        $"🎵 {{user.name}} активировал(а) {AlertDisplayName}! 🎵",
+                                        $"🎵 #{{user.name}}# активировал(а) {AlertDisplayName}! 🎵",
                                     TextColor = "#FFFFFF",
+                                    KeyWordSybmolDelimiter = '#',
+                                    KeyWordsColor = "{user.color}",
                                 },
                                 FileInfo = new MediaFileInfo
                                 {
@@ -126,7 +129,12 @@ public class FumoFridayNight_TwitchReward(
                                 StylesInfo = new MediaStylesInfo(),
                             };
 
-                            mediaInfo.FixAlertText(twEvent.UserName, string.Empty);
+                            var user = await twitchUserEnsureService.EnsureUserExistsAsync(
+                                TwitchUser.FromChannelPointsCustomRewardRedemptionArgs(args)!
+                            );
+
+                            mediaInfo.FixAlertText(user, string.Empty);
+                            mediaInfo.FixAlertColor(user);
 
                             var mediaDto = new MediaDto(mediaInfo);
                             await hubContext.Clients.All.Alert(mediaDto);
