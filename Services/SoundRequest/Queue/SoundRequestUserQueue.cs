@@ -1,5 +1,4 @@
-﻿using System.Linq.Dynamic.Core.Exceptions;
-using MARS.Server.Services.SoundRequest.Entities;
+﻿using MARS.Server.Services.SoundRequest.Entities;
 using MARS.Server.Services.Twitch;
 using MARS.Server.Services.Twitch.Entitys;
 

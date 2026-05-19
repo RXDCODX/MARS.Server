@@ -1,9 +1,5 @@
 ﻿using System.Diagnostics;
-using System.Linq;
 using MARS.Server.Services.Twitch.SoundBarService.Entitys;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 namespace MARS.Server.Services.Twitch.SoundBarService;
 
@@ -30,7 +26,9 @@ public class SoundBarFactory(
     private string GetAudioControllerUrl()
     {
         var config = httpClientsOptions.Value;
-        var port = environment.IsProduction() ? config.AudioControllerProdPort : config.AudioControllerDevPort;
+        var port = environment.IsProduction()
+            ? config.AudioControllerProdPort
+            : config.AudioControllerDevPort;
         if (port <= 0)
         {
             // Fallback to hardcoded ports if configuration not present

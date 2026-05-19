@@ -1,5 +1,4 @@
 ﻿using MARS.Server.Services.CommandExecutor.Entitys;
-using MARS.Server.Services.CommandExecutor.Entitys.Commands;
 using Telegram.Bot.Types.Enums;
 
 namespace MARS.Server.Services.CommandExecutor.Adapters;

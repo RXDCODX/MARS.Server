@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using System.Threading;
 
 namespace MARS.Server.CustomLoggers.SignalRLogger;
 
@@ -39,7 +38,10 @@ public class LoggerHubRecursionGuard
         {
             result = true;
         }
-        else if (hasCategory && category.StartsWith("Microsoft.AspNetCore", StringComparison.OrdinalIgnoreCase))
+        else if (
+            hasCategory
+            && category.StartsWith("Microsoft.AspNetCore", StringComparison.OrdinalIgnoreCase)
+        )
         {
             // Block all Microsoft.AspNetCore.* logs from going to the LoggerHub to avoid recursion
             result = true;

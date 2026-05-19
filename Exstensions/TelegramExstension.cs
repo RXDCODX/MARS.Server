@@ -1,6 +1,4 @@
-﻿using Telegram.Bot.Types;
-
-namespace MARS.Server.Exstensions;
+﻿namespace MARS.Server.Exstensions;
 
 public static class TelegramExstension
 {

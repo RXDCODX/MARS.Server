@@ -1,8 +1,4 @@
-﻿using System.Net.Http;
-using MARS.Server.Configuration;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Options;
-using TwitchLib.EventSub.Core.EventArgs.Stream;
+﻿using TwitchLib.EventSub.Core.EventArgs.Stream;
 using TwitchLib.EventSub.Websockets;
 
 namespace MARS.Server.Services.Twitch.StreamBotNotifications;
@@ -66,7 +62,8 @@ public class TwitchStreamStartupNotifications : IHostedService
 
         if (!audioControllerAvailable)
         {
-            var reminderMessage = "Аудиоконтроллер не запущен. Проверь его запуск, чтобы звуковые запросы работали корректно.";
+            var reminderMessage =
+                "Аудиоконтроллер не запущен. Проверь его запуск, чтобы звуковые запросы работали корректно.";
             await _twitchClient.SendMessageToMainTwitchAsync(reminderMessage, _logger);
         }
     }
@@ -76,7 +73,9 @@ public class TwitchStreamStartupNotifications : IHostedService
         try
         {
             var config = _httpClientsConfiguration.Value;
-            var port = _environment.IsProduction() ? config.AudioControllerProdPort : config.AudioControllerDevPort;
+            var port = _environment.IsProduction()
+                ? config.AudioControllerProdPort
+                : config.AudioControllerDevPort;
             if (port <= 0)
             {
                 port = _environment.IsProduction() ? 30695 : 30691;

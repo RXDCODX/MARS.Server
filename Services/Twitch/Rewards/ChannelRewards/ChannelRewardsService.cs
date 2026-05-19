@@ -1,6 +1,4 @@
-﻿using System.Runtime.CompilerServices;
-using MARS.Server.Services.Twitch.Management;
-using Microsoft.Extensions.Options;
+﻿using MARS.Server.Services.Twitch.Management;
 using TwitchLib.Api.Helix.Models.ChannelPoints;
 using TwitchLib.Api.Helix.Models.ChannelPoints.CreateCustomReward;
 using TwitchLib.Api.Helix.Models.ChannelPoints.UpdateCustomReward;
@@ -86,7 +84,8 @@ public class ChannelRewardsService : BackgroundService
     /// <summary>
     /// Получает все награды канала (с кешированием).
     /// </summary>
-    public Task<IEnumerable<CustomReward>?> GetRewardsAsync() => RewardsCacheService.GetRewardsAsync();
+    public Task<IEnumerable<CustomReward>?> GetRewardsAsync() =>
+        RewardsCacheService.GetRewardsAsync();
 
     /// <summary>
     /// Получает награды напрямую из API (без кеша).

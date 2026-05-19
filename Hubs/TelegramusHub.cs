@@ -1,15 +1,10 @@
-﻿using MARS.Server.Configuration;
-using MARS.Server.Hubs.Interfaces;
-using MARS.Server.Services.Twitch.Rewards._1580_MikuBeam;
+﻿using MARS.Server.Services.Twitch.Rewards._1580_MikuBeam;
 using MARS.Server.Services.Twitch.Rewards._39_MikuMonday;
 using MARS.Server.Services.Twitch.SoundBarService;
 using MARS.Server.Services.WaifuRoll;
-using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.Options;
 using SignalRSwaggerGen.Attributes;
 using SignalRSwaggerGen.Enums;
 using Swashbuckle.AspNetCore.Annotations;
-using TwitchLib.Client.Interfaces;
 
 namespace MARS.Server.Hubs;
 

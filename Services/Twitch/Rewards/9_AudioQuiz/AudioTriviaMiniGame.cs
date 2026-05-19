@@ -1,6 +1,4 @@
 using Cyrillic.Convert;
-using MARS.Server.Hubs;
-using MARS.Server.Hubs.Interfaces;
 using MARS.Server.Hubs.Models.AudioQuiz;
 using MARS.Server.Services.SoundRequest.Entities;
 using MARS.Server.Services.SoundRequest.Interfaces;

@@ -1,8 +1,6 @@
 namespace MARS.Server.Hubs.Interfaces;
 
 using MARS.Server.Hubs.Models.VoiceRecognition;
-using SignalRSwaggerGen.Attributes;
-using SignalRSwaggerGen.Enums;
 
 /// <summary>
 /// Interface for voice recognition hub client methods.
