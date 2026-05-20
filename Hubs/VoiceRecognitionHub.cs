@@ -1,5 +1,6 @@
 namespace MARS.Server.Hubs;
 
+using Microsoft.AspNetCore.Authorization;
 using SignalRSwaggerGen.Attributes;
 using SignalRSwaggerGen.Enums;
 
@@ -10,7 +11,9 @@ using SignalRSwaggerGen.Enums;
 ///
 /// The route is preserved for compatibility while the semantics now belong to TTS.
 /// </summary>
-[SignalRHub("/hubs/voice-recognition", AutoDiscover.MethodsAndParams)]
+
+[AllowAnonymous]
+[SignalRHub("/hubs/tts", AutoDiscover.MethodsAndParams)]
 public class VoiceRecognitionHub(ILogger<VoiceRecognitionHub> logger) : Hub<IVoiceRecognitionHub>
 {
     private const string TtsConsumersGroupName = "tts-consumers";
@@ -22,10 +25,7 @@ public class VoiceRecognitionHub(ILogger<VoiceRecognitionHub> logger) : Hub<IVoi
     {
         await Groups.AddToGroupAsync(Context.ConnectionId, TtsConsumersGroupName);
 
-        logger.LogInformation(
-            "TTS consumer registered: {ConnectionId}",
-            Context.ConnectionId
-        );
+        logger.LogInformation("TTS consumer registered: {ConnectionId}", Context.ConnectionId);
     }
 
     /// <summary>
@@ -35,10 +35,7 @@ public class VoiceRecognitionHub(ILogger<VoiceRecognitionHub> logger) : Hub<IVoi
     {
         await Groups.RemoveFromGroupAsync(Context.ConnectionId, TtsConsumersGroupName);
 
-        logger.LogInformation(
-            "TTS consumer unregistered: {ConnectionId}",
-            Context.ConnectionId
-        );
+        logger.LogInformation("TTS consumer unregistered: {ConnectionId}", Context.ConnectionId);
     }
 
     /// <summary>
@@ -90,10 +87,7 @@ public class VoiceRecognitionHub(ILogger<VoiceRecognitionHub> logger) : Hub<IVoi
     /// </summary>
     public override async Task OnConnectedAsync()
     {
-        logger.LogInformation(
-            "Client connected to TtsHub: {ConnectionId}",
-            Context.ConnectionId
-        );
+        logger.LogInformation("Client connected to TtsHub: {ConnectionId}", Context.ConnectionId);
 
         await base.OnConnectedAsync();
     }
