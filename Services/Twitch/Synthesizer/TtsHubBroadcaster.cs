@@ -1,4 +1,5 @@
 using MARS.Server.Hubs.Interfaces;
+using MARS.Server.Hubs.Models.VoiceRecognition;
 using MARS.Server.Services.Twitch.Entitys;
 using Microsoft.AspNetCore.SignalR;
 
@@ -34,6 +35,22 @@ public class TtsHubBroadcaster(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to broadcast TTS message to hub consumers.");
+        }
+    }
+
+    public async Task BroadcastStateAsync(
+        TtsState state,
+        CancellationToken cancellationToken = default
+    )
+    {
+        try
+        {
+            await hubContext.Clients.Group(TtsConsumersGroupName).UpdateTtsState(state);
+            logger.LogInformation("TTS state update was sent to hub consumers: {@State}", state);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to broadcast TTS state to hub consumers.");
         }
     }
 }

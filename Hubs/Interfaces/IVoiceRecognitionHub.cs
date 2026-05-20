@@ -1,5 +1,6 @@
 namespace MARS.Server.Hubs.Interfaces;
 
+using MARS.Server.Hubs.Models.VoiceRecognition;
 using MARS.Server.Services.Twitch.Entitys;
 
 /// <summary>
@@ -14,4 +15,10 @@ public interface IVoiceRecognitionHub
     /// <param name="user">Twitch user payload.</param>
     /// <param name="message">Text to speak.</param>
     Task PlayTts(TwitchUser user, string message);
+
+    /// <summary>
+    /// Send updated TTS state (stop flag / volume) to clients.
+    /// </summary>
+    /// <param name="state">TTS state payload.</param>
+    Task UpdateTtsState(TtsState state);
 }
