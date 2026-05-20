@@ -36,6 +36,7 @@ using MARS.Server.Services.Twitch.MiniGamesStats;
 using MARS.Server.Services.Twitch.PuntoSwitcher;
 using MARS.Server.Services.Twitch.Rewards;
 using MARS.Server.Services.Twitch.Rewards._11_RandomMemReward.Service;
+using MARS.Server.Services.Twitch.Media;
 using MARS.Server.Services.Twitch.Rewards._1580_MikuBeam;
 using MARS.Server.Services.Twitch.Rewards._160_LegBum;
 using MARS.Server.Services.Twitch.Rewards._2_WaifuMarriage;
@@ -528,6 +529,9 @@ public static class StartupEstensions
 
         internal IServiceCollection AddRandomMemServices()
         {
+            services.AddSingleton<ITwitchMediaPreparationService, TwitchMediaPreparationService>();
+            services.AddSingleton<TwitchMediaTranscodeWorker>();
+            services.AddHostedService(sp => sp.GetRequiredService<TwitchMediaTranscodeWorker>());
             services.AddSingleton<RandomMemHandler>();
             services.AddSingleton<RandomMemeWorker>();
             services.AddHostedService(sp => sp.GetRequiredService<RandomMemeWorker>());

@@ -1,4 +1,5 @@
 using MARS.Server.Services.Twitch.Entitys;
+using MARS.Server.Services.Twitch.Media;
 using MARS.Server.Services.Twitch.Rewards._11_RandomMemReward.Service.Entity;
 using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
 using TwitchLib.EventSub.Core.EventArgs.Channel;
@@ -12,6 +13,7 @@ public class RandomMem_TwitchReward(
     IHostEnvironment environment,
     IHubContext<TelegramusHub, ITelegramusHub> hubContext,
     IWebHostEnvironment webHostEnvironment,
+    ITwitchMediaPreparationService twitchMediaPreparationService,
     IDbContextFactory<AppDbContext> dbContextFactory,
     IHostApplicationLifetime applicationLifetime,
     EventSubWebsocketClient wsClient,
@@ -83,40 +85,12 @@ public class RandomMem_TwitchReward(
     private async Task<MediaInfo?> GetAlert(string path, string? displayName)
     {
         var mediaOrder = await GetNextVideoOrderAsync(path);
-        var filePath = mediaOrder.FilePath;
 
-        var exst = Path.GetExtension(filePath);
-        var fileType = await exst.GetFileMediaTypeAsync();
-        var shortPath = filePath[
-            (filePath.IndexOf("wwwroot", StringComparison.Ordinal) + "wwwroot".Length)..
-        ];
-
-        var mediaInfo = new MediaInfo
-        {
-            FileInfo = new MediaFileInfo
-            {
-                Extension = exst,
-                Type = fileType,
-                FileName = Path.GetFileName(filePath),
-                FilePath = shortPath,
-            },
-            MetaInfo = new MediaMetaInfo
-            {
-                DisplayName = displayName ?? string.Empty,
-                IsLooped = false,
-            },
-            PositionInfo = new MediaPositionInfo
-            {
-                Height = 400,
-                Width = 400,
-                IsProportion = true,
-                IsResizeRequires = true,
-            },
-            StylesInfo = new MediaStylesInfo { IsBorder = false },
-            TextInfo = new MediaTextInfo(),
-        };
-
-        return mediaInfo;
+        return await twitchMediaPreparationService.PrepareMediaAsync(
+            mediaOrder,
+            displayName,
+            _stoppingToken
+        );
     }
 
     public async Task<MemeOrder> GetNextVideoOrderAsync(string path)

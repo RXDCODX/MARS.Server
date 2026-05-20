@@ -7,6 +7,7 @@ public class RandomMemeWorker(
     IWebHostEnvironment webHostEnvironment
 ) : BackgroundService
 {
+    private const string CacheFolderName = "_converted";
     public bool IsServiceActive { get; set; } = true;
     private readonly string _folderPath = Path.Combine(webHostEnvironment.WebRootPath, "Alerts");
 
@@ -18,6 +19,7 @@ public class RandomMemeWorker(
 
             var files = Directory
                 .GetFiles(_folderPath, "*", SearchOption.AllDirectories)
+                .Where(filePath => !IsCacheFile(filePath))
                 .ToHashSet();
             var orders = await dbContext.RandomMemeOrder.ToListAsync(stoppingToken);
 
@@ -117,5 +119,23 @@ public class RandomMemeWorker(
 
             await Task.Delay(TimeSpan.FromMinutes(30), stoppingToken);
         }
+    }
+
+    private static bool IsCacheFile(string filePath)
+    {
+        var result = filePath.Contains(
+            Path.DirectorySeparatorChar + CacheFolderName + Path.DirectorySeparatorChar,
+            StringComparison.OrdinalIgnoreCase
+        );
+
+        if (!result)
+        {
+            result = filePath.Contains(
+                Path.AltDirectorySeparatorChar + CacheFolderName + Path.AltDirectorySeparatorChar,
+                StringComparison.OrdinalIgnoreCase
+            );
+        }
+
+        return result;
     }
 }
