@@ -51,7 +51,6 @@ using MARS.Server.Services.Twitch.SoundBarService;
 using MARS.Server.Services.Twitch.StreamBotNotifications;
 using MARS.Server.Services.Twitch.StreamManagement;
 using MARS.Server.Services.Twitch.Synthesizer;
-using MARS.Server.Services.Twitch.Synthesizer.Enitity;
 using MARS.Server.Services.Twitch.TwitchFollowers;
 using MARS.Server.Services.Twitch.WeddingAnniversary;
 using MARS.Server.Services.WaifuRoll;
@@ -542,16 +541,6 @@ public static class StartupEstensions
     internal static IServiceCollection AddSyntheziaServices(this IServiceCollection services)
     {
         services.AddSingleton<TtsHubBroadcaster>();
-        services.AddSingleton<ITtsVoiceRepository, TtsVoiceRepository>();
-        services.AddSingleton(sp =>
-            VoicerFactory.CreateVoicer(
-                sp.GetRequiredService<ILogger<IVoicer>>(),
-                sp.GetRequiredService<ITtsVoiceRepository>(),
-                sp
-            )
-        );
-        services.AddSingleton<SyntheziaQueueManager>();
-        services.AddHostedService(sp => sp.GetRequiredService<SyntheziaQueueManager>());
         return services;
     }
 
