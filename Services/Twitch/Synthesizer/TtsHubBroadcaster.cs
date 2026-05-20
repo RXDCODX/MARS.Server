@@ -1,14 +1,15 @@
-using MARS.Server.Hubs.Interfaces;
 using MARS.Server.Hubs.Models.VoiceRecognition;
 using MARS.Server.Services.Twitch.Entitys;
-using Microsoft.AspNetCore.SignalR;
+using TwitchLib.Client.Events;
 
 namespace MARS.Server.Services.Twitch.Synthesizer;
 
 public class TtsHubBroadcaster(
     IHubContext<Hubs.VoiceRecognitionHub, IVoiceRecognitionHub> hubContext,
-    ILogger<TtsHubBroadcaster> logger
-)
+    ILogger<TtsHubBroadcaster> logger,
+    ITwitchClient client,
+    IHostApplicationLifetime lifetime
+) : BackgroundService
 {
     private const string TtsConsumersGroupName = "tts-consumers";
 
@@ -51,6 +52,44 @@ public class TtsHubBroadcaster(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to broadcast TTS state to hub consumers.");
+        }
+    }
+
+    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        lifetime.ApplicationStarted.Register(() =>
+        {
+            client.OnMessageReceived += ClientOnOnMessageReceived;
+        });
+
+        lifetime.ApplicationStopping.Register(() =>
+        {
+            client.OnMessageReceived -= ClientOnOnMessageReceived;
+        });
+
+        return Task.CompletedTask;
+    }
+
+    private async Task ClientOnOnMessageReceived(object? sender, OnMessageReceivedArgs args)
+    {
+        if (
+            args.ChatMessage.Channel.Equals(
+                TwitchExstension.Channel,
+                StringComparison.OrdinalIgnoreCase
+            )
+            && !TwitchExstension.BlackList.Any(u =>
+                u.Equals(args.ChatMessage.Username, StringComparison.OrdinalIgnoreCase)
+            )
+        )
+        {
+            await Task.Factory.StartNew(
+                () =>
+                    BroadcastAsync(
+                        TwitchUser.FromOnMessageReceivedArgs(args)!,
+                        args.ChatMessage.Message,
+                        lifetime.ApplicationStopping
+                    )
+            );
         }
     }
 }

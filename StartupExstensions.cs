@@ -491,131 +491,131 @@ public static class StartupEstensions
         return app;
     }
 
-    internal static IServiceCollection AddPyroAlertsServices(this IServiceCollection services)
+    extension(IServiceCollection services)
     {
-        services.AddSingleton<PyroAlertsHelper>();
-        services.AddSingleton<PyroAlertsHandler>();
-        return services;
-    }
-
-    internal static IServiceCollection AddShikimoriServices(this IServiceCollection services)
-    {
-        services.AddSingleton<IShikimoriRateLimiter, ShikimoriShikimoriRateLimiter>();
-        services.AddSingleton<ShikimoriService>();
-        return services;
-    }
-
-    internal static IServiceCollection AddScoreboardServiceSingleton(
-        this IServiceCollection services
-    )
-    {
-        services.AddSingleton<ScoreboardService>();
-        return services;
-    }
-
-    internal static IServiceCollection AddWaifuRollServices(this IServiceCollection services)
-    {
-        services.AddSingleton<WaifuRollService>();
-        services.AddSingleton<WaifuRollEnsurenceService>();
-        services.AddSingleton<WaifuPrizesService>();
-        services.AddSingleton<IWaifuRollGuaranteeService, WaifuRollGuaranteeService>();
-
-        // Фоновый запуск WaifuRollService
-        services.AddHostedService(sp => sp.GetRequiredService<WaifuRollService>());
-
-        return services;
-    }
-
-    internal static IServiceCollection AddRandomMemServices(this IServiceCollection services)
-    {
-        services.AddSingleton<RandomMemHandler>();
-        services.AddSingleton<RandomMemeWorker>();
-        services.AddHostedService(sp => sp.GetRequiredService<RandomMemeWorker>());
-        services.AddSingleton<RandomMemOnline>();
-        services.AddHostedService(sp => sp.GetRequiredService<RandomMemOnline>());
-
-        services.AddScoped<IRandomMemeService, RandomMemeService>();
-        return services;
-    }
-
-    internal static IServiceCollection AddSyntheziaServices(this IServiceCollection services)
-    {
-        services.AddSingleton<TtsHubBroadcaster>();
-        return services;
-    }
-
-    internal static IServiceCollection Add365Services(this IServiceCollection services)
-    {
-        services.AddSingleton<Worker365>();
-        services.AddHostedService(sp => sp.GetRequiredService<Worker365>());
-        return services;
-    }
-
-    internal static IServiceCollection AddBooruServices(this IServiceCollection services)
-    {
-        services.AddSingleton<Gelbooru>(sp =>
+        internal IServiceCollection AddPyroAlertsServices()
         {
-            var booruConfiguration =
-                sp.GetService<IOptions<BooruConfiguration>>() ?? throw new NullReferenceException();
+            services.AddSingleton<PyroAlertsHelper>();
+            services.AddSingleton<PyroAlertsHandler>();
+            return services;
+        }
 
-            return new Gelbooru
+        internal IServiceCollection AddShikimoriServices()
+        {
+            services.AddSingleton<IShikimoriRateLimiter, ShikimoriShikimoriRateLimiter>();
+            services.AddSingleton<ShikimoriService>();
+            return services;
+        }
+
+        internal IServiceCollection AddScoreboardServiceSingleton()
+        {
+            services.AddSingleton<ScoreboardService>();
+            return services;
+        }
+
+        internal IServiceCollection AddWaifuRollServices()
+        {
+            services.AddSingleton<WaifuRollService>();
+            services.AddSingleton<WaifuRollEnsurenceService>();
+            services.AddSingleton<WaifuPrizesService>();
+            services.AddSingleton<IWaifuRollGuaranteeService, WaifuRollGuaranteeService>();
+
+            // Фоновый запуск WaifuRollService
+            services.AddHostedService(sp => sp.GetRequiredService<WaifuRollService>());
+
+            return services;
+        }
+
+        internal IServiceCollection AddRandomMemServices()
+        {
+            services.AddSingleton<RandomMemHandler>();
+            services.AddSingleton<RandomMemeWorker>();
+            services.AddHostedService(sp => sp.GetRequiredService<RandomMemeWorker>());
+            services.AddSingleton<RandomMemOnline>();
+            services.AddHostedService(sp => sp.GetRequiredService<RandomMemOnline>());
+
+            services.AddScoped<IRandomMemeService, RandomMemeService>();
+            return services;
+        }
+
+        internal IServiceCollection AddSyntheziaServices()
+        {
+            services.AddSingleton<TtsHubBroadcaster>();
+            services.AddHostedService(sp => sp.GetRequiredService<TtsHubBroadcaster>());
+            return services;
+        }
+
+        internal IServiceCollection Add365Services()
+        {
+            services.AddSingleton<Worker365>();
+            services.AddHostedService(sp => sp.GetRequiredService<Worker365>());
+            return services;
+        }
+
+        internal IServiceCollection AddBooruServices()
+        {
+            services.AddSingleton<Gelbooru>(sp =>
             {
-                Auth = new BooruAuth(
-                    booruConfiguration.Value.UserId,
-                    booruConfiguration.Value.PwdHash
-                ),
-            };
-        });
+                var booruConfiguration =
+                    sp.GetService<IOptions<BooruConfiguration>>() ?? throw new NullReferenceException();
 
-        return services;
-    }
+                return new Gelbooru
+                {
+                    Auth = new BooruAuth(
+                        booruConfiguration.Value.UserId,
+                        booruConfiguration.Value.PwdHash
+                    ),
+                };
+            });
 
-    /// <summary>
-    /// Добавляет все Twitch-связанная сервисы
-    /// </summary>
-    internal static IServiceCollection AddTwitchServices(
-        this IServiceCollection services,
-        IConfigurationManager configuration
-    )
-    {
-        services.AddTwitchEvents(configuration).AddTwitchStreamManagementServiceOnly();
+            return services;
+        }
 
-        return services;
-    }
+        /// <summary>
+        /// Добавляет все Twitch-связанная сервисы
+        /// </summary>
+        internal IServiceCollection AddTwitchServices(IConfigurationManager configuration
+        )
+        {
+            services.AddTwitchEvents(configuration).AddTwitchStreamManagementServiceOnly();
 
-    /// <summary>
-    /// Добавляет все игровые сервисы
-    /// </summary>
-    internal static IServiceCollection AddGameServices(this IServiceCollection services)
-    {
-        services
-            //.AddHonkaiServices()
+            return services;
+        }
+
+        /// <summary>
+        /// Добавляет все игровые сервисы
+        /// </summary>
+        internal IServiceCollection AddGameServices()
+        {
+            services
+                //.AddHonkaiServices()
 
 
-            .AddWaifuRollServices()
-            .AddRandomMemServices()
-            .AddScoreboardServiceSingleton();
+                .AddWaifuRollServices()
+                .AddRandomMemServices()
+                .AddScoreboardServiceSingleton();
 
-        return services;
-    }
+            return services;
+        }
 
-    /// <summary>
-    /// Добавляет все внешние API сервисы
-    /// </summary>
-    internal static IServiceCollection AddExternalApiServices(this IServiceCollection services)
-    {
-        services.AddShikimoriServices().AddPyroAlertsServices().AddBooruServices();
+        /// <summary>
+        /// Добавляет все внешние API сервисы
+        /// </summary>
+        internal IServiceCollection AddExternalApiServices()
+        {
+            services.AddShikimoriServices().AddPyroAlertsServices().AddBooruServices();
 
-        return services;
-    }
+            return services;
+        }
 
-    /// <summary>
-    /// Добавляет все специализированные сервисы
-    /// </summary>
-    internal static IServiceCollection AddSpecializedServices(this IServiceCollection services)
-    {
-        services.AddSyntheziaServices().Add365Services();
+        /// <summary>
+        /// Добавляет все специализированные сервисы
+        /// </summary>
+        internal IServiceCollection AddSpecializedServices()
+        {
+            services.AddSyntheziaServices().Add365Services();
 
-        return services;
+            return services;
+        }
     }
 }
