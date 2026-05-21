@@ -1,7 +1,8 @@
 using MARS.Server.Hubs.Models.VoiceRecognition;
-using MARS.Server.Services.Twitch.Entitys;
 using SevenTV;
+using SevenTV.Types.Rest;
 using TwitchLib.Client.Events;
+using TwitchUser = MARS.Server.Services.Twitch.Entitys.TwitchUser;
 
 namespace MARS.Server.Services.Twitch.Synthesizer;
 
@@ -193,21 +194,41 @@ public class TtsHubBroadcaster(
                 return;
             }
 
-            var sevenTvUser = await _sevenTvClient.rest.GetUser(TwitchExstension.SevenTVUserId);
-            HashSet<string> emotesFromSets =
-            [
-                .. (sevenTvUser?.emote_sets ?? [])
-                    .Where(set => set?.emotes is not null)
-                    .SelectMany(set => set!.emotes!)
-                    .Select(emote => emote?.name)
-                    .Where(name => !string.IsNullOrWhiteSpace(name))
-                    .Select(name => name!.Trim()),
-            ];
+            var emoteSets = new HashSet<string>();
+            try
+            {
+                var sevenTvUser = await _sevenTvClient.rest.GetUser(TwitchExstension.SevenTVUserId);
 
-            if (emotesFromSets.Count > 0)
+                if (sevenTvUser is { emote_sets: { Length: > 0 } })
+                {
+                    foreach (var emoteSet in sevenTvUser.emote_sets)
+                    {
+                        if (emoteSet is { id: not null })
+                        {
+                            var emoteSetEmojis = await _sevenTvClient.rest.GetEmoteSet(emoteSet.id);
+                            if (emoteSetEmojis is { emotes: { Length: > 0 } })
+                            {
+                                foreach (var emote in emoteSetEmojis.emotes)
+                                {
+                                    if (emote is { name: not null })
+                                    {
+                                        emoteSets.Add(emote.name);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                logger.LogException(e);
+            }
+
+            if (emoteSets.Count > 0)
             {
                 _sevenTvEmoteNames.Clear();
-                foreach (var emoteName in emotesFromSets)
+                foreach (var emoteName in emoteSets)
                 {
                     _sevenTvEmoteNames.Add(emoteName);
                 }
