@@ -11,7 +11,7 @@ public class TtsHubBroadcaster(
     ILogger<TtsHubBroadcaster> logger,
     ITwitchClient client,
     IHostApplicationLifetime lifetime
-) : BackgroundService
+ ) : BackgroundService, ITtsHubBroadcaster
 {
     private const string TtsConsumersGroupName = "tts-consumers";
     private static readonly TimeSpan SevenTvEmotesCacheLifetime = TimeSpan.FromMinutes(10);
@@ -42,7 +42,7 @@ public class TtsHubBroadcaster(
     Task ITtsHubBroadcaster.BroadcastStateAsync(TtsState? state, CancellationToken cancellationToken) => BroadcastStateAsync(state, cancellationToken);
 
     public async Task BroadcastAsync(
-        TwitchUser user,
+        TwitchUser? user,
         string message,
         CancellationToken cancellationToken = default
     )
