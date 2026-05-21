@@ -1025,4 +1025,69 @@ public class CommandsService(
 
         return result;
     }
+
+    /// <summary>
+    /// Остановить воспроизведение (очистить текущее состояние плеера)
+    /// </summary>
+    public async Task<string> StopPlaybackAsync(CancellationToken cancellationToken = default)
+    {
+        string result;
+
+        try
+        {
+            await stateManager.StopPlaybackAsync(notify: true);
+            await NotifyQueueChangedAsync();
+            result = "⏹ Воспроизведение остановлено";
+        }
+        catch (Exception ex)
+        {
+            result = $"❌ Исключение: {ex.Message}";
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Возобновить воспроизведение: снять паузу или запустить первый трек из очереди
+    /// </summary>
+    public async Task<string> ResumePlaybackAsync(CancellationToken cancellationToken = default)
+    {
+        string result;
+
+        try
+        {
+            var currentState = await stateManager.GetStateAsync();
+
+            if (currentState.State == PlaybackState.Paused)
+            {
+                await stateManager.SetPausedAsync(false, notify: true);
+                result = "▶️ Воспроизведение возобновлено";
+            }
+            else if (currentState.State == PlaybackState.Stopped)
+            {
+                var queueList = await queue.GetQueueAsync();
+                var first = queueList.FirstOrDefault(qi => qi.QueueOrder > 0);
+                if (first != null && playerController is MainPlayer mainPlayer)
+                {
+                    await mainPlayer.PlayAsync(first, cancellationToken);
+                    await NotifyQueueChangedAsync();
+                    result = first.Track != null ? $"▶️ Сейчас играет: {first.Track.Title}" : "▶️ Воспроизведение запущено";
+                }
+                else
+                {
+                    result = "Нет треков в очереди";
+                }
+            }
+            else
+            {
+                result = "Уже воспроизводится";
+            }
+        }
+        catch (Exception ex)
+        {
+            result = $"❌ Исключение: {ex.Message}";
+        }
+
+        return result;
+    }
 }
