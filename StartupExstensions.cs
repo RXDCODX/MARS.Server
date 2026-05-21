@@ -547,6 +547,7 @@ public static class StartupEstensions
         internal IServiceCollection AddSyntheziaServices()
         {
             services.AddSingleton<TtsHubBroadcaster>();
+            services.AddSingleton<ITtsHubBroadcaster>(sp => sp.GetRequiredService<TtsHubBroadcaster>());
             services.AddHostedService(sp => sp.GetRequiredService<TtsHubBroadcaster>());
             return services;
         }

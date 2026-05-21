@@ -765,6 +765,9 @@ namespace MARS.Server.Migrations
                     b.Property<bool>("IsMuted")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("PausedByMute")
+                        .HasColumnType("boolean");
+
                     b.Property<int>("State")
                         .HasColumnType("integer");
 
