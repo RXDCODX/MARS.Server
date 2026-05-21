@@ -1,7 +1,7 @@
-﻿using MARS.Server.Services;
+﻿using System.Text.Json;
+using MARS.Server.Services;
 using MARS.Server.Services.Media;
 using MARS.Server.Services.PyroAlerts.Entitys;
-using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MARS.Server.Controllers;
@@ -526,7 +526,7 @@ public class MediaInfoApiController(
         };
     }
 
-    
+
 
     /// <summary>
     /// Удалить алерт
