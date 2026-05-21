@@ -31,7 +31,6 @@ public class TwitchMediaTranscodeWorker(
             using var scope = serviceScopeFactory.CreateScope();
             var randomMemeService = scope.ServiceProvider.GetRequiredService<IRandomMemeService>();
             var mediaOrders = await randomMemeService.GetAllMemeOrdersAsync(cancellationToken);
-            var convertedFilesCount = 0;
 
             foreach (var mediaOrder in mediaOrders)
             {
@@ -41,17 +40,8 @@ public class TwitchMediaTranscodeWorker(
                     cancellationToken,
                     async message =>
                     {
-                        convertedFilesCount++;
                         await SendTelegramNotificationAsync(message, cancellationToken);
                     }
-                );
-            }
-
-            if (convertedFilesCount == 0)
-            {
-                await SendTelegramNotificationAsync(
-                    "В очереди больше нет файлов для конвертации.",
-                    cancellationToken
                 );
             }
         }
