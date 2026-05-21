@@ -1,5 +1,4 @@
-﻿using BooruSharp.Booru;
-using BooruSharp.Search.Post;
+﻿using Imouto.BooruParser.Implementations.Danbooru;
 using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Management.Entitys;
 using Microsoft.AspNetCore.StaticFiles.Infrastructure;
@@ -11,7 +10,7 @@ namespace MARS.Server.Services.Twitch.Rewards._27_RandomArt;
 public class RandomArt(
     IHubContext<TelegramusHub, ITelegramusHub> hub,
     ITwitchClient client,
-    Gelbooru site,
+    DanbooruApiLoader site,
     ILogger<RandomArt> logger,
     EventSubWebsocketClient wsClient,
     SharedOptions staticFilesOptions,
@@ -42,66 +41,57 @@ public class RandomArt(
                     TwitchUser.FromChannelPointsCustomRewardRedemptionArgs(args)!,
                     async () =>
                     {
-                        if (
-                            twEvent.UserInput.Contains("rating", StringComparison.OrdinalIgnoreCase)
-                        )
+                        var userInput = twEvent.UserInput.Trim();
+
+                        if (string.IsNullOrWhiteSpace(userInput))
                         {
                             await client.SendMessageToMainTwitchAsync(
-                                @$"@{twEvent.UserName}, ты охуел?",
+                                @$"@{twEvent.UserName}, нужен хотя бы один тег.",
                                 logger
                             );
                             return;
                         }
 
-                        var result = new List<SearchResult>();
-
-                        if (int.TryParse(twEvent.UserInput, out var aa))
+                        if (userInput.Contains(' '))
                         {
-                            do
-                            {
-                                var answer = await site.GetRandomPostsAsync(10, "rating:general");
-
-                                var posts = answer.Where(e =>
-                                    e.Rating is Rating.General or Rating.Questionable
-                                );
-
-                                result.AddRange(posts);
-                            } while (result.Count == 0);
-                        }
-                        else
-                        {
-                            do
-                            {
-                                var tagParams = (twEvent.UserInput + " rating:general").Split(' ');
-                                var answer = await site.GetRandomPostsAsync(
-                                    10,
-                                    string.Join(' ', tagParams)
-                                );
-
-                                if (answer.Length == 0)
-                                {
-                                    await client.SendMessageToMainTwitchAsync(
-                                        @$"@{twEvent.UserName}, плохой запрос, нету артов(",
-                                        logger
-                                    );
-                                    return;
-                                }
-
-                                var posts = answer.Where(e =>
-                                    e.Rating is Rating.General or Rating.Safe
-                                );
-
-                                result.AddRange(posts);
-                            } while (result.Count == 0);
+                            await client.SendMessageToMainTwitchAsync(
+                                @$"@{twEvent.UserName}, нужен только один тег без пробелов.",
+                                logger
+                            );
+                            return;
                         }
 
+                        var searchQuery = $"{userInput} (rating:general or rating:sensitive)";
+                        var searchResult = await site.SearchAsync(searchQuery);
+                        var answer = searchResult.Results;
+
+                        if (answer.Count == 0)
+                        {
+                            await client.SendMessageToMainTwitchAsync(
+                                @$"@{twEvent.UserName}, плохой запрос, нету артов(",
+                                logger
+                            );
+                            return;
+                        }
+
+                        var result = answer.DistinctBy(e => e.Id).ToList();
                         var mediaDtos = new MediaDto[result.Count];
                         var index = 0;
-                        result = [.. result.DistinctBy(e => e.ID)];
 
-                        foreach (var sr in result)
+                        foreach (var preview in result)
                         {
-                            var fileUrl = sr.FileUrl.AbsoluteUri;
+                            var post = await site.GetPostAsync(preview.Id);
+                            var fileUrl = post.OriginalUrl ?? post.SampleUrl ?? post.PreviewUrl;
+
+                            if (string.IsNullOrWhiteSpace(fileUrl))
+                            {
+                                await client.SendMessageToMainTwitchAsync(
+                                    @$"@{twEvent.UserName}, не удалось получить ссылку на арт.",
+                                    logger
+                                );
+                                return;
+                            }
+
                             var extension = Path.GetExtension(fileUrl);
                             var fileName = Path.GetFileName(fileUrl);
                             var mediaType = await extension.GetFileMediaTypeAsync();

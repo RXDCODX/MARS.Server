@@ -54,10 +54,10 @@
     <PackageReference Include="AspNetCore.SpaYarp" />
     <PackageReference Include="Azure.Identity" />
     <PackageReference Include="Ben.Demystifier" />
-    <PackageReference Include="BooruSharp" />
     <PackageReference Include="Cyrillic.Convert" />
     <PackageReference Include="DSharpPlus.VoiceNext" />
     <PackageReference Include="H.Hooks" />
+    <PackageReference Include="Imouto.BooruParser" />
     <PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />

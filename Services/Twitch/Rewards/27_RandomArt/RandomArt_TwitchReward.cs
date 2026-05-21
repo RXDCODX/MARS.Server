@@ -12,7 +12,7 @@ public class RandomArt_TwitchReward(
 {
     public override string AlertDisplayName { get; set; } = "🎨 Random Art";
     public override string AlertDescription { get; set; } =
-        "🖼️ введи любое число для рандомного арта. Если нужен по теме, Example: black_hair asuna_(sao) https://gelbooru.com/index.php?page=tags&s=list";
+        "Введи только 1 тег, Example: black_hair https://danbooru.donmai.us/tags";
     public override Color Color { get; set; } = Color.FromArgb(145, 71, 255);
     public override int Cost { get; init; } = 27;
     public override Func<bool> IsRewardEnabled { get; set; } = () => true;

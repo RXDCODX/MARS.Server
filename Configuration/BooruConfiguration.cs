@@ -4,6 +4,6 @@ namespace MARS.Server.Configuration;
 public class BooruConfiguration
 {
     public const string Section = "Booru";
-    public string UserId { get; set; }
-    public string PwdHash { get; set; }
+    public string Login { get; set; }
+    public string ApiKey { get; set; }
 }

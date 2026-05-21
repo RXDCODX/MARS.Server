@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using BooruSharp.Booru;
+using Flurl.Http.Configuration;
+using Imouto.BooruParser.Implementations.Danbooru;
 using MARS.Server.CustomLoggers.SignalRLogger;
 using MARS.Server.Hubs.Filters;
 using MARS.Server.Services._365Genius;
@@ -558,18 +559,19 @@ public static class StartupEstensions
 
         internal IServiceCollection AddBooruServices()
         {
-            services.AddSingleton<Gelbooru>(sp =>
+            services.AddSingleton<DanbooruApiLoader>(sp =>
             {
                 var booruConfiguration =
                     sp.GetService<IOptions<BooruConfiguration>>() ?? throw new NullReferenceException();
 
-                return new Gelbooru
+                var danbooruApiLoader = new DanbooruApiLoader(new FlurlClientCache(), Options.Create(new DanbooruSettings()
                 {
-                    Auth = new BooruAuth(
-                        booruConfiguration.Value.UserId,
-                        booruConfiguration.Value.PwdHash
-                    ),
-                };
+                    Login = booruConfiguration.Value.Login,
+                    ApiKey = booruConfiguration.Value.ApiKey,
+                    BotUserAgent = "RXDCODXStreamerBotRandomArtFeature/v1"
+                }));
+
+                return danbooruApiLoader;
             });
 
             return services;
