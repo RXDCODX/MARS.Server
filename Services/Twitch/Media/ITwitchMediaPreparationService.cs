@@ -7,6 +7,7 @@ public interface ITwitchMediaPreparationService
     Task<MediaInfo?> PrepareMediaAsync(
         MARS.Server.Services.Twitch.Rewards._11_RandomMemReward.Service.Entity.MemeOrder memeOrder,
         string? displayName,
-        CancellationToken cancellationToken = default
+        CancellationToken cancellationToken = default,
+        Func<string, Task>? onFileTranscoded = null
     );
 }

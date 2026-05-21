@@ -27,7 +27,8 @@ public class TwitchMediaPreparationService(
     public async Task<MediaInfo?> PrepareMediaAsync(
         MemeOrder memeOrder,
         string? displayName,
-        CancellationToken cancellationToken = default
+        CancellationToken cancellationToken = default,
+        Func<string, Task>? onFileTranscoded = null
     )
     {
         MediaInfo? result = null;
@@ -59,7 +60,8 @@ public class TwitchMediaPreparationService(
                                 currentFilePath,
                                 mediaType,
                                 probe.BitrateKbps,
-                                cancellationToken
+                                cancellationToken,
+                                onFileTranscoded
                             );
                         }
                     }
@@ -89,7 +91,8 @@ public class TwitchMediaPreparationService(
         string sourceFilePath,
         MediaType mediaType,
         long? bitrateKbps,
-        CancellationToken cancellationToken
+        CancellationToken cancellationToken,
+        Func<string, Task>? onFileTranscoded
     )
     {
         var result = sourceFilePath;
@@ -124,6 +127,12 @@ public class TwitchMediaPreparationService(
                     tempFilePath,
                     cancellationToken
                 );
+
+                if (onFileTranscoded != null)
+                {
+                    var transcodedFileName = Path.GetFileName(targetFilePath);
+                    await onFileTranscoded($"Сконвертирован файл: {transcodedFileName}");
+                }
 
                 result = targetFilePath;
             }
@@ -167,6 +176,8 @@ public class TwitchMediaPreparationService(
 
             await UpdateMemeOrderPathAsync(memeOrder, targetFilePath, cancellationToken);
         }
+
+        await SyncDevelopmentCopyAsync(sourceFilePath, targetFilePath);
     }
 
     private async Task ReplaceTranscodedFileAsync(
@@ -194,6 +205,131 @@ public class TwitchMediaPreparationService(
 
             await UpdateMemeOrderPathAsync(memeOrder, targetFilePath, cancellationToken);
         }
+
+        await SyncDevelopmentCopyAsync(sourceFilePath, targetFilePath);
+    }
+
+    private async Task SyncDevelopmentCopyAsync(string sourceFilePath, string targetFilePath)
+    {
+        try
+        {
+            var mirroredSourcePath = TryGetMirroredRandomMemePath(sourceFilePath);
+            var mirroredTargetPath = TryGetMirroredRandomMemePath(targetFilePath);
+
+            if (!string.IsNullOrWhiteSpace(mirroredTargetPath) && File.Exists(targetFilePath))
+            {
+                EnsureDirectoryExists(Path.GetDirectoryName(mirroredTargetPath));
+                File.Copy(targetFilePath, mirroredTargetPath, true);
+                File.SetLastWriteTimeUtc(mirroredTargetPath, File.GetLastWriteTimeUtc(targetFilePath));
+
+                if (
+                    !string.IsNullOrWhiteSpace(mirroredSourcePath)
+                    && !string.Equals(
+                        mirroredSourcePath,
+                        mirroredTargetPath,
+                        StringComparison.OrdinalIgnoreCase
+                    )
+                    && File.Exists(mirroredSourcePath)
+                )
+                {
+                    File.Delete(mirroredSourcePath);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(ex, "Не удалось синхронизировать dev-копию медиафайла {FilePath}", targetFilePath);
+        }
+
+        await Task.CompletedTask;
+    }
+
+    private string? TryGetMirroredRandomMemePath(string filePath)
+    {
+        string? result = null;
+
+        if (webHostEnvironment.IsProduction() && !string.IsNullOrWhiteSpace(filePath))
+        {
+            var primaryRoot = NormalizePath(
+                Path.Combine(webHostEnvironment.WebRootPath, "Alerts", "random_meme")
+            );
+            var developmentRoot = TryGetDevelopmentRandomMemeRootPath();
+
+            if (!string.IsNullOrWhiteSpace(developmentRoot))
+            {
+                var normalizedDevelopmentRoot = NormalizePath(developmentRoot);
+                var normalizedFilePath = NormalizePath(filePath);
+
+                if (normalizedFilePath.StartsWith(primaryRoot, StringComparison.OrdinalIgnoreCase))
+                {
+                    var relativePath = Path.GetRelativePath(primaryRoot, normalizedFilePath);
+                    result = Path.Combine(normalizedDevelopmentRoot, relativePath);
+                }
+                else if (
+                    normalizedFilePath.StartsWith(
+                        normalizedDevelopmentRoot,
+                        StringComparison.OrdinalIgnoreCase
+                    )
+                )
+                {
+                    var relativePath = Path.GetRelativePath(
+                        normalizedDevelopmentRoot,
+                        normalizedFilePath
+                    );
+                    result = Path.Combine(primaryRoot, relativePath);
+                }
+            }
+        }
+
+        return result;
+    }
+
+    private string? TryGetDevelopmentRandomMemeRootPath()
+    {
+        string? result = null;
+
+        if (webHostEnvironment.IsProduction())
+        {
+            var currentDir = Directory.GetCurrentDirectory();
+            var projectRoot = FindProjectRoot(currentDir);
+
+            if (!string.IsNullOrWhiteSpace(projectRoot))
+            {
+                result = Path.Combine(projectRoot, "wwwroot", "Alerts", "random_meme");
+            }
+        }
+
+        return result;
+    }
+
+    private static string NormalizePath(string filePath)
+    {
+        var result = Path.GetFullPath(filePath).TrimEnd(
+            Path.DirectorySeparatorChar,
+            Path.AltDirectorySeparatorChar
+        );
+
+        return result;
+    }
+
+    private static string? FindProjectRoot(string startPath)
+    {
+        var result = (string?)null;
+        var dir = new DirectoryInfo(startPath);
+
+        while (dir != null && result == null)
+        {
+            if (dir.GetFiles("*.csproj").Length > 0)
+            {
+                result = dir.FullName;
+            }
+            else
+            {
+                dir = dir.Parent;
+            }
+        }
+
+        return result;
     }
 
     private async Task UpdateMemeOrderPathAsync(
