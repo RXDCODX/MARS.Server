@@ -245,7 +245,7 @@ public class PuntoSwitcherService : BackgroundService, IPuntoSwitcherService
             ReplacedTokens = 0,
         };
 
-        var parts = message.Split(' ', StringSplitOptions.None);
+        var parts = message.Split(' ');
         if (parts.Length > 0)
         {
             var replaced = 0;

@@ -22,7 +22,7 @@ public class CatisaCommand(ITwitchClient client) : BaseCommand
             },
             new()
             {
-                Name = "message",
+                Name = "text",
                 Description = "Текст для отправки сообщения",
                 Type = "string",
                 Required = true,
@@ -35,7 +35,7 @@ public class CatisaCommand(ITwitchClient client) : BaseCommand
         CancellationToken cancellationToken = default
     )
     {
-        var message = (string)parameters["message"];
+        var message = (string)parameters["text"];
         var channel = (string)parameters["channel"];
 
         await client.JoinChannelAsync(channel);
