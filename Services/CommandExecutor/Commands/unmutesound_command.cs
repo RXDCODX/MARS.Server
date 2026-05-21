@@ -4,7 +4,7 @@ using MARS.Server.Services.Twitch.SoundBarService;
 
 namespace MARS.Server.Services.CommandExecutor.Commands;
 
-public class unmutesound_command(SoundBarFactory factory) : BaseCommand
+public class unmutesound_command(SoundMuteCoordinator coordinator) : BaseCommand
 {
     public override string CommandName => "unmutesound";
     public override string Description => "Включить звук на компухтере";
@@ -20,7 +20,7 @@ public class unmutesound_command(SoundBarFactory factory) : BaseCommand
     {
         try
         {
-            await factory.CreateSoundBar().Unmute();
+            await coordinator.UnmuteAsync();
             return "Комплюхтер успешно размучен";
         }
         catch

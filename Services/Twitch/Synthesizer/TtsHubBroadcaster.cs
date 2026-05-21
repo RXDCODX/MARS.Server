@@ -34,6 +34,13 @@ public class TtsHubBroadcaster(
         private set;
     } = 1.0;
 
+    // Implement ITtsHubBroadcaster
+    double ITtsHubBroadcaster.CurrentVolume => CurrentVolume;
+
+    Task ITtsHubBroadcaster.BroadcastAsync(TwitchUser? user, string message, CancellationToken cancellationToken) => BroadcastAsync(user, message, cancellationToken);
+
+    Task ITtsHubBroadcaster.BroadcastStateAsync(TtsState? state, CancellationToken cancellationToken) => BroadcastStateAsync(state, cancellationToken);
+
     public async Task BroadcastAsync(
         TwitchUser user,
         string message,

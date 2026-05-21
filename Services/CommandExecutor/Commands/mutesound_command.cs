@@ -4,7 +4,7 @@ using MARS.Server.Services.Twitch.SoundBarService;
 
 namespace MARS.Server.Services.CommandExecutor.Commands;
 
-public class mutesound_command(SoundBarFactory factory) : BaseCommand
+public class mutesound_command(SoundMuteCoordinator coordinator) : BaseCommand
 {
     public override string CommandName => "mutesound";
     public override string Description => "Выключить звук на компухтере";
@@ -19,7 +19,7 @@ public class mutesound_command(SoundBarFactory factory) : BaseCommand
     {
         try
         {
-            await factory.CreateSoundBar().Mute();
+            await coordinator.MuteAsync();
             return "Комплюхтер замучен успешно";
         }
         catch

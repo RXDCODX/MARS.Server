@@ -45,6 +45,11 @@ public class PlayerState
     public bool IsMuted { get; set; }
 
     /// <summary>
+    /// Флаг, указывающий что плеер был поставлен на паузу из‑за глобального Mute
+    /// </summary>
+    public bool PausedByMute { get; set; }
+
+    /// <summary>
     /// Уровень громкости плеера (0-100)
     /// </summary>
     public float Volume { get; set; } = 100f;

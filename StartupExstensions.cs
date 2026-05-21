@@ -300,6 +300,7 @@ public static class StartupEstensions
         services.AddHostedService(sp => sp.GetRequiredService<TwitchMessagesHubAwaker>());
 
         services.AddSingleton<SoundBarFactory>();
+        services.AddSingleton<SoundMuteCoordinator>();
 
         services.AddSingleton<AutoRewardInfoFetcher>();
         services.AddHostedService(sp => sp.GetRequiredService<AutoRewardInfoFetcher>());

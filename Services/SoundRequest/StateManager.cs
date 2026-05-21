@@ -19,6 +19,7 @@ public class StateManager(
         Volume = 100f,
         State = PlaybackState.Stopped,
         IsMuted = false,
+        PausedByMute = false,
     };
     private bool _disposed;
     private bool _isInitialized;
@@ -124,6 +125,7 @@ public class StateManager(
                 VideoState = _currentState.VideoState,
                 IsMuted = _currentState.IsMuted,
                 Volume = _currentState.Volume,
+                PausedByMute = _currentState.PausedByMute,
             };
         }
         finally
@@ -151,6 +153,7 @@ public class StateManager(
                 VideoState = _currentState.VideoState,
                 IsMuted = _currentState.IsMuted,
                 Volume = _currentState.Volume,
+                PausedByMute = _currentState.PausedByMute,
             };
         }
         finally
@@ -182,6 +185,7 @@ public class StateManager(
                 existingState.State = _currentState.State;
                 existingState.VideoState = _currentState.VideoState;
                 existingState.IsMuted = _currentState.IsMuted;
+                existingState.PausedByMute = _currentState.PausedByMute;
                 existingState.Volume = _currentState.Volume;
 
                 db.SoundRequestPlayerState.Update(existingState);
@@ -331,6 +335,18 @@ public class StateManager(
     )
     {
         await UpdateStateAsync(state => state.IsMuted = isMuted, notify, excludeConnectionId);
+    }
+
+    /// <summary>
+    /// Установить флаг, что пауза была вызвана глобальным mute (PausedByMute)
+    /// </summary>
+    public async Task SetPausedByMuteAsync(
+        bool byMute,
+        bool notify = true,
+        string? excludeConnectionId = null
+    )
+    {
+        await UpdateStateAsync(state => state.PausedByMute = byMute, notify, excludeConnectionId);
     }
 
     /// <summary>
