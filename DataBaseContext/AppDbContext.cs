@@ -30,19 +30,18 @@ public sealed partial class AppDbContext : DbContext
         if (!_isMigrated && !isMigrations)
         {
             Locker.Enter();
-            if (!_isMigrated)
+            try
             {
-                var migrations = Database.GetPendingMigrations();
-
-                if (migrations.Any())
+                if (!_isMigrated)
                 {
                     Database.Migrate();
+                    _isMigrated = true;
                 }
-
-                _isMigrated = true;
             }
-
-            Locker.Exit();
+            finally
+            {
+                Locker.Exit();
+            }
         }
     }
 
