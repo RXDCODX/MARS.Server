@@ -81,6 +81,7 @@
     <PackageReference Include="Microsoft.Extensions.Http.Polly" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
     <PackageReference Include="OpenTelemetry.Api" />
+    <PackageReference Include="SevenTV-lib" />
     <PackageReference Include="ShikimoriSharp" />
     <PackageReference Include="SignalRSwaggerGen" />
     <PackageReference Include="SignalRSwaggerGen.Core" />

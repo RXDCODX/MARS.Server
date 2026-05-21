@@ -11,6 +11,7 @@ public static class TwitchExstension
     public const string Channel = "rxdcodx";
     public const string BotName = "catisaai";
     public const string BotId = "888848441";
+    public const string SevenTVUserId = "01G9FVE50G00022RD2T09E7QXC";
 
     public static readonly List<string> BlackList =
     [
