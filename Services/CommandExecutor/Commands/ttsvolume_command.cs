@@ -11,6 +11,17 @@ public class TtsVolumeCommand(TtsHubBroadcaster broadcaster) : BaseCommand
     public override string Description => "Установить громкость TTS";
     public override bool IsAdminCommand => true;
 
+    public override CommandParameterInfo[] Parameters =>
+        [
+            new CommandParameterInfo()
+            {
+                Name = "volume",
+                Description = "Громкость",
+                Required = true,
+                Type = "int",
+            },
+        ];
+
     public override async Task<string> ExecuteAsync(
         Dictionary<string, object>? parameters,
         Platform platform = Platform.None,

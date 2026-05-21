@@ -14,25 +14,24 @@ public class TtsHubBroadcaster(
 {
     private const string TtsConsumersGroupName = "tts-consumers";
     private static readonly TimeSpan SevenTvEmotesCacheLifetime = TimeSpan.FromMinutes(10);
-    private readonly object stateGate = new();
+    private readonly Lock _stateGate = new();
 
-    private readonly SevenTVClient sevenTvClient = new();
-    private readonly SemaphoreSlim sevenTvEmotesLock = new(1, 1);
-    private readonly HashSet<string> sevenTvEmoteNames = new(StringComparer.OrdinalIgnoreCase);
-    private DateTimeOffset sevenTvEmotesLoadedAt = DateTimeOffset.MinValue;
+    private readonly SevenTVClient _sevenTvClient = new();
+    private readonly SemaphoreSlim _sevenTvEmotesLock = new(1, 1);
+    private readonly HashSet<string> _sevenTvEmoteNames = new(StringComparer.OrdinalIgnoreCase);
+    private DateTimeOffset _sevenTvEmotesLoadedAt = DateTimeOffset.MinValue;
 
     public double CurrentVolume
     {
         get
         {
-            lock (stateGate)
+            lock (_stateGate)
             {
-                return currentVolume;
+                return field;
             }
         }
-    }
-
-    private double currentVolume = 1.0;
+        private set;
+    } = 1.0;
 
     public async Task BroadcastAsync(
         TwitchUser user,
@@ -69,9 +68,9 @@ public class TtsHubBroadcaster(
         {
             if (state is not null)
             {
-                lock (stateGate)
+                lock (_stateGate)
                 {
-                    currentVolume = Math.Clamp(state.Volume, 0.0, 2.0);
+                    CurrentVolume = Math.Clamp(state.Volume, 0.0, 2.0);
                 }
             }
 
@@ -147,7 +146,7 @@ public class TtsHubBroadcaster(
         {
             await EnsureSevenTvEmotesLoadedAsync(cancellationToken);
 
-            if (sevenTvEmoteNames.Count > 0)
+            if (_sevenTvEmoteNames.Count > 0)
             {
                 List<string> words =
                 [
@@ -157,7 +156,10 @@ public class TtsHubBroadcaster(
                     ),
                 ];
 
-                List<string> filteredWords = [.. words.Where(word => !sevenTvEmoteNames.Contains(word))];
+                List<string> filteredWords =
+                [
+                    .. words.Where(word => !_sevenTvEmoteNames.Contains(word)),
+                ];
                 result = string.Join(' ', filteredWords).Trim();
             }
             else
@@ -172,26 +174,26 @@ public class TtsHubBroadcaster(
     private async Task EnsureSevenTvEmotesLoadedAsync(CancellationToken cancellationToken)
     {
         var shouldReload =
-            sevenTvEmoteNames.Count == 0
-            || DateTimeOffset.UtcNow - sevenTvEmotesLoadedAt >= SevenTvEmotesCacheLifetime;
+            _sevenTvEmoteNames.Count == 0
+            || DateTimeOffset.UtcNow - _sevenTvEmotesLoadedAt >= SevenTvEmotesCacheLifetime;
 
         if (!shouldReload)
         {
             return;
         }
 
-        await sevenTvEmotesLock.WaitAsync(cancellationToken);
+        await _sevenTvEmotesLock.WaitAsync(cancellationToken);
         try
         {
             shouldReload =
-                sevenTvEmoteNames.Count == 0
-                || DateTimeOffset.UtcNow - sevenTvEmotesLoadedAt >= SevenTvEmotesCacheLifetime;
+                _sevenTvEmoteNames.Count == 0
+                || DateTimeOffset.UtcNow - _sevenTvEmotesLoadedAt >= SevenTvEmotesCacheLifetime;
             if (!shouldReload)
             {
                 return;
             }
 
-            var sevenTvUser = await sevenTvClient.rest.GetUser(TwitchExstension.SevenTVUserId);
+            var sevenTvUser = await _sevenTvClient.rest.GetUser(TwitchExstension.SevenTVUserId);
             HashSet<string> emotesFromSets =
             [
                 .. (sevenTvUser?.emote_sets ?? [])
@@ -204,13 +206,13 @@ public class TtsHubBroadcaster(
 
             if (emotesFromSets.Count > 0)
             {
-                sevenTvEmoteNames.Clear();
+                _sevenTvEmoteNames.Clear();
                 foreach (var emoteName in emotesFromSets)
                 {
-                    sevenTvEmoteNames.Add(emoteName);
+                    _sevenTvEmoteNames.Add(emoteName);
                 }
 
-                sevenTvEmotesLoadedAt = DateTimeOffset.UtcNow;
+                _sevenTvEmotesLoadedAt = DateTimeOffset.UtcNow;
             }
             else
             {
@@ -222,11 +224,14 @@ public class TtsHubBroadcaster(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to load 7TV emotes. TTS message will be processed without emote filtering.");
+            logger.LogError(
+                ex,
+                "Failed to load 7TV emotes. TTS message will be processed without emote filtering."
+            );
         }
         finally
         {
-            sevenTvEmotesLock.Release();
+            _sevenTvEmotesLock.Release();
         }
     }
 }
