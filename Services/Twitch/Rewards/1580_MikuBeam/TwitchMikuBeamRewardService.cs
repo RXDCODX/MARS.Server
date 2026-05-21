@@ -1,6 +1,7 @@
 ﻿using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.Twitch.Management.Entitys;
+using TwitchLib.Api.Helix.Models.Moderation.BanUser;
 using TwitchLib.Client.Events;
 using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Websockets;
@@ -14,17 +15,17 @@ namespace MARS.Server.Services.Twitch.Rewards._1580_MikuBeam;
 public class TwitchMikuBeamRewardService(
     IHubContext<TelegramusHub, ITelegramusHub> hubContext,
     ITwitchClient client,
+    ITwitchAPI api,
     TokenService tokenService,
     ILogger<TwitchMikuBeamRewardService> logger,
     EventSubWebsocketClient wsClient,
     IHostApplicationLifetime lifetime,
     IDbContextFactory<AppDbContext> factory,
-    RickRollerService rickRollerService
-) : BackgroundService, ITwitchReward
+    RickRollerService rickRollerService,
+    MikuBeam_TwitchReward reward
+) : BackgroundService
 {
-    public int Cost { get; init; } = 1580;
-
-    private readonly HashSet<string> _allUsersNicknames = []; // Все ID пользователей для отображения (включая модераторов)
+    private readonly HashSet<string> _allUserIds = []; // Все ID пользователей для отображения (включая модераторов)
     private readonly HashSet<string> _moderatorIds = []; // ID модераторов
     private readonly SemaphoreSlim _semaphoreSlim = new(1);
     private DateTimeOffset _lastActivation = DateTimeOffset.MinValue;
@@ -71,24 +72,24 @@ public class TwitchMikuBeamRewardService(
             return Task.CompletedTask;
         }
 
-        if (string.IsNullOrWhiteSpace(e.ChatMessage.Username))
+        if (string.IsNullOrWhiteSpace(e.ChatMessage.UserId))
         {
             return Task.CompletedTask;
         }
 
         // ID пользователя добавляем всегда (включая модераторов и стримера)
         _semaphoreSlim.Wait();
-        _allUsersNicknames.Add(e.ChatMessage.Username);
+        _allUserIds.Add(e.ChatMessage.UserId);
 
         // Отслеживаем модераторов
         if (e.ChatMessage.UserDetail.IsModerator)
         {
-            _moderatorIds.Add(e.ChatMessage.Username);
+            _moderatorIds.Add(e.ChatMessage.UserId);
         }
 
-        while (_allUsersNicknames.Count > MaxStoredMessages)
+        while (_allUserIds.Count > MaxStoredMessages)
         {
-            _allUsersNicknames.Remove(e.ChatMessage.Username);
+            _allUserIds.Remove(e.ChatMessage.UserId);
         }
 
         _semaphoreSlim.Release();
@@ -104,7 +105,7 @@ public class TwitchMikuBeamRewardService(
         var twEvent = args.Payload.Event;
 
         if (
-            twEvent.Reward.Cost != Cost
+            twEvent.Reward.Cost != reward.Cost
             || !twEvent.BroadcasterUserLogin.Equals(
                 TwitchExstension.Channel,
                 StringComparison.OrdinalIgnoreCase
@@ -146,12 +147,12 @@ public class TwitchMikuBeamRewardService(
 
                     // Используем все ID пользователей (включая модераторов) для отображения
                     await _semaphoreSlim.WaitAsync();
-                    var uniqueUserNicknames = _allUsersNicknames.ToList();
+                    var uniqueUserIds = _allUserIds.ToList();
                     _semaphoreSlim.Release();
 
                     logger.LogInformation(
                         "MIKU MIKU BEAM: найдено {UsersCount} уникальных пользователей для отображения",
-                        uniqueUserNicknames.Count
+                        uniqueUserIds.Count
                     );
 
                     // Обновляем время последней активации
@@ -160,19 +161,19 @@ public class TwitchMikuBeamRewardService(
                     // Получаем информацию о пользователях из базы данных по их ID
                     List<TwitchUser> twitchUsers = [];
 
-                    if (uniqueUserNicknames.Count > 0)
+                    if (uniqueUserIds.Count > 0)
                     {
                         await using var dbContext = await factory.CreateDbContextAsync();
 
                         twitchUsers = await dbContext
                             .TwitchUsers.AsNoTracking()
-                            .Where(u => uniqueUserNicknames.Contains(u.UserLogin))
+                            .Where(u => uniqueUserIds.Contains(u.TwitchId))
                             .ToListAsync();
 
                         logger.LogInformation(
                             "MIKU MIKU BEAM: найдено {Count} пользователей в базе данных из {Total}",
                             twitchUsers.Count,
-                            uniqueUserNicknames.Count
+                            uniqueUserIds.Count
                         );
                     }
 
@@ -208,8 +209,8 @@ public class TwitchMikuBeamRewardService(
         {
             // Получаем список юзеров для таймаута (исключаем модераторов)
             await _semaphoreSlim.WaitAsync();
-            var usersToTimeout = _allUsersNicknames
-                .Where(userNickname => !_moderatorIds.Contains(userNickname))
+            var usersToTimeout = _allUserIds
+                .Where(userId => !_moderatorIds.Contains(userId))
                 .ToList();
             _semaphoreSlim.Release();
 
@@ -225,20 +226,16 @@ public class TwitchMikuBeamRewardService(
                 {
                     try
                     {
-                        //await api.Helix.Moderation.BanUserAsync(
-                        //    TwitchExstension.ChannelId,
-                        //    TwitchExstension.ChannelId,
-                        //    new BanUserRequest
-                        //    {
-                        //        Duration = 5,
-                        //        Reason = "MIKU MIKU BEAM",
-                        //        UserId = userId,
-                        //    },
-                        //    tokenService.Token.AccessToken
-                        //);
-
-                        await client.SendMessageToMainTwitchAsync(
-                            $"/timeout {userId} 5s MIKU MIKU BEAM"
+                        await api.Helix.Moderation.BanUserAsync(
+                            TwitchExstension.ChannelId,
+                            TwitchExstension.ChannelId,
+                            new BanUserRequest
+                            {
+                                Duration = 5,
+                                Reason = "MIKU MIKU BEAM",
+                                UserId = userId,
+                            },
+                            tokenService.Token.AccessToken
                         );
                     }
                     catch (Exception ex)
@@ -273,7 +270,7 @@ public class TwitchMikuBeamRewardService(
 
             // Используем все ID пользователей (включая модераторов) для отображения
             await _semaphoreSlim.WaitAsync();
-            var uniqueUserIds = _allUsersNicknames.ToList();
+            var uniqueUserIds = _allUserIds.ToList();
             _semaphoreSlim.Release();
 
             logger.LogInformation(
