@@ -17,28 +17,30 @@ public class TtsVolumeCommand(TtsHubBroadcaster broadcaster) : BaseCommand
         CancellationToken cancellationToken = default
     )
     {
+        var result = $"Текущая громкость TTS: {broadcaster.CurrentVolume * 100:0}%";
+
         if (parameters != null && parameters.TryGetValue("volume", out var v))
         {
-            if (double.TryParse(v?.ToString(), out var vol))
-            {
-                vol = Math.Clamp(vol, 0.0, 1.0);
-                var state = new TtsState { IsStopped = false, Volume = vol };
-                await broadcaster.BroadcastStateAsync(state, cancellationToken);
-                return $"Громкость TTS установлена: {vol}";
-            }
-
             if (int.TryParse(v?.ToString(), out var value))
             {
-                if (value is <= 100 and >= 0)
+                if (value is >= 0 and <= 200)
                 {
-                    var dblValue = Convert.ToDouble(value) / 100;
-                    var state = new TtsState { IsStopped = false, Volume = dblValue };
+                    var volume = value / 100.0;
+                    var state = new TtsState { IsStopped = false, Volume = volume };
                     await broadcaster.BroadcastStateAsync(state, cancellationToken);
-                    return $"Громкость TTS установлена: {vol}";
+                    result = $"Громкость TTS установлена: {value}%";
                 }
+                else
+                {
+                    result = "Неверный параметр volume. Ожидается целое число 0..200";
+                }
+            }
+            else
+            {
+                result = "Неверный параметр volume. Ожидается целое число 0..200";
             }
         }
 
-        return "Неверный параметр volume. Ожидается число 0.0..1.0";
+        return result;
     }
 }

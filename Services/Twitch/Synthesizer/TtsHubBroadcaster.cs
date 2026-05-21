@@ -14,11 +14,25 @@ public class TtsHubBroadcaster(
 {
     private const string TtsConsumersGroupName = "tts-consumers";
     private static readonly TimeSpan SevenTvEmotesCacheLifetime = TimeSpan.FromMinutes(10);
+    private readonly object stateGate = new();
 
     private readonly SevenTVClient sevenTvClient = new();
     private readonly SemaphoreSlim sevenTvEmotesLock = new(1, 1);
     private readonly HashSet<string> sevenTvEmoteNames = new(StringComparer.OrdinalIgnoreCase);
     private DateTimeOffset sevenTvEmotesLoadedAt = DateTimeOffset.MinValue;
+
+    public double CurrentVolume
+    {
+        get
+        {
+            lock (stateGate)
+            {
+                return currentVolume;
+            }
+        }
+    }
+
+    private double currentVolume = 1.0;
 
     public async Task BroadcastAsync(
         TwitchUser user,
@@ -47,14 +61,27 @@ public class TtsHubBroadcaster(
     }
 
     public async Task BroadcastStateAsync(
-        TtsState state,
+        TtsState? state,
         CancellationToken cancellationToken = default
     )
     {
         try
         {
-            await hubContext.Clients.Group(TtsConsumersGroupName).UpdateTtsState(state);
-            logger.LogInformation("TTS state update was sent to hub consumers: {@State}", state);
+            if (state is not null)
+            {
+                lock (stateGate)
+                {
+                    currentVolume = Math.Clamp(state.Volume, 0.0, 2.0);
+                }
+            }
+
+            var stateToBroadcast = state ?? new TtsState { Volume = CurrentVolume };
+
+            await hubContext.Clients.Group(TtsConsumersGroupName).UpdateTtsState(stateToBroadcast);
+            logger.LogInformation(
+                "TTS state update was sent to hub consumers: {@State}",
+                stateToBroadcast
+            );
         }
         catch (Exception ex)
         {
