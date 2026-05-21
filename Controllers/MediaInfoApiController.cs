@@ -1,4 +1,7 @@
 ﻿using MARS.Server.Services;
+using MARS.Server.Services.Media;
+using MARS.Server.Services.PyroAlerts.Entitys;
+using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MARS.Server.Controllers;
@@ -10,9 +13,21 @@ namespace MARS.Server.Controllers;
 [Route("api/[controller]")]
 public class MediaInfoApiController(
     IDbContextFactory<AppDbContext> factory,
-    ILogger<MediaInfoApiController> logger
+    ILogger<MediaInfoApiController> logger,
+    IMediaFileStorageService storage,
+    IMediaInspector inspector,
+    IMediaTranscoder transcoder,
+    IWebHostEnvironment webHostEnvironment
 ) : ControllerBase
 {
+    private static readonly JsonSerializerOptions FormJsonOptions = new(JsonSerializerDefaults.Web)
+    {
+        Converters =
+        {
+            new System.Text.Json.Serialization.JsonStringEnumConverter(),
+        },
+    };
+
     /// <summary>
     /// Получить все алерты
     /// </summary>
@@ -226,22 +241,82 @@ public class MediaInfoApiController(
     /// <returns>Созданный алерт</returns>
     [HttpPost]
     public async Task<ActionResult<OperationResult<ApiMediaInfo?>>> CreateAlert(
-        [FromBody] ApiMediaInfo alert
+        [FromForm] MediaInfoUpsertRequest request
     )
     {
         ActionResult<OperationResult<ApiMediaInfo?>> result = null!;
 
         try
         {
-            await using var dbContext = await factory.CreateDbContextAsync();
+            if (string.IsNullOrWhiteSpace(request.AlertJson))
+            {
+                result = Ok(OperationResult<ApiMediaInfo?>.Bad("Данные алерта не переданы", null));
+            }
+            else
+            {
+                var alert = JsonSerializer.Deserialize<ApiMediaInfo>(request.AlertJson, FormJsonOptions);
+                if (alert is null)
+                {
+                    result = Ok(OperationResult<ApiMediaInfo?>.Bad("Не удалось разобрать алерт", null));
+                }
+                else if (request.File is null)
+                {
+                    result = Ok(OperationResult<ApiMediaInfo?>.Bad("Файл не передан", null));
+                }
+                else
+                {
+                    var fileInfo = await storage.SaveFileAsync(request.File);
 
-            // ApiMediaInfo наследуется от MediaInfo, поэтому можно использовать напрямую
-            dbContext.Alerts.Add(alert);
-            await dbContext.SaveChangesAsync();
+                    try
+                    {
+                        var fullPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", fileInfo.FilePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
 
-            result = Ok(
-                OperationResult<ApiMediaInfo?>.Ok("Алерт успешно создан", new ApiMediaInfo(alert))
-            );
+                        // Ensure playable: transcode if needed
+                        var playablePath = await transcoder.EnsurePlayableAsync(fullPath);
+
+                        if (!string.Equals(playablePath, fullPath, StringComparison.OrdinalIgnoreCase))
+                        {
+                            var rel = "/" + Path.GetRelativePath(webHostEnvironment.WebRootPath, Path.GetFullPath(playablePath)).Replace('\\', '/');
+                            fileInfo.FilePath = rel;
+                            fileInfo.Extension = Path.GetExtension(playablePath);
+                            fileInfo.FileName = Path.GetFileName(playablePath);
+                            fileInfo.Type = await fileInfo.Extension.GetFileMediaTypeAsync();
+
+                            // ensure dev copies for transcoded file
+                            try
+                            {
+                                await storage.CopyToDevCopiesAsync(fileInfo.FilePath);
+                            }
+                            catch { }
+                        }
+                        else
+                        {
+                            var probe = await inspector.ProbeAsync(fullPath);
+                            if ((fileInfo.Type == MediaType.Audio && (probe.BitrateKbps is null || probe.BitrateKbps < 128)) || (fileInfo.Type == MediaType.Video && (probe.BitrateKbps is null || probe.BitrateKbps < 128)))
+                            {
+                                logger.LogInformation("Загружен файл с низким битрейтом: {File} ({Bitrate} kbps)", fullPath, probe.BitrateKbps);
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogDebug(ex, "Не удалось выполнить пробинг/транскодирование файла {File}", fileInfo.FilePath);
+                    }
+                    var createdAlert = CreateStoredAlert(alert, fileInfo);
+
+                    await using var dbContext = await factory.CreateDbContextAsync();
+
+                    dbContext.Alerts.Add(createdAlert);
+                    await dbContext.SaveChangesAsync();
+
+                    result = Ok(
+                        OperationResult<ApiMediaInfo?>.Ok(
+                            "Алерт успешно создан",
+                            new ApiMediaInfo(createdAlert)
+                        )
+                    );
+                }
+            }
         }
         catch (Exception ex)
         {
@@ -261,106 +336,171 @@ public class MediaInfoApiController(
     [HttpPut("{id:guid}")]
     public async Task<ActionResult<OperationResult<ApiMediaInfo?>>> UpdateAlert(
         Guid id,
-        [FromBody] ApiMediaInfo alert
+        [FromForm] MediaInfoUpsertRequest request
     )
     {
         ActionResult<OperationResult<ApiMediaInfo?>> result = null!;
 
         try
         {
-            if (id != alert.Id)
+            if (string.IsNullOrWhiteSpace(request.AlertJson))
             {
-                result = Ok(
-                    OperationResult<ApiMediaInfo?>.Bad(
-                        "ID в URL не совпадает с ID в теле запроса",
-                        null
-                    )
-                );
+                result = Ok(OperationResult<ApiMediaInfo?>.Bad("Данные алерта не переданы", null));
             }
             else
             {
-                await using var dbContext = await factory.CreateDbContextAsync();
-
-                var existingAlert = await dbContext.Alerts.FirstOrDefaultAsync(a => a.Id == id);
-                if (existingAlert == null)
+                var alert = JsonSerializer.Deserialize<ApiMediaInfo>(request.AlertJson, FormJsonOptions);
+                if (alert is null)
+                {
+                    result = Ok(OperationResult<ApiMediaInfo?>.Bad("Не удалось разобрать алерт", null));
+                }
+                else if (id != alert.Id)
                 {
                     result = Ok(
-                        OperationResult<ApiMediaInfo?>.Bad($"Алерт с ID '{id}' не найден", null)
+                        OperationResult<ApiMediaInfo?>.Bad(
+                            "ID в URL не совпадает с ID в теле запроса",
+                            null
+                        )
                     );
                 }
                 else
                 {
-                    var oldPath = existingAlert.FileInfo.FilePath ?? string.Empty;
-                    var newPath = alert.FileInfo.FilePath ?? string.Empty;
+                    await using var dbContext = await factory.CreateDbContextAsync();
 
-                    if (
-                        !string.IsNullOrWhiteSpace(oldPath)
-                        && !string.IsNullOrWhiteSpace(newPath)
-                        && !string.Equals(oldPath, newPath, StringComparison.OrdinalIgnoreCase)
-                        && !oldPath.StartsWith("memory/", StringComparison.OrdinalIgnoreCase)
-                        && !newPath.StartsWith("memory/", StringComparison.OrdinalIgnoreCase)
-                    )
+                    var existingAlert = await dbContext.Alerts.FirstOrDefaultAsync(a => a.Id == id);
+                    if (existingAlert == null)
                     {
-                        var sourceRelativePath = oldPath
-                            .TrimStart('/')
-                            .Replace('/', Path.DirectorySeparatorChar);
-                        var targetRelativePath = newPath
-                            .TrimStart('/')
-                            .Replace('/', Path.DirectorySeparatorChar);
-                        var baseRoots = new[]
-                        {
-                            Directory.GetCurrentDirectory(),
-                            AppContext.BaseDirectory,
-                        };
-
-                        var sourceRoot = baseRoots.FirstOrDefault(root =>
-                            System.IO.File.Exists(Path.Combine(root, "wwwroot", sourceRelativePath))
+                        result = Ok(
+                            OperationResult<ApiMediaInfo?>.Bad(
+                                $"Алерт с ID '{id}' не найден",
+                                null
+                            )
                         );
-
-                        if (string.IsNullOrWhiteSpace(sourceRoot))
-                        {
-                            result = Ok(
-                                OperationResult<ApiMediaInfo?>.Bad(
-                                    "Файл для перемещения не найден",
-                                    null
-                                )
-                            );
-                            return result;
-                        }
-
-                        var oldFullPath = Path.Combine(sourceRoot, "wwwroot", sourceRelativePath);
-                        var newFullPath = Path.Combine(sourceRoot, "wwwroot", targetRelativePath);
-
-                        var newDirectory = Path.GetDirectoryName(newFullPath);
-                        if (!string.IsNullOrWhiteSpace(newDirectory))
-                        {
-                            Directory.CreateDirectory(newDirectory);
-                        }
-
-                        System.IO.File.Move(oldFullPath, newFullPath, true);
                     }
-
-                    // Создаем новый объект MediaInfo с обновленными данными
-                    var updatedAlert = new MediaInfo
+                    else
                     {
-                        Id = existingAlert.Id,
-                        TextInfo = alert.TextInfo,
-                        FileInfo = alert.FileInfo,
-                        PositionInfo = alert.PositionInfo,
-                        MetaInfo = alert.MetaInfo,
-                        StylesInfo = alert.StylesInfo,
-                    };
+                        var resolvedFileInfo = alert.FileInfo;
 
-                    dbContext.Entry(existingAlert).State = EntityState.Detached;
-                    dbContext.Alerts.Update(updatedAlert);
-                    await dbContext.SaveChangesAsync();
+                        if (request.File is not null)
+                        {
+                            resolvedFileInfo = await storage.SaveFileAsync(request.File);
 
-                    result = Ok(
-                        OperationResult<ApiMediaInfo?>.Ok(
-                            "Алерт успешно обновлен",
-                            new ApiMediaInfo(updatedAlert)
-                        )
-                    );
+                            try
+                            {
+                                var fullPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", resolvedFileInfo.FilePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+
+                                var playable = await transcoder.EnsurePlayableAsync(fullPath);
+                                if (!string.Equals(playable, fullPath, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    var rel = "/" + Path.GetRelativePath(webHostEnvironment.WebRootPath, Path.GetFullPath(playable)).Replace('\\', '/');
+                                    resolvedFileInfo.FilePath = rel;
+                                    resolvedFileInfo.Extension = Path.GetExtension(playable);
+                                    resolvedFileInfo.FileName = Path.GetFileName(playable);
+                                    resolvedFileInfo.Type = await resolvedFileInfo.Extension.GetFileMediaTypeAsync();
+
+                                    try { await storage.CopyToDevCopiesAsync(resolvedFileInfo.FilePath); } catch { }
+                                }
+                                else
+                                {
+                                    var probe = await inspector.ProbeAsync(fullPath);
+                                    if ((resolvedFileInfo.Type == MediaType.Audio && (probe.BitrateKbps is null || probe.BitrateKbps < 128)) || (resolvedFileInfo.Type == MediaType.Video && (probe.BitrateKbps is null || probe.BitrateKbps < 128)))
+                                    {
+                                        logger.LogInformation("Загружен файл с низким битрейтом: {File} ({Bitrate} kbps)", fullPath, probe.BitrateKbps);
+                                    }
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                logger.LogDebug(ex, "Не удалось выполнить пробинг/транскодирование файла {File}", resolvedFileInfo.FilePath);
+                            }
+
+                            var oldPath = existingAlert.FileInfo.FilePath ?? string.Empty;
+                            if (
+                                !string.IsNullOrWhiteSpace(oldPath)
+                                && !oldPath.StartsWith("memory/", StringComparison.OrdinalIgnoreCase)
+                                && oldPath.StartsWith("/", StringComparison.Ordinal)
+                            )
+                            {
+                                var oldFullPath = Path.Combine(
+                                    Directory.GetCurrentDirectory(),
+                                    "wwwroot",
+                                    oldPath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar)
+                                );
+
+                                if (System.IO.File.Exists(oldFullPath))
+                                {
+                                    System.IO.File.Delete(oldFullPath);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            var oldPath = existingAlert.FileInfo.FilePath ?? string.Empty;
+                            var newPath = resolvedFileInfo.FilePath ?? string.Empty;
+
+                            if (
+                                !string.IsNullOrWhiteSpace(oldPath)
+                                && !string.IsNullOrWhiteSpace(newPath)
+                                && !string.Equals(oldPath, newPath, StringComparison.OrdinalIgnoreCase)
+                                && !oldPath.StartsWith("memory/", StringComparison.OrdinalIgnoreCase)
+                                && !newPath.StartsWith("memory/", StringComparison.OrdinalIgnoreCase)
+                            )
+                            {
+                                var sourceRelativePath = oldPath
+                                    .TrimStart('/')
+                                    .Replace('/', Path.DirectorySeparatorChar);
+                                var targetRelativePath = newPath
+                                    .TrimStart('/')
+                                    .Replace('/', Path.DirectorySeparatorChar);
+                                var baseRoots = new[]
+                                {
+                                    Directory.GetCurrentDirectory(),
+                                    AppContext.BaseDirectory,
+                                };
+
+                                var sourceRoot = baseRoots.FirstOrDefault(root =>
+                                    System.IO.File.Exists(
+                                        Path.Combine(root, "wwwroot", sourceRelativePath)
+                                    )
+                                );
+
+                                if (string.IsNullOrWhiteSpace(sourceRoot))
+                                {
+                                    result = Ok(
+                                        OperationResult<ApiMediaInfo?>.Bad(
+                                            "Файл для перемещения не найден",
+                                            null
+                                        )
+                                    );
+                                    return result;
+                                }
+
+                                var oldFullPath = Path.Combine(sourceRoot, "wwwroot", sourceRelativePath);
+                                var newFullPath = Path.Combine(sourceRoot, "wwwroot", targetRelativePath);
+
+                                var newDirectory = Path.GetDirectoryName(newFullPath);
+                                if (!string.IsNullOrWhiteSpace(newDirectory))
+                                {
+                                    Directory.CreateDirectory(newDirectory);
+                                }
+
+                                System.IO.File.Move(oldFullPath, newFullPath, true);
+                            }
+                        }
+
+                        var updatedAlert = CreateStoredAlert(alert, resolvedFileInfo);
+
+                        dbContext.Entry(existingAlert).State = EntityState.Detached;
+                        dbContext.Alerts.Update(updatedAlert);
+                        await dbContext.SaveChangesAsync();
+
+                        result = Ok(
+                            OperationResult<ApiMediaInfo?>.Ok(
+                                "Алерт успешно обновлен",
+                                new ApiMediaInfo(updatedAlert)
+                            )
+                        );
+                    }
                 }
             }
         }
@@ -372,6 +512,21 @@ public class MediaInfoApiController(
 
         return result;
     }
+
+    private static MediaInfo CreateStoredAlert(ApiMediaInfo source, MediaFileInfo fileInfo)
+    {
+        return new MediaInfo
+        {
+            Id = source.Id,
+            TextInfo = source.TextInfo,
+            FileInfo = fileInfo,
+            PositionInfo = source.PositionInfo,
+            MetaInfo = source.MetaInfo,
+            StylesInfo = source.StylesInfo,
+        };
+    }
+
+    
 
     /// <summary>
     /// Удалить алерт

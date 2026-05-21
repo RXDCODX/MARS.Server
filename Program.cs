@@ -11,6 +11,7 @@ using MARS.Server.Services.Logs.Services;
 using MARS.Server.Services.MemoryStorageService;
 using MARS.Server.Services.Twitch;
 using MARS.Server.Services.Twitch.Rewards;
+using MARS.Server.Services.Media;
 using Microsoft.OpenApi;
 using Swashbuckle.AspNetCore.Swagger;
 
@@ -189,6 +190,11 @@ public static class Program
             .AddExternalApiServices()
             .AddSpecializedServices()
             .AddSoundRequest();
+
+        // Media file storage
+        services.AddSingleton<IMediaFileStorageService, WebRootMediaFileStorageService>();
+        services.AddSingleton<IMediaInspector, FfprobeMediaInspector>();
+        services.AddSingleton<IMediaTranscoder, MediaTranscoder>();
 
         services.AddSingleton<IDbContextFactory<AppDbContext>>(contextFactory);
         services.AddHostedService<ConfigurationKeysBootstrapHostedService>();
