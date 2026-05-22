@@ -11,6 +11,8 @@ namespace MARS.Server.Services.Media;
 
 public class WebRootMediaFileStorageService : IMediaFileStorageService
 {
+    private const string DefaultFolderName = "Alerts/uploaded_mems";
+
     private readonly IWebHostEnvironment _env;
     private readonly ILogger<WebRootMediaFileStorageService> _logger;
 
@@ -22,12 +24,18 @@ public class WebRootMediaFileStorageService : IMediaFileStorageService
 
     public async Task<MediaFileInfo> SaveFileAsync(IFormFile file, string? targetRelativePathHint = null)
     {
-        var uploadsRoot = Path.Combine(_env.WebRootPath, "media", "uploads");
-        Directory.CreateDirectory(uploadsRoot);
-
         var extension = Path.GetExtension(file.FileName) ?? string.Empty;
-        var fileName = $"{Guid.NewGuid()}{extension}";
-        var fullPath = Path.Combine(uploadsRoot, fileName);
+        var relativePath = ResolveRelativePath(targetRelativePathHint, extension);
+        var fullPath = Path.Combine(
+            _env.WebRootPath,
+            relativePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar)
+        );
+
+        var directory = Path.GetDirectoryName(fullPath);
+        if (!string.IsNullOrWhiteSpace(directory))
+        {
+            Directory.CreateDirectory(directory);
+        }
 
         await using (var fs = File.Create(fullPath))
         {
@@ -35,29 +43,27 @@ public class WebRootMediaFileStorageService : IMediaFileStorageService
             await fs.FlushAsync();
         }
 
-        var relativeUrl = "/" + Path.Combine("media", "uploads", fileName).Replace(Path.DirectorySeparatorChar, '/');
+        var relativeUrl = NormalizePath(relativePath);
 
         var mediaType = await extension.GetFileMediaTypeAsync();
+        var resolvedFileName = Path.GetFileName(fullPath);
 
         var info = new MediaFileInfo
         {
             Type = mediaType,
             FilePath = NormalizePath(relativeUrl),
             IsLocalFile = true,
-            FileName = fileName,
+            FileName = resolvedFileName,
             Extension = extension,
         };
 
-        if (_env.IsDevelopment())
+        try
         {
-            try
-            {
-                await CopyToDevCopiesAsync(info.FilePath);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to copy media file to dev copies");
-            }
+            await CopyToDevCopiesAsync(info.FilePath);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to copy media file to dev copies");
         }
 
         return info;
@@ -76,23 +82,94 @@ public class WebRootMediaFileStorageService : IMediaFileStorageService
 
     public Task CopyToDevCopiesAsync(string relativePath)
     {
-        var trimmed = relativePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
-        var sourceFull = Path.Combine(_env.WebRootPath, trimmed);
+        var normalizedRelativePath = NormalizePath(relativePath);
+        var sourceFull = Path.Combine(
+            _env.WebRootPath,
+            normalizedRelativePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar)
+        );
 
         if (!File.Exists(sourceFull))
         {
             return Task.CompletedTask;
         }
 
-        var devRoot = Path.Combine(_env.WebRootPath, "Alerts", "random_meme");
-        Directory.CreateDirectory(devRoot);
+        var devWebRoot = ResolveDevWebRoot();
+        var devRelativePath = normalizedRelativePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
+        var destFull = Path.Combine(devWebRoot, devRelativePath);
 
-        var fileName = Path.GetFileName(sourceFull);
-        var destFull = Path.Combine(devRoot, fileName);
+        var destDirectory = Path.GetDirectoryName(destFull);
+        if (!string.IsNullOrWhiteSpace(destDirectory))
+        {
+            Directory.CreateDirectory(destDirectory);
+        }
 
         File.Copy(sourceFull, destFull, true);
 
         return Task.CompletedTask;
+    }
+
+    private static string ResolveRelativePath(string? targetRelativePathHint, string sourceExtension)
+    {
+        if (string.IsNullOrWhiteSpace(targetRelativePathHint))
+        {
+            var defaultFileName = $"{Guid.NewGuid()}{sourceExtension}";
+            return "/" + Path.Combine(DefaultFolderName, defaultFileName).Replace(Path.DirectorySeparatorChar, '/');
+        }
+
+        var normalizedHint = NormalizePath(targetRelativePathHint);
+        var trimmedHint = normalizedHint.TrimStart('/');
+
+        if (Path.IsPathRooted(trimmedHint) || trimmedHint.Contains(".."))
+        {
+            throw new InvalidOperationException("Некорректный относительный путь для файла");
+        }
+
+        var finalPath = normalizedHint;
+        if (string.IsNullOrWhiteSpace(Path.GetExtension(trimmedHint)))
+        {
+            finalPath = NormalizePath(normalizedHint + sourceExtension);
+        }
+
+        return finalPath;
+    }
+
+    private string ResolveDevWebRoot()
+    {
+        var currentDirectory = Directory.GetCurrentDirectory();
+        var projectRoot = FindProjectRoot(currentDirectory);
+
+        if (!string.IsNullOrWhiteSpace(projectRoot))
+        {
+            var candidate = Path.Combine(projectRoot, "wwwroot");
+            if (Directory.Exists(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        return _env.WebRootPath;
+    }
+
+    private static string? FindProjectRoot(string startPath)
+    {
+        var dir = new DirectoryInfo(startPath);
+
+        while (dir != null)
+        {
+            if (dir.GetFiles("*.csproj").Length > 0)
+            {
+                return dir.FullName;
+            }
+
+            if (dir.Parent == null)
+            {
+                break;
+            }
+
+            dir = dir.Parent;
+        }
+
+        return null;
     }
 
     private static string NormalizePath(string path)

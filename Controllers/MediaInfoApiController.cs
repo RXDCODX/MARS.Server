@@ -157,59 +157,6 @@ public class MediaInfoApiController(
     }
 
     /// <summary>
-    /// Загрузить файл для алерта (возвращает информацию о файле)
-    /// </summary>
-    [HttpPost("upload")]
-    public async Task<ActionResult<OperationResult<object>>> UploadFile()
-    {
-        try
-        {
-            var file = Request.Form.Files.FirstOrDefault();
-            if (file == null)
-            {
-                return Ok(OperationResult<object>.Bad("Файл не передан"));
-            }
-
-            var originalName = Path.GetFileName(file.FileName);
-            var extension = Path.GetExtension(originalName);
-
-            var generated = $"{Guid.NewGuid()}{extension}";
-            var relative = Path.Combine("media", "uploads", generated).Replace('\\', '/');
-            var fullPath = Path.Combine(
-                Directory.GetCurrentDirectory(),
-                "wwwroot",
-                relative.Replace('/', Path.DirectorySeparatorChar)
-            );
-
-            var dir = Path.GetDirectoryName(fullPath);
-            if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
-            {
-                Directory.CreateDirectory(dir);
-            }
-
-            await using (var stream = System.IO.File.Create(fullPath))
-            {
-                await file.CopyToAsync(stream);
-            }
-
-            var fileInfo = new
-            {
-                fileName = originalName,
-                extension = extension,
-                filePath = "/" + relative,
-                isLocalFile = true,
-            };
-
-            return Ok(OperationResult<object>.Ok("Файл загружен", fileInfo));
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Ошибка при загрузке файла");
-            return StatusCode(500, "Ошибка при загрузке файла");
-        }
-    }
-
-    /// <summary>
     /// Определяет MIME-тип файла по расширению
     /// </summary>
     /// <param name="extension">Расширение файла</param>
@@ -263,13 +210,20 @@ public class MediaInfoApiController(
                 {
                     result = Ok(OperationResult<ApiMediaInfo?>.Bad("Файл не передан", null));
                 }
+                else if (!TryResolveUploadedMemsFilePath(alert.FileInfo.FilePath, out var targetFilePath, out var pathError))
+                {
+                    result = Ok(OperationResult<ApiMediaInfo?>.Bad(pathError, null));
+                }
                 else
                 {
-                    var fileInfo = await storage.SaveFileAsync(request.File);
+                    var fileInfo = await storage.SaveFileAsync(request.File, targetFilePath);
 
                     try
                     {
-                        var fullPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", fileInfo.FilePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+                        var fullPath = Path.Combine(
+                            webHostEnvironment.WebRootPath,
+                            fileInfo.FilePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar)
+                        );
 
                         // Ensure playable: transcode if needed
                         var playablePath = await transcoder.EnsurePlayableAsync(fullPath);
@@ -301,6 +255,18 @@ public class MediaInfoApiController(
                     catch (Exception ex)
                     {
                         logger.LogDebug(ex, "Не удалось выполнить пробинг/транскодирование файла {File}", fileInfo.FilePath);
+                    }
+
+                    if (fileInfo.IsLocalFile)
+                    {
+                        try
+                        {
+                            await storage.CopyToDevCopiesAsync(fileInfo.FilePath);
+                        }
+                        catch (Exception copyEx)
+                        {
+                            logger.LogDebug(copyEx, "Не удалось синхронизировать dev-копию файла {File}", fileInfo.FilePath);
+                        }
                     }
                     var createdAlert = CreateStoredAlert(alert, fileInfo);
 
@@ -383,11 +349,20 @@ public class MediaInfoApiController(
 
                         if (request.File is not null)
                         {
-                            resolvedFileInfo = await storage.SaveFileAsync(request.File);
+                            if (!TryResolveUploadedMemsFilePath(alert.FileInfo.FilePath, out var targetFilePath, out var pathError))
+                            {
+                                result = Ok(OperationResult<ApiMediaInfo?>.Bad(pathError, null));
+                                return result;
+                            }
+
+                            resolvedFileInfo = await storage.SaveFileAsync(request.File, targetFilePath);
 
                             try
                             {
-                                var fullPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", resolvedFileInfo.FilePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+                                var fullPath = Path.Combine(
+                                    webHostEnvironment.WebRootPath,
+                                    resolvedFileInfo.FilePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar)
+                                );
 
                                 var playable = await transcoder.EnsurePlayableAsync(fullPath);
                                 if (!string.Equals(playable, fullPath, StringComparison.OrdinalIgnoreCase))
@@ -412,6 +387,15 @@ public class MediaInfoApiController(
                             catch (Exception ex)
                             {
                                 logger.LogDebug(ex, "Не удалось выполнить пробинг/транскодирование файла {File}", resolvedFileInfo.FilePath);
+                            }
+
+                            try
+                            {
+                                await storage.CopyToDevCopiesAsync(resolvedFileInfo.FilePath);
+                            }
+                            catch (Exception copyEx)
+                            {
+                                logger.LogDebug(copyEx, "Не удалось синхронизировать dev-копию файла {File}", resolvedFileInfo.FilePath);
                             }
 
                             var oldPath = existingAlert.FileInfo.FilePath ?? string.Empty;
@@ -511,6 +495,59 @@ public class MediaInfoApiController(
         }
 
         return result;
+    }
+
+    private static bool TryResolveUploadedMemsFilePath(string? filePath, out string resolvedPath, out string errorMessage)
+    {
+        resolvedPath = string.Empty;
+        errorMessage = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(filePath))
+        {
+            errorMessage = "Укажи путь к файлу внутри Alerts/uploaded_mems";
+            return false;
+        }
+
+        var normalized = NormalizeRelativePath(filePath);
+        var relative = normalized.TrimStart('/');
+
+        if (Path.IsPathRooted(relative) || relative.Contains("..", StringComparison.Ordinal))
+        {
+            errorMessage = "Путь к файлу должен быть относительным и находиться внутри Alerts/uploaded_mems";
+            return false;
+        }
+
+        if (!relative.StartsWith("Alerts/uploaded_mems/", StringComparison.OrdinalIgnoreCase))
+        {
+            errorMessage = "Для загружаемых файлов используй путь внутри Alerts/uploaded_mems";
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(Path.GetFileName(relative)))
+        {
+            errorMessage = "Укажи имя файла в пути Alerts/uploaded_mems";
+            return false;
+        }
+
+        resolvedPath = normalized;
+        return true;
+    }
+
+    private static string NormalizeRelativePath(string path)
+    {
+        var normalized = path.Replace('\\', '/');
+
+        while (normalized.Contains("//", StringComparison.Ordinal))
+        {
+            normalized = normalized.Replace("//", "/", StringComparison.Ordinal);
+        }
+
+        if (!normalized.StartsWith('/'))
+        {
+            normalized = "/" + normalized;
+        }
+
+        return normalized;
     }
 
     private static MediaInfo CreateStoredAlert(ApiMediaInfo source, MediaFileInfo fileInfo)
