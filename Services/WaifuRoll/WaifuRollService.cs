@@ -1,11 +1,17 @@
 ﻿using System.Collections.Concurrent;
 using MARS.Server.ApplicationState;
+using MARS.Server.Configuration;
+using MARS.Server.DataBaseContext;
+using MARS.Server.Exstensions;
 using MARS.Server.Services.Twitch;
 using MARS.Server.Services.Twitch.Rewards;
 using MARS.Server.Services.Twitch.WeddingAnniversary;
+using MARS.Server.Services.WaifuRoll.Entitys;
 using MARS.Server.Services.WaifuRoll.helpers;
 using MARS.Server.Services.WaifuRoll.Interfaces;
 using MARS.Server.Services.WaifuRoll.Models;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using ShikimoriSharp.Classes;
 
 namespace MARS.Server.Services.WaifuRoll;

@@ -1,4 +1,6 @@
-﻿using MARS.Server.Services.Twitch.Entitys;
+﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using MARS.Server.Services.Twitch.Entitys;
 
 namespace MARS.Server.Services.WaifuRoll.Entitys;
 

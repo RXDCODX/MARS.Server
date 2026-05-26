@@ -137,6 +137,8 @@ public class WeddingAnniversaryService(
                 {
                     twitchUser.LastWeddingCongratulatedMonths = months;
 
+                    dbContext.Hosts.Update(twitchUser);
+
                     await dbContext.SaveChangesAsync(cancellationToken);
 
                     logger.LogInformation(
