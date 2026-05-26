@@ -675,7 +675,7 @@ public class TelegramCommandService(
                     commandName = TrimCommandPrefix(commandName);
                 }
 
-                input = commandParts.Length > 1 ? commandParts[1] : string.Empty;
+                input = commandParts.Length > 1 ? commandParts[1].Trim() : string.Empty;
             }
         }
     }
