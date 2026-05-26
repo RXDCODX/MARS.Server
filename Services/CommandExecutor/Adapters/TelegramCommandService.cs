@@ -101,7 +101,7 @@ public class TelegramCommandService(
                         );
                         if (commandParts.Length > 0)
                         {
-                            var commandName = TrimCommandPrefix(commandParts[0]);
+                            var commandName = NormalizeCommandName(commandParts[0]);
                             var input = commandParts.Length > 1 ? commandParts[1] : "";
 
                             // Обработка специальной команды commands
@@ -669,15 +669,32 @@ public class TelegramCommandService(
 
             if (commandParts.Length > 0)
             {
-                commandName = commandParts[0];
-                if (StartsWithCommandPrefix(commandName))
-                {
-                    commandName = TrimCommandPrefix(commandName);
-                }
+                commandName = NormalizeCommandName(commandParts[0]);
 
                 input = commandParts.Length > 1 ? commandParts[1].Trim() : string.Empty;
             }
         }
+    }
+
+    private string NormalizeCommandName(string commandText)
+    {
+        var result = commandText;
+
+        if (!string.IsNullOrWhiteSpace(result))
+        {
+            if (StartsWithCommandPrefix(result))
+            {
+                result = TrimCommandPrefix(result);
+            }
+
+            var atIndex = result.IndexOf('@');
+            if (atIndex > 0)
+            {
+                result = result[..atIndex];
+            }
+        }
+
+        return result;
     }
 
     private IEnumerable<BaseCommand> GetInlineCommands(long userId)
