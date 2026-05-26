@@ -177,6 +177,29 @@ public class CommandExecutorService(CommandFactory commandFactory)
         return result;
     }
 
+    public BaseCommand[] GetInlineCommandsInfo(
+        Platform platforms,
+        CancellationToken cancellationToken = default
+    )
+    {
+        BaseCommand[] result = [];
+
+        if (_commands.Count > 0)
+        {
+            result =
+            [
+                .. _commands.Values.Where(c =>
+                    !c.IsAdminCommand
+                    && c.IsAvailableOnPlatform(platforms)
+                    && c.IsVisibleIn(CommandVisibility.Inline)
+                    && (c.SupportsInline || c.SupportsMediaInline)
+                ),
+            ];
+        }
+
+        return result;
+    }
+
     public BaseCommand[] GetAdminCommandsInfo(
         Platform platforms,
         CancellationToken cancellationToken = default

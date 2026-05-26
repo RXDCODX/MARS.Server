@@ -22,7 +22,12 @@ public enum CommandVisibility
     ShortList = 2,
 
     /// <summary>
+    /// Команда отображается в inline-выдаче
+    /// </summary>
+    Inline = 4,
+
+    /// <summary>
     /// Команда отображается везде (полный и краткий список)
     /// </summary>
-    All = FullList | ShortList,
+    All = FullList | ShortList | Inline,
 }

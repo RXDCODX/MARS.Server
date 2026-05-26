@@ -9,7 +9,6 @@ using MARS.Server.Services.Twitch.Rewards._11_RandomMemReward.Service;
 using Telegram.Bot.Exceptions;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types.Enums;
-using Telegram.Bot.Types.InlineQueryResults;
 
 namespace MARS.Server.Services.Telegram.BotService;
 
@@ -19,7 +18,6 @@ public class UpdateHandler : IUpdateHandler
     public event TelegramUpdateDelegate TelegramUpdate = (client, update) => Task.CompletedTask;
 
     private readonly ITelegramBotClient _botClient;
-    private readonly ICommandService _commandService;
     private readonly ILogger<UpdateHandler> _logger;
     private readonly TelegramConfiguration _options;
     private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
@@ -27,7 +25,6 @@ public class UpdateHandler : IUpdateHandler
     public UpdateHandler(
         ITelegramBotClient botClient,
         ILogger<UpdateHandler> logger,
-        ICommandService commandService,
         IOptions<TelegramConfiguration> options,
         PyroAlertsHandler pyroAlertsHandler,
         RandomMemHandler randomMemHandler,
@@ -42,7 +39,6 @@ public class UpdateHandler : IUpdateHandler
     {
         _botClient = botClient;
         _logger = logger;
-        _commandService = commandService;
         _dbContextFactory = dbContextFactory;
         _options = options.Value;
 
@@ -52,6 +48,8 @@ public class UpdateHandler : IUpdateHandler
             TelegramUpdate += randomMemHandler.HandMessage;
             TelegramUpdate += frameData.HandAlert;
             TelegramUpdate += telegramCommandService.HandMessage;
+            TelegramUpdate += telegramCommandService.HandInlineQuery;
+            TelegramUpdate += telegramCommandService.HandChosenInlineResult;
             TelegramUpdate += telegramClipboardCopyService.HandMessage;
             TelegramUpdate += telegramGooglePhotosService.HandMessage;
 
@@ -181,24 +179,13 @@ public class UpdateHandler : IUpdateHandler
         if (inlineQuery != null)
         {
             _logger.LogInformation(
-                "Received inline query from: {InlineQueryFromId}",
-                inlineQuery.From.Id
-            );
-
-            InlineQueryResult[] results =
-            [
-                // displayed result
-                new InlineQueryResultArticle("1", "TgBots", new InputTextMessageContent("hello")),
-            ];
-
-            await _botClient.AnswerInlineQuery(
-                inlineQuery.Id,
-                results,
-                0,
-                true,
-                cancellationToken: cancellationToken
+                "Получен inline query от пользователя {InlineQueryFromId}: {InlineQuery}",
+                inlineQuery.From.Id,
+                inlineQuery.Query
             );
         }
+
+        await Task.CompletedTask;
     }
 
     #endregion

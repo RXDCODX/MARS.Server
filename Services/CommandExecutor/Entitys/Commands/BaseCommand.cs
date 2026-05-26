@@ -28,6 +28,31 @@ public abstract class BaseCommand
     public virtual CommandVisibility Visibility => CommandVisibility.All;
 
     /// <summary>
+    /// Включена ли поддержка inline-режима для команды
+    /// </summary>
+    public virtual bool SupportsInline => false;
+
+    /// <summary>
+    /// Включена ли поддержка media-inline (photo/gif/video)
+    /// </summary>
+    public virtual bool SupportsMediaInline => false;
+
+    /// <summary>
+    /// Предоставляет URL превью/контента для media-inline (опционально)
+    /// </summary>
+    public virtual string? InlinePreviewUrl => null;
+
+    /// <summary>
+    /// Заголовок для inline-результата
+    /// </summary>
+    public virtual string InlineTitle => CommandName;
+
+    /// <summary>
+    /// Описание для inline-результата
+    /// </summary>
+    public virtual string InlineDescription => Description;
+
+    /// <summary>
     /// Выполняет команду с разобранными параметрами
     /// </summary>
     /// <param name="parameters">Разобранные параметры</param>

@@ -1,5 +1,8 @@
-﻿using MARS.Server.Services.CommandExecutor.Entitys;
+﻿using System.Collections.Concurrent;
+using MARS.Server.Services.CommandExecutor.Entitys;
+using MARS.Server.Services.CommandExecutor.Entitys.Commands;
 using Telegram.Bot.Types.Enums;
+using Telegram.Bot.Types.InlineQueryResults;
 
 namespace MARS.Server.Services.CommandExecutor.Adapters;
 
@@ -12,6 +15,12 @@ public class TelegramCommandService(
     ILogger<TelegramCommandService> logger
 ) : PlatformCommandServiceBase<long>
 {
+    private const int InlineCacheTimeSeconds = 45;
+    private const int InlineMaxResults = 30;
+    private static readonly TimeSpan InlineResultPayloadTtl = TimeSpan.FromMinutes(5);
+    private readonly ConcurrentDictionary<string, InlineResultPayload> _inlineResultPayloads =
+        new(StringComparer.Ordinal);
+
     public override Platform Platform => Platform.Telegram;
 
     protected override int DefaultMaxResponseLength => 4096;
@@ -230,6 +239,469 @@ public class TelegramCommandService(
         }
     }
 
+    public async Task HandInlineQuery(ITelegramBotClient _, Update update)
+    {
+        if (update?.Type == UpdateType.InlineQuery && update.InlineQuery is { } inlineQuery)
+        {
+            try
+            {
+                var results = await BuildInlineResults(inlineQuery);
+
+                await botClient.AnswerInlineQuery(
+                    inlineQuery.Id,
+                    results,
+                    InlineCacheTimeSeconds,
+                    true
+                );
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(
+                    ex,
+                    "Ошибка при обработке inline-запроса Telegram от пользователя {UserId}",
+                    inlineQuery.From.Id
+                );
+
+                await botClient.AnswerInlineQuery(
+                    inlineQuery.Id,
+                    Array.Empty<InlineQueryResult>(),
+                    0,
+                    true
+                );
+            }
+        }
+    }
+
+    public async Task HandChosenInlineResult(ITelegramBotClient _, Update update)
+    {
+        if (
+            update?.Type == UpdateType.ChosenInlineResult
+            && update.ChosenInlineResult is { } chosenInlineResult
+        )
+        {
+            try
+            {
+                var executionResult = await ExecuteInlineCommand(chosenInlineResult);
+
+                if (!string.IsNullOrWhiteSpace(chosenInlineResult.InlineMessageId))
+                {
+                    var responseText = ValidateResponse(executionResult);
+                    await botClient.EditMessageText(
+                        inlineMessageId: chosenInlineResult.InlineMessageId,
+                        text: responseText
+                    );
+                }
+
+                logger.LogInformation(
+                    "Inline команда выполнена пользователем {UserId}. Query: {Query}",
+                    chosenInlineResult.From.Id,
+                    chosenInlineResult.Query
+                );
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(
+                    ex,
+                    "Ошибка при выполнении выбранного inline-результата пользователем {UserId}. Query: {Query}",
+                    chosenInlineResult.From.Id,
+                    chosenInlineResult.Query
+                );
+            }
+        }
+    }
+
+    private Task<InlineQueryResult[]> BuildInlineResults(InlineQuery inlineQuery)
+    {
+        var result = Array.Empty<InlineQueryResult>();
+
+        if (inlineQuery?.From is not null)
+        {
+            var userId = inlineQuery.From.Id;
+            var query = inlineQuery.Query?.Trim() ?? string.Empty;
+            var commands = GetInlineCommands(userId);
+            var responseItems = new List<InlineQueryResult>();
+
+            if (string.IsNullOrWhiteSpace(query))
+            {
+                responseItems.AddRange(BuildDefaultInlineResults(commands, userId));
+            }
+            else
+            {
+                var mediaResult = BuildMediaInlineResult(query, userId);
+                if (mediaResult is not null)
+                {
+                    responseItems.Add(mediaResult);
+                }
+
+                responseItems.AddRange(BuildInlineQueryResults(query, commands, userId));
+            }
+
+            if (responseItems.Count > 0)
+            {
+                result = [.. responseItems.Take(InlineMaxResults)];
+            }
+            else
+            {
+                responseItems.Add(
+                    new InlineQueryResultArticle(
+                        "inline_help",
+                        "Команда не найдена",
+                        new InputTextMessageContent(
+                            "Используйте формат: /команда параметры или начните вводить имя команды."
+                        )
+                    )
+                    {
+                        Description = "Попробуйте ввести часть имени команды",
+                    }
+                );
+
+                result = [.. responseItems];
+            }
+        }
+
+        return Task.FromResult(result);
+    }
+
+    private IEnumerable<InlineQueryResult> BuildDefaultInlineResults(
+        IEnumerable<BaseCommand> commands,
+        long userId
+    )
+    {
+        var result = new List<InlineQueryResult>();
+        CleanupInlineResultPayloads();
+
+        foreach (var command in commands.Take(InlineMaxResults))
+        {
+            var message = $"/{command.CommandName}";
+            var resultId = CreateInlineResultId(userId, message);
+            result.Add(
+                new InlineQueryResultArticle(
+                    resultId,
+                    message,
+                    new InputTextMessageContent(message)
+                )
+                {
+                    Description = command.Description,
+                }
+            );
+        }
+
+        return result;
+    }
+
+    private IEnumerable<InlineQueryResult> BuildInlineQueryResults(
+        string query,
+        IEnumerable<BaseCommand> commands,
+        long userId
+    )
+    {
+        var result = new List<InlineQueryResult>();
+        var normalizedQuery = query.Trim();
+        CleanupInlineResultPayloads();
+
+        ParseInlineCommand(normalizedQuery, out var commandNameCandidate, out _);
+
+        var directCommand = commands.FirstOrDefault(c =>
+            c.CommandName.Equals(commandNameCandidate, StringComparison.OrdinalIgnoreCase)
+            || c.Aliases.Contains(commandNameCandidate, StringComparer.OrdinalIgnoreCase)
+        );
+
+        if (directCommand is not null)
+        {
+            var commandText = StartsWithCommandPrefix(normalizedQuery)
+                ? normalizedQuery
+                : $"/{normalizedQuery}";
+            var resultId = CreateInlineResultId(userId, commandText);
+
+            result.Add(
+                new InlineQueryResultArticle(
+                    resultId,
+                    $"Выполнить {commandText}",
+                    new InputTextMessageContent(commandText)
+                )
+                {
+                    Description = directCommand.Description,
+                }
+            );
+        }
+
+        var searchTerm = TrimCommandPrefix(normalizedQuery);
+        var matchedCommands = commands
+            .Where(c =>
+                c.CommandName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)
+                || c.Aliases.Any(a =>
+                    a.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)
+                )
+                || c.Description.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)
+            )
+            .Take(InlineMaxResults);
+
+        foreach (var command in matchedCommands)
+        {
+            var commandText = $"/{command.CommandName}";
+            var resultId = CreateInlineResultId(userId, commandText);
+            result.Add(
+                new InlineQueryResultArticle(
+                    resultId,
+                    commandText,
+                    new InputTextMessageContent(commandText)
+                )
+                {
+                    Description = command.Description,
+                }
+            );
+        }
+
+        return result;
+    }
+
+    private InlineQueryResult? BuildMediaInlineResult(string query, long userId)
+    {
+        InlineQueryResult? result = null;
+
+        if (!string.IsNullOrWhiteSpace(query))
+        {
+            var mediaUrl = ExtractMediaUrl(query);
+
+            if (!string.IsNullOrWhiteSpace(mediaUrl))
+            {
+                var resultId = CreateInlineResultId(userId, query);
+
+                if (IsGifUrl(mediaUrl))
+                {
+                    result = new InlineQueryResultGif(resultId, mediaUrl, mediaUrl)
+                    {
+                        Caption = "GIF из inline-запроса",
+                    };
+                }
+                else if (IsImageUrl(mediaUrl))
+                {
+                    result = new InlineQueryResultPhoto(resultId, mediaUrl, mediaUrl)
+                    {
+                        Caption = "Изображение из inline-запроса",
+                    };
+                }
+                else if (IsVideoUrl(mediaUrl))
+                {
+                    result = new InlineQueryResultVideo(
+                        resultId,
+                        mediaUrl,
+                        "video/mp4",
+                        mediaUrl,
+                        new InputTextMessageContent(mediaUrl)
+                    )
+                    {
+                        Title = "Видео из inline-запроса",
+                        Caption = "Видео из inline-запроса",
+                    };
+                }
+            }
+        }
+
+        return result;
+    }
+
+    private string ExtractMediaUrl(string query)
+    {
+        var result = string.Empty;
+
+        if (!string.IsNullOrWhiteSpace(query))
+        {
+            var parts = query.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            var urlCandidate = parts.FirstOrDefault(part =>
+                Uri.TryCreate(part, UriKind.Absolute, out var uri)
+                && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps)
+            );
+
+            if (!string.IsNullOrWhiteSpace(urlCandidate))
+            {
+                result = urlCandidate;
+            }
+        }
+
+        return result;
+    }
+
+    private bool IsImageUrl(string url)
+    {
+        return url.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase)
+            || url.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase)
+            || url.EndsWith(".png", StringComparison.OrdinalIgnoreCase)
+            || url.EndsWith(".webp", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private bool IsGifUrl(string url)
+    {
+        return url.EndsWith(".gif", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private bool IsVideoUrl(string url)
+    {
+        return url.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase)
+            || url.EndsWith(".mov", StringComparison.OrdinalIgnoreCase)
+            || url.EndsWith(".webm", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private async Task<string> ExecuteInlineCommand(ChosenInlineResult chosenInlineResult)
+    {
+        var result =
+            "Не удалось выполнить inline-команду. Используйте формат: @bot /команда параметры.";
+
+        if (chosenInlineResult.From is not null)
+        {
+            var query = chosenInlineResult.Query?.Trim() ?? string.Empty;
+            var payloadQuery = ResolveInlinePayloadQuery(
+                chosenInlineResult.ResultId,
+                chosenInlineResult.From.Id
+            );
+
+            if (!string.IsNullOrWhiteSpace(payloadQuery))
+            {
+                query = payloadQuery;
+            }
+
+            ParseInlineCommand(query, out var commandName, out var input);
+
+            if (!string.IsNullOrWhiteSpace(commandName))
+            {
+                var commandInfo = commandService.GetCommandParameters(commandName);
+                if (commandInfo is not null)
+                {
+                    var requiredParams = commandInfo
+                        .Where(p =>
+                            p.Required
+                            && !(
+                                p.Type == nameof(Message)
+                                && p.Name.Equals("message", StringComparison.OrdinalIgnoreCase)
+                            )
+                        )
+                        .ToArray();
+
+                    var parameters = commandService.ParseParameters(input, commandInfo);
+
+                    if (parameters.Count >= requiredParams.Length)
+                    {
+                        var isAdminCommand = commandService.IsAdminCommand(commandName);
+                        if (!isAdminCommand || IsUserAdmin(chosenInlineResult.From.Id))
+                        {
+                            result = await commandService.ExecuteCommandAsync(
+                                commandName,
+                                parameters,
+                                Platform.Telegram
+                            );
+                        }
+                        else
+                        {
+                            result =
+                                $"Команда '{commandName}' доступна только администраторам.";
+                        }
+                    }
+                    else
+                    {
+                        var missingParam = requiredParams[parameters.Count];
+                        result =
+                            $"Не хватает параметра '{missingParam.Name}'. Использование: /{commandName} {string.Join(" ", requiredParams.Select(p => $"<{p.Name}>"))}";
+                    }
+                }
+                else
+                {
+                    result =
+                        $"Команда '{commandName}' не найдена. Используйте /commands для списка доступных команд.";
+                }
+            }
+        }
+
+        return result;
+    }
+
+    private string CreateInlineResultId(long userId, string query)
+    {
+        var resultId = Guid.NewGuid().ToString("N");
+        var expiresAtUtc = DateTime.UtcNow.Add(InlineResultPayloadTtl);
+        var payload = new InlineResultPayload(userId, query, expiresAtUtc);
+
+        _inlineResultPayloads[resultId] = payload;
+
+        return resultId;
+    }
+
+    private string? ResolveInlinePayloadQuery(string? resultId, long userId)
+    {
+        string? result = null;
+
+        if (!string.IsNullOrWhiteSpace(resultId))
+        {
+            if (_inlineResultPayloads.TryGetValue(resultId, out var payload))
+            {
+                if (payload.UserId == userId && payload.ExpiresAtUtc >= DateTime.UtcNow)
+                {
+                    result = payload.Query;
+                }
+
+                _inlineResultPayloads.TryRemove(resultId, out _);
+            }
+        }
+
+        return result;
+    }
+
+    private void CleanupInlineResultPayloads()
+    {
+        var utcNow = DateTime.UtcNow;
+
+        foreach (var payload in _inlineResultPayloads)
+        {
+            if (payload.Value.ExpiresAtUtc < utcNow)
+            {
+                _inlineResultPayloads.TryRemove(payload.Key, out _);
+            }
+        }
+    }
+
+    private void ParseInlineCommand(string query, out string commandName, out string input)
+    {
+        commandName = string.Empty;
+        input = string.Empty;
+
+        if (!string.IsNullOrWhiteSpace(query))
+        {
+            var commandParts = query.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
+
+            if (commandParts.Length > 0)
+            {
+                commandName = commandParts[0];
+                if (StartsWithCommandPrefix(commandName))
+                {
+                    commandName = TrimCommandPrefix(commandName);
+                }
+
+                input = commandParts.Length > 1 ? commandParts[1] : string.Empty;
+            }
+        }
+    }
+
+    private IEnumerable<BaseCommand> GetInlineCommands(long userId)
+    {
+        var result = commandService.GetInlineCommandsInfo(Platform.Telegram).AsEnumerable();
+
+        if (IsUserAdmin(userId))
+        {
+            var adminInline = commandService
+                .GetAdminCommandsInfo(Platform.Telegram)
+                .Where(c => c.IsVisibleIn(CommandVisibility.Inline) && (c.SupportsInline || c.SupportsMediaInline));
+
+            result = result.Concat(adminInline);
+        }
+
+        result = result
+            .Where(c => c.IsVisibleIn(CommandVisibility.ShortList))
+            .GroupBy(c => c.CommandName, StringComparer.OrdinalIgnoreCase)
+            .Select(g => g.First())
+            .OrderBy(c => c.CommandName, StringComparer.OrdinalIgnoreCase);
+
+        return result;
+    }
+
     /// <summary>
     /// Получить краткий список команд для пользователя
     /// </summary>
@@ -300,5 +772,12 @@ public class TelegramCommandService(
         {
             logger.LogError(ex, "Ошибка при отправке сообщения в Telegram");
         }
+    }
+
+    private sealed class InlineResultPayload(long userId, string query, DateTime expiresAtUtc)
+    {
+        public long UserId { get; } = userId;
+        public string Query { get; } = query;
+        public DateTime ExpiresAtUtc { get; } = expiresAtUtc;
     }
 }

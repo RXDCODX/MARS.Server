@@ -69,6 +69,14 @@ public interface ICommandService
     );
 
     /// <summary>
+    /// Получить информацию о командах, предназначенных для inline-выдачи
+    /// </summary>
+    BaseCommand[] GetInlineCommandsInfo(
+        Platform platforms,
+        CancellationToken cancellationToken = default
+    );
+
+    /// <summary>
     /// Получить информацию об админских командах для указанных платформ
     /// </summary>
     /// <param name="platforms">Платформы для фильтрации команд</param>
@@ -100,7 +108,7 @@ public interface ICommandService
         // Заполняем именованные параметры по порядку, если они есть
         if (commandInfo is not null && commandInfo.Length > 0)
         {
-            for (var i = 0; i < commandInfo.Length; i++)
+            for (var i = 0 ; i < commandInfo.Length ; i++)
             {
                 var p = commandInfo[i];
                 if (i < inputParts.Length)
