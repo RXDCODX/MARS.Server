@@ -17,7 +17,7 @@ public class TtsVolumeCommand(TtsHubBroadcaster broadcaster) : BaseCommand
             {
                 Name = "volume",
                 Description = "Громкость",
-                Required = true,
+                Required = false,
                 Type = "int",
             },
         ];

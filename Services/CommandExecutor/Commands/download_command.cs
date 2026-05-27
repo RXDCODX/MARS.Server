@@ -6,6 +6,7 @@ using MARS.Server.Services.YouTube;
 using YoutubeExplode;
 using YoutubeExplode.Converter;
 using YoutubeExplode.Videos.Streams;
+using System.Diagnostics;
 
 namespace MARS.Server.Services.CommandExecutor.Commands;
 
@@ -16,6 +17,17 @@ public class DownloadCommand(
     ITelegramBotClient client
 ) : BaseCommand
 {
+    private const long MaxVideoSizeBytes = 20L * 1024 * 1024;
+    private const long FinalFallbackSizeBytes = 19L * 1024 * 1024;
+
+    private static readonly VideoCompressionProfile[] VideoCompressionProfiles =
+    [
+        new(1280, 28, 128),
+        new(960, 30, 112),
+        new(854, 32, 96),
+        new(640, 34, 80),
+    ];
+
     private readonly YoutubeClient _youtubeClient = new();
 
     public override string CommandName => "download";
@@ -152,6 +164,7 @@ public class DownloadCommand(
             var bestAudioStream = streamManifest.GetAudioStreams().GetWithHighestBitrate();
 
             var tempFile = Guid.NewGuid() + ".mp4";
+            var preparedFile = tempFile;
 
             await _youtubeClient.Videos.DownloadAsync(
                 [bestAudioStream, bestVideoStream],
@@ -165,8 +178,10 @@ public class DownloadCommand(
                 cancellationToken: cancellationToken
             );
 
+            preparedFile = await PrepareVideoForTelegramAsync(tempFile, cancellationToken);
+
             // Скачиваем видео в память
-            await using var fileStream = File.OpenRead(tempFile);
+            await using var fileStream = File.OpenRead(preparedFile);
 
             // Генерируем имя файла
             var sanitizedTitle = SanitizeFileName(videoTitle);
@@ -193,6 +208,10 @@ public class DownloadCommand(
                 try
                 {
                     File.Delete(tempFile);
+                    if (!string.Equals(preparedFile, tempFile, StringComparison.OrdinalIgnoreCase))
+                    {
+                        File.Delete(preparedFile);
+                    }
                 }
                 catch { }
             }
@@ -205,6 +224,156 @@ public class DownloadCommand(
         {
             logger.LogError(ex, "Ошибка при скачивании видео {Url}", url);
         }
+    }
+
+    private async Task<string> PrepareVideoForTelegramAsync(
+        string sourceFile,
+        CancellationToken cancellationToken
+    )
+    {
+        var result = sourceFile;
+
+        if (new FileInfo(sourceFile).Length > MaxVideoSizeBytes)
+        {
+            foreach (var profile in VideoCompressionProfiles)
+            {
+                var compressedFile = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".mp4");
+                var compressionSucceeded = await TryTranscodeVideoAsync(
+                    sourceFile,
+                    compressedFile,
+                    profile,
+                    cancellationToken
+                );
+
+                if (compressionSucceeded && new FileInfo(compressedFile).Length <= MaxVideoSizeBytes)
+                {
+                    result = compressedFile;
+                    break;
+                }
+
+                try
+                {
+                    File.Delete(compressedFile);
+                }
+                catch { }
+            }
+
+            if (string.Equals(result, sourceFile, StringComparison.OrdinalIgnoreCase))
+            {
+                var trimmedFile = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".mp4");
+                var fallbackSucceeded = await TryTranscodeVideoAsync(
+                    sourceFile,
+                    trimmedFile,
+                    VideoCompressionProfiles[^1],
+                    cancellationToken,
+                    FinalFallbackSizeBytes
+                );
+
+                if (fallbackSucceeded)
+                {
+                    result = trimmedFile;
+                }
+                else
+                {
+                    try
+                    {
+                        File.Delete(trimmedFile);
+                    }
+                    catch { }
+                }
+            }
+        }
+
+        return result;
+    }
+
+    private async Task<bool> TryTranscodeVideoAsync(
+        string inputFile,
+        string outputFile,
+        VideoCompressionProfile profile,
+        CancellationToken cancellationToken,
+        long? maxOutputSizeBytes = null
+    )
+    {
+        var result = false;
+
+        var ffmpegArguments = new List<string>
+        {
+            "-y",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-i",
+            inputFile,
+            "-vf",
+            $"scale=min({profile.MaxWidth},iw):-2",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "veryfast",
+            "-crf",
+            profile.Crf.ToString(),
+            "-c:a",
+            "aac",
+            "-b:a",
+            $"{profile.AudioBitrateKbps}k",
+            "-pix_fmt",
+            "yuv420p",
+            "-movflags",
+            "+faststart",
+        };
+
+        if (maxOutputSizeBytes is not null)
+        {
+            ffmpegArguments.Add("-fs");
+            ffmpegArguments.Add(maxOutputSizeBytes.Value.ToString());
+        }
+
+        ffmpegArguments.Add(outputFile);
+
+        var process = new Process
+        {
+            StartInfo = new ProcessStartInfo
+            {
+                FileName = "ffmpeg",
+                UseShellExecute = false,
+                RedirectStandardError = true,
+                CreateNoWindow = true,
+            },
+        };
+
+        foreach (var argument in ffmpegArguments)
+        {
+            process.StartInfo.ArgumentList.Add(argument);
+        }
+
+        try
+        {
+            process.Start();
+            await process.WaitForExitAsync(cancellationToken);
+
+            if (process.ExitCode == 0 && File.Exists(outputFile))
+            {
+                result = true;
+            }
+            else
+            {
+                var error = await process.StandardError.ReadToEndAsync();
+                logger.LogWarning(
+                    "FFmpeg не смог подготовить видео {InputFile} -> {OutputFile}. ExitCode: {ExitCode}. Error: {Error}",
+                    inputFile,
+                    outputFile,
+                    process.ExitCode,
+                    error
+                );
+            }
+        }
+        finally
+        {
+            process.Dispose();
+        }
+
+        return result;
     }
 
     private async Task DownloadAndSendAudioAsync(
@@ -291,4 +460,6 @@ public class DownloadCommand(
         // Обрезаем до максимальной длины
         return sanitized.Length > 200 ? sanitized[..200] : sanitized;
     }
+
+    private sealed record VideoCompressionProfile(int MaxWidth, int Crf, int AudioBitrateKbps);
 }
