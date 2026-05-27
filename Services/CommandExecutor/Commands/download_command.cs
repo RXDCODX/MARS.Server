@@ -162,7 +162,11 @@ public class DownloadCommand(
             var bestVideoStream = streamManifest.GetVideoStreams().GetWithHighestVideoQuality();
             var bestAudioStream = streamManifest.GetAudioStreams().GetWithHighestBitrate();
 
-            var tempDirectory = Path.Combine(Path.GetTempPath(), "mars-downloads", Guid.NewGuid().ToString("N"));
+            var tempDirectory = Path.Combine(
+                Path.GetTempPath(),
+                "mars-downloads",
+                Guid.NewGuid().ToString("N")
+            );
             Directory.CreateDirectory(tempDirectory);
 
             var videoStreamFile = Path.Combine(tempDirectory, Guid.NewGuid() + ".mp4");
@@ -268,7 +272,10 @@ public class DownloadCommand(
                     cancellationToken
                 );
 
-                if (compressionSucceeded && new FileInfo(compressedFile).Length <= MaxVideoSizeBytes)
+                if (
+                    compressionSucceeded
+                    && new FileInfo(compressedFile).Length <= MaxVideoSizeBytes
+                )
                 {
                     result = compressedFile;
                     break;
@@ -327,15 +334,18 @@ public class DownloadCommand(
                 .OutputToFile(
                     outputFile,
                     true,
-                    options => options
-                        .WithVideoCodec("libx264")
-                        .WithAudioCodec("aac")
-                        .WithAudioBitrate(profile.AudioBitrateKbps)
-                        .WithConstantRateFactor(profile.Crf)
-                        .WithVideoFilters(filterOptions => filterOptions.Scale(profile.MaxWidth, -2))
-                        .WithCustomArgument("-pix_fmt yuv420p")
-                        .WithCustomArgument("-preset veryfast")
-                        .WithFastStart()
+                    options =>
+                        options
+                            .WithVideoCodec("libx264")
+                            .WithAudioCodec("aac")
+                            .WithAudioBitrate(profile.AudioBitrateKbps)
+                            .WithConstantRateFactor(profile.Crf)
+                            .WithVideoFilters(filterOptions =>
+                                filterOptions.Scale(profile.MaxWidth, -2)
+                            )
+                            .WithCustomArgument("-pix_fmt yuv420p")
+                            .WithCustomArgument("-preset veryfast")
+                            .WithFastStart()
                 )
                 .CancellableThrough(cancellationToken);
 
@@ -346,16 +356,19 @@ public class DownloadCommand(
                     .OutputToFile(
                         outputFile,
                         true,
-                        options => options
-                            .WithVideoCodec("libx264")
-                            .WithAudioCodec("aac")
-                            .WithAudioBitrate(profile.AudioBitrateKbps)
-                            .WithConstantRateFactor(profile.Crf)
-                            .WithVideoFilters(filterOptions => filterOptions.Scale(profile.MaxWidth, -2))
-                            .WithCustomArgument("-pix_fmt yuv420p")
-                            .WithCustomArgument("-preset veryfast")
-                            .WithCustomArgument($"-fs {maxOutputSizeBytes.Value}")
-                            .WithFastStart()
+                        options =>
+                            options
+                                .WithVideoCodec("libx264")
+                                .WithAudioCodec("aac")
+                                .WithAudioBitrate(profile.AudioBitrateKbps)
+                                .WithConstantRateFactor(profile.Crf)
+                                .WithVideoFilters(filterOptions =>
+                                    filterOptions.Scale(profile.MaxWidth, -2)
+                                )
+                                .WithCustomArgument("-pix_fmt yuv420p")
+                                .WithCustomArgument("-preset veryfast")
+                                .WithCustomArgument($"-fs {maxOutputSizeBytes.Value}")
+                                .WithFastStart()
                     )
                     .CancellableThrough(cancellationToken);
             }

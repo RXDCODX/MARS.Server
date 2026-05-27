@@ -1,5 +1,3 @@
-using MARS.Server.Services.PyroAlerts.Entitys;
-
 namespace MARS.Server.Services.Twitch.Media;
 
 public interface ITwitchMediaPreparationService

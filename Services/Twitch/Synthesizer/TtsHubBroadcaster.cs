@@ -1,6 +1,5 @@
 using MARS.Server.Hubs.Models.VoiceRecognition;
 using SevenTV;
-using SevenTV.Types.Rest;
 using TwitchLib.Client.Events;
 using TwitchUser = MARS.Server.Services.Twitch.Entitys.TwitchUser;
 

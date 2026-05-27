@@ -1,6 +1,5 @@
 ﻿using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Management;
-using MARS.Server.Services.Twitch.Management.Entitys;
 using TwitchLib.Api.Helix.Models.Moderation.BanUser;
 using TwitchLib.Client.Events;
 using TwitchLib.EventSub.Core.EventArgs.Channel;

@@ -84,7 +84,7 @@ public class TwitchMessagesHubAwaker(
 
                         if (singleWordMatch)
                         {
-                            listAlerts.Add(info);
+                            listAlerts.Add((MediaInfo)info);
                         }
 
                         // Проверяем фразы (если есть триггеры с пробелами)
@@ -102,7 +102,7 @@ public class TwitchMessagesHubAwaker(
                         {
                             if (fullMessage.Contains(phrase, StringComparison.OrdinalIgnoreCase))
                             {
-                                listAlerts.Add(info);
+                                listAlerts.Add((MediaInfo)info);
                             }
                         }
                     }

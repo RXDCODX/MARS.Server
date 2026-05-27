@@ -1,4 +1,3 @@
-using MARS.Server.Exstensions;
 using MARS.Server.Services.Twitch.Rewards._11_RandomMemReward.Service;
 
 namespace MARS.Server.Services.Twitch.Media;

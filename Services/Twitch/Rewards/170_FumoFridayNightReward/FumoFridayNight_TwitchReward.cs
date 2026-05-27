@@ -1,14 +1,6 @@
-using System.Drawing;
-using MARS.Server.ApplicationState;
-using MARS.Server.DataBaseContext;
-using MARS.Server.Hubs;
-using MARS.Server.Hubs.Interfaces;
 using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
-using Microsoft.AspNetCore.SignalR;
-using Microsoft.EntityFrameworkCore;
 using TwitchLib.Api.Helix.Models.ChannelPoints.CreateCustomReward;
-using TwitchLib.EventSub.Websockets;
 
 namespace MARS.Server.Services.Twitch.Rewards._170_FumoFridayNightReward;
 

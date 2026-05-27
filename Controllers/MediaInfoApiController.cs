@@ -1,7 +1,6 @@
 ﻿using System.Text.Json;
 using MARS.Server.Services;
 using MARS.Server.Services.Media;
-using MARS.Server.Services.PyroAlerts.Entitys;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MARS.Server.Controllers;
