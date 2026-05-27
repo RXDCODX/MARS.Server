@@ -1,7 +1,7 @@
 namespace MARS.Server.Hubs.Interfaces;
 
-using MARS.Server.Hubs.Models.VoiceRecognition;
-using MARS.Server.Services.Twitch.Entitys;
+using Models.VoiceRecognition;
+using Services.Twitch.Entitys;
 
 /// <summary>
 /// Interface for TTS hub client methods.

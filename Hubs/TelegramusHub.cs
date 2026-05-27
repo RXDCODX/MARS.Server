@@ -59,9 +59,9 @@ public class TelegramusHub(
             try
             {
                 var stateManager =
-                    serviceProvider.GetRequiredService<MARS.Server.Services.SoundRequest.StateManager>();
+                    serviceProvider.GetRequiredService<Services.SoundRequest.StateManager>();
                 var ttsBroadcaster =
-                    serviceProvider.GetRequiredService<MARS.Server.Services.Twitch.Synthesizer.TtsHubBroadcaster>();
+                    serviceProvider.GetRequiredService<Services.Twitch.Synthesizer.TtsHubBroadcaster>();
 
                 await stateManager.SetMutedAsync(false);
                 var state = await stateManager.GetStateAsync();
@@ -94,9 +94,9 @@ public class TelegramusHub(
             try
             {
                 var stateManager =
-                    serviceProvider.GetRequiredService<MARS.Server.Services.SoundRequest.StateManager>();
+                    serviceProvider.GetRequiredService<Services.SoundRequest.StateManager>();
                 var ttsBroadcaster =
-                    serviceProvider.GetRequiredService<MARS.Server.Services.Twitch.Synthesizer.TtsHubBroadcaster>();
+                    serviceProvider.GetRequiredService<Services.Twitch.Synthesizer.TtsHubBroadcaster>();
 
                 var state = await stateManager.GetStateAsync();
                 if (state.State == Services.SoundRequest.Entities.PlaybackState.Playing)

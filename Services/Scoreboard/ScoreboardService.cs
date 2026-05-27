@@ -8,10 +8,8 @@ public class ScoreboardService(
 )
 {
     // Статический словарь для отслеживания отложенных обновлений
-    private static readonly Dictionary<
-        string,
-        (ScoreboardDto State, System.Threading.Timer Timer)
-    > PendingUpdates = [];
+    private static readonly Dictionary<string, (ScoreboardDto State, Timer Timer)> PendingUpdates =
+    [];
 
     private static readonly SemaphoreSlim SemaphoreSlim = new(1);
     private static readonly SemaphoreSlim StateSlim = new(1);
@@ -58,7 +56,7 @@ public class ScoreboardService(
             }
 
             // Создаем новый таймер для отложенного обновления
-            var timer = new System.Threading.Timer(
+            var timer = new Timer(
                 async _ => await ProcessDebouncedUpdate(updateKey),
                 null,
                 DebounceDelayMs,

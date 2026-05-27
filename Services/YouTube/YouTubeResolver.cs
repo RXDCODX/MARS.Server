@@ -485,10 +485,7 @@ public class YouTubeResolver(ILogger<YouTubeResolver> logger)
     {
         var result = streamInfo.Container.Name;
 
-        if (
-            streamInfo is IAudioStreamInfo
-            && streamInfo.Container == YoutubeExplode.Videos.Streams.Container.Mp4
-        )
+        if (streamInfo is IAudioStreamInfo && streamInfo.Container == Container.Mp4)
         {
             result = "m4a";
         }

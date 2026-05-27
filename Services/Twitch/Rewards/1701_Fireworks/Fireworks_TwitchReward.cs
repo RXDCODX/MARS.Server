@@ -57,10 +57,7 @@ public class Fireworks_TwitchReward(
         {
             await rickRollerService.TryRickRollAsync(
                 TwitchUser.FromChannelPointsCustomRewardRedemptionArgs(args)!,
-                () =>
-                    hubContext.Clients.All.MakeScreenParticles(
-                        Entitys.TwitchScreenParticles.Fireworks
-                    )
+                () => hubContext.Clients.All.MakeScreenParticles(TwitchScreenParticles.Fireworks)
             );
         }
     }
