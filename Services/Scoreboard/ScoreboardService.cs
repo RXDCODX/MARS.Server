@@ -9,7 +9,7 @@ public class ScoreboardService(
 {
     // Статический словарь для отслеживания отложенных обновлений
     private static readonly Dictionary<string, (ScoreboardDto State, Timer Timer)> PendingUpdates =
-    [];
+        new();
 
     private static readonly SemaphoreSlim SemaphoreSlim = new(1);
     private static readonly SemaphoreSlim StateSlim = new(1);
@@ -52,16 +52,14 @@ public class ScoreboardService(
             // Отменяем предыдущий таймер, если он существует
             if (PendingUpdates.TryGetValue(updateKey, out var existing))
             {
-                await existing.Timer.DisposeAsync();
+                existing.Timer.Stop();
+                existing.Timer.Dispose();
             }
 
-            // Создаем новый таймер для отложенного обновления
-            var timer = new Timer(
-                async _ => await ProcessDebouncedUpdate(updateKey),
-                null,
-                DebounceDelayMs,
-                Timeout.Infinite
-            );
+            // Создаем новый таймер для отложенного обновления (System.Timers.Timer)
+            var timer = new Timer(DebounceDelayMs) { AutoReset = false };
+            timer.Elapsed += async (s, e) => await ProcessDebouncedUpdate(updateKey);
+            timer.Start();
             PendingUpdates[updateKey] = (dto, timer);
             SemaphoreSlim.Release();
 
@@ -81,7 +79,8 @@ public class ScoreboardService(
         if (PendingUpdates.TryGetValue(updateKey, out var pending))
         {
             stateToUpdate = pending.State;
-            await pending.Timer.DisposeAsync();
+            pending.Timer.Stop();
+            pending.Timer.Dispose();
             PendingUpdates.Remove(updateKey);
         }
 
