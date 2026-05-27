@@ -181,13 +181,17 @@ public class TwitchMediaPreparationService(
     private async Task<(
         long? BitrateKbps,
         double? AverageFrameRate,
-        double? RawFrameRate
+        double? RawFrameRate,
+        string? VideoCodecName,
+        string? AudioCodecName
     )> ReadProbeAsync(string filePath, CancellationToken cancellationToken)
     {
         var result = (
             BitrateKbps: (long?)null,
             AverageFrameRate: (double?)null,
-            RawFrameRate: (double?)null
+            RawFrameRate: (double?)null,
+            VideoCodecName: (string?)null,
+            AudioCodecName: (string?)null
         );
 
         if (!string.IsNullOrWhiteSpace(filePath) && File.Exists(filePath))
@@ -212,7 +216,9 @@ public class TwitchMediaPreparationService(
                             : null,
                         RawFrameRate: primaryVideoStream.FrameRate is > 0
                             ? primaryVideoStream.FrameRate
-                            : null
+                            : null,
+                        VideoCodecName: NormalizeCodecName(primaryVideoStream.CodecName),
+                        AudioCodecName: NormalizeCodecName(primaryAudioStream?.CodecName)
                     );
                 }
                 else if (primaryAudioStream is not null)
@@ -222,7 +228,9 @@ public class TwitchMediaPreparationService(
                             ? primaryAudioStream.BitRate / 1000
                             : null,
                         AverageFrameRate: null,
-                        RawFrameRate: null
+                        RawFrameRate: null,
+                        VideoCodecName: null,
+                        AudioCodecName: NormalizeCodecName(primaryAudioStream.CodecName)
                     );
                 }
                 else if (analysis.Format.BitRate > 0)
@@ -230,7 +238,9 @@ public class TwitchMediaPreparationService(
                     result = (
                         BitrateKbps: (long)Math.Round(analysis.Format.BitRate / 1000d),
                         AverageFrameRate: null,
-                        RawFrameRate: null
+                        RawFrameRate: null,
+                        VideoCodecName: null,
+                        AudioCodecName: null
                     );
                 }
             }
@@ -243,16 +253,34 @@ public class TwitchMediaPreparationService(
         return result;
     }
 
+    private static string? NormalizeCodecName(string? codecName)
+    {
+        var result = string.IsNullOrWhiteSpace(codecName)
+            ? null
+            : codecName.Trim().ToLowerInvariant();
+
+        return result;
+    }
+
     private static bool NeedsTranscoding(
         MediaType mediaType,
-        (long? BitrateKbps, double? AverageFrameRate, double? RawFrameRate) probe
+        (
+            long? BitrateKbps,
+            double? AverageFrameRate,
+            double? RawFrameRate,
+            string? VideoCodecName,
+            string? AudioCodecName
+        ) probe
     )
     {
         var result = false;
 
         if (mediaType == MediaType.Audio)
         {
-            result = probe.BitrateKbps is null || probe.BitrateKbps < MinimumAudioBitrateKbps;
+            result =
+                probe.BitrateKbps is null
+                || probe.BitrateKbps < MinimumAudioBitrateKbps
+                || !string.Equals(probe.AudioCodecName, "mp3", StringComparison.OrdinalIgnoreCase);
         }
         else if (mediaType == MediaType.Video)
         {
@@ -262,7 +290,11 @@ public class TwitchMediaPreparationService(
                 probe.AverageFrameRate,
                 probe.RawFrameRate
             );
-            result = hasLowBitrate || hasVariableFrameRate;
+            var needsH264Video =
+                !string.Equals(probe.VideoCodecName, "h264", StringComparison.OrdinalIgnoreCase);
+            var needsAacAudio = probe.AudioCodecName is not null
+                && !string.Equals(probe.AudioCodecName, "aac", StringComparison.OrdinalIgnoreCase);
+            result = hasLowBitrate || hasVariableFrameRate || needsH264Video || needsAacAudio;
         }
 
         return result;
@@ -346,7 +378,13 @@ public class TwitchMediaPreparationService(
         string sourceFilePath,
         string cachedFilePath,
         MediaType mediaType,
-        (long? BitrateKbps, double? AverageFrameRate, double? RawFrameRate) probe
+        (
+            long? BitrateKbps,
+            double? AverageFrameRate,
+            double? RawFrameRate,
+            string? VideoCodecName,
+            string? AudioCodecName
+        ) probe
     )
     {
         var result = new StringBuilder();
@@ -365,6 +403,9 @@ public class TwitchMediaPreparationService(
             $"Что сделано: создана кеш-копия с расширением {targetExtension}, оригинал заменён и удалён после успешной обработки"
         );
         result.AppendLine($"Подробности: исходная битрейт-оценка {detectedBitrateText}");
+        result.AppendLine(
+            $"Кодеки источника: video={probe.VideoCodecName ?? "unknown"}, audio={probe.AudioCodecName ?? "unknown"}"
+        );
 
         if (mediaType == MediaType.Video)
         {
