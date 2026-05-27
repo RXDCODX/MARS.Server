@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using System.Text.RegularExpressions;
+using MARS.Server.Services.PyroAlerts.Entitys;
 
 namespace MARS.Server.Exstensions;
 
@@ -19,17 +20,11 @@ public static class StringExtension
             return exstension switch
             {
                 ".tgs" => MediaType.TelegramSticker,
-                ".ogg" => MediaType.Audio,
-                ".oga" => MediaType.Audio,
-                ".webm" => MediaType.Video,
-                ".mp4" => MediaType.Video,
-                ".jpg" => MediaType.Image,
-                ".jpeg" => MediaType.Image,
-                ".png" => MediaType.Image,
-                ".webp" => MediaType.Image,
+                ".ogg" or ".oga" => MediaType.Audio,
+                ".webm" or ".mp4" => MediaType.Video,
+                ".jpg" or ".jpeg" or ".png" or ".webp" => MediaType.Image,
                 ".gif" => MediaType.Gif,
-                ".mp3" => MediaType.Audio,
-                ".wav" => MediaType.Audio,
+                ".mp3" or ".wav" => MediaType.Audio,
                 _ => MediaType.None,
             };
         }
