@@ -15,6 +15,7 @@ public class RandomSound_TwitchReward(
     IWebHostEnvironment webHostEnvironment,
     ITwitchMediaPreparationService twitchMediaPreparationService,
     IDbContextFactory<AppDbContext> dbContextFactory,
+    ITelegramBotClient telegramBotClient,
     IHostApplicationLifetime applicationLifetime,
     EventSubWebsocketClient wsClient,
     RickRollerService rickRollerService
@@ -81,12 +82,45 @@ public class RandomSound_TwitchReward(
     private async Task<MediaInfo?> GetAlert(string path, string? displayName)
     {
         var mediaOrder = await GetNextVideoOrderAsync(path);
+        var sourcePath = mediaOrder.FilePath;
 
-        return await twitchMediaPreparationService.PrepareMediaAsync(
+        await SendTranscodeNotificationAsync(
+            $"Начата обработка файла: {sourcePath}",
+            _stoppingToken
+        );
+
+        var media = await twitchMediaPreparationService.PrepareMediaAsync(
             mediaOrder,
             displayName,
             _stoppingToken
         );
+
+        var successCount = media is not null ? 1 : 0;
+        var failedCount = media is null ? 1 : 0;
+        var statusText = media is not null ? "успех" : "ошибка";
+
+        await SendTranscodeNotificationAsync(
+            $"Обработка файлов завершена\nВсего файлов: 1\nУспешно: {successCount}\nС ошибкой: {failedCount}\nПолный список:\n1. {sourcePath} [{statusText}]",
+            _stoppingToken
+        );
+
+        return media;
+    }
+
+    private async Task SendTranscodeNotificationAsync(string message, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await telegramBotClient.SendMessage(
+                TelegramExstension.Rxdcodx,
+                message,
+                cancellationToken: cancellationToken
+            );
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Не удалось отправить уведомление о подготовке медиа");
+        }
     }
 
     public async Task<MemeOrder> GetNextVideoOrderAsync(string path)

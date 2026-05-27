@@ -1,4 +1,3 @@
-using System.Security.Cryptography;
 using System.Text;
 using FFMpegCore;
 using MARS.Server.Services.Twitch.Rewards._11_RandomMemReward.Service.Entity;
@@ -152,7 +151,7 @@ public class TwitchMediaPreparationService(
                     options =>
                         options
                             .WithVideoCodec("libx264")
-                            .WithAudioCodec("aac")
+                            .WithAudioCodec("libmp3lame")
                             .WithAudioBitrate(MinimumAudioBitrateKbps)
                             .WithConstantRateFactor(20)
                             .WithFramerate(VideoFrameRate)
@@ -292,9 +291,9 @@ public class TwitchMediaPreparationService(
             );
             var needsH264Video =
                 !string.Equals(probe.VideoCodecName, "h264", StringComparison.OrdinalIgnoreCase);
-            var needsAacAudio = probe.AudioCodecName is not null
-                && !string.Equals(probe.AudioCodecName, "aac", StringComparison.OrdinalIgnoreCase);
-            result = hasLowBitrate || hasVariableFrameRate || needsH264Video || needsAacAudio;
+            var needsMp3Audio = probe.AudioCodecName is not null
+                && !string.Equals(probe.AudioCodecName, "mp3", StringComparison.OrdinalIgnoreCase);
+            result = hasLowBitrate || hasVariableFrameRate || needsH264Video || needsMp3Audio;
         }
 
         return result;
@@ -328,30 +327,46 @@ public class TwitchMediaPreparationService(
         return result;
     }
 
-    private string GetCacheFilePath(string sourceFilePath, MediaType mediaType)
+    private string GetCacheDirectoryPath()
     {
-        var cacheDirectory = Path.Combine(
-            webHostEnvironment.WebRootPath,
-            "Alerts",
-            CacheFolderName
-        );
-        Directory.CreateDirectory(cacheDirectory);
+        var result = Path.Combine(webHostEnvironment.WebRootPath, "Alerts", CacheFolderName);
+        return result;
+    }
 
-        var key = string.Join(
-            '|',
-            sourceFilePath,
-            File.GetLastWriteTimeUtc(sourceFilePath).Ticks,
-            mediaType,
-            MinimumAudioBitrateKbps,
-            MinimumVideoBitrateKbps,
-            VideoFrameRate
-        );
-        var hash = Convert
-            .ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(key)))
-            .ToLowerInvariant();
-        var extension = mediaType == MediaType.Audio ? ".mp3" : ".mp4";
+    private (int DeletedFiles, long FreedBytes) CleanupCacheDirectory(CancellationToken cancellationToken)
+    {
+        var result = (DeletedFiles: 0, FreedBytes: 0L);
+        var cacheDirectory = GetCacheDirectoryPath();
 
-        var result = Path.Combine(cacheDirectory, hash + extension);
+        if (Directory.Exists(cacheDirectory))
+        {
+            var files = Directory.GetFiles(cacheDirectory);
+
+            foreach (var filePath in files)
+            {
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    break;
+                }
+
+                try
+                {
+                    var fileInfo = new FileInfo(filePath);
+                    var deletedSize = fileInfo.Length;
+                    File.Delete(filePath);
+                    result = (result.DeletedFiles + 1, result.FreedBytes + deletedSize);
+                }
+                catch (IOException ex)
+                {
+                    logger.LogDebug(ex, "Не удалось удалить кеш-файл {CacheFilePath}", filePath);
+                }
+                catch (UnauthorizedAccessException ex)
+                {
+                    logger.LogDebug(ex, "Нет прав для удаления кеш-файла {CacheFilePath}", filePath);
+                }
+            }
+        }
+
         return result;
     }
 
@@ -376,7 +391,7 @@ public class TwitchMediaPreparationService(
 
     private string BuildTranscodeReport(
         string sourceFilePath,
-        string cachedFilePath,
+        string targetFilePath,
         MediaType mediaType,
         (
             long? BitrateKbps,
@@ -398,9 +413,9 @@ public class TwitchMediaPreparationService(
         result.AppendLine($"Файл: {fileName}");
         result.AppendLine($"Тип: {mediaKindText}");
         result.AppendLine($"Исходник: {sourceFilePath}");
-        result.AppendLine($"Кеш: {cachedFilePath}");
+        result.AppendLine($"Результат: {targetFilePath}");
         result.AppendLine(
-            $"Что сделано: создана кеш-копия с расширением {targetExtension}, оригинал заменён и удалён после успешной обработки"
+            $"Что сделано: оригинал заменён на файл с расширением {targetExtension} после успешной обработки"
         );
         result.AppendLine($"Подробности: исходная битрейт-оценка {detectedBitrateText}");
         result.AppendLine(
@@ -417,7 +432,7 @@ public class TwitchMediaPreparationService(
                 : "unknown";
 
             result.AppendLine(
-                $"Изменения: выставлен H.264, AAC, {MinimumVideoBitrateKbps} kbps, {VideoFrameRate} fps, fast start"
+                $"Изменения: выставлен H.264, MP3, {MinimumVideoBitrateKbps} kbps, {VideoFrameRate} fps, fast start"
             );
             result.AppendLine($"Кадры: average={averageFrameRateText}, raw={rawFrameRateText}");
         }
@@ -526,17 +541,23 @@ public class TwitchMediaPreparationService(
 
         var extension = Path.GetExtension(resolvedPath);
         var mediaType = extension.GetFileMediaType();
-        var cachePath = GetCacheFilePath(resolvedPath, mediaType);
+        var targetPath = GetTargetFilePath(resolvedPath, mediaType);
+        var cleanupResult = CleanupCacheDirectory(cancellationToken);
 
-        if (File.Exists(cachePath))
+        if (cleanupResult.DeletedFiles > 0)
         {
-            return BuildMediaInfo(cachePath, displayName);
+            logger.LogInformation(
+                "Очистка twitch_media_cache завершена: удалено файлов {DeletedFiles}, освобождено байт {FreedBytes}",
+                cleanupResult.DeletedFiles,
+                cleanupResult.FreedBytes
+            );
         }
 
         var probe = await ReadProbeAsync(resolvedPath, cancellationToken);
 
         if (NeedsTranscoding(mediaType, probe))
         {
+            var sourcePathForReport = resolvedPath;
             var tempDirectory =
                 Path.GetDirectoryName(resolvedPath) ?? webHostEnvironment.ContentRootPath;
             var tempFile = Path.Combine(
@@ -565,32 +586,47 @@ public class TwitchMediaPreparationService(
                             File.Delete(resolvedPath);
                         }
 
-                        File.Move(tempFile, resolvedPath);
-
-                        if (File.Exists(cachePath))
+                        if (
+                            !string.Equals(
+                                resolvedPath,
+                                targetPath,
+                                StringComparison.OrdinalIgnoreCase
+                            )
+                            && File.Exists(targetPath)
+                        )
                         {
-                            File.Delete(cachePath);
+                            File.Delete(targetPath);
                         }
 
-                        File.Copy(resolvedPath, cachePath);
-                        File.SetLastWriteTimeUtc(cachePath, DateTime.UtcNow);
+                        File.Move(tempFile, targetPath);
 
-                        await UpdateMemeOrderPathAsync(memeOrder, cachePath, cancellationToken);
+                        await UpdateMemeOrderPathAsync(memeOrder, targetPath, cancellationToken);
+
+                        var postCleanupResult = CleanupCacheDirectory(cancellationToken);
+
+                        if (postCleanupResult.DeletedFiles > 0)
+                        {
+                            logger.LogInformation(
+                                "После конвертации удалены кеш-файлы: {DeletedFiles}, освобождено байт {FreedBytes}",
+                                postCleanupResult.DeletedFiles,
+                                postCleanupResult.FreedBytes
+                            );
+                        }
 
                         if (onFileTranscoded is not null)
                         {
                             await onFileTranscoded(
-                                BuildTranscodeReport(resolvedPath, cachePath, mediaType, probe)
+                                BuildTranscodeReport(sourcePathForReport, targetPath, mediaType, probe)
                             );
                         }
 
-                        return BuildMediaInfo(cachePath, displayName);
+                        return BuildMediaInfo(targetPath, displayName);
                     }
                     catch (Exception ex)
                     {
                         logger.LogWarning(
                             ex,
-                            "Failed to move converted file to cache {TempFile}",
+                            "Failed to move converted file to target path {TempFile}",
                             tempFile
                         );
                     }
