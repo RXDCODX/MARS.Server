@@ -1,3 +1,4 @@
+using System.Text;
 using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Media;
 using MARS.Server.Services.Twitch.Rewards._11_RandomMemReward.Service.Entity;
@@ -83,28 +84,47 @@ public class RandomSound_TwitchReward(
     {
         var mediaOrder = await GetNextVideoOrderAsync(path);
         var sourcePath = mediaOrder.FilePath;
-
-        await SendTranscodeNotificationAsync(
-            $"Начата обработка файла: {sourcePath}",
-            _stoppingToken
-        );
+        var transcodeReports = new List<string>();
 
         var media = await twitchMediaPreparationService.PrepareMediaAsync(
             mediaOrder,
             displayName,
-            _stoppingToken
+            _stoppingToken,
+            report =>
+            {
+                transcodeReports.Add(report);
+                return Task.CompletedTask;
+            }
         );
 
-        var successCount = media is not null ? 1 : 0;
-        var failedCount = media is null ? 1 : 0;
-        var statusText = media is not null ? "успех" : "ошибка";
-
-        await SendTranscodeNotificationAsync(
-            $"Обработка файлов завершена\nВсего файлов: 1\nУспешно: {successCount}\nС ошибкой: {failedCount}\nПолный список:\n1. {sourcePath} [{statusText}]",
-            _stoppingToken
-        );
+        if (transcodeReports.Count > 0)
+        {
+            await SendTranscodeNotificationAsync(
+                BuildSingleFileSummary(sourcePath, transcodeReports),
+                _stoppingToken
+            );
+        }
 
         return media;
+    }
+
+    private static string BuildSingleFileSummary(string sourcePath, IReadOnlyList<string> transcodeReports)
+    {
+        var result = new StringBuilder();
+
+        result.AppendLine("Обработка файлов завершена");
+        result.AppendLine("Всего файлов: 1");
+        result.AppendLine($"Требовали конвертацию: {transcodeReports.Count}");
+        result.AppendLine("Полный список:");
+        result.AppendLine($"1. {sourcePath}");
+
+        foreach (var report in transcodeReports)
+        {
+            result.AppendLine();
+            result.AppendLine(report);
+        }
+
+        return result.ToString().TrimEnd();
     }
 
     private async Task SendTranscodeNotificationAsync(string message, CancellationToken cancellationToken)

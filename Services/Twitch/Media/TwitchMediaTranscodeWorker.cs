@@ -13,12 +13,6 @@ public class TwitchMediaTranscodeWorker(
     private const int TelegramMessageMaxLength = 3900;
     private readonly System.Threading.SemaphoreSlim _runLock = new(1, 1);
 
-    private sealed class ProcessedMediaEntry
-    {
-        public string SourcePath { get; init; } = string.Empty;
-        public bool IsSuccess { get; init; }
-    }
-
     public bool IsServiceActive { get; set; } = true;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -63,41 +57,36 @@ public class TwitchMediaTranscodeWorker(
         {
             using var scope = serviceScopeFactory.CreateScope();
             var randomMemeService = scope.ServiceProvider.GetRequiredService<IRandomMemeService>();
-            var mediaOrders = await randomMemeService.GetAllMemeOrdersAsync(cancellationToken);
-            var processedMediaEntries = new List<ProcessedMediaEntry>();
+            var mediaOrders = (await randomMemeService.GetAllMemeOrdersAsync(cancellationToken)).ToList();
+            var transcodeReports = new List<string>();
 
             foreach (var mediaOrder in mediaOrders)
             {
-                await SendTelegramNotificationAsync(
-                    $"Начата обработка файла: {mediaOrder.FilePath}",
-                    cancellationToken
-                );
-
-                var isSuccess = false;
-
                 try
                 {
                     var media = await twitchMediaPreparationService.PrepareMediaAsync(
                         mediaOrder,
                         null,
-                        cancellationToken
+                        cancellationToken,
+                        report =>
+                        {
+                            transcodeReports.Add(report);
+                            return Task.CompletedTask;
+                        }
                     );
-                    isSuccess = media is not null;
+
+                    _ = media;
                 }
                 catch (Exception ex)
                 {
                     logger.LogWarning(ex, "Ошибка обработки файла {FilePath}", mediaOrder.FilePath);
                 }
-
-                processedMediaEntries.Add(
-                    new ProcessedMediaEntry { SourcePath = mediaOrder.FilePath, IsSuccess = isSuccess }
-                );
             }
 
-            if (processedMediaEntries.Count > 0)
+            if (transcodeReports.Count > 0)
             {
                 await SendTelegramNotificationAsync(
-                    BuildBatchSummary(processedMediaEntries),
+                    BuildBatchSummary(mediaOrders.Count, transcodeReports),
                     cancellationToken
                 );
             }
@@ -108,24 +97,19 @@ public class TwitchMediaTranscodeWorker(
         }
     }
 
-    private string BuildBatchSummary(IReadOnlyList<ProcessedMediaEntry> processedMediaEntries)
+    private string BuildBatchSummary(int totalCount, IReadOnlyList<string> transcodeReports)
     {
         var result = new StringBuilder();
-        var totalCount = processedMediaEntries.Count;
-        var successCount = processedMediaEntries.Count(x => x.IsSuccess);
-        var failedCount = totalCount - successCount;
+        var convertedCount = transcodeReports.Count;
 
         result.AppendLine("Обработка файлов завершена");
         result.AppendLine($"Всего файлов: {totalCount}");
-        result.AppendLine($"Успешно: {successCount}");
-        result.AppendLine($"С ошибкой: {failedCount}");
+        result.AppendLine($"Требовали конвертацию: {convertedCount}");
         result.AppendLine("Полный список:");
 
-        for (var index = 0 ; index < processedMediaEntries.Count ; index++)
+        for (var index = 0 ; index < transcodeReports.Count ; index++)
         {
-            var entry = processedMediaEntries[index];
-            var statusText = entry.IsSuccess ? "успех" : "ошибка";
-            result.AppendLine($"{index + 1}. {entry.SourcePath} [{statusText}]");
+            result.AppendLine($"{index + 1}. {transcodeReports[index]}");
         }
 
         return result.ToString().TrimEnd();
