@@ -3,10 +3,9 @@ using MARS.Server.Services.CommandExecutor.Entitys.Commands;
 using MARS.Server.Services.SoundRequest.Entities;
 using MARS.Server.Services.SoundRequest.SoundCloud;
 using MARS.Server.Services.YouTube;
+using FFMpegCore;
 using YoutubeExplode;
-using YoutubeExplode.Converter;
 using YoutubeExplode.Videos.Streams;
-using System.Diagnostics;
 
 namespace MARS.Server.Services.CommandExecutor.Commands;
 
@@ -163,20 +162,27 @@ public class DownloadCommand(
             var bestVideoStream = streamManifest.GetVideoStreams().GetWithHighestVideoQuality();
             var bestAudioStream = streamManifest.GetAudioStreams().GetWithHighestBitrate();
 
-            var tempFile = Guid.NewGuid() + ".mp4";
+            var tempDirectory = Path.Combine(Path.GetTempPath(), "mars-downloads", Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(tempDirectory);
+
+            var videoStreamFile = Path.Combine(tempDirectory, Guid.NewGuid() + ".mp4");
+            var audioStreamFile = Path.Combine(tempDirectory, Guid.NewGuid() + ".m4a");
+            var tempFile = Path.Combine(tempDirectory, Guid.NewGuid() + ".mp4");
             var preparedFile = tempFile;
 
-            await _youtubeClient.Videos.DownloadAsync(
-                [bestAudioStream, bestVideoStream],
-                new ConversionRequest(
-                    "ffmpeg",
-                    tempFile,
-                    Container.Mp4,
-                    ConversionPreset.VerySlow,
-                    new Dictionary<string, string?>()
-                ),
+            await _youtubeClient.Videos.Streams.DownloadAsync(
+                bestVideoStream,
+                videoStreamFile,
                 cancellationToken: cancellationToken
             );
+
+            await _youtubeClient.Videos.Streams.DownloadAsync(
+                bestAudioStream,
+                audioStreamFile,
+                cancellationToken: cancellationToken
+            );
+
+            FFMpeg.ReplaceAudio(videoStreamFile, audioStreamFile, tempFile);
 
             preparedFile = await PrepareVideoForTelegramAsync(tempFile, cancellationToken);
 
@@ -207,10 +213,27 @@ public class DownloadCommand(
             {
                 try
                 {
-                    File.Delete(tempFile);
+                    if (File.Exists(videoStreamFile))
+                    {
+                        File.Delete(videoStreamFile);
+                    }
+
+                    if (File.Exists(audioStreamFile))
+                    {
+                        File.Delete(audioStreamFile);
+                    }
+
+                    if (File.Exists(tempFile))
+                    {
+                        File.Delete(tempFile);
+                    }
+
                     if (!string.Equals(preparedFile, tempFile, StringComparison.OrdinalIgnoreCase))
                     {
-                        File.Delete(preparedFile);
+                        if (File.Exists(preparedFile))
+                        {
+                            File.Delete(preparedFile);
+                        }
                     }
                 }
                 catch { }
@@ -297,80 +320,61 @@ public class DownloadCommand(
     {
         var result = false;
 
-        var ffmpegArguments = new List<string>
-        {
-            "-y",
-            "-hide_banner",
-            "-loglevel",
-            "error",
-            "-i",
-            inputFile,
-            "-vf",
-            $"scale=min({profile.MaxWidth},iw):-2",
-            "-c:v",
-            "libx264",
-            "-preset",
-            "veryfast",
-            "-crf",
-            profile.Crf.ToString(),
-            "-c:a",
-            "aac",
-            "-b:a",
-            $"{profile.AudioBitrateKbps}k",
-            "-pix_fmt",
-            "yuv420p",
-            "-movflags",
-            "+faststart",
-        };
-
-        if (maxOutputSizeBytes is not null)
-        {
-            ffmpegArguments.Add("-fs");
-            ffmpegArguments.Add(maxOutputSizeBytes.Value.ToString());
-        }
-
-        ffmpegArguments.Add(outputFile);
-
-        var process = new Process
-        {
-            StartInfo = new ProcessStartInfo
-            {
-                FileName = "ffmpeg",
-                UseShellExecute = false,
-                RedirectStandardError = true,
-                CreateNoWindow = true,
-            },
-        };
-
-        foreach (var argument in ffmpegArguments)
-        {
-            process.StartInfo.ArgumentList.Add(argument);
-        }
-
         try
         {
-            process.Start();
-            await process.WaitForExitAsync(cancellationToken);
+            var outputBuilder = FFMpegArguments
+                .FromFileInput(inputFile)
+                .OutputToFile(
+                    outputFile,
+                    true,
+                    options => options
+                        .WithVideoCodec("libx264")
+                        .WithAudioCodec("aac")
+                        .WithAudioBitrate(profile.AudioBitrateKbps)
+                        .WithConstantRateFactor(profile.Crf)
+                        .WithVideoFilters(filterOptions => filterOptions.Scale(profile.MaxWidth, -2))
+                        .WithCustomArgument("-pix_fmt yuv420p")
+                        .WithCustomArgument("-preset veryfast")
+                        .WithFastStart()
+                )
+                .CancellableThrough(cancellationToken);
 
-            if (process.ExitCode == 0 && File.Exists(outputFile))
+            if (maxOutputSizeBytes is not null)
+            {
+                outputBuilder = FFMpegArguments
+                    .FromFileInput(inputFile)
+                    .OutputToFile(
+                        outputFile,
+                        true,
+                        options => options
+                            .WithVideoCodec("libx264")
+                            .WithAudioCodec("aac")
+                            .WithAudioBitrate(profile.AudioBitrateKbps)
+                            .WithConstantRateFactor(profile.Crf)
+                            .WithVideoFilters(filterOptions => filterOptions.Scale(profile.MaxWidth, -2))
+                            .WithCustomArgument("-pix_fmt yuv420p")
+                            .WithCustomArgument("-preset veryfast")
+                            .WithCustomArgument($"-fs {maxOutputSizeBytes.Value}")
+                            .WithFastStart()
+                    )
+                    .CancellableThrough(cancellationToken);
+            }
+
+            await outputBuilder.ProcessAsynchronously();
+
+            if (File.Exists(outputFile))
             {
                 result = true;
             }
-            else
-            {
-                var error = await process.StandardError.ReadToEndAsync();
-                logger.LogWarning(
-                    "FFmpeg не смог подготовить видео {InputFile} -> {OutputFile}. ExitCode: {ExitCode}. Error: {Error}",
-                    inputFile,
-                    outputFile,
-                    process.ExitCode,
-                    error
-                );
-            }
         }
-        finally
+        catch (Exception ex)
         {
-            process.Dispose();
+            logger.LogWarning(
+                ex,
+                "FFMpegCore не смог подготовить видео {InputFile} -> {OutputFile}",
+                inputFile,
+                outputFile
+            );
         }
 
         return result;

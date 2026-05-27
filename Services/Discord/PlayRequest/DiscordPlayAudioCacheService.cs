@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
-using System.Diagnostics;
 using System.Text.RegularExpressions;
+using FFMpegCore;
 using MARS.Server.Services.SoundRequest.Entities;
 using MARS.Server.Services.YouTube;
 
@@ -247,56 +247,23 @@ public class DiscordPlayAudioCacheService(
 
         try
         {
-            using var process = new Process();
+            await FFMpegArguments
+                .FromFileInput(sourceFilePath)
+                .OutputToFile(
+                    outputFilePath,
+                    true,
+                    options => options
+                        .WithAudioCodec("libmp3lame")
+                        .WithAudioBitrate(bitrateKbps)
+                        .WithCustomArgument("-vn")
+                        .WithCustomArgument("-map_metadata -1")
+                )
+                .CancellableThrough(cancellationToken)
+                .ProcessAsynchronously();
 
-            process.StartInfo = new ProcessStartInfo
+            if (File.Exists(outputFilePath))
             {
-                FileName = "ffmpeg",
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                RedirectStandardError = true,
-                RedirectStandardOutput = true,
-            };
-
-            process.StartInfo.ArgumentList.Add("-y");
-            process.StartInfo.ArgumentList.Add("-i");
-            process.StartInfo.ArgumentList.Add(sourceFilePath);
-            process.StartInfo.ArgumentList.Add("-vn");
-            process.StartInfo.ArgumentList.Add("-map_metadata");
-            process.StartInfo.ArgumentList.Add("-1");
-            process.StartInfo.ArgumentList.Add("-acodec");
-            process.StartInfo.ArgumentList.Add("libmp3lame");
-            process.StartInfo.ArgumentList.Add("-b:a");
-            process.StartInfo.ArgumentList.Add(string.Concat(bitrateKbps, "k"));
-            process.StartInfo.ArgumentList.Add(outputFilePath);
-
-            if (process.Start())
-            {
-                var standardErrorTask = process.StandardError.ReadToEndAsync();
-                var standardOutputTask = process.StandardOutput.ReadToEndAsync();
-
-                await process.WaitForExitAsync(cancellationToken);
-
-                var standardError = await standardErrorTask;
-                await standardOutputTask;
-
-                if (process.ExitCode == 0 && File.Exists(outputFilePath))
-                {
-                    result = true;
-                }
-                else
-                {
-                    logger.LogWarning(
-                        "ffmpeg завершился с кодом {ExitCode} при битрейте {BitrateKbps} kbps. stderr: {StandardError}",
-                        process.ExitCode,
-                        bitrateKbps,
-                        standardError
-                    );
-                }
-            }
-            else
-            {
-                logger.LogWarning("Не удалось запустить ffmpeg для подготовки Discord play аудио.");
+                result = true;
             }
         }
         catch (Exception ex)

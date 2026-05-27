@@ -5,6 +5,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using FFMpegCore;
 using MARS.Server.Exstensions;
 using MARS.Server.Services.PyroAlerts.Entitys;
 using Microsoft.AspNetCore.Hosting;
@@ -182,46 +183,30 @@ public class MediaTranscoder : IMediaTranscoder
 
     private async Task<bool> ConvertAudioAsync(string sourceFilePath, string outputFilePath, CancellationToken cancellationToken)
     {
+        var result = false;
+
         try
         {
             EnsureDirectoryExists(Path.GetDirectoryName(outputFilePath));
 
-            using var process = new Process();
-            process.StartInfo = BuildProcessStartInfo("ffmpeg");
+            await FFMpegArguments
+                .FromFileInput(sourceFilePath)
+                .OutputToFile(
+                    outputFilePath,
+                    true,
+                    options => options
+                        .WithAudioCodec("libmp3lame")
+                        .WithAudioBitrate(MinimumAudioBitrateKbps)
+                        .WithCustomArgument("-vn")
+                        .WithCustomArgument("-map_metadata -1")
+                )
+                .CancellableThrough(cancellationToken)
+                .ProcessAsynchronously();
 
-            process.StartInfo.ArgumentList.Add("-y");
-            process.StartInfo.ArgumentList.Add("-i");
-            process.StartInfo.ArgumentList.Add(sourceFilePath);
-            process.StartInfo.ArgumentList.Add("-vn");
-            process.StartInfo.ArgumentList.Add("-map_metadata");
-            process.StartInfo.ArgumentList.Add("-1");
-            process.StartInfo.ArgumentList.Add("-c:a");
-            process.StartInfo.ArgumentList.Add("libmp3lame");
-            process.StartInfo.ArgumentList.Add("-b:a");
-            process.StartInfo.ArgumentList.Add($"{MinimumAudioBitrateKbps}k");
-            process.StartInfo.ArgumentList.Add(outputFilePath);
-
-            if (process.Start())
+            if (File.Exists(outputFilePath))
             {
-                var standardErrorTask = process.StandardError.ReadToEndAsync(cancellationToken);
-                var standardOutputTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
-
-                await process.WaitForExitAsync(cancellationToken);
-
-                var standardError = await standardErrorTask;
-                await standardOutputTask;
-
-                if (process.ExitCode == 0 && File.Exists(outputFilePath))
-                {
-                    File.SetLastWriteTimeUtc(outputFilePath, DateTime.UtcNow);
-                    return true;
-                }
-
-                _logger.LogWarning("ffmpeg завершился с кодом {ExitCode} при конвертации аудио {FilePath}. stderr: {StandardError}", process.ExitCode, sourceFilePath, standardError);
-            }
-            else
-            {
-                _logger.LogWarning("Не удалось запустить ffmpeg для конвертации аудио {FilePath}", sourceFilePath);
+                File.SetLastWriteTimeUtc(outputFilePath, DateTime.UtcNow);
+                result = true;
             }
         }
         catch (Exception ex)
@@ -229,62 +214,40 @@ public class MediaTranscoder : IMediaTranscoder
             _logger.LogWarning(ex, "Ошибка конвертации аудио {FilePath}", sourceFilePath);
         }
 
-        return false;
+        return result;
     }
 
     private async Task<bool> ConvertVideoAsync(string sourceFilePath, string outputFilePath, CancellationToken cancellationToken)
     {
+        var result = false;
+
         try
         {
             EnsureDirectoryExists(Path.GetDirectoryName(outputFilePath));
 
-            using var process = new Process();
-            process.StartInfo = BuildProcessStartInfo("ffmpeg");
+            await FFMpegArguments
+                .FromFileInput(sourceFilePath)
+                .OutputToFile(
+                    outputFilePath,
+                    true,
+                    options => options
+                        .WithVideoCodec("libx264")
+                        .WithAudioCodec("aac")
+                        .WithAudioBitrate(MinimumAudioBitrateKbps)
+                        .WithConstantRateFactor(20)
+                        .WithFramerate(VideoFrameRate)
+                        .WithCustomArgument("-vf fps=30")
+                        .WithCustomArgument("-pix_fmt yuv420p")
+                        .WithCustomArgument("-preset veryfast")
+                        .WithFastStart()
+                )
+                .CancellableThrough(cancellationToken)
+                .ProcessAsynchronously();
 
-            process.StartInfo.ArgumentList.Add("-y");
-            process.StartInfo.ArgumentList.Add("-i");
-            process.StartInfo.ArgumentList.Add(sourceFilePath);
-            process.StartInfo.ArgumentList.Add("-vf");
-            process.StartInfo.ArgumentList.Add($"fps={VideoFrameRate}");
-            process.StartInfo.ArgumentList.Add("-r");
-            process.StartInfo.ArgumentList.Add(VideoFrameRate.ToString());
-            process.StartInfo.ArgumentList.Add("-c:v");
-            process.StartInfo.ArgumentList.Add("libx264");
-            process.StartInfo.ArgumentList.Add("-pix_fmt");
-            process.StartInfo.ArgumentList.Add("yuv420p");
-            process.StartInfo.ArgumentList.Add("-preset");
-            process.StartInfo.ArgumentList.Add("veryfast");
-            process.StartInfo.ArgumentList.Add("-crf");
-            process.StartInfo.ArgumentList.Add("20");
-            process.StartInfo.ArgumentList.Add("-c:a");
-            process.StartInfo.ArgumentList.Add("aac");
-            process.StartInfo.ArgumentList.Add("-b:a");
-            process.StartInfo.ArgumentList.Add($"{MinimumAudioBitrateKbps}k");
-            process.StartInfo.ArgumentList.Add("-movflags");
-            process.StartInfo.ArgumentList.Add("+faststart");
-            process.StartInfo.ArgumentList.Add(outputFilePath);
-
-            if (process.Start())
+            if (File.Exists(outputFilePath))
             {
-                var standardErrorTask = process.StandardError.ReadToEndAsync(cancellationToken);
-                var standardOutputTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
-
-                await process.WaitForExitAsync(cancellationToken);
-
-                var standardError = await standardErrorTask;
-                await standardOutputTask;
-
-                if (process.ExitCode == 0 && File.Exists(outputFilePath))
-                {
-                    File.SetLastWriteTimeUtc(outputFilePath, DateTime.UtcNow);
-                    return true;
-                }
-
-                _logger.LogWarning("ffmpeg завершился с кодом {ExitCode} при конвертации видео {FilePath}. stderr: {StandardError}", process.ExitCode, sourceFilePath, standardError);
-            }
-            else
-            {
-                _logger.LogWarning("Не удалось запустить ffmpeg для конвертации видео {FilePath}", sourceFilePath);
+                File.SetLastWriteTimeUtc(outputFilePath, DateTime.UtcNow);
+                result = true;
             }
         }
         catch (Exception ex)
@@ -292,19 +255,7 @@ public class MediaTranscoder : IMediaTranscoder
             _logger.LogWarning(ex, "Ошибка конвертации видео {FilePath}", sourceFilePath);
         }
 
-        return false;
-    }
-
-    private static ProcessStartInfo BuildProcessStartInfo(string fileName)
-    {
-        return new ProcessStartInfo
-        {
-            FileName = fileName,
-            UseShellExecute = false,
-            CreateNoWindow = true,
-            RedirectStandardError = true,
-            RedirectStandardOutput = true,
-        };
+        return result;
     }
 
     private static void EnsureDirectoryExists(string? directoryPath)
