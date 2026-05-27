@@ -655,10 +655,13 @@ public class TwitchMediaPreparationService(
             var sourcePathForReport = resolvedPath;
             var tempDirectory =
                 Path.GetDirectoryName(resolvedPath) ?? webHostEnvironment.ContentRootPath;
-            var targetExtension = Path.GetExtension(targetPath) ?? (mediaType == MediaType.Audio ? ".mp3" : ".mp4");
+            var tempExtension = Path.GetExtension(targetPath);
             var tempFile = Path.Combine(
                 tempDirectory,
-                Guid.NewGuid().ToString() + targetExtension
+                Guid.NewGuid().ToString()
+                    + (string.IsNullOrWhiteSpace(tempExtension)
+                        ? (mediaType == MediaType.Audio ? ".mp3" : ".mp4")
+                        : tempExtension)
             );
 
             try
