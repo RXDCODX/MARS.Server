@@ -76,7 +76,7 @@ public class UpdateHandler : IUpdateHandler
             {
                 await UpdateOffset(update.Id, cancellationToken);
 
-                ResendMessage(update);
+                await ResendMessage(update);
             }
             catch (Exception e)
             {
@@ -133,7 +133,7 @@ public class UpdateHandler : IUpdateHandler
         }
     }
 
-    private async void ResendMessage(Update update)
+    private async Task ResendMessage(Update update)
     {
         if (update != null && _options.AdminIdsArray != null)
         {
@@ -147,7 +147,22 @@ public class UpdateHandler : IUpdateHandler
 
                         if (update.Message.HasProtectedContent != true)
                         {
-                            await _botClient.ForwardMessage(id, chatId, messageId);
+                            try
+                            {
+                                await _botClient.ForwardMessage(id, chatId, messageId);
+                            }
+                            catch (ApiRequestException ex) when (
+                                ex.ErrorCode == 400
+                                && ex.Message.Contains("message to forward not found", StringComparison.OrdinalIgnoreCase)
+                            )
+                            {
+                                _logger.LogWarning(
+                                    ex,
+                                    "Не удалось переслать сообщение {MessageId} из чата {ChatId}",
+                                    messageId,
+                                    chatId
+                                );
+                            }
                         }
 
                         break;
@@ -157,7 +172,22 @@ public class UpdateHandler : IUpdateHandler
 
                         if (update.ChannelPost.HasProtectedContent != true)
                         {
-                            await _botClient.ForwardMessage(id, chatId, messageId);
+                            try
+                            {
+                                await _botClient.ForwardMessage(id, chatId, messageId);
+                            }
+                            catch (ApiRequestException ex) when (
+                                ex.ErrorCode == 400
+                                && ex.Message.Contains("message to forward not found", StringComparison.OrdinalIgnoreCase)
+                            )
+                            {
+                                _logger.LogWarning(
+                                    ex,
+                                    "Не удалось переслать сообщение {MessageId} из канала {ChatId}",
+                                    messageId,
+                                    chatId
+                                );
+                            }
                         }
 
                         //if (_environment.IsDevelopment())
