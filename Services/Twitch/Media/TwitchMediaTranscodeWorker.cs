@@ -1,5 +1,5 @@
-using MARS.Server.Services.Twitch.Rewards._11_RandomMemReward.Service;
 using System.Text;
+using MARS.Server.Services.Twitch.Rewards._11_RandomMemReward.Service;
 
 namespace MARS.Server.Services.Twitch.Media;
 
@@ -96,7 +96,7 @@ public class TwitchMediaTranscodeWorker(
         result.AppendLine($"С ошибкой: {failedCount}");
         result.AppendLine("Полный список:");
 
-        for (var index = 0; index < processedMediaEntries.Count; index++)
+        for (var index = 0 ; index < processedMediaEntries.Count ; index++)
         {
             var entry = processedMediaEntries[index];
             var statusText = entry.IsSuccess ? "успех" : "ошибка";
