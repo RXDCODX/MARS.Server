@@ -372,3 +372,4 @@ appsettings.json
 /WTelegram/WTelegram.session
 /wwwroot/assets/*
 /Logs.csv
+twitch_media_cache
