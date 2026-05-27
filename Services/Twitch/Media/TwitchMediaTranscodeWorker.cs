@@ -11,6 +11,7 @@ public class TwitchMediaTranscodeWorker(
 ) : BackgroundService
 {
     private const int TelegramMessageMaxLength = 3900;
+    private readonly System.Threading.SemaphoreSlim _runLock = new(1, 1);
 
     private sealed class ProcessedMediaEntry
     {
@@ -22,13 +23,37 @@ public class TwitchMediaTranscodeWorker(
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        await TranscodePendingMediaAsync(stoppingToken);
+        // Try to run initial pass if available
+        if (await _runLock.WaitAsync(0, stoppingToken))
+        {
+            try
+            {
+                await TranscodePendingMediaAsync(stoppingToken);
+            }
+            finally
+            {
+                _runLock.Release();
+            }
+        }
 
         using var periodicTimer = new PeriodicTimer(TimeSpan.FromMinutes(30));
 
         while (IsServiceActive && await periodicTimer.WaitForNextTickAsync(stoppingToken))
         {
-            await TranscodePendingMediaAsync(stoppingToken);
+            // If previous run still executing, skip this tick to keep single-threaded behavior
+            if (!await _runLock.WaitAsync(0, stoppingToken))
+            {
+                continue;
+            }
+
+            try
+            {
+                await TranscodePendingMediaAsync(stoppingToken);
+            }
+            finally
+            {
+                _runLock.Release();
+            }
         }
     }
 

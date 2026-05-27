@@ -90,6 +90,55 @@ public class TwitchMediaPreparationService(
         }
     }
 
+    private async Task UpdateAlertsForFileAsync(
+        string oldAbsolutePath,
+        string newAbsolutePath,
+        string? displayName,
+        MediaType mediaType,
+        CancellationToken cancellationToken
+    )
+    {
+        try
+        {
+            var oldWebPath = BuildWebPath(oldAbsolutePath);
+            var newWebPath = BuildWebPath(newAbsolutePath);
+
+            await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+
+            var alerts = await dbContext.Alerts
+                .Where(a => a.FileInfo.FilePath == oldWebPath || a.FileInfo.FilePath == oldWebPath.TrimStart('/'))
+                .ToListAsync(cancellationToken);
+
+            if (alerts.Count == 0)
+            {
+                return;
+            }
+
+            foreach (var alert in alerts)
+            {
+                alert.FileInfo.FilePath = newWebPath;
+                alert.FileInfo.FileName = Path.GetFileName(newAbsolutePath);
+                alert.FileInfo.Extension = Path.GetExtension(newAbsolutePath);
+                alert.FileInfo.Type = mediaType;
+                alert.FileInfo.IsLocalFile = true;
+
+                if (!string.IsNullOrWhiteSpace(displayName))
+                {
+                    alert.MetaInfo.DisplayName = displayName!;
+                }
+
+                dbContext.Entry(alert).State = EntityState.Modified;
+            }
+
+            await dbContext.SaveChangesAsync(cancellationToken);
+            logger.LogInformation("Обновлено {Count} записей Alerts для файла {Old} -> {New}", alerts.Count, oldWebPath, newWebPath);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Не удалось обновить записи Alerts для файла {Old} -> {New}", oldAbsolutePath, newAbsolutePath);
+        }
+    }
+
     private async Task<bool> ConvertAudioAsync(
         string sourceFilePath,
         string outputFilePath,
@@ -143,12 +192,24 @@ public class TwitchMediaPreparationService(
         {
             EnsureDirectoryExists(Path.GetDirectoryName(outputFilePath));
 
-            await FFMpegArguments
-                .FromFileInput(sourceFilePath)
-                .OutputToFile(
-                    outputFilePath,
-                    true,
-                    options =>
+            var ext = Path.GetExtension(outputFilePath)?.ToLowerInvariant();
+
+            var ffArgs = FFMpegArguments.FromFileInput(sourceFilePath).OutputToFile(
+                outputFilePath,
+                true,
+                options =>
+                {
+                    if (ext == ".webm")
+                    {
+                        options
+                            .WithVideoCodec("libvpx")
+                            .WithAudioCodec("libvorbis")
+                            .WithCustomArgument($"-b:v {MinimumVideoBitrateKbps}k")
+                            .WithFramerate(VideoFrameRate)
+                            .WithCustomArgument("-threads 2");
+                    }
+                    else
+                    {
                         options
                             .WithVideoCodec("libx264")
                             .WithAudioCodec("libmp3lame")
@@ -158,10 +219,12 @@ public class TwitchMediaPreparationService(
                             .WithCustomArgument("-vf fps=30")
                             .WithCustomArgument("-pix_fmt yuv420p")
                             .WithCustomArgument("-preset veryfast")
-                            .WithFastStart()
-                )
-                .CancellableThrough(cancellationToken)
-                .ProcessAsynchronously();
+                            .WithFastStart();
+                    }
+                }
+            ).CancellableThrough(cancellationToken);
+
+            await ffArgs.ProcessAsynchronously();
 
             if (File.Exists(outputFilePath))
             {
@@ -269,7 +332,8 @@ public class TwitchMediaPreparationService(
             double? RawFrameRate,
             string? VideoCodecName,
             string? AudioCodecName
-        ) probe
+        ) probe,
+        string targetExtension
     )
     {
         var result = false;
@@ -289,11 +353,22 @@ public class TwitchMediaPreparationService(
                 probe.AverageFrameRate,
                 probe.RawFrameRate
             );
-            var needsH264Video =
-                !string.Equals(probe.VideoCodecName, "h264", StringComparison.OrdinalIgnoreCase);
-            var needsMp3Audio = probe.AudioCodecName is not null
-                && !string.Equals(probe.AudioCodecName, "mp3", StringComparison.OrdinalIgnoreCase);
-            result = hasLowBitrate || hasVariableFrameRate || needsH264Video || needsMp3Audio;
+            var ext = targetExtension?.ToLowerInvariant() ?? ".mp4";
+
+            if (ext == ".webm")
+            {
+                // For webm we want VP8 video. Transcode if not VP8 or bitrate/frame issues.
+                var needsVp8 = !string.Equals(probe.VideoCodecName, "vp8", StringComparison.OrdinalIgnoreCase);
+                result = hasLowBitrate || hasVariableFrameRate || needsVp8;
+            }
+            else
+            {
+                var needsH264Video =
+                    !string.Equals(probe.VideoCodecName, "h264", StringComparison.OrdinalIgnoreCase);
+                var needsMp3Audio = probe.AudioCodecName is not null
+                    && !string.Equals(probe.AudioCodecName, "mp3", StringComparison.OrdinalIgnoreCase);
+                result = hasLowBitrate || hasVariableFrameRate || needsH264Video || needsMp3Audio;
+            }
         }
 
         return result;
@@ -321,7 +396,17 @@ public class TwitchMediaPreparationService(
         }
         else if (mediaType == MediaType.Video)
         {
-            result = Path.ChangeExtension(sourceFilePath, ".mp4");
+            var ext = Path.GetExtension(sourceFilePath)?.ToLowerInvariant();
+
+            // Preserve webm extension; otherwise use mp4 container for H.264
+            if (string.Equals(ext, ".webm", StringComparison.OrdinalIgnoreCase))
+            {
+                result = Path.ChangeExtension(sourceFilePath, ".webm");
+            }
+            else
+            {
+                result = Path.ChangeExtension(sourceFilePath, ".mp4");
+            }
         }
 
         return result;
@@ -431,9 +516,18 @@ public class TwitchMediaPreparationService(
                 ? probe.RawFrameRate.Value.ToString("0.##")
                 : "unknown";
 
-            result.AppendLine(
-                $"Изменения: выставлен H.264, MP3, {MinimumVideoBitrateKbps} kbps, {VideoFrameRate} fps, fast start"
-            );
+            var targetExt = Path.GetExtension(targetFilePath)?.ToLowerInvariant();
+            if (targetExt == ".webm")
+            {
+                result.AppendLine($"Изменения: выставлен VP8 (webm), {MinimumVideoBitrateKbps} kbps, {VideoFrameRate} fps");
+            }
+            else
+            {
+                result.AppendLine(
+                    $"Изменения: выставлен H.264, MP3, {MinimumVideoBitrateKbps} kbps, {VideoFrameRate} fps, fast start"
+                );
+            }
+
             result.AppendLine($"Кадры: average={averageFrameRateText}, raw={rawFrameRateText}");
         }
         else
@@ -554,15 +648,17 @@ public class TwitchMediaPreparationService(
         }
 
         var probe = await ReadProbeAsync(resolvedPath, cancellationToken);
+        var targetExt = Path.GetExtension(targetPath)?.ToLowerInvariant() ?? ".mp4";
 
-        if (NeedsTranscoding(mediaType, probe))
+        if (NeedsTranscoding(mediaType, probe, targetExt))
         {
             var sourcePathForReport = resolvedPath;
             var tempDirectory =
                 Path.GetDirectoryName(resolvedPath) ?? webHostEnvironment.ContentRootPath;
+            var targetExtension = Path.GetExtension(targetPath) ?? (mediaType == MediaType.Audio ? ".mp3" : ".mp4");
             var tempFile = Path.Combine(
                 tempDirectory,
-                Guid.NewGuid().ToString() + (mediaType == MediaType.Audio ? ".mp3" : ".mp4")
+                Guid.NewGuid().ToString() + targetExtension
             );
 
             try
@@ -601,6 +697,16 @@ public class TwitchMediaPreparationService(
                         File.Move(tempFile, targetPath);
 
                         await UpdateMemeOrderPathAsync(memeOrder, targetPath, cancellationToken);
+
+                        // Update any Alerts entries that referenced the old file path
+                        try
+                        {
+                            await UpdateAlertsForFileAsync(resolvedPath, targetPath, displayName, mediaType, cancellationToken);
+                        }
+                        catch (Exception ex)
+                        {
+                            logger.LogDebug(ex, "Ошибка при обновлении Alerts после конвертации");
+                        }
 
                         var postCleanupResult = CleanupCacheDirectory(cancellationToken);
 
