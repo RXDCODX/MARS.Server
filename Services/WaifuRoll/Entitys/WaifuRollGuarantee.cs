@@ -1,6 +1,4 @@
-﻿using MARS.Server.Services.Twitch.Entitys;
-
-namespace MARS.Server.Services.WaifuRoll.Entitys;
+﻿namespace MARS.Server.Services.WaifuRoll.Entitys;
 
 [Table("WaifuRollGuarantees")]
 public class WaifuRollGuarantee

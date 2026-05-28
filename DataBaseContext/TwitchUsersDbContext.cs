@@ -1,6 +1,4 @@
 ﻿using MARS.Server.Services.CinemaQueue.Entitys;
-using MARS.Server.Services.SoundRequest.Entities;
-using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.FumoFriday.Entitys;
 using MARS.Server.Services.Twitch.HelloVideos.Entitys;
 using MARS.Server.Services.Twitch.MiniGamesStats.Entitys;

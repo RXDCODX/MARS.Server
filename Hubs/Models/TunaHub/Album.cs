@@ -1,5 +1,4 @@
-﻿using System.Text.Json.Serialization;
-using Newtonsoft.Json;
+﻿using System.Collections.Generic;
 
 namespace MARS.Server.Hubs.Models.TunaHub;
 

@@ -1,7 +1,5 @@
-using MARS.Server.Services.CommandExecutor.Entitys;
-using MARS.Server.Services.CommandExecutor.Entitys.Commands;
-using MARS.Server.Services.Twitch.Entitys;
-using MARS.Server.Services.Twitch.Management;
+using System.Collections.Generic;
+using System.Threading;
 using TwitchLib.Api.Helix.Models.Moderation.BanUser;
 
 namespace MARS.Server.Services.CommandExecutor.Commands;
@@ -9,8 +7,9 @@ namespace MARS.Server.Services.CommandExecutor.Commands;
 public class VanishCommand(ITwitchAPI twitchApi, TokenService tokenService) : BaseCommand
 {
     public override string CommandName => "vanish";
-    public override string Description => "Отправляет в таймаут на 1 секунду пользователя, который вызвал команду";
-    public override bool IsAdminCommand => true;
+    public override string Description =>
+        "Отправляет в таймаут на 1 секунду пользователя, который вызвал команду";
+    public override bool IsAdminCommand => false;
 
     public override Platform[] AvailablePlatforms => [Platform.Twitch];
 

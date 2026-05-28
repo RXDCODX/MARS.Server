@@ -1,8 +1,9 @@
-﻿using MARS.Server.Services;
+﻿using System.Collections.Generic;
+using System.Threading;
 using MARS.Server.Services.CinemaQueue.Entitys;
 using MARS.Server.Services.CinemaQueue.Interfaces;
 using MARS.Server.Services.CinemaQueue.Services;
-using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 
 namespace MARS.Server.Controllers;
 

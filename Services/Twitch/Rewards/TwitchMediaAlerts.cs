@@ -1,7 +1,6 @@
-﻿using MARS.Server.Services.Twitch.Entitys;
-using TwitchLib.Client.Events;
-using TwitchLib.EventSub.Core.EventArgs.Channel;
-using TwitchLib.EventSub.Websockets;
+﻿using System.Linq;
+using System.Threading;
+using Microsoft.Extensions.Hosting;
 
 namespace MARS.Server.Services.Twitch.Rewards;
 

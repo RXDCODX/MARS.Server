@@ -1,7 +1,7 @@
-﻿using MARS.Server.CustomLoggers.DatabaseLogger;
-using MARS.Server.Services;
+﻿using System.Collections.Generic;
+using MARS.Server.CustomLoggers.DatabaseLogger;
 using MARS.Server.Services.Logs.Interfaces;
-using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 
 namespace MARS.Server.Controllers;
 

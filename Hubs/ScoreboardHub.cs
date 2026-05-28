@@ -1,5 +1,6 @@
 ﻿using MARS.Server.Services.Scoreboard;
 using MARS.Server.Services.Scoreboard.Entitys;
+using Microsoft.Extensions.Logging;
 using SignalRSwaggerGen.Attributes;
 using SignalRSwaggerGen.Enums;
 using Swashbuckle.AspNetCore.Annotations;

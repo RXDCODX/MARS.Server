@@ -1,5 +1,9 @@
 ﻿using System.Diagnostics;
+using System.Linq;
+using System.Net.Http;
 using MARS.Server.Services.Twitch.SoundBarService.Entitys;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace MARS.Server.Services.Twitch.SoundBarService;
 

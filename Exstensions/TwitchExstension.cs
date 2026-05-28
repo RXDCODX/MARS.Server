@@ -1,4 +1,7 @@
-﻿using MARS.Server.Services.Twitch.Management.Entitys;
+﻿using System.Collections.Generic;
+using System.Linq;
+using MARS.Server.Services.Twitch.Management.Entitys;
+using Microsoft.Extensions.Logging;
 using TwitchLib.Api.Auth;
 using TwitchLib.Api.Helix.Models.Chat;
 using TwitchLib.Client.Models;

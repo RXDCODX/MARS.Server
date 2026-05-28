@@ -1,4 +1,5 @@
 ﻿using MARS.Server.Services.CommandExecutor.Adapters;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace MARS.Server.Services.CommandExecutor;
 

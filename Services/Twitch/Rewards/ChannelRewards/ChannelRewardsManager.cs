@@ -1,6 +1,10 @@
-﻿using MARS.Server.Services.Twitch.Management.Entitys;
+﻿using System.Collections.Generic;
+using System.Linq;
+using MARS.Server.Services.Twitch.Management.Entitys;
 using MARS.Server.Services.Twitch.Rewards.ChannelRewards.Entities;
 using MARS.Server.Services.Twitch.Rewards.ChannelRewards.Models;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using TwitchLib.Api.Helix.Models.ChannelPoints;
 
 namespace MARS.Server.Services.Twitch.Rewards.ChannelRewards;

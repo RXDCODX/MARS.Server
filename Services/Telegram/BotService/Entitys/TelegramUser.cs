@@ -1,5 +1,3 @@
-using Newtonsoft.Json;
-
 namespace MARS.Server.Services.Telegram.BotService.Entitys;
 
 public class TelegramUser

@@ -1,6 +1,4 @@
-﻿using MARS.Server.Services.Twitch.Entitys;
-
-namespace MARS.Server.Services.Twitch.TwitchFollowers.Entitys;
+﻿namespace MARS.Server.Services.Twitch.TwitchFollowers.Entitys;
 
 /// <summary>
 /// Информация о фоловере канала

@@ -1,5 +1,10 @@
-using System.Text;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
 using MARS.Server.Services.Twitch.Rewards._11_RandomMemReward.Service;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace MARS.Server.Services.Twitch.Media;
 
@@ -11,7 +16,7 @@ public class TwitchMediaTranscodeWorker(
 ) : BackgroundService
 {
     private const int TelegramMessageMaxLength = 3900;
-    private readonly System.Threading.SemaphoreSlim _runLock = new(1, 1);
+    private readonly SemaphoreSlim _runLock = new(1, 1);
 
     public bool IsServiceActive { get; set; } = true;
 
@@ -30,7 +35,7 @@ public class TwitchMediaTranscodeWorker(
             }
         }
 
-        using var periodicTimer = new PeriodicTimer(TimeSpan.FromMinutes(30));
+        using var periodicTimer = new PeriodicTimer(TimeSpan.FromHours(3));
 
         while (IsServiceActive && await periodicTimer.WaitForNextTickAsync(stoppingToken))
         {
@@ -57,7 +62,9 @@ public class TwitchMediaTranscodeWorker(
         {
             using var scope = serviceScopeFactory.CreateScope();
             var randomMemeService = scope.ServiceProvider.GetRequiredService<IRandomMemeService>();
-            var mediaOrders = (await randomMemeService.GetAllMemeOrdersAsync(cancellationToken)).ToList();
+            var mediaOrders = (
+                await randomMemeService.GetAllMemeOrdersAsync(cancellationToken)
+            ).ToList();
             var transcodeReports = new List<string>();
 
             foreach (var mediaOrder in mediaOrders)
@@ -107,7 +114,7 @@ public class TwitchMediaTranscodeWorker(
         result.AppendLine($"Требовали конвертацию: {convertedCount}");
         result.AppendLine("Полный список:");
 
-        for (var index = 0 ; index < transcodeReports.Count ; index++)
+        for (var index = 0; index < transcodeReports.Count; index++)
         {
             result.AppendLine($"{index + 1}. {transcodeReports[index]}");
         }
@@ -146,7 +153,10 @@ public class TwitchMediaTranscodeWorker(
 
                         while (startIndex < line.Length)
                         {
-                            var length = Math.Min(TelegramMessageMaxLength, line.Length - startIndex);
+                            var length = Math.Min(
+                                TelegramMessageMaxLength,
+                                line.Length - startIndex
+                            );
                             result.Add(line.Substring(startIndex, length));
                             startIndex += length;
                         }

@@ -1,6 +1,7 @@
-﻿using MARS.Server.Services.Twitch.Management.Entitys;
-using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
-using TwitchLib.Api.Helix.Models.ChannelPoints.CreateCustomReward;
+﻿using System.Threading;
+using MARS.Server.Services.Twitch.Management.Entitys;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using TwitchLib.Api.Helix.Models.ChannelPoints.UpdateCustomReward;
 
 namespace MARS.Server.Services.Twitch.Entitys;

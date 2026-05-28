@@ -1,6 +1,4 @@
-﻿using MARS.Server.Services.Twitch.Entitys;
-
-namespace MARS.Server.Services.Twitch.Rewards;
+﻿namespace MARS.Server.Services.Twitch.Rewards;
 
 public class RickRollerService(
     IHubContext<TelegramusHub, ITelegramusHub> hubContext,

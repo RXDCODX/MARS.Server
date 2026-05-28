@@ -1,11 +1,10 @@
-﻿using MARS.Server.ApplicationState;
-using MARS.Server.Services.SoundRequest.Entities;
+﻿using System.Linq;
+using System.Threading;
 using MARS.Server.Services.SoundRequest.Interfaces;
 using MARS.Server.Services.SoundRequest.Queue;
 using MARS.Server.Services.SoundRequest.SoundCloud;
 using MARS.Server.Services.SoundRequest.Spotify;
 using MARS.Server.Services.SoundRequest.YouTube;
-using MARS.Server.Services.Twitch.Entitys;
 using DateTime = System.DateTime;
 using Exception = System.Exception;
 using Math = System.Math;

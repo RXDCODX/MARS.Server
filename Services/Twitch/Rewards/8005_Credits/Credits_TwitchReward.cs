@@ -1,7 +1,6 @@
-using MARS.Server.Services.Twitch.Entitys;
-using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
-using TwitchLib.EventSub.Core.EventArgs.Channel;
-using TwitchLib.EventSub.Websockets;
+using System.Threading;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace MARS.Server.Services.Twitch.Rewards._8005_Credits;
 

@@ -1,9 +1,11 @@
-﻿using Imouto.BooruParser.Implementations.Danbooru;
-using MARS.Server.Services.Twitch.Entitys;
+﻿using System.IO;
+using System.Linq;
+using System.Threading;
+using Imouto.BooruParser.Implementations.Danbooru;
 using MARS.Server.Services.Twitch.Management.Entitys;
 using Microsoft.AspNetCore.StaticFiles.Infrastructure;
-using TwitchLib.EventSub.Core.EventArgs.Channel;
-using TwitchLib.EventSub.Websockets;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace MARS.Server.Services.Twitch.Rewards._27_RandomArt;
 

@@ -1,10 +1,12 @@
-using System.Text;
-using MARS.Server.Services.Twitch.Entitys;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading;
 using MARS.Server.Services.Twitch.Media;
 using MARS.Server.Services.Twitch.Rewards._11_RandomMemReward.Service.Entity;
-using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
-using TwitchLib.EventSub.Core.EventArgs.Channel;
-using TwitchLib.EventSub.Websockets;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace MARS.Server.Services.Twitch.Rewards._10_RandomSound;
 

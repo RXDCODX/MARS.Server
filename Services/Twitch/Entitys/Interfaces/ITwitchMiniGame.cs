@@ -1,4 +1,6 @@
-﻿namespace MARS.Server.Services.Twitch.Entitys.Interfaces;
+﻿using System.Threading;
+
+namespace MARS.Server.Services.Twitch.Entitys.Interfaces;
 
 public interface ITwitchMiniGame
 {

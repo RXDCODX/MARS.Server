@@ -1,6 +1,4 @@
-﻿using System.Text.Json.Serialization;
-
-namespace MARS.Server.Services.WaifuRoll.Entitys;
+﻿namespace MARS.Server.Services.WaifuRoll.Entitys;
 
 public abstract class PrizeTypeAbstract
 {

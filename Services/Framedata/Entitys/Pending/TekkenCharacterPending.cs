@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace MARS.Server.Services.Framedata.Entitys.Pending;
 
 public class TekkenCharacterPending

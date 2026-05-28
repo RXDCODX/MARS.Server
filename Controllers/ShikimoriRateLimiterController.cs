@@ -1,7 +1,6 @@
-﻿using MARS.Server.Services;
-using MARS.Server.Services.Shikimori;
+﻿using MARS.Server.Services.Shikimori;
 using MARS.Server.Services.Shikimori.Entitys;
-using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 
 namespace MARS.Server.Controllers;
 

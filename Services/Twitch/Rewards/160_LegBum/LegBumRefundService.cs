@@ -1,9 +1,10 @@
-﻿using MARS.Server.Services.Twitch.Management;
+﻿using System.Linq;
+using System.Threading;
 using MARS.Server.Services.Twitch.Management.Entitys;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using TwitchLib.Api.Core.Enums;
 using TwitchLib.Api.Helix.Models.ChannelPoints.UpdateCustomRewardRedemptionStatus;
-using TwitchLib.EventSub.Core.EventArgs.Channel;
-using TwitchLib.EventSub.Websockets;
 
 namespace MARS.Server.Services.Twitch.Rewards._160_LegBum;
 

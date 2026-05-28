@@ -1,4 +1,5 @@
-﻿using TwitchLib.Api.Helix.Models.Channels.GetChannelFollowers;
+﻿using System.Collections.Generic;
+using TwitchLib.Api.Helix.Models.Channels.GetChannelFollowers;
 using TwitchLib.Api.Helix.Models.Channels.GetChannelVIPs;
 using TwitchLib.Api.Helix.Models.Moderation.GetModerators;
 

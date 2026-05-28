@@ -1,6 +1,4 @@
-﻿using MARS.Server.Services.SoundRequest.Entities;
-
-namespace MARS.Server.Services.Twitch.Entitys;
+﻿namespace MARS.Server.Services.Twitch.Entitys;
 
 /// <summary>
 /// Связующая таблица между наградой Miku Monday и BaseTrackInfo

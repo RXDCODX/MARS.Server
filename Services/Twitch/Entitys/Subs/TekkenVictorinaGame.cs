@@ -1,4 +1,7 @@
-﻿namespace MARS.Server.Services.Twitch.Entitys.Subs;
+﻿using System.Collections.Generic;
+using System.Threading;
+
+namespace MARS.Server.Services.Twitch.Entitys.Subs;
 
 public class TekkenVictorinaGame(IntRange answer)
 {

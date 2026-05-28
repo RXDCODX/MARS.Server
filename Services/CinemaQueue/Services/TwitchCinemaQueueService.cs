@@ -1,7 +1,8 @@
-﻿using MARS.Server.Services.CinemaQueue.Entitys;
+﻿using System.Threading;
+using MARS.Server.Services.CinemaQueue.Entitys;
 using MARS.Server.Services.CinemaQueue.Interfaces;
-using TwitchLib.EventSub.Core.EventArgs.Channel;
-using TwitchLib.EventSub.Websockets;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace MARS.Server.Services.CinemaQueue.Services;
 

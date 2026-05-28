@@ -1,11 +1,10 @@
 using System.Globalization;
-using MARS.Server.Services.Twitch.Entitys;
-using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
+using System.Threading;
 using MARS.Server.Services.WaifuRoll;
 using MARS.Server.Services.WaifuRoll.helpers;
-using TwitchLib.EventSub.Core.EventArgs.Channel;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using TwitchLib.EventSub.Core.SubscriptionTypes.Channel;
-using TwitchLib.EventSub.Websockets;
 
 namespace MARS.Server.Services.Twitch.Rewards._4_SearchWife;
 

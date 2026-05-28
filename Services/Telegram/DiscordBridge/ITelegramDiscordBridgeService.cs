@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Threading;
 using MARS.Server.Services.Telegram.DiscordBridge.Entitys;
 
 namespace MARS.Server.Services.Telegram.DiscordBridge;

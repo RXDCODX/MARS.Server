@@ -1,6 +1,10 @@
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
 using MARS.Server.Hubs.Models.VoiceRecognition;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using SevenTV;
-using TwitchLib.Client.Events;
 using TwitchUser = MARS.Server.Services.Twitch.Entitys.TwitchUser;
 
 namespace MARS.Server.Services.Twitch.Synthesizer;
@@ -10,7 +14,7 @@ public class TtsHubBroadcaster(
     ILogger<TtsHubBroadcaster> logger,
     ITwitchClient client,
     IHostApplicationLifetime lifetime
- ) : BackgroundService, ITtsHubBroadcaster
+) : BackgroundService, ITtsHubBroadcaster
 {
     private const string TtsConsumersGroupName = "tts-consumers";
     private static readonly TimeSpan SevenTvEmotesCacheLifetime = TimeSpan.FromMinutes(10);
@@ -36,9 +40,16 @@ public class TtsHubBroadcaster(
     // Implement ITtsHubBroadcaster
     double ITtsHubBroadcaster.CurrentVolume => CurrentVolume;
 
-    Task ITtsHubBroadcaster.BroadcastAsync(TwitchUser? user, string message, CancellationToken cancellationToken) => BroadcastAsync(user, message, cancellationToken);
+    Task ITtsHubBroadcaster.BroadcastAsync(
+        TwitchUser? user,
+        string message,
+        CancellationToken cancellationToken
+    ) => BroadcastAsync(user, message, cancellationToken);
 
-    Task ITtsHubBroadcaster.BroadcastStateAsync(TtsState? state, CancellationToken cancellationToken) => BroadcastStateAsync(state, cancellationToken);
+    Task ITtsHubBroadcaster.BroadcastStateAsync(
+        TtsState? state,
+        CancellationToken cancellationToken
+    ) => BroadcastStateAsync(state, cancellationToken);
 
     public async Task BroadcastAsync(
         TwitchUser? user,
@@ -195,6 +206,7 @@ public class TtsHubBroadcaster(
             shouldReload =
                 _sevenTvEmoteNames.Count == 0
                 || DateTimeOffset.UtcNow - _sevenTvEmotesLoadedAt >= SevenTvEmotesCacheLifetime;
+
             if (!shouldReload)
             {
                 return;

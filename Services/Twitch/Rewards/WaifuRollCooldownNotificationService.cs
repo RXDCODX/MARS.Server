@@ -1,7 +1,8 @@
-﻿using MARS.Server.Services.WaifuRoll;
-using TwitchLib.Client.Events;
-using TwitchLib.EventSub.Core.EventArgs.Channel;
-using TwitchLib.EventSub.Websockets;
+﻿using System.Collections.Generic;
+using System.Threading;
+using MARS.Server.Services.WaifuRoll;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace MARS.Server.Services.Twitch.Rewards;
 

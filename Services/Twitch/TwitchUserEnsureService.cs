@@ -1,9 +1,9 @@
-﻿using MARS.Server.Services.Twitch.Entitys;
-using MARS.Server.Services.Twitch.Management;
+﻿using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
 using MARS.Server.Services.Twitch.TwitchFollowers;
-using TwitchLib.Client.Events;
+using Microsoft.Extensions.Logging;
 using TwitchLib.Client.Models;
-using TwitchLib.EventSub.Core.EventArgs.Channel;
 
 namespace MARS.Server.Services.Twitch;
 

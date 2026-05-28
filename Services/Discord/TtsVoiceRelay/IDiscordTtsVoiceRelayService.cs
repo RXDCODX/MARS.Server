@@ -1,3 +1,5 @@
+using System.Threading;
+
 namespace MARS.Server.Services.Discord.TtsVoiceRelay;
 
 public interface IDiscordTtsVoiceRelayService

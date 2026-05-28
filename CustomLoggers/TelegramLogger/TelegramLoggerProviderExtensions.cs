@@ -1,4 +1,6 @@
-﻿namespace MARS.Server.CustomLoggers.TelegramLogger;
+﻿using Microsoft.Extensions.Logging;
+
+namespace MARS.Server.CustomLoggers.TelegramLogger;
 
 public static class TelegramLoggerProviderExtensions
 {

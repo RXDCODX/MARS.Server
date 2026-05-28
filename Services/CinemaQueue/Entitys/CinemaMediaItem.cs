@@ -1,6 +1,4 @@
-﻿using MARS.Server.Services.Twitch.Entitys;
-
-namespace MARS.Server.Services.CinemaQueue.Entitys;
+﻿namespace MARS.Server.Services.CinemaQueue.Entitys;
 
 [Table("CinemaQueue")]
 public class CinemaMediaItem

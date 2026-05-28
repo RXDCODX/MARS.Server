@@ -1,5 +1,7 @@
-﻿using System.Timers;
-using MARS.Server.Services.Twitch.Management;
+﻿using System.Linq;
+using System.Threading;
+using System.Timers;
+using Microsoft.Extensions.Hosting;
 
 namespace MARS.Server.Services.Twitch.AutoInfoFetch;
 

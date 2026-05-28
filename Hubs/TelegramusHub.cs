@@ -2,6 +2,7 @@
 using MARS.Server.Services.Twitch.Rewards._39_MikuMonday;
 using MARS.Server.Services.Twitch.SoundBarService;
 using MARS.Server.Services.WaifuRoll;
+using Microsoft.Extensions.DependencyInjection;
 using SignalRSwaggerGen.Attributes;
 using SignalRSwaggerGen.Enums;
 using Swashbuckle.AspNetCore.Annotations;

@@ -1,6 +1,4 @@
-﻿using MARS.Server.Services.Twitch.Entitys;
-
-namespace MARS.Server.Services.Twitch.HelloVideos.Entitys;
+﻿namespace MARS.Server.Services.Twitch.HelloVideos.Entitys;
 
 public class HelloVideosUsers
 {

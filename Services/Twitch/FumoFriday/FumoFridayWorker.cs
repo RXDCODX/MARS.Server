@@ -1,9 +1,9 @@
-﻿using MARS.Server.Services.Twitch.Entitys;
+﻿using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
 using MARS.Server.Services.Twitch.FumoFriday.Entitys;
-using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
-using TwitchLib.Client.Events;
-using TwitchLib.EventSub.Core.EventArgs.Channel;
-using TwitchLib.EventSub.Websockets;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace MARS.Server.Services.Twitch.FumoFriday;
 

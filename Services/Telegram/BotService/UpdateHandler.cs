@@ -1,3 +1,4 @@
+using System.Threading;
 using MARS.Server.Services.CommandExecutor.Adapters;
 using MARS.Server.Services.Framedata;
 using MARS.Server.Services.PyroAlerts;
@@ -5,6 +6,9 @@ using MARS.Server.Services.Telegram.ClipboardCopy;
 using MARS.Server.Services.Telegram.GooglePhotos;
 using MARS.Server.Services.Telegram.WTelegram;
 using MARS.Server.Services.Twitch.Rewards._11_RandomMemReward.Service;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Telegram.Bot.Exceptions;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types.Enums;

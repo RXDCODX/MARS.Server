@@ -1,4 +1,3 @@
-using System.Text.Json.Serialization;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace MARS.Server.Services.Framedata.Entitys.Pending;
@@ -11,7 +10,7 @@ public class MovePending
     [Key]
     public required string Command { get; set; }
 
-    [JsonIgnore]
+    [System.Text.Json.Serialization.JsonIgnore]
     [SwaggerIgnore]
     public TekkenCharacterPending? Character { get; set; }
     public bool IsFromStance => !string.IsNullOrWhiteSpace(StanceCode);

@@ -1,8 +1,11 @@
-﻿using MARS.Server.ApplicationState;
-using MARS.Server.Services.SoundRequest.Entities;
+﻿using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
 using MARS.Server.Services.SoundRequest.Interfaces;
 using MARS.Server.Services.SoundRequest.Queue;
 using MARS.Server.Services.SoundRequest.Spotify;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace MARS.Server.Services.SoundRequest;
 

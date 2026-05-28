@@ -1,4 +1,6 @@
-﻿namespace MARS.Server.Services.MemoryStorageService.Entitys;
+﻿using System.IO;
+
+namespace MARS.Server.Services.MemoryStorageService.Entitys;
 
 /// <summary>
 /// Represents a file stored in memory, used by the memory storage service.

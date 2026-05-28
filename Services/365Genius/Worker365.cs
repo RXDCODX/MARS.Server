@@ -1,10 +1,16 @@
+using System.IO;
+using System.Linq;
 using System.Net;
+using System.Net.Http;
+using System.Threading;
 using AngleSharp.Dom;
 using AngleSharp.Html.Dom;
 using AngleSharp.Html.Parser;
 using AngleSharp.XPath;
 using MARS.Server.Services._365Genius.Entitys;
 using MARS.Server.Services.Telegram.WTelegram;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using TL;
 
 namespace MARS.Server.Services._365Genius;

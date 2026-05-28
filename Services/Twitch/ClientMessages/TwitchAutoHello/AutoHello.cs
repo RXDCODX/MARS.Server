@@ -1,6 +1,8 @@
-﻿using MARS.Server.Services.Twitch.Rewards._5_AddWife;
+﻿using System.Threading;
+using MARS.Server.Services.Twitch.Rewards._5_AddWife;
 using MARS.Server.Services.WaifuRoll;
-using TwitchLib.Client.Events;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace MARS.Server.Services.Twitch.ClientMessages.TwitchAutoHello;
 

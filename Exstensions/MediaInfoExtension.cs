@@ -1,6 +1,4 @@
-﻿using MARS.Server.Services.Twitch.Entitys;
-
-namespace MARS.Server.Exstensions;
+﻿namespace MARS.Server.Exstensions;
 
 public static class MediaInfoExtension
 {

@@ -1,9 +1,10 @@
-﻿using MARS.Server.Services.Framedata;
-using MARS.Server.Services.Framedata.Entitys;
+﻿using System.Linq;
+using System.Threading;
+using MARS.Server.Services.Framedata;
 using MARS.Server.Services.Twitch.Entitys.Interfaces;
 using MARS.Server.Services.Twitch.Entitys.Subs;
-using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.Twitch.MiniGamesStats;
+using Microsoft.Extensions.Logging;
 using TwitchLib.Api.Helix.Models.Chat;
 
 namespace MARS.Server.Services.Twitch.Rewards._8_TekkenQuiz;

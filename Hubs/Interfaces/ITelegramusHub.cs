@@ -1,6 +1,6 @@
-﻿using MARS.Server.Hubs.Models.AudioQuiz;
+﻿using System.Collections.Generic;
+using MARS.Server.Hubs.Models.AudioQuiz;
 using MARS.Server.Services.AutoArts_OBSOLETE.Entitys;
-using MARS.Server.Services.Twitch.Entitys;
 using SignalRSwaggerGen.Attributes;
 using SignalRSwaggerGen.Enums;
 using TwitchLib.Client.Models;

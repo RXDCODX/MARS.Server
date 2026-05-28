@@ -1,8 +1,9 @@
-namespace MARS.Server.Hubs;
-
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Logging;
 using SignalRSwaggerGen.Attributes;
 using SignalRSwaggerGen.Enums;
+
+namespace MARS.Server.Hubs;
 
 /// <summary>
 /// SignalR hub for TTS delivery to AudioController.

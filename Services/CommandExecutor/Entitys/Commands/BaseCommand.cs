@@ -1,4 +1,8 @@
-﻿namespace MARS.Server.Services.CommandExecutor.Entitys.Commands;
+﻿using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+
+namespace MARS.Server.Services.CommandExecutor.Entitys.Commands;
 
 public abstract class BaseCommand
 {
@@ -244,7 +248,7 @@ public abstract class BaseCommand
     public virtual bool IsAvailableOnPlatform(Platform platform)
     {
         var availablePlatforms = GetAvailablePlatforms();
-        return availablePlatforms.Contains(platform);
+        return Enumerable.Contains(availablePlatforms, platform);
     }
 
     /// <summary>

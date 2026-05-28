@@ -1,5 +1,7 @@
-﻿using MARS.Server.Services.Twitch.MiniGamesStats.Entitys;
-using TwitchLib.Client.Events;
+﻿using System.Linq;
+using System.Threading;
+using MARS.Server.Services.Twitch.MiniGamesStats.Entitys;
+using Microsoft.Extensions.Hosting;
 
 namespace MARS.Server.Services.Twitch.MiniGamesStats;
 

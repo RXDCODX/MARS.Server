@@ -1,6 +1,4 @@
-﻿using MARS.Server.Services.SoundRequest.Entities;
-
-namespace MARS.Server.Services.SoundRequest;
+﻿namespace MARS.Server.Services.SoundRequest;
 
 public class OutSignalRHubService
 {

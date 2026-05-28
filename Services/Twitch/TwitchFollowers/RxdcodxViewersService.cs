@@ -1,9 +1,10 @@
-﻿using MARS.Server.Services.Twitch.Entitys;
-using MARS.Server.Services.Twitch.Management;
+﻿using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
 using MARS.Server.Services.Twitch.TwitchFollowers.Entitys;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
-using TwitchLib.EventSub.Core.EventArgs.Channel;
-using TwitchLib.EventSub.Websockets;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 // ReSharper disable All
 

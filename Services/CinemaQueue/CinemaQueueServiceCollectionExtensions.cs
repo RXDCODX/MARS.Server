@@ -1,6 +1,7 @@
 using MARS.Server.Services.CinemaQueue.Interfaces;
 using MARS.Server.Services.CinemaQueue.Repositories;
 using MARS.Server.Services.CinemaQueue.Services;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace MARS.Server.Services.CinemaQueue;
 
