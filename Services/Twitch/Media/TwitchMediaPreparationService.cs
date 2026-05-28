@@ -16,8 +16,7 @@ public class TwitchMediaPreparationService(
 ) : ITwitchMediaPreparationService
 {
     private const int MinimumAudioBitrateKbps = 128;
-    private const int MinimumVideoBitrateKbps = 1200;
-    private const int VideoFrameRate = 30;
+    private const int MinimumVideoBitrateKbps = 128;
     private const string CacheFolderName = "twitch_media_cache";
 
     private string? TryGetDevelopmentRandomMemeRootPath()
@@ -34,14 +33,6 @@ public class TwitchMediaPreparationService(
                 result = Path.Combine(projectRoot, "wwwroot", "Alerts", "random_meme");
             }
         }
-
-        return result;
-    }
-
-    private static string NormalizePath(string filePath)
-    {
-        var result = Path.GetFullPath(filePath)
-            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
 
         return result;
     }
@@ -159,47 +150,6 @@ public class TwitchMediaPreparationService(
         }
     }
 
-    private async Task<bool> ConvertAudioAsync(
-        string sourceFilePath,
-        string outputFilePath,
-        CancellationToken cancellationToken
-    )
-    {
-        var result = false;
-
-        try
-        {
-            EnsureDirectoryExists(Path.GetDirectoryName(outputFilePath));
-
-            await FFMpegArguments
-                .FromFileInput(sourceFilePath)
-                .OutputToFile(
-                    outputFilePath,
-                    true,
-                    options =>
-                        options
-                            .WithAudioCodec("libmp3lame")
-                            .WithAudioBitrate(MinimumAudioBitrateKbps)
-                            .WithCustomArgument("-vn")
-                            .WithCustomArgument("-map_metadata -1")
-                )
-                .CancellableThrough(cancellationToken)
-                .ProcessAsynchronously();
-
-            if (File.Exists(outputFilePath))
-            {
-                result = true;
-                File.SetLastWriteTimeUtc(outputFilePath, DateTime.UtcNow);
-            }
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarning(ex, "Ошибка конвертации аудио {FilePath}", sourceFilePath);
-        }
-
-        return result;
-    }
-
     private async Task<bool> ConvertVideoAsync(
         string sourceFilePath,
         string outputFilePath,
@@ -225,9 +175,8 @@ public class TwitchMediaPreparationService(
                         {
                             options
                                 .WithVideoCodec("libvpx")
-                                .WithAudioCodec("libvorbis")
+                                .WithAudioCodec("aac")
                                 .WithCustomArgument($"-b:v {MinimumVideoBitrateKbps}k")
-                                .WithFramerate(VideoFrameRate)
                                 .WithCustomArgument("-threads 2");
                         }
                         else
@@ -237,7 +186,6 @@ public class TwitchMediaPreparationService(
                                 .WithAudioCodec("libmp3lame")
                                 .WithAudioBitrate(MinimumAudioBitrateKbps)
                                 .WithConstantRateFactor(20)
-                                .WithFramerate(VideoFrameRate)
                                 .WithCustomArgument("-vf fps=30")
                                 .WithCustomArgument("-pix_fmt yuv420p")
                                 .WithCustomArgument("-preset veryfast")
@@ -361,10 +309,9 @@ public class TwitchMediaPreparationService(
     {
         var result = false;
 
-        if (mediaType == MediaType.Video)
+        if (mediaType == MediaType.Video && probe.BitrateKbps != null)
         {
-            var hasLowBitrate =
-                probe.BitrateKbps is null || probe.BitrateKbps < MinimumVideoBitrateKbps;
+            var hasLowBitrate = probe.BitrateKbps < MinimumVideoBitrateKbps;
             var hasVariableFrameRate = IsVariableFrameRate(
                 probe.AverageFrameRate,
                 probe.RawFrameRate
@@ -379,6 +326,7 @@ public class TwitchMediaPreparationService(
                     "vp8",
                     StringComparison.OrdinalIgnoreCase
                 );
+
                 result = hasLowBitrate || hasVariableFrameRate || needsVp8;
             }
             else
@@ -395,6 +343,7 @@ public class TwitchMediaPreparationService(
                         "mp3",
                         StringComparison.OrdinalIgnoreCase
                     );
+
                 result = hasLowBitrate || hasVariableFrameRate || needsH264Video || needsMp3Audio;
             }
         }
@@ -418,11 +367,7 @@ public class TwitchMediaPreparationService(
     {
         var result = sourceFilePath;
 
-        if (mediaType == MediaType.Audio)
-        {
-            result = Path.ChangeExtension(sourceFilePath, ".mp3");
-        }
-        else if (mediaType == MediaType.Video)
+        if (mediaType == MediaType.Video)
         {
             var ext = Path.GetExtension(sourceFilePath)?.ToLowerInvariant();
 
@@ -489,25 +434,6 @@ public class TwitchMediaPreparationService(
         return result;
     }
 
-    private string GetConversionMessage(
-        string sourceFilePath,
-        MediaType mediaType,
-        long? bitrateKbps
-    )
-    {
-        var fileName = Path.GetFileName(sourceFilePath);
-        var bitrateText = bitrateKbps is > 0 ? $"{bitrateKbps} kbps" : "unknown bitrate";
-        var mediaKindText = mediaType == MediaType.Audio ? "аудио" : "видео";
-        var result = $"Перекодирую {mediaKindText} {fileName} ({bitrateText}) для Chrome";
-
-        if (mediaType == MediaType.Video)
-        {
-            result += $" и фиксирую {VideoFrameRate} fps";
-        }
-
-        return result;
-    }
-
     private static string BuildTranscodeReport(
         string sourceFilePath,
         string targetFilePath,
@@ -523,8 +449,8 @@ public class TwitchMediaPreparationService(
     {
         var result = new StringBuilder();
         var fileName = Path.GetFileName(sourceFilePath);
-        var mediaKindText = mediaType == MediaType.Audio ? "аудио" : "видео";
-        var targetExtension = mediaType == MediaType.Audio ? ".mp3" : ".mp4";
+        var mediaKindText = "видео";
+        var targetExtension = Path.GetExtension(sourceFilePath);
         var detectedBitrateText = probe.BitrateKbps is > 0
             ? $"{probe.BitrateKbps} kbps"
             : "unknown";
@@ -549,20 +475,6 @@ public class TwitchMediaPreparationService(
             var rawFrameRateText = probe.RawFrameRate is > 0
                 ? probe.RawFrameRate.Value.ToString("0.##")
                 : "unknown";
-
-            var targetExt = Path.GetExtension(targetFilePath)?.ToLowerInvariant();
-            if (targetExt == ".webm")
-            {
-                result.AppendLine(
-                    $"Изменения: выставлен VP8 (webm), {MinimumVideoBitrateKbps} kbps, {VideoFrameRate} fps"
-                );
-            }
-            else
-            {
-                result.AppendLine(
-                    $"Изменения: выставлен H.264, MP3, {MinimumVideoBitrateKbps} kbps, {VideoFrameRate} fps, fast start"
-                );
-            }
 
             result.AppendLine($"Кадры: average={averageFrameRateText}, raw={rawFrameRateText}");
         }
@@ -694,12 +606,7 @@ public class TwitchMediaPreparationService(
             var tempExtension = Path.GetExtension(targetPath);
             var tempFile = Path.Combine(
                 tempDirectory,
-                Guid.NewGuid()
-                    + (
-                        string.IsNullOrWhiteSpace(tempExtension)
-                            ? (mediaType == MediaType.Audio ? ".mp3" : ".mp4")
-                            : tempExtension
-                    )
+                Guid.NewGuid() + (string.IsNullOrWhiteSpace(tempExtension) ? ".mp4" : tempExtension)
             );
 
             try

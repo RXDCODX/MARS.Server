@@ -4,6 +4,7 @@ using System.Linq;
 using MARS.Server.CustomLoggers.DatabaseLogger;
 using MARS.Server.CustomLoggers.SignalRLogger;
 using MARS.Server.CustomLoggers.TelegramLogger;
+using MARS.Server.Services.CinemaQueue;
 using MARS.Server.Services.CommandExecutor;
 using MARS.Server.Services.Configuration;
 using MARS.Server.Services.KeyboardHook_UNUSED;
