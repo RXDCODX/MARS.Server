@@ -67,7 +67,7 @@ public class SoundMuteCoordinator
 
             // Сохраняем текущую громкость TTS и отправляем Volume=0
             _previousTtsVolume = _ttsHubBroadcaster.CurrentVolume;
-            var ttsState = new TtsState { IsStopped = false, Volume = 0.0 };
+            var ttsState = new TtsState { IsStopped = true, Volume = 0.0 };
             await _ttsHubBroadcaster.BroadcastStateAsync(ttsState);
         }
         catch (Exception ex)
