@@ -99,6 +99,16 @@ public class WeddingAnniversaryService(
                             break;
                         }
                     }
+
+                    if (result.HasValue)
+                    {
+                        // Отмечаем годовщину как отправленную
+                        await MarkAnniversaryAsSentAsync(
+                            twitchId,
+                            result.Value.Months,
+                            cancellationToken
+                        );
+                    }
                 }
             }
             catch (Exception ex)
@@ -131,25 +141,20 @@ public class WeddingAnniversaryService(
                     cancellationToken
                 );
 
-                var twitchUser = await dbContext.Hosts.FirstOrDefaultAsync(
-                    e => e.TwitchId == twitchId,
-                    cancellationToken
-                );
-
-                if (twitchUser != null)
-                {
-                    twitchUser.LastWeddingCongratulatedMonths = months;
-
-                    dbContext.Hosts.Update(twitchUser);
-
-                    await dbContext.SaveChangesAsync(cancellationToken);
-
-                    logger.LogInformation(
-                        "Отмечена годовщина {Months} месяцев для пользователя {UserId}",
-                        months,
-                        twitchId
+                await dbContext
+                    .Hosts.Where(e => e.TwitchId == twitchId)
+                    .ExecuteUpdateAsync(
+                        e => e.SetProperty(t => t.LastWeddingCongratulatedMonths, months),
+                        cancellationToken: cancellationToken
                     );
-                }
+
+                await dbContext.SaveChangesAsync(cancellationToken);
+
+                logger.LogInformation(
+                    "Отмечена годовщина {Months} месяцев для пользователя {UserId}",
+                    months,
+                    twitchId
+                );
             }
             catch (Exception ex)
             {
@@ -190,7 +195,9 @@ public class WeddingAnniversaryService(
     private static string DeclineAnniversaryName(string name)
     {
         if (string.IsNullOrWhiteSpace(name))
+        {
             return name;
+        }
 
         // Простое правило: заменить "свадьба" на "свадьбой", а прилагательное
         // перед словом "свадьбой" склонить из "-ая" -> "-ой" (и "-ная" -> "-ной").

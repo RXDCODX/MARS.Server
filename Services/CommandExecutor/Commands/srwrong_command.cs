@@ -3,7 +3,7 @@ using System.Threading;
 
 namespace MARS.Server.Services.CommandExecutor.Commands;
 
-public class SrWrongCommand(CommandsService commandsService) : BaseCommand
+public class SrWrongCommand(SoundRequestCommandsService soundRequestCommandsService) : BaseCommand
 {
     public override string CommandName => "srwrong";
     public override string Description => "Отменить последний заказанный трек или плейлист";
@@ -37,7 +37,7 @@ public class SrWrongCommand(CommandsService commandsService) : BaseCommand
         }
         else
         {
-            result = await commandsService.CancelLastTrackAsync(user, cancellationToken);
+            result = await soundRequestCommandsService.CancelLastTrackAsync(user, cancellationToken);
         }
 
         return result;

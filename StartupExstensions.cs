@@ -1,8 +1,13 @@
+using System;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Flurl.Http.Configuration;
 using Imouto.BooruParser.Implementations.Danbooru;
+using MARS.Server.Configuration;
 using MARS.Server.CustomLoggers.SignalRLogger;
+using MARS.Server.Hubs;
 using MARS.Server.Hubs.Filters;
+using MARS.Server.Hubs.Interfaces;
 using MARS.Server.Services._365Genius;
 using MARS.Server.Services.Discord.Gateway;
 using MARS.Server.Services.Discord.PlayRequest;
@@ -12,6 +17,7 @@ using MARS.Server.Services.Scoreboard;
 using MARS.Server.Services.ServiceManager;
 using MARS.Server.Services.Shikimori;
 using MARS.Server.Services.Shikimori.Entitys;
+using MARS.Server.Services.SoundRequest;
 using MARS.Server.Services.SoundRequest.Interfaces;
 using MARS.Server.Services.SoundRequest.Queue;
 using MARS.Server.Services.SoundRequest.SoundCloud;
@@ -30,6 +36,7 @@ using MARS.Server.Services.Twitch.ClientMessages.AutoMessages.Extensions;
 using MARS.Server.Services.Twitch.ClientMessages.SignalRAlerts;
 using MARS.Server.Services.Twitch.ClientMessages.TwitchAutoHello;
 using MARS.Server.Services.Twitch.HelloVideos;
+using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.Twitch.Media;
 using MARS.Server.Services.Twitch.MiniGamesStats;
 using MARS.Server.Services.Twitch.PuntoSwitcher;
@@ -45,6 +52,7 @@ using MARS.Server.Services.Twitch.Rewards._6_RussianRoulette;
 using MARS.Server.Services.Twitch.Rewards._7_Quiz;
 using MARS.Server.Services.Twitch.Rewards._8_TekkenQuiz;
 using MARS.Server.Services.Twitch.Rewards._9_AudioQuiz;
+using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
 using MARS.Server.Services.Twitch.SoundBarService;
 using MARS.Server.Services.Twitch.StreamBotNotifications;
 using MARS.Server.Services.Twitch.StreamManagement;
@@ -57,16 +65,21 @@ using MARS.Server.Services.WaifuRoll.helpers;
 using MARS.Server.Services.YouTube;
 using MARS.Server.Swagger;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.OpenApi;
+using Telegram.Bot;
 using TwitchLib.Api;
 using TwitchLib.Api.Core;
 using TwitchLib.Api.Core.Enums;
 using TwitchLib.Api.Core.HttpCallHandlers;
 using TwitchLib.Api.Core.Interfaces;
+using TwitchLib.Api.Interfaces;
+using TwitchLib.Client.Interfaces;
 using TwitchLib.EventSub.Websockets.Extensions;
 
 namespace MARS.Server;
@@ -434,7 +447,6 @@ public static class StartupEstensions
         services.AddSingleton<SoundRequestUserQueue>();
 
         // YouTube / Discord play request services
-        services.AddSingleton<MARS.Server.Services.SoundRequest.YouTube.YouTubeResolver>();
         services.AddSingleton<DiscordPlayAudioCacheService>();
         services.AddSingleton<DiscordPlayRequestService>();
         services.AddHostedService(sp => sp.GetRequiredService<DiscordPlayRequestService>());
@@ -446,11 +458,11 @@ public static class StartupEstensions
         services.AddSingleton<SpotifyPlaybackService>();
         services.AddSingleton<SoundCloudResolver>();
 
-        // Регистрируем плеер и CommandsService
+        // Регистрируем плеер и SoundRequestCommandsService
         services.AddSingleton<MainPlayer>();
         services.AddSingleton<IPlayerController>(sp => sp.GetRequiredService<MainPlayer>());
         services.AddHostedService(sp => sp.GetRequiredService<MainPlayer>());
-        services.AddSingleton<CommandsService>();
+        services.AddSingleton<SoundRequestCommandsService>();
 
         return services;
     }
@@ -571,7 +583,8 @@ public static class StartupEstensions
                 {
                     Login = booruConfiguration.Value.Login,
                     ApiKey = booruConfiguration.Value.ApiKey,
-                    BotUserAgent = "RXDCODXStreamerBotRandomArtFeature/v1"
+                    BotUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0",
+                    PauseBetweenRequestsInMs = 5000
                 }));
 
                 return danbooruApiLoader;

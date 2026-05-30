@@ -4,7 +4,7 @@ using MARS.Server.Services.SoundRequest.Interfaces;
 using MARS.Server.Services.SoundRequest.Queue;
 using MARS.Server.Services.SoundRequest.SoundCloud;
 using MARS.Server.Services.SoundRequest.Spotify;
-using MARS.Server.Services.SoundRequest.YouTube;
+using MARS.Server.Services.YouTube;
 using DateTime = System.DateTime;
 using Exception = System.Exception;
 using Math = System.Math;
@@ -17,7 +17,7 @@ namespace MARS.Server.Services.SoundRequest;
 /// <summary>
 /// Сервис для работы со звуковыми запросами
 /// </summary>
-public class CommandsService(
+public class SoundRequestCommandsService(
     YouTubeResolver ytResolver,
     SpotifyResolver spotifyResolver,
     SoundCloudResolver soundCloudResolver,
@@ -359,6 +359,29 @@ public class CommandsService(
         catch (Exception ex)
         {
             result = $"❌ Исключение: {ex.Message}";
+        }
+
+        return result;
+    }
+
+    public async Task<string> AddPlaylistByQueryAsync(
+        string query,
+        TwitchUser? user,
+        int maxTracksToAdd = 10,
+        CancellationToken cancellationToken = default
+    )
+    {
+        var result = "Не удалось найти плейлист по запросу";
+
+        var playlist = await ytResolver.ResolvePlaylistQueryAsync(
+            query,
+            maxTracksToAdd,
+            cancellationToken
+        );
+
+        if (playlist != null)
+        {
+            result = await AddPlaylistAsync(playlist.Url, user, maxTracksToAdd, cancellationToken);
         }
 
         return result;
@@ -1070,7 +1093,10 @@ public class CommandsService(
                 {
                     await mainPlayer.PlayAsync(first, cancellationToken);
                     await NotifyQueueChangedAsync();
-                    result = first.Track != null ? $"▶️ Сейчас играет: {first.Track.Title}" : "▶️ Воспроизведение запущено";
+                    result =
+                        first.Track != null
+                            ? $"▶️ Сейчас играет: {first.Track.Title}"
+                            : "▶️ Воспроизведение запущено";
                 }
                 else
                 {
@@ -1080,6 +1106,35 @@ public class CommandsService(
             else
             {
                 result = "Уже воспроизводится";
+            }
+        }
+        catch (Exception ex)
+        {
+            result = $"❌ Исключение: {ex.Message}";
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Возобновить воспроизведение: снять паузу или запустить первый трек из очереди
+    /// </summary>
+    public async Task<string> PausePlaybackAsync(CancellationToken cancellationToken = default)
+    {
+        string result;
+
+        try
+        {
+            var currentState = await stateManager.GetStateAsync();
+
+            if (currentState.State != PlaybackState.Stopped)
+            {
+                await stateManager.SetPausedAsync(true, notify: true);
+                result = "⏸️ Воспроизведение остановлено";
+            }
+            else
+            {
+                result = "Нельзя поставить паузу если воиспроизведение остановленно";
             }
         }
         catch (Exception ex)

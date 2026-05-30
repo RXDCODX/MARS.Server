@@ -51,7 +51,7 @@ public abstract class TemporaryReward(
         );
         _timer = new PeriodicTimer(TimeSpan.FromMinutes(5));
 
-        if (environment.IsProduction())
+        if (!environment.IsEnvironment("arara"))
         {
             var custom = IsRewardEnabled();
             var effective = ComputeEffectiveEnabled(custom);
@@ -64,7 +64,9 @@ public abstract class TemporaryReward(
     {
         logger.LogInformation("Остановка временной награды: {AlertName}", AlertDisplayName);
 
-        _cancellationTokenSource?.Cancel();
+#pragma warning disable CS8602 // Dereference of a possibly null reference.
+        await _cancellationTokenSource?.CancelAsync();
+#pragma warning restore CS8602 // Dereference of a possibly null reference.
 
         if (_timer != null)
         {
@@ -143,7 +145,7 @@ public abstract class TemporaryReward(
             var desiredCost = Cost;
             var desiredBg = ColorToHex(Color);
             var desiredIsUserRequest = CreateCustomRewardsRequest.IsUserInputRequired;
-            var desiredGlobalCooldown = CreateCustomRewardsRequest.GlobalCooldownSeconds;
+            var desiredGlobalCooldown = CreateCustomRewardsRequest.GlobalCooldownSeconds ?? 0;
             var desiredIsGLobalCooldownEnabled = CreateCustomRewardsRequest.IsGlobalCooldownEnabled;
             var desiredIsMaxPerStreamEnabled = CreateCustomRewardsRequest.IsMaxPerStreamEnabled;
             var desiredIsMaxPerUserPerStreamEnabled =

@@ -3,7 +3,7 @@ using System.Threading;
 
 namespace MARS.Server.Services.CommandExecutor.Commands;
 
-public class SrClearCommand(CommandsService commandsService) : BaseCommand
+public class SrClearCommand(SoundRequestCommandsService soundRequestCommandsService) : BaseCommand
 {
     public override string CommandName => "srclear";
     public override string Description => "Очистить очередь звуковых запросов";
@@ -51,7 +51,7 @@ public class SrClearCommand(CommandsService commandsService) : BaseCommand
             }
             else
             {
-                result = await commandsService.ClearQueueAsync(cancellationToken);
+                result = await soundRequestCommandsService.ClearQueueAsync(cancellationToken);
             }
         }
 

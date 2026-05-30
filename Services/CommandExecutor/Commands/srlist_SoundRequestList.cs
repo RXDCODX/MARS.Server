@@ -3,7 +3,8 @@ using System.Threading;
 
 namespace MARS.Server.Services.CommandExecutor.Commands;
 
-public class SrlistSoundRequestListCommand(CommandsService commandsService) : BaseCommand
+public class SrlistSoundRequestListCommand(SoundRequestCommandsService soundRequestCommandsService)
+    : BaseCommand
 {
     public override string CommandName => "srlist";
     public override string Description =>
@@ -14,24 +15,23 @@ public class SrlistSoundRequestListCommand(CommandsService commandsService) : Ba
 
     public override string[] Aliases => ["srlists"];
 
-    public override CommandVisibility Visibility => CommandVisibility.All;
-
     public override CommandParameterInfo[] Parameters =>
         [
             new()
             {
-                Name = "playlistUrl",
-                Description = "URL плейлиста YouTube или SoundCloud",
-                Type = "string",
+                Name = "tracksCount",
+                Description =
+                    "Сколько треков добавить из плейлиста. 0 или меньше - добавить максимум",
+                Type = "int",
                 Required = true,
+                DefaultValue = "10",
             },
             new()
             {
-                Name = "tracksCount",
-                Description = "Сколько треков добавить из плейлиста. 0 или меньше - добавить максимум",
-                Type = "int",
-                Required = false,
-                DefaultValue = "10",
+                Name = "playlistQuery",
+                Description = "URL плейлиста YouTube или SoundCloud",
+                Type = "string",
+                Required = true,
             },
         ];
 
@@ -62,10 +62,7 @@ public class SrlistSoundRequestListCommand(CommandsService commandsService) : Ba
             var hasPermission = true;
             if (platform == Platform.Twitch)
             {
-                hasPermission =
-                    user.IsModerator
-                    || user.IsVip
-                    || user.IsBroadcaster;
+                hasPermission = user.IsModerator || user.IsVip || user.IsBroadcaster;
             }
 
             if (!hasPermission)
@@ -74,13 +71,26 @@ public class SrlistSoundRequestListCommand(CommandsService commandsService) : Ba
             }
             else
             {
-                var hasPlaylistUrl =
-                    parameters.TryGetValue("playlistUrl", out var playlistUrlObj)
-                    && !string.IsNullOrWhiteSpace(playlistUrlObj?.ToString());
+                var hasPlaylistQuery = false;
+                Uri? uri = null;
+                string? playlistUri = null;
 
-                if (hasPlaylistUrl)
+                if (parameters.TryGetValue("playlistQuery", out var playlistUrlObj))
                 {
-                    var playlistUrl = playlistUrlObj!.ToString()!.Trim();
+                    playlistUri = playlistUrlObj.ToString();
+
+                    if (!string.IsNullOrWhiteSpace(playlistUri))
+                    {
+                        hasPlaylistQuery = true;
+                    }
+                }
+
+                var isUrl =
+                    hasPlaylistQuery && Uri.TryCreate(playlistUri, UriKind.Absolute, out uri);
+
+                if (hasPlaylistQuery && isUrl)
+                {
+                    var playlistUrl = uri!.AbsoluteUri;
                     var tracksCount = 10;
 
                     if (parameters.TryGetValue("tracksCount", out var tracksCountObj))
@@ -88,8 +98,24 @@ public class SrlistSoundRequestListCommand(CommandsService commandsService) : Ba
                         tracksCount = Convert.ToInt32(tracksCountObj);
                     }
 
-                    result = await commandsService.AddPlaylistAsync(
+                    result = await soundRequestCommandsService.AddPlaylistAsync(
                         playlistUrl,
+                        user,
+                        tracksCount,
+                        cancellationToken
+                    );
+                }
+                else if (hasPlaylistQuery)
+                {
+                    var tracksCount = 10;
+
+                    if (parameters.TryGetValue("tracksCount", out var tracksCountObj))
+                    {
+                        tracksCount = Convert.ToInt32(tracksCountObj);
+                    }
+
+                    result = await soundRequestCommandsService.AddPlaylistByQueryAsync(
+                        playlistUri!,
                         user,
                         tracksCount,
                         cancellationToken
@@ -97,7 +123,7 @@ public class SrlistSoundRequestListCommand(CommandsService commandsService) : Ba
                 }
                 else
                 {
-                    result = "Необходимо указать URL плейлиста";
+                    result = "Ошибка: отсуствует запрос";
                 }
             }
         }

@@ -6,6 +6,9 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using Microsoft.Extensions.Logging;
 using YoutubeExplode;
+using YoutubeExplode.Common;
+using YoutubeExplode.Playlists;
+using YoutubeExplode.Search;
 using YoutubeExplode.Videos.Streams;
 
 namespace MARS.Server.Services.YouTube;
@@ -13,6 +16,33 @@ namespace MARS.Server.Services.YouTube;
 public class YouTubeResolver(ILogger<YouTubeResolver> logger)
 {
     private readonly YoutubeClient _youtubeClient = new();
+
+    public async Task<PlaylistSearchResult?> ResolvePlaylistQueryAsync(
+        string query,
+        int maxResults,
+        CancellationToken ct
+    )
+    {
+        PlaylistSearchResult? result = null;
+
+        if (!string.IsNullOrWhiteSpace(query) && maxResults > 0)
+        {
+            try
+            {
+                var searchResults = _youtubeClient.Search.GetPlaylistsAsync(query, ct);
+
+                var playlist = await searchResults.FirstOrDefaultAsync(cancellationToken: ct);
+
+                result = playlist;
+            }
+            catch (Exception ex)
+            {
+                logger.LogException(ex);
+            }
+        }
+
+        return result;
+    }
 
     public async Task<BaseTrackInfo?> ResolveQueryAsync(string query, CancellationToken ct)
     {

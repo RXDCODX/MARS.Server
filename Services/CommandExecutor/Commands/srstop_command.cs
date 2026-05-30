@@ -3,7 +3,7 @@ using System.Threading;
 
 namespace MARS.Server.Services.CommandExecutor.Commands;
 
-public class SrStopCommand(CommandsService commandsService) : BaseCommand
+public class SrStopCommand(SoundRequestCommandsService soundRequestCommandsService) : BaseCommand
 {
     public override string CommandName => "srstop";
     public override string Description => "Остановить воспроизведение SoundRequest";
@@ -15,6 +15,6 @@ public class SrStopCommand(CommandsService commandsService) : BaseCommand
         CancellationToken cancellationToken = default
     )
     {
-        return await commandsService.StopPlaybackAsync(cancellationToken);
+        return await soundRequestCommandsService.StopPlaybackAsync(cancellationToken);
     }
 }

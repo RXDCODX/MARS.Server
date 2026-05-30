@@ -29,17 +29,11 @@ public class SearchWife_TwitchReward(
     public override int Cost { get; init; } = 4;
     public override Func<bool> IsRewardEnabled { get; set; } = () => true;
 
-    public bool IsServiceActive { get; set; } = true;
-
     public override async Task StartAsync(CancellationToken cancellationToken)
     {
         await base.StartAsync(cancellationToken);
 
-        if (IsServiceActive)
-        {
-            wsClient.ChannelPointsCustomRewardRedemptionAdd +=
-                OnChannelPointsCustomRewardRedemption;
-        }
+        wsClient.ChannelPointsCustomRewardRedemptionAdd += OnChannelPointsCustomRewardRedemption;
     }
 
     public override async Task StopAsync(CancellationToken cancellationToken)
@@ -58,7 +52,7 @@ public class SearchWife_TwitchReward(
             twEvent.BroadcasterUserId.Equals(
                 TwitchExstension.ChannelId,
                 StringComparison.OrdinalIgnoreCase
-            ) && IsServiceActive
+            )
         )
         {
             if (twEvent.Reward.Cost == Cost)

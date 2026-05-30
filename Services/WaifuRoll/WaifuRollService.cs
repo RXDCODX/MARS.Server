@@ -457,12 +457,6 @@ public class WaifuRollService(
                                     anniversary.Value
                                 );
 
-                            // Отмечаем годовщину как отправленную
-                            await anniversaryService.MarkAnniversaryAsSentAsync(
-                                id,
-                                anniversary.Value.Months
-                            );
-
                             // Обновляем время последнего приветствия
                             greet.Time = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
                             dbContext.HostsGreetings.Update(greet);
@@ -474,6 +468,7 @@ public class WaifuRollService(
                         {
                             // Если годовщины нет - отправляем обычное AutoHello сообщение
                             Waifu? waifu = await dbContext.Waifus.FindAsync(host.WaifuBrideId);
+
                             var helloMsg = await GetHelloText();
                             var fixedmsg = await ConvertFixLinksInHelloMessages(helloMsg);
 
@@ -485,6 +480,7 @@ public class WaifuRollService(
                             var spouseName = waifu?.Name ?? "супруг(а)";
                             var message =
                                 $"@{{user}}, твой супруг {spouseName} прислал(а) тебе сообщение: \"{fixedmsg}\"";
+
                             message = AnswersForTwitchRewards.ReplaceKeywordsInAnswer(
                                 displayName,
                                 message,

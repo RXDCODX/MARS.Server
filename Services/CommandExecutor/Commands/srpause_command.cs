@@ -3,9 +3,9 @@ using System.Threading;
 
 namespace MARS.Server.Services.CommandExecutor.Commands;
 
-public class SrPlayCommand(SoundRequestCommandsService soundRequestCommandsService) : BaseCommand
+public class SrPauseCommand(SoundRequestCommandsService soundRequestCommandsService) : BaseCommand
 {
-    public override string CommandName => "srplay";
+    public override string CommandName => "srpause";
     public override string Description => "Возобновить воспроизведение SoundRequest";
     public override bool IsAdminCommand => true;
 
@@ -15,6 +15,6 @@ public class SrPlayCommand(SoundRequestCommandsService soundRequestCommandsServi
         CancellationToken cancellationToken = default
     )
     {
-        return await soundRequestCommandsService.ResumePlaybackAsync(cancellationToken);
+        return await soundRequestCommandsService.PausePlaybackAsync(cancellationToken);
     }
 }

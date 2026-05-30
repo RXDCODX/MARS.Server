@@ -3,7 +3,7 @@ using System.Threading;
 
 namespace MARS.Server.Services.CommandExecutor.Commands;
 
-public class SrCommand(CommandsService commandsService) : BaseCommand
+public class SrCommand(SoundRequestCommandsService soundRequestCommandsService) : BaseCommand
 {
     public override string CommandName => "sr";
     public override string Description => "Добавить трек в очередь звуковых запросов";
@@ -58,7 +58,7 @@ public class SrCommand(CommandsService commandsService) : BaseCommand
             {
                 var query = queryObj!.ToString()!.Trim();
 
-                result = await commandsService.AddTrackAsync(query, user, cancellationToken);
+                result = await soundRequestCommandsService.AddTrackAsync(query, user, cancellationToken);
             }
             else
             {

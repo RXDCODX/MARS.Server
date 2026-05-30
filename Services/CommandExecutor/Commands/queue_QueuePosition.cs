@@ -3,7 +3,7 @@ using System.Threading;
 
 namespace MARS.Server.Services.CommandExecutor.Commands;
 
-public class QueueQueuePositionCommand(CommandsService commandsService) : BaseCommand
+public class QueueQueuePositionCommand(SoundRequestCommandsService soundRequestCommandsService) : BaseCommand
 {
     public override string CommandName => "queue";
     public override string Description => "Показать вашу позицию в очереди звуковых запросов";
@@ -37,7 +37,7 @@ public class QueueQueuePositionCommand(CommandsService commandsService) : BaseCo
         }
         else
         {
-            result = await commandsService.GetUserQueuePositionAsync(user);
+            result = await soundRequestCommandsService.GetUserQueuePositionAsync(user);
         }
 
         return result;

@@ -13,7 +13,7 @@ namespace MARS.Server.Controllers;
 [Route("api/[controller]")]
 public class SoundRequestController(
     MainPlayer player,
-    CommandsService service,
+    SoundRequestCommandsService service,
     SoundRequestUserQueue queue,
     TwitchUserEnsureService userEnsureService,
     ILogger<SoundRequestController> logger

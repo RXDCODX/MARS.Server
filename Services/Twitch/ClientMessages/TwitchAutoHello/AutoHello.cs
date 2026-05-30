@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System.Linq;
+using System.Threading;
 using MARS.Server.Services.Twitch.Rewards._5_AddWife;
 using MARS.Server.Services.WaifuRoll;
 using Microsoft.Extensions.Hosting;

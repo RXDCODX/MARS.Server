@@ -22,12 +22,13 @@ public class AddNewWaifu(
     ITwitchAPI api,
     TokenService tokenService,
     IWaifuRollGuaranteeService guaranteeService,
-    WaifuRollEnsurenceService waifuDbHelper
+    WaifuRollEnsurenceService waifuDbHelper,
+    AddWife_TwitchReward reward
 ) : BackgroundService
 {
     private readonly ShikimoriClientOptions _options = options.Value;
 
-    private static Guid RewardGuid => Guid.Parse("a0c9d421-cf76-4f76-9bc6-3cf28da1ffaf");
+    private Guid? RewardGuid => reward.TwitchRewardId;
     private const int GuaranteeRolls = 200; // Количество роллов для гаранта
 
     public bool IsServiceActive { get; set; } = true;
@@ -51,7 +52,8 @@ public class AddNewWaifu(
         }
 
         if (
-            Guid.Parse(rewardId) == RewardGuid
+            RewardGuid.HasValue
+            && Guid.Parse(rewardId) == RewardGuid
             && !TwitchExstension.BlackList.Any(t =>
                 t.Equals(
                     onMessageReceivedArgs.ChatMessage.Username,

@@ -1,11 +1,21 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Imouto.BooruParser.Implementations.Danbooru;
+using MARS.Server.Exstensions;
+using MARS.Server.Hubs;
+using MARS.Server.Hubs.Interfaces;
+using MARS.Server.Services.PyroAlerts.Entitys;
 using MARS.Server.Services.Twitch.Management.Entitys;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.StaticFiles.Infrastructure;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using TwitchLib.Client.Interfaces;
+using TwitchLib.EventSub.Core.EventArgs.Channel;
+using TwitchLib.EventSub.Websockets;
 
 namespace MARS.Server.Services.Twitch.Rewards._27_RandomArt;
 
@@ -16,11 +26,11 @@ public class RandomArt(
     ILogger<RandomArt> logger,
     EventSubWebsocketClient wsClient,
     SharedOptions staticFilesOptions,
-    RickRollerService rickRollerService
+    RickRollerService rickRollerService,
+    RandomArt_TwitchReward reward
 ) : BackgroundService, ITwitchReward
 {
-    public bool IsServiceActive { get; set; } = true;
-    public int Cost { get; init; } = 27;
+    public int Cost { get; init; } = reward.Cost;
 
     private async Task WsClientOnChannelPointsCustomRewardRedemptionAdd(
         object? sender,
@@ -34,7 +44,6 @@ public class RandomArt(
                 TwitchExstension.Channel,
                 StringComparison.OrdinalIgnoreCase
             )
-            && IsServiceActive
         )
         {
             await Task.Factory.StartNew(async () =>
