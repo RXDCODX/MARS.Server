@@ -53,7 +53,7 @@ public static class MemoryStorage
             UseCount = 1,
         };
 
-        FileStorage.TryAdd(fileName, content);
+        FileStorage.AddOrUpdate(fileName, content, ((_, _) => content));
 
         return "/memory" + fileName;
     }
