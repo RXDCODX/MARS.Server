@@ -163,6 +163,10 @@ public sealed partial class AppDbContext : DbContext
                     fileInfo.Property(p => p.Extension).HasColumnName("FileInfo_Extension");
                     fileInfo.Property(p => p.IsLocalFile).HasColumnName("FileInfo_IsLocal");
                     fileInfo
+                        .Property(p => p.IsFileNotConvertable)
+                        .HasColumnName("FileInfo_IsFileNotConvertable");
+
+                    fileInfo
                         .Property(p => p.Type)
                         .HasColumnName("FileInfo_Type")
                         .HasConversion<string>();

@@ -67,7 +67,7 @@ public class TwitchMediaTranscodeWorker(
             ).ToList();
             var transcodeReports = new List<string>();
 
-            foreach (var mediaOrder in mediaOrders)
+            foreach (var mediaOrder in mediaOrders.Where(e => e.IsFileNotConvertable = false))
             {
                 try
                 {

@@ -7,4 +7,5 @@ public class MediaFileInfo
     public bool IsLocalFile { get; set; } = true;
     public required string FileName { get; set; }
     public required string Extension { get; set; }
+    public bool IsFileNotConvertable { get; set; } = false;
 }

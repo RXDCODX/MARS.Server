@@ -60,6 +60,7 @@ public class TwitchMediaPreparationService(
     private async Task UpdateMemeOrderPathAsync(
         MemeOrder memeOrder,
         string newFilePath,
+        bool isBrokenFile,
         CancellationToken cancellationToken
     )
     {
@@ -81,6 +82,7 @@ public class TwitchMediaPreparationService(
             )
             {
                 entity.FilePath = newFilePath;
+                entity.IsFileNotConvertable = isBrokenFile;
                 await dbContext.SaveChangesAsync(cancellationToken);
             }
         }
@@ -91,6 +93,7 @@ public class TwitchMediaPreparationService(
         string newAbsolutePath,
         string? displayName,
         MediaType mediaType,
+        bool isBrokenFile,
         CancellationToken cancellationToken
     )
     {
@@ -122,6 +125,7 @@ public class TwitchMediaPreparationService(
                 alert.FileInfo.Extension = Path.GetExtension(newAbsolutePath);
                 alert.FileInfo.Type = mediaType;
                 alert.FileInfo.IsLocalFile = true;
+                alert.FileInfo.IsFileNotConvertable = isBrokenFile;
 
                 if (!string.IsNullOrWhiteSpace(displayName))
                 {
@@ -635,7 +639,20 @@ public class TwitchMediaPreparationService(
 
                         File.Move(tempFile, targetPath);
 
-                        await UpdateMemeOrderPathAsync(memeOrder, targetPath, cancellationToken);
+                        var isBrokenFile = false;
+                        var convertedProbe = await ReadProbeAsync(targetPath, cancellationToken);
+
+                        if (NeedsTranscoding(mediaType, convertedProbe, extension))
+                        {
+                            isBrokenFile = true;
+                        }
+
+                        await UpdateMemeOrderPathAsync(
+                            memeOrder,
+                            targetPath,
+                            isBrokenFile,
+                            cancellationToken
+                        );
 
                         // Update any Alerts entries that referenced the old file path
                         try
@@ -645,6 +662,7 @@ public class TwitchMediaPreparationService(
                                 targetPath,
                                 displayName,
                                 mediaType,
+                                isBrokenFile,
                                 cancellationToken
                             );
                         }

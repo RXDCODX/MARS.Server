@@ -13,6 +13,7 @@ public class MemeOrder
     public required string FilePath { get; set; }
     public int? MemeTypeId { get; set; }
     public MemeType? Type { get; set; }
+    public bool IsFileNotConvertable { get; set; }
 
     public override bool Equals(object? obj)
     {
