@@ -15,6 +15,14 @@ public class StartCommand : BaseCommand
         CancellationToken cancellationToken = default
     )
     {
-        return Task.FromResult("Бот запущен!");
+        return Task.FromResult(
+            $$"""
+            Привет! Это бот для интерактивного развлечения на твич канале https://twitch.tv/{{TwitchExstension.Channel}}.
+
+            /commands или /c для списка доступных комманд.
+            /help {команда} для информации о команде. 
+            Пример пользования - /info
+            """
+        );
     }
 }

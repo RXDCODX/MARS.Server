@@ -79,7 +79,7 @@ public class PyroAlertsHandler(
                                 if (mediaInfo != null)
                                 {
                                     mediaInfo.FileInfo.Type = MediaType.Voice;
-                                    mediaInfo.TextInfo.Text = "/memory/" + fileInfo.FilePath;
+                                    mediaInfo.TextInfo.Text = "memory/" + fileInfo.FilePath;
                                     mediaInfo.MetaInfo.DisplayName = chat.Username ?? string.Empty;
                                     mediaInfo.MetaInfo.Priority = MediaAlertPriority.High;
                                     mediaInfo.FileInfo.IsLocalFile = true;

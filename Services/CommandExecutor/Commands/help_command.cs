@@ -54,7 +54,7 @@ public class HelpCommand(ICommandService commandService) : BaseCommand
         }
         else
         {
-            result = GetGeneralHelp();
+            result = "Параметр с названием команды пуст";
         }
 
         return result;
@@ -72,49 +72,42 @@ public class HelpCommand(ICommandService commandService) : BaseCommand
         return result;
     }
 
-    private static string GetGeneralHelp()
-    {
-        var result = """
-            Можно отправлять:
-            1) Войсы
-            2) Стикеры, на анимированные стикеры (в формате tgs) распростроняется кулдаун
-            3) Видео до 20 мб в формате webm/mp4
-            4) Аудио, но не советую. В них нету смысла, на стриме есть саундреквест
-            5) Различные картинки, советую брать пикчи до разрешения в 1920x1080, кинешь выше - сломаю колени
-
-            💡 Подсказка: используйте /help <команда> для получения информации о конкретной команде
-            Например: /help catisa или /help !catisa
-            """;
-
-        return result;
-    }
-
-    private async Task<string> GetCommandHelp(
+    private Task<string> GetCommandHelp(
         string commandName,
         Platform platform,
         CancellationToken cancellationToken
     )
     {
-        var result = string.Empty;
-
-        if (!string.IsNullOrWhiteSpace(commandName))
+        try
         {
-            var userCommands = commandService.GetUserCommandsInfo(platform, cancellationToken);
-            var adminCommands = commandService.GetAdminCommandsInfo(platform, cancellationToken);
+            var result = string.Empty;
 
-            var allCommands = userCommands.Concat(adminCommands).ToArray();
-
-            var command = allCommands.FirstOrDefault(c =>
-                c.CommandName.Equals(commandName, StringComparison.OrdinalIgnoreCase)
-            );
-
-            if (command != null)
+            if (!string.IsNullOrWhiteSpace(commandName))
             {
-                result = FormatCommandHelp(command, platform);
-            }
-        }
+                var userCommands = commandService.GetUserCommandsInfo(platform, cancellationToken);
+                var adminCommands = commandService.GetAdminCommandsInfo(
+                    platform,
+                    cancellationToken
+                );
 
-        return result;
+                var allCommands = userCommands.Concat(adminCommands).ToArray();
+
+                var command = allCommands.FirstOrDefault(c =>
+                    c.CommandName.Equals(commandName, StringComparison.OrdinalIgnoreCase)
+                );
+
+                if (command != null)
+                {
+                    result = FormatCommandHelp(command, platform);
+                }
+            }
+
+            return Task.FromResult(result);
+        }
+        catch (Exception exception)
+        {
+            return Task.FromException<string>(exception);
+        }
     }
 
     private static string FormatCommandHelp(BaseCommand command, Platform platform)
