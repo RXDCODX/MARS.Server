@@ -1,16 +1,32 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using System.Threading;
-using MARS.Server.Services.Twitch.FumoFriday.Entitys;
+using System.Threading.Tasks;
+using MARS.Server.DataBaseContext;
+using MARS.Server.Exstensions;
+using MARS.Server.Hubs;
+using MARS.Server.Hubs.Interfaces;
+using MARS.Server.Services.Twitch.Entitys;
+using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
+using MARS.Server.Services.Twitch.Rewards.FumoFriday.Entitys;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using TwitchLib.Api.Interfaces;
+using TwitchLib.Client.Events;
+using TwitchLib.Client.Interfaces;
+using TwitchLib.EventSub.Core.EventArgs.Channel;
+using TwitchLib.EventSub.Websockets;
 
-namespace MARS.Server.Services.Twitch.FumoFriday;
+namespace MARS.Server.Services.Twitch.Rewards._13_FumoFriday;
 
-public class FumoFridayWorker(
+public class FumoFriday_TwitchReward(
     ChannelRewardsService channelRewardsService,
     IDbContextFactory<AppDbContext> dbContextFactory,
-    ILogger<FumoFridayWorker> logger,
+    ILogger<FumoFriday_TwitchReward> logger,
     IHostApplicationLifetime hostApplicationLifetime,
     ITwitchClient twitchClient,
     ITwitchAPI twitchApi,

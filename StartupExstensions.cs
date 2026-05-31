@@ -1,8 +1,6 @@
 using System;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Flurl.Http.Configuration;
-using Imouto.BooruParser.Implementations.Danbooru;
 using MARS.Server.Configuration;
 using MARS.Server.CustomLoggers.SignalRLogger;
 using MARS.Server.Hubs;
@@ -574,21 +572,7 @@ public static class StartupEstensions
 
         internal IServiceCollection AddBooruServices()
         {
-            services.AddSingleton<DanbooruApiLoader>(sp =>
-            {
-                var booruConfiguration =
-                    sp.GetService<IOptions<BooruConfiguration>>() ?? throw new NullReferenceException();
-
-                var danbooruApiLoader = new DanbooruApiLoader(new FlurlClientCache(), Options.Create(new DanbooruSettings()
-                {
-                    Login = booruConfiguration.Value.Login,
-                    ApiKey = booruConfiguration.Value.ApiKey,
-                    BotUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0",
-                    PauseBetweenRequestsInMs = 5000
-                }));
-
-                return danbooruApiLoader;
-            });
+            services.AddSingleton<DanbooruRandomPostService>();
 
             return services;
         }

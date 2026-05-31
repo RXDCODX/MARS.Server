@@ -3,11 +3,11 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Imouto.BooruParser.Implementations.Danbooru;
 using MARS.Server.Exstensions;
 using MARS.Server.Hubs;
 using MARS.Server.Hubs.Interfaces;
 using MARS.Server.Services.PyroAlerts.Entitys;
+using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Management.Entitys;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.StaticFiles.Infrastructure;
@@ -22,7 +22,7 @@ namespace MARS.Server.Services.Twitch.Rewards._27_RandomArt;
 public class RandomArt(
     IHubContext<TelegramusHub, ITelegramusHub> hub,
     ITwitchClient client,
-    DanbooruApiLoader site,
+    DanbooruRandomPostService site,
     ILogger<RandomArt> logger,
     EventSubWebsocketClient wsClient,
     SharedOptions staticFilesOptions,
@@ -72,11 +72,11 @@ public class RandomArt(
                             return;
                         }
 
-                        var searchQuery = $"{userInput} (rating:general or rating:sensitive)";
-                        var searchResult = await site.SearchAsync(searchQuery);
-                        var answer = searchResult.Results;
+                        var searchQuery = $"{userInput} rating:general";
+                        var searchResult = await site.GetRandomPostAsync(searchQuery);
+                        var answer = searchResult;
 
-                        if (answer.Count == 0)
+                        if (answer is not { Length: > 0 })
                         {
                             await client.SendMessageToMainTwitchAsync(
                                 @$"@{twEvent.UserName}, плохой запрос, нету артов(",
@@ -91,8 +91,8 @@ public class RandomArt(
 
                         foreach (var preview in result)
                         {
-                            var post = await site.GetPostAsync(preview.Id);
-                            var fileUrl = post.OriginalUrl ?? post.SampleUrl ?? post.PreviewUrl;
+                            var post = preview;
+                            var fileUrl = post.LargeFileUrl ?? post.FileUrl ?? post.PreviewFileUrl;
 
                             if (string.IsNullOrWhiteSpace(fileUrl))
                             {
@@ -120,7 +120,7 @@ public class RandomArt(
                                     {
                                         Extension = extension,
                                         FileName = fileName,
-                                        FilePath = staticFilePath + fileUrl,
+                                        FilePath = fileUrl,
                                         Type = mediaType,
                                         IsLocalFile = false,
                                     },

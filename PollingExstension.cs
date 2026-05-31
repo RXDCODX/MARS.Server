@@ -1,4 +1,6 @@
-﻿namespace MARS.Server;
+﻿using Microsoft.Extensions.Options;
+
+namespace MARS.Server;
 
 public static class PollingExtensions
 {

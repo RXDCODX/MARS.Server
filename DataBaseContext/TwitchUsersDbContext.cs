@@ -1,7 +1,7 @@
 ﻿using MARS.Server.Services.CinemaQueue.Entitys;
-using MARS.Server.Services.Twitch.FumoFriday.Entitys;
 using MARS.Server.Services.Twitch.HelloVideos.Entitys;
 using MARS.Server.Services.Twitch.MiniGamesStats.Entitys;
+using MARS.Server.Services.Twitch.Rewards.FumoFriday.Entitys;
 using MARS.Server.Services.Twitch.TwitchFollowers.Entitys;
 
 namespace MARS.Server.DataBaseContext;

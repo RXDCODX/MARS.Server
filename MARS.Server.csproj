@@ -58,7 +58,6 @@
     <PackageReference Include="DSharpPlus.VoiceNext" />
     <PackageReference Include="FFMpegCore" />
     <PackageReference Include="H.Hooks" />
-    <PackageReference Include="Imouto.BooruParser" />
     <PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />

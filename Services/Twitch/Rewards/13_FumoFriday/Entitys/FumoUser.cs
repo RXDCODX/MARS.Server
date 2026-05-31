@@ -1,4 +1,4 @@
-﻿namespace MARS.Server.Services.Twitch.FumoFriday.Entitys;
+﻿namespace MARS.Server.Services.Twitch.Rewards.FumoFriday.Entitys;
 
 public class FumoUser
 {
