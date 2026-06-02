@@ -1,4 +1,6 @@
 using MARS.Server.Hubs.Models.VoiceRecognition;
+using MARS.Server.Services.SoundRequest;
+using MARS.Server.Services.SoundRequest.Entities;
 using MARS.Server.Services.Twitch.SoundBarService.Entitys;
 using MARS.Server.Services.Twitch.Synthesizer;
 using Microsoft.Extensions.Logging;
@@ -15,6 +17,7 @@ public class SoundMuteCoordinator
 
     // Сохраняем предыдущую громкость TTS, чтобы восстановить после unmute
     private double? _previousTtsVolume;
+    private bool _isMuted = false;
 
     public SoundMuteCoordinator(
         Func<ISoundBar> soundBarProvider,
@@ -66,9 +69,14 @@ public class SoundMuteCoordinator
             await _stateManager.SetMutedAsync(true);
 
             // Сохраняем текущую громкость TTS и отправляем Volume=0
-            _previousTtsVolume = _ttsHubBroadcaster.CurrentVolume;
-            var ttsState = new TtsState { IsStopped = true, Volume = 0.0 };
-            await _ttsHubBroadcaster.BroadcastStateAsync(ttsState);
+
+            if (_isMuted == false)
+            {
+                _previousTtsVolume = _ttsHubBroadcaster.CurrentVolume;
+                var ttsState = new TtsState { IsStopped = true, Volume = 0.0 };
+                await _ttsHubBroadcaster.BroadcastStateAsync(ttsState);
+                _isMuted = true;
+            }
         }
         catch (Exception ex)
         {
@@ -102,6 +110,7 @@ public class SoundMuteCoordinator
             var volumeToRestore = _previousTtsVolume ?? _ttsHubBroadcaster.CurrentVolume;
             var ttsState = new TtsState { IsStopped = false, Volume = volumeToRestore };
             await _ttsHubBroadcaster.BroadcastStateAsync(ttsState);
+            _isMuted = false;
         }
         catch (Exception ex)
         {
