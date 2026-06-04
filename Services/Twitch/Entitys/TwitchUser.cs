@@ -1,6 +1,13 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using System.Diagnostics;
+using MARS.Server.Exstensions;
 using TwitchLib.Api.Helix.Models.Channels.GetChannelVIPs;
 using TwitchLib.Api.Helix.Models.Moderation.GetModerators;
+using TwitchLib.Api.Helix.Models.Users.GetUsers;
+using TwitchLib.Client.Events;
+using TwitchLib.EventSub.Core.EventArgs.Channel;
 using ChatMessage = TwitchLib.Client.Models.ChatMessage;
 using User = TwitchLib.Api.Helix.Models.Users.GetUsers.User;
 
@@ -89,6 +96,11 @@ public class TwitchUser
     /// Дата создания записи
     /// </summary>
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    /// <summary>
+    /// Флаг указывающий, что юзер в черном списке
+    /// </summary>
+    public bool IsInBlockList { get; set; } = false;
 
     /// <summary>
     /// Проверить, является ли пользователь просто фоловером
@@ -239,5 +251,18 @@ public class TwitchUser
             IsVip = true,
         };
     }
+
+    public static TwitchUser? FromApiUser(User apiuser)
+    {
+        return new TwitchUser()
+        {
+            DisplayName = apiuser.DisplayName,
+            TwitchId = apiuser.Id,
+            UserLogin = apiuser.Login,
+            CreatedAt = apiuser.CreatedAt,
+            ProfileImageUrl = apiuser.ProfileImageUrl,
+        };
+    }
+
     #endregion
 }

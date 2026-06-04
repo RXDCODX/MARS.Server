@@ -63,7 +63,7 @@ public class TwitchMikuBeamRewardService(
         }
 
         if (
-            TwitchExstension.BlackList.Any(u =>
+            TwitchExstension.BlackList.Logins.Any(u =>
                 u.Equals(e.ChatMessage.Username, StringComparison.OrdinalIgnoreCase)
             )
         )

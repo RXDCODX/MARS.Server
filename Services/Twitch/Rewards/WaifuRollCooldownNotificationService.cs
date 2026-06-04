@@ -135,7 +135,7 @@ public class WaifuRollCooldownNotificationService(
         }
 
         if (
-            TwitchExstension.BlackList.Any(t =>
+            TwitchExstension.BlackList.Logins.Any(t =>
                 t.Equals(e.ChatMessage.Username, StringComparison.OrdinalIgnoreCase)
             )
         )

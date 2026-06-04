@@ -25,7 +25,7 @@ public class TwitchMediaAlerts(
                 TwitchExstension.Channel,
                 StringComparison.OrdinalIgnoreCase
             )
-            && !TwitchExstension.BlackList.Any(u =>
+            && !TwitchExstension.BlackList.Logins.Any(u =>
                 u.Equals(args.ChatMessage.Username, StringComparison.OrdinalIgnoreCase)
             )
             && IsServiceActive

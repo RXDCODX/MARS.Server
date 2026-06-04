@@ -49,7 +49,7 @@ public class TwitchTitleChangeCommand(
         // Проверяем, что это команда !title
         if (
             message.StartsWith(CommandPrefix, StringComparison.OrdinalIgnoreCase)
-            && !TwitchExstension.BlackList.Any(t =>
+            && !TwitchExstension.BlackList.Logins.Any(t =>
                 t.Equals(args.ChatMessage.Username, StringComparison.OrdinalIgnoreCase)
             )
         )

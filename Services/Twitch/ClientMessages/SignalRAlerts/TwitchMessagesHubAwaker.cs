@@ -45,7 +45,7 @@ public class TwitchMessagesHubAwaker(
                 TwitchExstension.Channel,
                 StringComparison.OrdinalIgnoreCase
             )
-            && !TwitchExstension.BlackList.Any(t =>
+            && !TwitchExstension.BlackList.Logins.Any(t =>
                 t.Equals(e.ChatMessage.Username, StringComparison.OrdinalIgnoreCase)
             )
         )
@@ -175,7 +175,7 @@ public class TwitchMessagesHubAwaker(
                 TwitchExstension.Channel,
                 StringComparison.OrdinalIgnoreCase
             )
-            && !TwitchExstension.BlackList.Any(e =>
+            && !TwitchExstension.BlackList.Logins.Any(e =>
                 e.Equals(args.ChatMessage.Username, StringComparison.OrdinalIgnoreCase)
             )
         )

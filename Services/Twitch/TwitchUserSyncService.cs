@@ -57,7 +57,7 @@ public class TwitchUserSyncService(
 
         // Пропускаем ботов и черный список
         if (
-            TwitchExstension.BlackList.Any(t =>
+            TwitchExstension.BlackList.Logins.Any(t =>
                 t.Equals(e.ChatMessage.Username, StringComparison.OrdinalIgnoreCase)
             )
         )

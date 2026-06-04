@@ -133,7 +133,7 @@ public class PuntoSwitcherService : BackgroundService, IPuntoSwitcherService
                     TwitchExstension.Channel,
                     StringComparison.OrdinalIgnoreCase
                 )
-                && !TwitchExstension.BlackList.Any(t =>
+                && !TwitchExstension.BlackList.Logins.Any(t =>
                     t.Equals(args.ChatMessage.Username, StringComparison.OrdinalIgnoreCase)
                 )
             )

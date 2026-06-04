@@ -24,7 +24,7 @@ public class TwitchFramedate(
     {
         if (
             args.ChatMessage.Channel.Equals(TwitchExstension.Channel)
-            && !TwitchExstension.BlackList.Any(t =>
+            && !TwitchExstension.BlackList.Logins.Any(t =>
                 t.Equals(args.ChatMessage.Username, StringComparison.OrdinalIgnoreCase)
             )
         )

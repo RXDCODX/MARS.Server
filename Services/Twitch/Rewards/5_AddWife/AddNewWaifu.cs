@@ -54,7 +54,7 @@ public class AddNewWaifu(
         if (
             RewardGuid.HasValue
             && Guid.Parse(rewardId) == RewardGuid
-            && !TwitchExstension.BlackList.Any(t =>
+            && !TwitchExstension.BlackList.Logins.Any(t =>
                 t.Equals(
                     onMessageReceivedArgs.ChatMessage.Username,
                     StringComparison.OrdinalIgnoreCase

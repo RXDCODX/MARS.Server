@@ -129,7 +129,7 @@ public class TekkenVictorinaLeaderbord(
 
         if (
             channel.Equals(TwitchExstension.Channel)
-            && !TwitchExstension.BlackList.Any(t =>
+            && !TwitchExstension.BlackList.Logins.Any(t =>
                 t.Equals(e.ChatMessage.Username, StringComparison.OrdinalIgnoreCase)
             )
         )

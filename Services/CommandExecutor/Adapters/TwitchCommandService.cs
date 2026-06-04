@@ -63,7 +63,7 @@ public class TwitchCommandService : PlatformCommandServiceBase<string>, IHostedS
     private async Task ClientOnOnMessageReceived(object? sender, OnMessageReceivedArgs e)
     {
         if (
-            TwitchExstension.BlackList.All(t =>
+            TwitchExstension.BlackList.Logins.All(t =>
                 !t.Equals(e.ChatMessage.Username, StringComparison.OrdinalIgnoreCase)
             )
         )

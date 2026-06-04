@@ -128,7 +128,7 @@ public class TtsHubBroadcaster(
                 TwitchExstension.Channel,
                 StringComparison.OrdinalIgnoreCase
             )
-            && !TwitchExstension.BlackList.Any(u =>
+            && !TwitchExstension.BlackList.Logins.Any(u =>
                 u.Equals(args.ChatMessage.Username, StringComparison.OrdinalIgnoreCase)
             )
         )
@@ -215,7 +215,7 @@ public class TtsHubBroadcaster(
             var emoteSets = new HashSet<string>();
             try
             {
-                var sevenTvUser = await _sevenTvClient.rest.GetUser(TwitchExstension.SevenTVUserId);
+                var sevenTvUser = await _sevenTvClient.rest.GetUser(TwitchExstension.SevenTvUserId);
 
                 if (sevenTvUser is { emote_sets: { Length: > 0 } })
                 {
@@ -257,7 +257,7 @@ public class TtsHubBroadcaster(
             {
                 logger.LogWarning(
                     "7TV emote list is empty for user {SevenTvUserId}. TTS emote filtering is disabled.",
-                    TwitchExstension.SevenTVUserId
+                    TwitchExstension.SevenTvUserId
                 );
             }
         }

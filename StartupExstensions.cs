@@ -28,6 +28,7 @@ using MARS.Server.Services.Telegram.PrivateChannelsResender;
 using MARS.Server.Services.Telegram.WTelegram;
 using MARS.Server.Services.Twitch;
 using MARS.Server.Services.Twitch.AutoInfoFetch;
+using MARS.Server.Services.Twitch.BlackList;
 using MARS.Server.Services.Twitch.Client;
 using MARS.Server.Services.Twitch.ClientMessages.AutoMessages;
 using MARS.Server.Services.Twitch.ClientMessages.AutoMessages.Extensions;
@@ -362,6 +363,9 @@ public static class StartupEstensions
         services.AddSingleton<TwitchUserEnsureService>();
 
         services.AddSingleton<RickRollerService>();
+
+        services.AddSingleton<TwitchBlackListService>();
+        services.AddHostedService(sp => sp.GetRequiredService<TwitchBlackListService>());
 
         return services;
     }

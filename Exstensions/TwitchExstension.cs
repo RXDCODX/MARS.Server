@@ -14,18 +14,9 @@ public static class TwitchExstension
     public const string Channel = "rxdcodx";
     public const string BotName = "catisaai";
     public const string BotId = "888848441";
-    public const string SevenTVUserId = "01G9FVE50G00022RD2T09E7QXC";
+    public const string SevenTvUserId = "01G9FVE50G00022RD2T09E7QXC";
 
-    public static readonly List<string> BlackList =
-    [
-        BotName,
-        "streamelements",
-        "4vacking",
-        "aspirantd",
-        "nightbot",
-        "moobot",
-        "jeetbot",
-    ];
+    public static ConcurrentBag<TwitchUser> BlackList = [];
 
     extension(ITwitchClient client)
     {
@@ -139,5 +130,12 @@ public static class TwitchExstension
                 return false;
             }
         }
+    }
+
+    extension<T>(IEnumerable<T> list) where T : TwitchUser
+    {
+        public HashSet<string> Logins => list.Select(e => e.UserLogin).ToHashSet();
+
+        public HashSet<string> TwitchId => list.Select(e => e.TwitchId).ToHashSet();
     }
 }

@@ -30,7 +30,7 @@ public class AutoMessagesHandler(
     {
         if (
             args.ChatMessage.Channel.Equals(Channel, StringComparison.OrdinalIgnoreCase)
-            && !TwitchExstension.BlackList.Any(t =>
+            && !TwitchExstension.BlackList.Logins.Any(t =>
                 t.Equals(args.ChatMessage.Username, StringComparison.OrdinalIgnoreCase)
             )
         )
