@@ -2,28 +2,27 @@
 
 #nullable disable
 
-namespace MARS.Server.Migrations
+namespace MARS.Server.Migrations;
+
+/// <inheritdoc />
+public partial class AddTwitchBlockList : Migration
 {
     /// <inheritdoc />
-    public partial class AddTwitchBlockList : Migration
+    protected override void Up(MigrationBuilder migrationBuilder)
     {
-        /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.AddColumn<bool>(
-                name: "IsInBlockList",
-                table: "TwitchUsers",
-                type: "boolean",
-                nullable: false,
-                defaultValue: false);
-        }
+        migrationBuilder.AddColumn<bool>(
+            name: "IsInBlockList",
+            table: "TwitchUsers",
+            type: "boolean",
+            nullable: false,
+            defaultValue: false);
+    }
 
-        /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.DropColumn(
-                name: "IsInBlockList",
-                table: "TwitchUsers");
-        }
+    /// <inheritdoc />
+    protected override void Down(MigrationBuilder migrationBuilder)
+    {
+        migrationBuilder.DropColumn(
+            name: "IsInBlockList",
+            table: "TwitchUsers");
     }
 }

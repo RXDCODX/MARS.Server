@@ -402,6 +402,11 @@ public sealed partial class AppDbContext : DbContext
         //     .WithOne()
         //     .HasForeignKey<PlayerState>(ps => ps.NextTrackId)
         //     .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder
+            .Entity<TekkenCharacter>()
+            .Property(e => e.Image)
+            .HasColumnType("bytea");
     }
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
@@ -413,6 +418,8 @@ public sealed partial class AppDbContext : DbContext
             .HaveConversion<DateTimeOffsetConversion>();
 
         configurationBuilder.Properties<DateTime>().HaveConversion<DateTimeToDateTimeUtc>();
+
+        configurationBuilder.Properties<byte[]>().HaveColumnType("bytea");
     }
 
     public sealed class DateTimeOffsetConversion()

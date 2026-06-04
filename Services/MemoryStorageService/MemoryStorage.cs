@@ -84,24 +84,19 @@ public static class MemoryStorage
         string contentType
     )> GetFileStreamWithContentTypeAsync(string fileName)
     {
-        return Task.Factory.StartNew(() =>
+        if (string.IsNullOrWhiteSpace(fileName))
         {
-            if (string.IsNullOrWhiteSpace(fileName))
-            {
-                throw new ArgumentNullException(nameof(fileName), "Имя файла не может быть пустым");
-            }
+            throw new ArgumentNullException(nameof(fileName), "Имя файла не может быть пустым");
+        }
 
-            if (!FileStorage.TryGetValue(fileName, out var description))
-            {
-                throw new FileNotFoundException(
-                    $"Файл с именем '{fileName}' не найден в хранилище"
-                );
-            }
+        if (!FileStorage.TryGetValue(fileName, out var description))
+        {
+            throw new FileNotFoundException($"Файл с именем '{fileName}' не найден в хранилище");
+        }
 
-            var stream = new MemoryStream(description.FileContent);
+        var stream = new MemoryStream(description.FileContent);
 
-            return (stream, description.GetContentType());
-        });
+        return Task.FromResult((stream, description.GetContentType()));
     }
 
     /// <summary>
@@ -166,12 +161,9 @@ public static class MemoryStorage
     /// <returns>Массив имен файлов</returns>
     public static Task<string[]> GetAllFileNamesAsync()
     {
-        return Task.Factory.StartNew(() =>
-        {
-            var fileNames = new string[FileStorage.Count];
-            FileStorage.Keys.CopyTo(fileNames, 0);
-            return fileNames;
-        });
+        var fileNames = new string[FileStorage.Count];
+        FileStorage.Keys.CopyTo(fileNames, 0);
+        return Task.FromResult(fileNames);
     }
 
     /// <summary>
@@ -179,10 +171,8 @@ public static class MemoryStorage
     /// </summary>
     public static Task ClearStorageAsync()
     {
-        return Task.Factory.StartNew(() =>
-        {
-            FileStorage.Clear();
-        });
+        FileStorage.Clear();
+        return Task.CompletedTask;
     }
 
     public static void ClearStorage()
