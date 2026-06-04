@@ -83,9 +83,6 @@ public class TwitchMessagesHubAwaker(
                             if (word.IsValidRegexString())
                             {
                                 regexWords.Add(word);
-                            }
-                            else
-                            {
                                 words.Remove(word);
                             }
                         }
