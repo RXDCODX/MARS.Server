@@ -1,8 +1,5 @@
-﻿using System.Threading;
-using MARS.Server.Services.CinemaQueue.Entitys;
+﻿using MARS.Server.Services.CinemaQueue.Entitys;
 using MARS.Server.Services.CinemaQueue.Interfaces;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 
 namespace MARS.Server.Services.CinemaQueue.Services;
 

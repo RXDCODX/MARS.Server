@@ -1,7 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-
-namespace MARS.Server.Services.Framedata;
+﻿namespace MARS.Server.Services.Framedata;
 
 /// <summary>
 /// Provides helper methods for the Tekken8FrameData class.

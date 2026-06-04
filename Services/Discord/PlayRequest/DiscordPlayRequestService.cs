@@ -1,15 +1,9 @@
-using System.Collections.Generic;
 using System.Globalization;
-using System.IO;
-using System.Linq;
-using System.Threading;
 using DSharpPlus;
 using DSharpPlus.Entities;
 using DSharpPlus.EventArgs;
 using MARS.Server.Services.Discord.Gateway;
 using MARS.Server.Services.YouTube;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 
 namespace MARS.Server.Services.Discord.PlayRequest;
 

@@ -1,9 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using Microsoft.Extensions.Logging;
-
-namespace MARS.Server.Services.CommandExecutor.Adapters;
+﻿namespace MARS.Server.Services.CommandExecutor.Adapters;
 
 /// <summary>
 /// Адаптер для выполнения команд через API

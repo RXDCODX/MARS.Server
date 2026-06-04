@@ -1,7 +1,4 @@
-using System.Collections.Generic;
-using System.Threading;
 using MARS.Server.Services.Twitch.StreamManagement;
-using Microsoft.Extensions.Logging;
 
 namespace MARS.Server.Services.CommandExecutor.Commands;
 

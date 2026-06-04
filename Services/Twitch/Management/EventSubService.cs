@@ -1,11 +1,5 @@
-﻿using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Net.Http;
-using System.Threading;
+﻿using System.Diagnostics;
 using System.Timers;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using TwitchLib.Api.Core.Enums;
 using TwitchLib.Api.Core.Exceptions;
 using TwitchLib.Api.Helix.Models.EventSub;

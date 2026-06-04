@@ -1,9 +1,4 @@
-﻿using System.Linq;
-using System.Threading;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-
-namespace MARS.Server.Services.Twitch.Rewards._39_MikuMonday;
+﻿namespace MARS.Server.Services.Twitch.Rewards._39_MikuMonday;
 
 /// <summary>
 /// Временная награда "Miku Monday" - доступна только по понедельникам

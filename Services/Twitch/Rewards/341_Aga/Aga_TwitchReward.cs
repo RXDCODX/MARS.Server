@@ -1,11 +1,3 @@
-using System;
-using System.Drawing;
-using MARS.Server.Services.Twitch.Entitys;
-using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using TwitchLib.Api.Helix.Models.ChannelPoints.CreateCustomReward;
-
 namespace MARS.Server.Services.Twitch.Rewards._341_Aga;
 
 public class Aga_TwitchReward(

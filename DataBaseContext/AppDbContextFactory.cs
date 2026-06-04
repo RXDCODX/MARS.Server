@@ -1,7 +1,4 @@
-﻿using System.IO;
-using Microsoft.EntityFrameworkCore.Design;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Hosting;
+﻿using Microsoft.EntityFrameworkCore.Design;
 
 namespace MARS.Server.DataBaseContext;
 

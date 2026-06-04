@@ -1,7 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using MARS.Server.Services.CinemaQueue.Entitys;
+﻿using MARS.Server.Services.CinemaQueue.Entitys;
 using MARS.Server.Services.CinemaQueue.Interfaces;
 
 namespace MARS.Server.Services.CinemaQueue.Repositories;

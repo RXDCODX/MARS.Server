@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-
-namespace MARS.Server.Hubs.Models.TunaHub;
+﻿namespace MARS.Server.Hubs.Models.TunaHub;
 
 public class TunaMusicDtoRoot
 {

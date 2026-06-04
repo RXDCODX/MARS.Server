@@ -1,13 +1,4 @@
-﻿using System.Linq;
-using System.Threading;
-using MARS.Server.DataBaseContext;
-using MARS.Server.Services.SoundRequest.Entities;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.DynamicLinq;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-
-namespace MARS.Server.Services.SoundRequest;
+﻿namespace MARS.Server.Services.SoundRequest;
 
 /// <summary>
 /// Менеджер состояния плеера с поддержкой многопоточности и персистентностью в БД

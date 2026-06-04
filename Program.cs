@@ -1,6 +1,4 @@
 ﻿using System.Diagnostics;
-using System.IO;
-using System.Linq;
 using MARS.Server.CustomLoggers.DatabaseLogger;
 using MARS.Server.CustomLoggers.SignalRLogger;
 using MARS.Server.CustomLoggers.TelegramLogger;
@@ -14,11 +12,6 @@ using MARS.Server.Services.Media;
 using MARS.Server.Services.MemoryStorageService;
 using MARS.Server.Services.Twitch;
 using MARS.Server.Services.Twitch.Rewards;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi;
 using Swashbuckle.AspNetCore.Swagger;
 

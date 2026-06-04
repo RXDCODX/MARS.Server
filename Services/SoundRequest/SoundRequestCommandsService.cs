@@ -1,6 +1,4 @@
-﻿using System.Linq;
-using System.Threading;
-using MARS.Server.Services.SoundRequest.Interfaces;
+﻿using MARS.Server.Services.SoundRequest.Interfaces;
 using MARS.Server.Services.SoundRequest.Queue;
 using MARS.Server.Services.SoundRequest.SoundCloud;
 using MARS.Server.Services.SoundRequest.Spotify;

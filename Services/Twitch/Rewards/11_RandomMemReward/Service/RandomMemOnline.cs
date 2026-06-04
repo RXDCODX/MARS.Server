@@ -1,10 +1,6 @@
 using System.Collections.Frozen;
-using System.IO;
-using System.Linq;
-using System.Threading;
 using MARS.Server.Services.MemoryStorageService;
 using MARS.Server.Services.Telegram.WTelegram;
-using Microsoft.Extensions.Hosting;
 using TL;
 using Document = TL.Document;
 using Message = TL.Message;

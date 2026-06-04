@@ -1,7 +1,5 @@
 ﻿using System.Text.RegularExpressions;
-using System.Threading;
 using MARS.Server.Services.Shikimori;
-using Microsoft.Extensions.Logging;
 
 namespace MARS.Server.Services.CinemaQueue.Services;
 

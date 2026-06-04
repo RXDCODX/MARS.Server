@@ -1,7 +1,5 @@
-﻿using System.Collections.Generic;
-using MARS.Server.CustomLoggers.DatabaseLogger;
+﻿using MARS.Server.CustomLoggers.DatabaseLogger;
 using MARS.Server.Services.Logs.Interfaces;
-using Microsoft.Extensions.Logging;
 
 namespace MARS.Server.Controllers;
 

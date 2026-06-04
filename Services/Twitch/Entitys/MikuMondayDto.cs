@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-
-namespace MARS.Server.Services.Twitch.Entitys;
+﻿namespace MARS.Server.Services.Twitch.Entitys;
 
 /// <summary>
 /// DTO для передачи данных Miku Monday на фронтенд

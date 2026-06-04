@@ -1,6 +1,4 @@
-using System.Threading;
 using MARS.Server.Hubs.Models.VoiceRecognition;
-using MARS.Server.Services.Twitch.Entitys;
 
 namespace MARS.Server.Services.Twitch.Synthesizer;
 

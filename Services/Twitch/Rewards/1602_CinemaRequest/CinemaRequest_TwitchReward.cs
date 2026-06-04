@@ -1,6 +1,3 @@
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-
 namespace MARS.Server.Services.Twitch.Rewards._1602_CinemaRequest;
 
 public class CinemaRequest_TwitchReward(

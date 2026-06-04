@@ -1,6 +1,3 @@
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-
 namespace MARS.Server.Services.Twitch.Rewards._5_AddWife;
 
 public class AddWife_TwitchReward(

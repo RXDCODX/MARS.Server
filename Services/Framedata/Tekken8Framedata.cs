@@ -1,13 +1,8 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using MARS.Server.Services.Framedata.Entitys.Enums;
+﻿using MARS.Server.Services.Framedata.Entitys.Enums;
 using MARS.Server.Services.Framedata.Subservices.Entitys;
 using MARS.Server.Services.Framedata.Subservices.HtmlParsers;
 using MARS.Server.Services.Telegram;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 
 namespace MARS.Server.Services.Framedata;
 

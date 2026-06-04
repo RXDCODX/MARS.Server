@@ -1,8 +1,5 @@
-﻿using System.Collections.Generic;
-using System.Threading;
-using MARS.Server.Services.SoundRequest.Queue;
+﻿using MARS.Server.Services.SoundRequest.Queue;
 using MARS.Server.Services.Twitch;
-using Microsoft.Extensions.Logging;
 
 namespace MARS.Server.Controllers;
 

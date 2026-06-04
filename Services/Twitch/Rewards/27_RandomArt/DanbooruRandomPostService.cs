@@ -1,9 +1,4 @@
-﻿using System.Text;
-using System.Text.Json.Serialization;
-using MARS.Server.Configuration;
-using Microsoft.Extensions.Options;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+﻿using Newtonsoft.Json.Linq;
 
 namespace MARS.Server.Services.Twitch.Rewards._27_RandomArt;
 

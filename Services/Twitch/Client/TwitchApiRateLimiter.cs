@@ -1,8 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Threading;
-using Microsoft.Extensions.Logging;
+﻿using System.Diagnostics;
 using TwitchLib.Api.Core.Interfaces;
 
 namespace MARS.Server.Services.Twitch.Client;

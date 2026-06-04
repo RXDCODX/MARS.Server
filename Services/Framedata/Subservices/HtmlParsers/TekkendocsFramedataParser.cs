@@ -1,12 +1,7 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using System.Net.Http;
-using System.Threading;
-using AngleSharp.Dom;
+﻿using AngleSharp.Dom;
 using AngleSharp.Html.Parser;
 using AngleSharp.XPath;
 using MARS.Server.Services.Framedata.Subservices.Entitys;
-using Microsoft.Extensions.Logging;
 
 namespace MARS.Server.Services.Framedata.Subservices.HtmlParsers;
 

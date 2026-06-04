@@ -1,8 +1,4 @@
-﻿using System.Net.Http;
-using System.Threading;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using TwitchLib.EventSub.Core.EventArgs.Stream;
+﻿using TwitchLib.EventSub.Core.EventArgs.Stream;
 
 namespace MARS.Server.Services.Twitch.StreamBotNotifications;
 

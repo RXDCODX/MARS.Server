@@ -1,7 +1,4 @@
-﻿using System.Linq;
-using System.Threading;
-using MARS.Server.Services.Shikimori.Entitys;
-using Microsoft.Extensions.Logging;
+﻿using MARS.Server.Services.Shikimori.Entitys;
 
 namespace MARS.Server.Services.Shikimori;
 

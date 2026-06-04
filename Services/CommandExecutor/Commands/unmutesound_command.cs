@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Threading;
-using MARS.Server.Services.Twitch.SoundBarService;
+﻿using MARS.Server.Services.Twitch.SoundBarService;
 
 namespace MARS.Server.Services.CommandExecutor.Commands;
 

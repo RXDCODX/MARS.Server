@@ -1,8 +1,5 @@
-﻿using System.Linq;
-using System.Net.Http;
-using MARS.Server.Services.Twitch.SoundBarService.Entitys;
+﻿using MARS.Server.Services.Twitch.SoundBarService.Entitys;
 using MARS.Server.Services.Twitch.SoundBarService.Models;
-using Microsoft.Extensions.Logging;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace MARS.Server.Services.Twitch.SoundBarService;

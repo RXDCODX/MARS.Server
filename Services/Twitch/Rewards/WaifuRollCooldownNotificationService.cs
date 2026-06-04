@@ -1,8 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Threading;
-using MARS.Server.Services.WaifuRoll;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
+﻿using MARS.Server.Services.WaifuRoll;
 
 namespace MARS.Server.Services.Twitch.Rewards;
 

@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-using System.Threading;
 using MARS.Server.Services.Telegram.GooglePhotos;
 
 namespace MARS.Server.Services.CommandExecutor.Commands;

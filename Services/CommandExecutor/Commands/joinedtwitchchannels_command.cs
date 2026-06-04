@@ -1,7 +1,3 @@
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-
 namespace MARS.Server.Services.CommandExecutor.Commands;
 
 public class JoinedTwitchChannelsCommand(ITwitchClient client) : BaseCommand

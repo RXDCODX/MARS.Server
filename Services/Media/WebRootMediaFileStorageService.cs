@@ -1,8 +1,3 @@
-using System.IO;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Logging;
-
 namespace MARS.Server.Services.Media;
 
 public class WebRootMediaFileStorageService : IMediaFileStorageService

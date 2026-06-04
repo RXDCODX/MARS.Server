@@ -1,8 +1,4 @@
-﻿using System.Linq;
-using System.Threading;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using TwitchLib.Client;
+﻿using TwitchLib.Client;
 using TwitchLib.Client.Models;
 
 namespace MARS.Server.Services.Twitch.Client;

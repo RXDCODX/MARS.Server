@@ -1,6 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
-
-namespace MARS.Server.Services.KeyboardHook_UNUSED.Controllers;
+﻿namespace MARS.Server.Services.KeyboardHook_UNUSED.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]

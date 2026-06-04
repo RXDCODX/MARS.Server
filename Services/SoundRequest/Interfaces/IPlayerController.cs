@@ -1,6 +1,4 @@
-﻿using System.Threading;
-
-namespace MARS.Server.Services.SoundRequest.Interfaces;
+﻿namespace MARS.Server.Services.SoundRequest.Interfaces;
 
 public interface IPlayerController
 {

@@ -1,12 +1,7 @@
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
 using MARS.Server.Services.Discord.Gateway;
 using MARS.Server.Services.Telegram.DiscordBridge.Entities;
 using MARS.Server.Services.Telegram.DiscordBridge.Entitys;
 using MARS.Server.Services.Telegram.WTelegram;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using TL;
 using TLMessage = TL.Message;
 

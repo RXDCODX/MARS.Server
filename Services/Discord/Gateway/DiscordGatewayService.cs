@@ -1,10 +1,6 @@
-using System.Collections.Generic;
-using System.Threading;
 using DSharpPlus;
 using DSharpPlus.EventArgs;
 using DSharpPlus.VoiceNext;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using ServerDiscordConfiguration = MARS.Server.Configuration.DiscordConfiguration;
 
 namespace MARS.Server.Services.Discord.Gateway;

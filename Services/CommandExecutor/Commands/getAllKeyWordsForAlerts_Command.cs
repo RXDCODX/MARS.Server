@@ -1,7 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Threading;
-
-namespace MARS.Server.Services.CommandExecutor.Commands;
+﻿namespace MARS.Server.Services.CommandExecutor.Commands;
 
 public class getAllKeyWordsForAlerts_Command(IDbContextFactory<AppDbContext> factory) : BaseCommand
 {

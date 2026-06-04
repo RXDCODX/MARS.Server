@@ -1,9 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using TwitchLib.Api.Helix.Models.Moderation.BanUser;
+﻿using TwitchLib.Api.Helix.Models.Moderation.BanUser;
 
 namespace MARS.Server.Services.Twitch.Rewards._1580_MikuBeam;
 

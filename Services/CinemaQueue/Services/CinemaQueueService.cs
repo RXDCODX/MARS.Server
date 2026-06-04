@@ -1,10 +1,6 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using MARS.Server.Services.CinemaQueue.Entitys;
+﻿using MARS.Server.Services.CinemaQueue.Entitys;
 using MARS.Server.Services.CinemaQueue.Interfaces;
 using MARS.Server.Services.Twitch;
-using Microsoft.Extensions.Logging;
 
 namespace MARS.Server.Services.CinemaQueue.Services;
 

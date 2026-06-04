@@ -1,7 +1,4 @@
-﻿using System.Threading;
-using MARS.Server.Services.Twitch.Management.Entitys;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
+﻿using MARS.Server.Services.Twitch.Management.Entitys;
 using TwitchLib.Api;
 
 namespace MARS.Server.Services.Twitch.Management;

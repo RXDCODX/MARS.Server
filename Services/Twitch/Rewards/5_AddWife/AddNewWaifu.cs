@@ -1,12 +1,8 @@
-﻿using System.Linq;
-using System.Text.RegularExpressions;
-using System.Threading;
+﻿using System.Text.RegularExpressions;
 using MARS.Server.Services.Shikimori;
 using MARS.Server.Services.WaifuRoll;
 using MARS.Server.Services.WaifuRoll.Entitys.Interfaces;
 using MARS.Server.Services.WaifuRoll.helpers;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using ShikimoriSharp.Classes;
 using TwitchLib.Api.Helix.Models.Chat;
 

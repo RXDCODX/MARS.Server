@@ -1,8 +1,4 @@
-﻿using System.Linq;
-using System.Threading;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using TwitchLib.Api.Helix.Models.Channels.GetChannelInformation;
+﻿using TwitchLib.Api.Helix.Models.Channels.GetChannelInformation;
 using TwitchLib.Api.Helix.Models.Channels.ModifyChannelInformation;
 
 namespace MARS.Server.Services.Twitch.StreamManagement;

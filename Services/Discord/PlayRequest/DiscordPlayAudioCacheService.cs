@@ -1,11 +1,6 @@
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Text.RegularExpressions;
-using System.Threading;
 using FFMpegCore;
 using MARS.Server.Services.YouTube;
-using Microsoft.Extensions.Logging;
 
 namespace MARS.Server.Services.Discord.PlayRequest;
 

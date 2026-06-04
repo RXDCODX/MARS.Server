@@ -1,6 +1,3 @@
-using System.Linq;
-using System.Threading;
-
 namespace MARS.Server.Services.SoundRequest.Spotify;
 
 public class SpotifyPlaybackService(SpotifyApiClient spotifyApiClient)

@@ -1,17 +1,11 @@
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Runtime.Versioning;
 using System.Speech.AudioFormat;
 using System.Speech.Synthesis;
-using System.Threading;
 using DSharpPlus;
 using DSharpPlus.Entities;
 using DSharpPlus.EventArgs;
 using DSharpPlus.VoiceNext;
 using MARS.Server.Services.Discord.Gateway;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 
 namespace MARS.Server.Services.Discord.TtsVoiceRelay;
 

@@ -1,5 +1,3 @@
-using System.Threading;
-
 namespace MARS.Server.Services.Shikimori.Entitys;
 
 /// <summary>

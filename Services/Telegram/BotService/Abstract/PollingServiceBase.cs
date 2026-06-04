@@ -1,8 +1,3 @@
-using System.Threading;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-
 namespace MARS.Server.Services.Telegram.BotService.Abstract;
 
 // A background service consuming a scoped service.

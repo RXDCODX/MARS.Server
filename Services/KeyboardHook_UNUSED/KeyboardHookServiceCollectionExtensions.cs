@@ -1,8 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-
-namespace MARS.Server.Services.KeyboardHook_UNUSED;
+﻿namespace MARS.Server.Services.KeyboardHook_UNUSED;
 
 public static class KeyboardHookServiceCollectionExtensions
 {

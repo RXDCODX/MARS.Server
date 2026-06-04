@@ -1,5 +1,3 @@
-using Microsoft.AspNetCore.Http;
-
 namespace MARS.Server.Services.Media;
 
 public interface IMediaFileStorageService

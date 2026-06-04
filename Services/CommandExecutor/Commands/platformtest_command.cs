@@ -1,7 +1,3 @@
-using System.Collections.Generic;
-using System.Threading;
-using Microsoft.Extensions.Logging;
-
 namespace MARS.Server.Services.CommandExecutor.Commands;
 
 public class PlatformTestCommand(ILogger<PlatformTestCommand> logger) : BaseCommand

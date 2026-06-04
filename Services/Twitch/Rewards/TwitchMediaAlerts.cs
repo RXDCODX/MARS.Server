@@ -1,8 +1,4 @@
-﻿using System.Linq;
-using System.Threading;
-using Microsoft.Extensions.Hosting;
-
-namespace MARS.Server.Services.Twitch.Rewards;
+﻿namespace MARS.Server.Services.Twitch.Rewards;
 
 public class TwitchMediaAlerts(
     IHubContext<TelegramusHub, ITelegramusHub> hubContext,

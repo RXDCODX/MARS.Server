@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-
-namespace MARS.Server.Services.StreamAcrhive_UNUSED.Entitys;
+﻿namespace MARS.Server.Services.StreamAcrhive_UNUSED.Entitys;
 
 public class StreamArchiveFile
 {

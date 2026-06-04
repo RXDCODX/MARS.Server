@@ -1,7 +1,4 @@
-using System.IO;
-using System.Threading;
 using FFMpegCore;
-using Microsoft.Extensions.Logging;
 
 namespace MARS.Server.Services.Media;
 

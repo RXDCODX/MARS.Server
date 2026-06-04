@@ -1,10 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-
-namespace MARS.Server.Services.Twitch.ClientMessages.SignalRAlerts;
+﻿namespace MARS.Server.Services.Twitch.ClientMessages.SignalRAlerts;
 
 public class TwitchMessagesHubAwaker(
     ITwitchClient client,

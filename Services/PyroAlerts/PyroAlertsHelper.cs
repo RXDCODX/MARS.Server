@@ -1,14 +1,5 @@
-﻿using System;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
-using MARS.Server.Exstensions;
-using MARS.Server.Services.MemoryStorageService;
-using MARS.Server.Services.PyroAlerts.Entitys;
+﻿using MARS.Server.Services.MemoryStorageService;
 using MARS.Server.Services.Telegram;
-using Microsoft.Extensions.Logging;
-using Telegram.Bot;
-using Telegram.Bot.Types;
 
 namespace MARS.Server.Services.PyroAlerts;
 

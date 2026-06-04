@@ -1,10 +1,6 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using MARS.Server.Services.Twitch.ClientMessages.AutoMessages.DTOs;
+﻿using MARS.Server.Services.Twitch.ClientMessages.AutoMessages.DTOs;
 using MARS.Server.Services.Twitch.ClientMessages.AutoMessages.Entitys;
 using MARS.Server.Services.Twitch.ClientMessages.AutoMessages.Interfaces;
-using Microsoft.Extensions.Logging;
 
 namespace MARS.Server.Services.Twitch.ClientMessages.AutoMessages.Services;
 

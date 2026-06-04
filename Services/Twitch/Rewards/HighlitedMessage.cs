@@ -1,20 +1,6 @@
-﻿using System;
-using System.IO;
-using System.Linq;
-using System.Reflection;
-using System.Threading;
-using System.Threading.Tasks;
-using MARS.Server.Exstensions;
-using MARS.Server.Hubs;
-using MARS.Server.Hubs.Interfaces;
+﻿using System.Reflection;
 using MARS.Server.Services.AutoArts_OBSOLETE.Entitys;
-using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.PuntoSwitcher;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.Hosting;
-using TwitchLib.Client.Events;
-using TwitchLib.Client.Interfaces;
 using TwitchLib.Client.Models;
 
 namespace MARS.Server.Services.Twitch.Rewards;

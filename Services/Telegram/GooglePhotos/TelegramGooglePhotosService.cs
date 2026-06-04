@@ -1,9 +1,4 @@
-﻿using System.IO;
-using System.Linq;
-using System.Threading;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using Telegram.Bot.Types.Enums;
+﻿using Telegram.Bot.Types.Enums;
 
 namespace MARS.Server.Services.Telegram.GooglePhotos;
 

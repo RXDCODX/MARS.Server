@@ -1,13 +1,9 @@
-﻿using System.IO;
-using System.Linq;
-using System.Threading;
-using MARS.Server.Services.Twitch;
+﻿using MARS.Server.Services.Twitch;
 using MARS.Server.Services.Twitch.Rewards;
 using MARS.Server.Services.Twitch.WeddingAnniversary;
 using MARS.Server.Services.WaifuRoll.helpers;
 using MARS.Server.Services.WaifuRoll.Interfaces;
 using MARS.Server.Services.WaifuRoll.Models;
-using Microsoft.Extensions.Hosting;
 using ShikimoriSharp.Classes;
 
 namespace MARS.Server.Services.WaifuRoll;

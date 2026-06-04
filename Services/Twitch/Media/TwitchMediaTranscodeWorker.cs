@@ -1,10 +1,4 @@
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
 using MARS.Server.Services.Twitch.Rewards._11_RandomMemReward.Service;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 
 namespace MARS.Server.Services.Twitch.Media;
 

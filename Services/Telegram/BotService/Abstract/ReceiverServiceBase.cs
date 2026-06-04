@@ -1,5 +1,3 @@
-using System.Threading;
-using Microsoft.Extensions.Logging;
 using Telegram.Bot.Polling;
 
 namespace MARS.Server.Services.Telegram.BotService.Abstract;

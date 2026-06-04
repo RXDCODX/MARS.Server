@@ -1,7 +1,3 @@
-using System.Threading;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-
 namespace MARS.Server.Services.Twitch.Rewards._1701_Fireworks;
 
 public class Fireworks_TwitchReward(

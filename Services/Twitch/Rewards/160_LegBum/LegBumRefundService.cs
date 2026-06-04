@@ -1,8 +1,4 @@
-﻿using System.Linq;
-using System.Threading;
-using MARS.Server.Services.Twitch.Management.Entitys;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
+﻿using MARS.Server.Services.Twitch.Management.Entitys;
 using TwitchLib.Api.Core.Enums;
 using TwitchLib.Api.Helix.Models.ChannelPoints.UpdateCustomRewardRedemptionStatus;
 

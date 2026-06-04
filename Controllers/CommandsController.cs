@@ -1,5 +1,4 @@
 ﻿using MARS.Server.Services.CommandExecutor.Adapters;
-using Microsoft.Extensions.Logging;
 
 namespace MARS.Server.Controllers;
 

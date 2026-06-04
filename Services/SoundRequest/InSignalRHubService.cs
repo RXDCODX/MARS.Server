@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-
-namespace MARS.Server.Services.SoundRequest;
+﻿namespace MARS.Server.Services.SoundRequest;
 
 /// <summary>
 /// Сервис для управления отправкой уведомлений через SignalR Hub

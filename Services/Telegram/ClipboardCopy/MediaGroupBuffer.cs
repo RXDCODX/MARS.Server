@@ -1,5 +1,3 @@
-using System.Threading;
-
 namespace MARS.Server.Services.Telegram.ClipboardCopy;
 
 internal sealed class MediaGroupBuffer

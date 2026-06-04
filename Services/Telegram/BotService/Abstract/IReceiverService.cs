@@ -1,5 +1,3 @@
-using System.Threading;
-
 namespace MARS.Server.Services.Telegram.BotService.Abstract;
 
 /// <summary>

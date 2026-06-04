@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-
-namespace MARS.Server.Services.Framedata.Subservices.Entitys;
+﻿namespace MARS.Server.Services.Framedata.Subservices.Entitys;
 
 /// <summary>
 /// Интерфейс для парсеров фреймдаты Tekken 8

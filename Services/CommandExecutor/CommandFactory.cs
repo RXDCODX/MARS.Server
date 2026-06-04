@@ -1,9 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-
-namespace MARS.Server.Services.CommandExecutor;
+﻿namespace MARS.Server.Services.CommandExecutor;
 
 /// <summary>
 /// Фабрика для создания команд с поддержкой DI

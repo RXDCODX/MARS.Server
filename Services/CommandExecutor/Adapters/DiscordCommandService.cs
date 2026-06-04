@@ -1,12 +1,7 @@
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
 using DSharpPlus;
 using DSharpPlus.EventArgs;
 using MARS.Server.Services.Discord.Gateway;
 using MARS.Server.Services.Discord.PlayRequest;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using ServerDiscordConfiguration = MARS.Server.Configuration.DiscordConfiguration;
 
 namespace MARS.Server.Services.CommandExecutor.Adapters;

@@ -1,10 +1,6 @@
-﻿using System.Linq;
-using System.Threading;
-using MARS.Server.Services.Twitch.Management.Entitys;
+﻿using MARS.Server.Services.Twitch.Management.Entitys;
 using MARS.Server.Services.WaifuRoll;
 using MARS.Server.Services.WaifuRoll.helpers;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using TwitchLib.Api.Helix.Models.Chat;
 
 namespace MARS.Server.Services.Twitch.Rewards._2_WaifuMarriage;

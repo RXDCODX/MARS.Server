@@ -1,8 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using MARS.Server.Services.Scoreboard.Entitys;
-using Microsoft.Extensions.Logging;
+﻿using MARS.Server.Services.Scoreboard.Entitys;
 
 namespace MARS.Server.Services.Scoreboard;
 

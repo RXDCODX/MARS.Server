@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-
-namespace MARS.Server.Services.WaifuRoll.Interfaces;
+﻿namespace MARS.Server.Services.WaifuRoll.Interfaces;
 
 public interface IWaifuPrizesService
 {

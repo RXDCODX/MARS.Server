@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using MARS.Server.Hubs.Models.AudioQuiz;
+﻿using MARS.Server.Hubs.Models.AudioQuiz;
 using MARS.Server.Services.AutoArts_OBSOLETE.Entitys;
 using SignalRSwaggerGen.Attributes;
 using SignalRSwaggerGen.Enums;
