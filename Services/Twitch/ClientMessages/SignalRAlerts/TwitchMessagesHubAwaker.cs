@@ -1,4 +1,6 @@
-﻿namespace MARS.Server.Services.Twitch.ClientMessages.SignalRAlerts;
+﻿using System.Text.RegularExpressions;
+
+namespace MARS.Server.Services.Twitch.ClientMessages.SignalRAlerts;
 
 public class TwitchMessagesHubAwaker(
     ITwitchClient client,
@@ -62,8 +64,8 @@ public class TwitchMessagesHubAwaker(
                     if (!string.IsNullOrWhiteSpace(info.TextInfo.TriggerWord))
                     {
                         var message = e.ChatMessage.Message.Trim();
-                        var words = info.TextInfo.TriggerWord?.Trim().SplitWithQuotes();
-                        if (words is null || words.Length == 0)
+                        var words = info.TextInfo.TriggerWord?.Trim().SplitWithQuotes().ToList();
+                        if (words is null || words.Count == 0)
                         {
                             continue;
                         }
@@ -74,6 +76,20 @@ public class TwitchMessagesHubAwaker(
                             StringSplitOptions.RemoveEmptyEntries
                         );
 
+                        var regexWords = new List<string>(words.Count);
+
+                        foreach (var word in words.ToList())
+                        {
+                            if (word.IsValidRegexString())
+                            {
+                                regexWords.Add(word);
+                            }
+                            else
+                            {
+                                words.Remove(word);
+                            }
+                        }
+
                         // Проверяем отдельные слова (обычный случай)
                         var singleWordMatch = chatMessageWords.Any(t =>
                             words.Any(r => r.Equals(t, StringComparison.OrdinalIgnoreCase))
@@ -81,7 +97,18 @@ public class TwitchMessagesHubAwaker(
 
                         if (singleWordMatch)
                         {
-                            listAlerts.Add((MediaInfo)info);
+                            listAlerts.Add(info);
+                        }
+
+                        foreach (var regexWord in regexWords)
+                        {
+                            if (
+                                Regex.IsMatch(message, regexWord)
+                                || chatMessageWords.Any(t => Regex.IsMatch(t, regexWord))
+                            )
+                            {
+                                listAlerts.Add(info);
+                            }
                         }
 
                         // Проверяем фразы (если есть триггеры с пробелами)
@@ -91,15 +118,12 @@ public class TwitchMessagesHubAwaker(
                             continue;
                         }
 
-                        // Собираем сообщение в одну строку для проверки фраз
-                        var fullMessage = string.Join(" ", chatMessageWords);
-
                         // Проверяем каждую фразу-триггер
                         foreach (var phrase in phraseTriggers)
                         {
-                            if (fullMessage.Contains(phrase, StringComparison.OrdinalIgnoreCase))
+                            if (message.Contains(phrase, StringComparison.OrdinalIgnoreCase))
                             {
-                                listAlerts.Add((MediaInfo)info);
+                                listAlerts.Add(info);
                             }
                         }
                     }

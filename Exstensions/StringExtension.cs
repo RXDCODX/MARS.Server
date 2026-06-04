@@ -4,16 +4,40 @@ namespace MARS.Server.Exstensions;
 
 public static class StringExtension
 {
-    extension(string? exst)
+    extension(string? text)
     {
+        public bool IsValidRegexString()
+        {
+            try
+            {
+                if (!string.IsNullOrWhiteSpace(text))
+                {
+                    var isMatch = Regex.IsMatch("", text);
+                    if (isMatch)
+                    {
+                        if (text == Regex.Escape(text))
+                        {
+                            return true;
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                // ignore
+            }
+
+            return false;
+        }
+
         public ValueTask<MediaType> GetFileMediaTypeAsync()
         {
-            return ValueTask.FromResult(exst.GetFileMediaType());
+            return ValueTask.FromResult(text.GetFileMediaType());
         }
 
         public MediaType GetFileMediaType()
         {
-            var exstension = exst?.ToLower();
+            var exstension = text?.ToLower();
 
             return exstension switch
             {
