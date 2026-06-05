@@ -1,10 +1,12 @@
-﻿namespace MARS.Server.Services.Twitch.BlackList;
+using MARS.Server.Services.Twitch;
+
+namespace MARS.Server.Services.Twitch.BlackList;
 
 public class TwitchBlackListService(
     IDbContextFactory<AppDbContext> factory,
     ILogger<TwitchBlackListService> logger,
     ITwitchAPI api,
-    TwitchUserEnsureService ensureService,
+    ITwitchUserEnsureService ensureService,
     IHostApplicationLifetime lifetime
 ) : BackgroundService
 {

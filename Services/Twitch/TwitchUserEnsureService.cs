@@ -1,4 +1,4 @@
-﻿using MARS.Server.Services.Twitch.TwitchFollowers;
+using MARS.Server.Services.Twitch.TwitchFollowers;
 using TwitchLib.Client.Models;
 
 namespace MARS.Server.Services.Twitch;
@@ -13,7 +13,7 @@ public class TwitchUserEnsureService(
     TokenService tokenService,
     ITwitchAPI api,
     ILogger<TwitchUserEnsureService> logger
-)
+) : ITwitchUserEnsureService
 {
     /// <summary>
     /// Гарантирует наличие пользователя в БД из ChatMessage.
