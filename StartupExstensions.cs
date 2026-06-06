@@ -343,11 +343,13 @@ public static class StartupEstensions
         // Регистрируем сервисы для работы с пользователями Twitch
         // Singleton безопасен, т.к. сервис использует IDbContextFactory и не хранит состояние
         services.AddSingleton<TwitchUserEnsureService>();
+        services.AddSingleton<ITwitchUserEnsureService>(sp => sp.GetRequiredService<TwitchUserEnsureService>());
 
         services.AddSingleton<RickRollerService>();
 
         services.AddSingleton<TwitchBlackListService>();
         services.AddHostedService(sp => sp.GetRequiredService<TwitchBlackListService>());
+
 
         return services;
     }
