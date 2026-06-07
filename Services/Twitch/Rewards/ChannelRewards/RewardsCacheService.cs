@@ -56,6 +56,7 @@ public class RewardsCacheService(
                     _cachedRewards.Count,
                     CacheTtlMinutes
                 );
+
                 _semaphore.Release();
 
                 return rewards;

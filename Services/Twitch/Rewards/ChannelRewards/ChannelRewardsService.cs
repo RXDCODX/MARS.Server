@@ -223,7 +223,10 @@ public class ChannelRewardsService : BackgroundService
     {
         var dict = _rewardsOptionsMonitor.CurrentValue?.EnabledByCost;
         if (dict == null)
+        {
             return null;
+        }
+
         return dict.TryGetValue(cost, out var val) ? val : null;
     }
 }

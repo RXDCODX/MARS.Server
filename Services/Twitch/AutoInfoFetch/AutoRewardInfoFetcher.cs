@@ -5,7 +5,8 @@ namespace MARS.Server.Services.Twitch.AutoInfoFetch;
 public class AutoRewardInfoFetcher(
     ITwitchAPI api,
     IDbContextFactory<AppDbContext> factory,
-    TokenService tokenService
+    TokenService tokenService,
+    ILogger<AutoRewardInfoFetcher> logger
 ) : BackgroundService
 {
     private Timer? _timer;
@@ -19,22 +20,26 @@ public class AutoRewardInfoFetcher(
         {
             await FetchRewardInfoAsync();
 
-            // Настройка таймера на 30 минут
-            _timer = new Timer(TimeSpan.FromMinutes(30).TotalMilliseconds);
+            // Настройка таймера на 10 минут
+            _timer = new Timer(TimeSpan.FromMinutes(10));
             _timer.Elapsed += OnTimerElapsed;
             _timer.AutoReset = true;
             _timer.Start();
         }
-
-        // Ожидание отмены
-        await Task.CompletedTask;
     }
 
     private async void OnTimerElapsed(object? sender, ElapsedEventArgs e)
     {
-        if (!_stoppingToken.IsCancellationRequested)
+        try
         {
-            await FetchRewardInfoAsync();
+            if (!_stoppingToken.IsCancellationRequested)
+            {
+                await FetchRewardInfoAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogException(ex);
         }
     }
 
@@ -44,17 +49,6 @@ public class AutoRewardInfoFetcher(
         {
             await using var dbcontext = await factory.CreateDbContextAsync(_stoppingToken);
 
-            var emptyAlerts = dbcontext
-                .Alerts.AsNoTracking()
-                .AsEnumerable()
-                .Where(e =>
-                {
-                    var guid = e.MetaInfo.TwitchGuid;
-
-                    return !guid.HasValue || guid == Guid.Empty || e.MetaInfo.TwitchPointsCost <= 0;
-                })
-                .ToList();
-
             var twitchAlerts = await api.Helix.ChannelPoints.GetCustomRewardAsync(
                 TwitchExstension.ChannelId,
                 null,
@@ -62,7 +56,9 @@ public class AutoRewardInfoFetcher(
                 tokenService.Token?.AccessToken
             );
 
-            foreach (var info in emptyAlerts)
+            await foreach (
+                var info in dbcontext.Alerts.AsAsyncEnumerable().WithCancellation(_stoppingToken)
+            )
             {
                 var firstAlert = twitchAlerts.Data.FirstOrDefault(e =>
                     e.Cost == info.MetaInfo.TwitchPointsCost
@@ -77,9 +73,9 @@ public class AutoRewardInfoFetcher(
 
             await dbcontext.SaveChangesAsync(_stoppingToken);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            // Игнорируем ошибки при отмене или других проблемах
+            logger.LogException(ex);
         }
     }
 
