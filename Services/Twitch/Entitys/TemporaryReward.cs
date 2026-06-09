@@ -48,13 +48,10 @@ public abstract class TemporaryReward(
         );
         _timer = new PeriodicTimer(TimeSpan.FromMinutes(5));
 
-        if (!environment.IsEnvironment("arara"))
-        {
-            var custom = IsRewardEnabled();
-            var effective = ComputeEffectiveEnabled(custom);
-            await EnsureRewardStateAsync(effective);
-            _runningTask = RunTimerLoopAsync(_cancellationTokenSource.Token);
-        }
+        var custom = IsRewardEnabled();
+        var effective = ComputeEffectiveEnabled(custom);
+        await EnsureRewardStateAsync(effective);
+        _runningTask = RunTimerLoopAsync(_cancellationTokenSource.Token);
     }
 
     public virtual async Task StopAsync(CancellationToken cancelToken)
