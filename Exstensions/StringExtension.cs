@@ -1,4 +1,4 @@
-﻿using System.Text.RegularExpressions;
+using System.Text.RegularExpressions;
 
 namespace MARS.Server.Exstensions;
 
@@ -131,6 +131,12 @@ public static class StringExtension
                 }
 
                 sb.Append(c);
+            }
+
+            // Добавляем последнее слово, если оно есть
+            if (sb.Length > 0 && !isQuoted)
+            {
+                list.Add(sb.ToString());
             }
 
             return isQuoted ? throw new Exception("ты насрал в ковычках") : [.. list];

@@ -26,7 +26,6 @@ using MARS.Server.Services.Twitch.BlackList;
 using MARS.Server.Services.Twitch.Client;
 using MARS.Server.Services.Twitch.ClientMessages.AutoMessages;
 using MARS.Server.Services.Twitch.ClientMessages.AutoMessages.Extensions;
-using MARS.Server.Services.Twitch.ClientMessages.SignalRAlerts;
 using MARS.Server.Services.Twitch.ClientMessages.TwitchAutoHello;
 using MARS.Server.Services.Twitch.HelloVideos;
 using MARS.Server.Services.Twitch.Media;
@@ -330,7 +329,6 @@ public static class StartupEstensions
         services.AddHostedService(sp => sp.GetRequiredService<TwitchMikuBeamRewardService>());
 
         services.AddHostedService<LegBumRefundService>();
-
         services.AddSingleton<ServiceManager>();
         services.AddSingleton<IServiceManager>(sp => sp.GetRequiredService<ServiceManager>());
 
@@ -343,13 +341,14 @@ public static class StartupEstensions
         // Регистрируем сервисы для работы с пользователями Twitch
         // Singleton безопасен, т.к. сервис использует IDbContextFactory и не хранит состояние
         services.AddSingleton<TwitchUserEnsureService>();
-        services.AddSingleton<ITwitchUserEnsureService>(sp => sp.GetRequiredService<TwitchUserEnsureService>());
+        services.AddSingleton<ITwitchUserEnsureService>(sp =>
+            sp.GetRequiredService<TwitchUserEnsureService>()
+        );
 
         services.AddSingleton<RickRollerService>();
 
         services.AddSingleton<TwitchBlackListService>();
         services.AddHostedService(sp => sp.GetRequiredService<TwitchBlackListService>());
-
 
         return services;
     }
@@ -546,7 +545,9 @@ public static class StartupEstensions
         internal IServiceCollection AddSyntheziaServices()
         {
             services.AddSingleton<TtsHubBroadcaster>();
-            services.AddSingleton<ITtsHubBroadcaster>(sp => sp.GetRequiredService<TtsHubBroadcaster>());
+            services.AddSingleton<ITtsHubBroadcaster>(sp =>
+                sp.GetRequiredService<TtsHubBroadcaster>()
+            );
             services.AddHostedService(sp => sp.GetRequiredService<TtsHubBroadcaster>());
             return services;
         }
@@ -568,8 +569,7 @@ public static class StartupEstensions
         /// <summary>
         /// Добавляет все Twitch-связанная сервисы
         /// </summary>
-        internal IServiceCollection AddTwitchServices(IConfigurationManager configuration
-        )
+        internal IServiceCollection AddTwitchServices(IConfigurationManager configuration)
         {
             services.AddTwitchEvents(configuration).AddTwitchStreamManagementServiceOnly();
 
@@ -583,7 +583,6 @@ public static class StartupEstensions
         {
             services
                 //.AddHonkaiServices()
-
 
                 .AddWaifuRollServices()
                 .AddRandomMemServices()
