@@ -1,6 +1,6 @@
-﻿using System.Text.RegularExpressions;
+using System.Text.RegularExpressions;
 
-namespace MARS.Server.Services.Twitch.ClientMessages.SignalRAlerts;
+namespace MARS.Server.Services.Twitch.Rewards;
 
 public class TwitchMessagesHubAwaker(
     ITwitchClient client,
@@ -97,11 +97,32 @@ public class TwitchMessagesHubAwaker(
                             listAlerts.Add(info);
                         }
 
-                        foreach (var regexWord in regexWords)
+                        foreach (var tempRegexWord in regexWords)
                         {
+                            var regexWord = tempRegexWord;
+
+                            if (!regexWord.StartsWith("\b") && !regexWord.EndsWith("\b"))
+                            {
+                                regexWord = "\b" + regexWord + "\b";
+                            }
+
                             if (
-                                Regex.IsMatch(message, regexWord)
-                                || chatMessageWords.Any(t => Regex.IsMatch(t, regexWord))
+                                Regex.IsMatch(
+                                    message,
+                                    regexWord,
+                                    RegexOptions.IgnoreCase
+                                        | RegexOptions.Singleline
+                                        | RegexOptions.NonBacktracking
+                                )
+                                || chatMessageWords.Any(t =>
+                                    Regex.IsMatch(
+                                        t,
+                                        regexWord,
+                                        RegexOptions.IgnoreCase
+                                            | RegexOptions.Singleline
+                                            | RegexOptions.NonBacktracking
+                                    )
+                                )
                             )
                             {
                                 listAlerts.Add(info);
