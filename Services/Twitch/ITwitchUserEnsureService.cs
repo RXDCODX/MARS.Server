@@ -1,4 +1,3 @@
-using MARS.Server.Services.Twitch.TwitchFollowers;
 using TwitchLib.Client.Models;
 
 namespace MARS.Server.Services.Twitch;
@@ -14,7 +13,10 @@ public interface ITwitchUserEnsureService
     /// <param name="chatMessage">Сообщение из чата с информацией о пользователе</param>
     /// <param name="cancellationToken">Токен отмены</param>
     /// <returns>TwitchUser из БД</returns>
-    Task<TwitchUser> EnsureUserExistsAsync(ChatMessage chatMessage, CancellationToken cancellationToken = default);
+    Task<TwitchUser> EnsureUserExistsAsync(
+        ChatMessage chatMessage,
+        CancellationToken cancellationToken = default
+    );
 
     /// <summary>
     /// Гарантирует наличие пользователя в БД из OnMessageReceivedArgs.
@@ -22,7 +24,10 @@ public interface ITwitchUserEnsureService
     /// <param name="args">Аргументы сообщения из чата</param>
     /// <param name="cancellationToken">Токен отмены</param>
     /// <returns>TwitchUser из БД</returns>
-    Task<TwitchUser> EnsureUserExistsAsync(OnMessageReceivedArgs args, CancellationToken cancellationToken = default);
+    Task<TwitchUser> EnsureUserExistsAsync(
+        OnMessageReceivedArgs args,
+        CancellationToken cancellationToken = default
+    );
 
     /// <summary>
     /// Гарантирует наличие пользователя в БД из ChannelPointsCustomRewardRedemptionArgs.
@@ -30,7 +35,10 @@ public interface ITwitchUserEnsureService
     /// <param name="args">Аргументы события использования награды за баллы канала</param>
     /// <param name="cancellationToken">Токен отмены</param>
     /// <returns>TwitchUser из БД</returns>
-    Task<TwitchUser> EnsureUserExistsAsync(ChannelPointsCustomRewardRedemptionArgs args, CancellationToken cancellationToken = default);
+    Task<TwitchUser> EnsureUserExistsAsync(
+        ChannelPointsCustomRewardRedemptionArgs args,
+        CancellationToken cancellationToken = default
+    );
 
     /// <summary>
     /// Гарантирует наличие пользователя в БД по TwitchId.
@@ -39,7 +47,10 @@ public interface ITwitchUserEnsureService
     /// <param name="twitchId">ID пользователя Twitch</param>
     /// <param name="cancellationToken">Токен отмены</param>
     /// <returns>TwitchUser из БД</returns>
-    Task<TwitchUser> EnsureUserExistsAsync(string twitchId, CancellationToken cancellationToken = default);
+    Task<TwitchUser> EnsureUserExistsAsync(
+        string twitchId,
+        CancellationToken cancellationToken = default
+    );
 
     /// <summary>
     /// Гарантирует наличие пользователя в БД из готовой сущности TwitchUser.
@@ -48,5 +59,8 @@ public interface ITwitchUserEnsureService
     /// <param name="twitchUser">Готовая сущность TwitchUser</param>
     /// <param name="cancellationToken">Токен отмены</param>
     /// <returns>TwitchUser из БД</returns>
-    Task<TwitchUser> EnsureUserExistsAsync(TwitchUser? twitchUser, CancellationToken cancellationToken = default);
+    Task<TwitchUser> EnsureUserExistsAsync(
+        TwitchUser? twitchUser,
+        CancellationToken cancellationToken = default
+    );
 }

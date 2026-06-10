@@ -1,4 +1,4 @@
-﻿namespace MARS.Server.Services.Twitch.Rewards;
+namespace MARS.Server.Services.Twitch.Rewards;
 
 public class RickRollerService(
     IHubContext<TelegramusHub, ITelegramusHub> hubContext,
@@ -6,6 +6,8 @@ public class RickRollerService(
     TwitchUserEnsureService userEnsureService
 )
 {
+    // ----- Dependencies -----------------------------------------------------
+
     private readonly Random _rnd = new();
 
     private readonly MediaInfo _baseMediaDto = new()
@@ -44,8 +46,45 @@ public class RickRollerService(
     {
         get
         {
-            var confValue = configuration["AppSettings:RickRoll:Chance"];
-            return double.TryParse(confValue, out var value) ? value : 0.03;
+            // Retrieve the configured chance value. Use invariant culture to ensure the
+            // decimal separator is interpreted correctly regardless of the system locale
+            // (the original implementation relied on the current culture, causing parsing
+            // failures on machines with a comma decimal separator, e.g., Russian locale).
+            var confValueRaw = configuration["AppSettings:RickRoll:Chance"];
+            var confValue = confValueRaw?.Trim();
+            if (!string.IsNullOrWhiteSpace(confValue))
+            {
+                // Attempt to parse using invariant culture (dot as decimal separator).
+                // This covers the expected configuration format.
+                if (
+                    double.TryParse(
+                        confValue,
+                        System.Globalization.NumberStyles.Float
+                            | System.Globalization.NumberStyles.AllowThousands,
+                        System.Globalization.CultureInfo.InvariantCulture,
+                        out var value
+                    )
+                )
+                {
+                    return value;
+                }
+                // As a fallback, replace a possible comma with a dot and try again.
+                var replaced = confValue.Replace(',', '.');
+                if (
+                    double.TryParse(
+                        replaced,
+                        System.Globalization.NumberStyles.Float
+                            | System.Globalization.NumberStyles.AllowThousands,
+                        System.Globalization.CultureInfo.InvariantCulture,
+                        out value
+                    )
+                )
+                {
+                    return value;
+                }
+            }
+            // Default chance when the configuration is missing or cannot be parsed.
+            return 0.03;
         }
     }
 

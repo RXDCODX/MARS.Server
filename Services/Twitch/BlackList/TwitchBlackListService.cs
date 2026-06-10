@@ -1,5 +1,3 @@
-using MARS.Server.Services.Twitch;
-
 namespace MARS.Server.Services.Twitch.BlackList;
 
 public class TwitchBlackListService(

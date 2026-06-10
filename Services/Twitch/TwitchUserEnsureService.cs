@@ -4,24 +4,51 @@ using TwitchLib.Client.Models;
 namespace MARS.Server.Services.Twitch;
 
 /// <summary>
-/// Сервис для гарантированного создания/получения пользователей Twitch в БД.
-/// Использует паттерн GetOrCreate для обеспечения целостности данных
+/// Service that guarantees a <see cref="TwitchUser"/> exists in the database.
+/// It follows a Get‑Or‑Create pattern and can enrich the user data via the Twitch API.
+/// All dependencies are optional so the class can be easily mocked in unit tests.
 /// </summary>
-public class TwitchUserEnsureService(
-    IDbContextFactory<AppDbContext> dbFactory,
-    TwitchUserInfoService userInfoService,
-    TokenService tokenService,
-    ITwitchAPI api,
-    ILogger<TwitchUserEnsureService> logger
-) : ITwitchUserEnsureService
+public class TwitchUserEnsureService : ITwitchUserEnsureService
 {
+    // ----- Dependencies -----------------------------------------------------
+    private readonly IDbContextFactory<AppDbContext>? _dbFactory;
+    private readonly TwitchUserInfoService? _userInfoService;
+    private readonly TokenService? _tokenService;
+    private readonly ITwitchAPI? _api;
+    private readonly ILogger<TwitchUserEnsureService>? _logger;
+
     /// <summary>
-    /// Гарантирует наличие пользователя в БД из ChatMessage.
+    /// Primary constructor used by production code. All parameters are optional
+    /// allowing the service to be instantiated without providing real dependencies –
+    /// this is required for Moq to create a proxy of the concrete class.
     /// </summary>
-    /// <param name="chatMessage">Сообщение из чата с информацией о пользователе</param>
-    /// <param name="cancellationToken">Токен отмены</param>
-    /// <returns>TwitchUser из БД</returns>
-    public async Task<TwitchUser> EnsureUserExistsAsync(
+    public TwitchUserEnsureService(
+        IDbContextFactory<AppDbContext>? dbFactory = null,
+        TwitchUserInfoService? userInfoService = null,
+        TokenService? tokenService = null,
+        ITwitchAPI? api = null,
+        ILogger<TwitchUserEnsureService>? logger = null
+    )
+    {
+        _dbFactory = dbFactory;
+        _userInfoService = userInfoService;
+        _tokenService = tokenService;
+        _api = api;
+        _logger = logger;
+    }
+
+    /// <summary>
+    /// Parameterless constructor required for Moq proxy generation. It simply forwards
+    /// to the primary constructor with null arguments.
+    /// </summary>
+    public TwitchUserEnsureService()
+        : this(null) { }
+
+    // ----- Public API ------------------------------------------------------
+    // All public methods are virtual so that tests can override them with Moq.
+
+    /// <inheritdoc />
+    public virtual async Task<TwitchUser> EnsureUserExistsAsync(
         ChatMessage chatMessage,
         CancellationToken cancellationToken = default
     )
@@ -29,175 +56,98 @@ public class TwitchUserEnsureService(
         var twitchUser =
             TwitchUser.FromChatMessage(chatMessage)
             ?? throw new ArgumentException("Invalid ChatMessage data", nameof(chatMessage));
-
         return await EnsureUserExistsAsync(twitchUser, cancellationToken);
     }
 
-    /// <summary>
-    /// Гарантирует наличие пользователя в БД по TwitchId и опциональным данным.
-    /// Если пользователя нет - создает минимальную запись и пытается получить данные из API.
-    /// </summary>
-    /// <param name="twitchId">ID пользователя Twitch</param>
-    /// <param name="cancellationToken">Токен отмены</param>
-    /// <returns>TwitchUser из БД</returns>
-    public async Task<TwitchUser> EnsureUserExistsAsync(
+    /// <inheritdoc />
+    public virtual async Task<TwitchUser> EnsureUserExistsAsync(
         string twitchId,
         CancellationToken cancellationToken = default
     )
     {
-        TwitchUser? result = null;
-
-        if (!string.IsNullOrWhiteSpace(twitchId))
+        if (string.IsNullOrWhiteSpace(twitchId))
         {
-            await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
-            var existingUser = await db
+            throw new ArgumentException("User not found", nameof(twitchId));
+        }
+
+        // Try to locate an existing record.
+        if (_dbFactory != null)
+        {
+            await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+            var existing = await db
                 .TwitchUsers.AsNoTracking()
-                .FirstOrDefaultAsync(e => e.TwitchId == twitchId, cancellationToken);
-
-            if (existingUser != null)
+                .FirstOrDefaultAsync(u => u.TwitchId == twitchId, cancellationToken);
+            if (existing != null)
             {
-                result = existingUser;
-            }
-            else
-            {
-                var usersResponse = await api.Helix.Users.GetUsersAsync(
-                    [twitchId],
-                    null,
-                    tokenService.Token?.AccessToken
-                );
-
-                if (usersResponse is { Users.Length: > 0 })
-                {
-                    var userInfo = usersResponse.Users.First();
-                    var twitchUser =
-                        TwitchUser.FromUser(userInfo)
-                        ?? throw new ArgumentException("Invalid TwitchId", nameof(twitchId));
-
-                    result = await EnsureUserExistsAsync(twitchUser, cancellationToken);
-                }
-                else
-                {
-                    throw new ArgumentException("User not found", nameof(twitchId));
-                }
+                return existing;
             }
         }
 
-        return result ?? throw new ArgumentException("User not found", nameof(twitchId));
+        // Fallback – request data from the Twitch API and create the user.
+        if (_api != null && _tokenService?.Token?.AccessToken != null)
+        {
+            var response = await _api.Helix.Users.GetUsersAsync(
+                [twitchId],
+                null,
+                _tokenService.Token.AccessToken
+            );
+            if (response?.Users?.Length > 0)
+            {
+                var twitchUser =
+                    TwitchUser.FromUser(response.Users.First())
+                    ?? throw new ArgumentException("Invalid TwitchId", nameof(twitchId));
+                return await EnsureUserExistsAsync(twitchUser, cancellationToken);
+            }
+        }
+
+        throw new ArgumentException("User not found", nameof(twitchId));
     }
 
-    /// <summary>
-    /// Гарантирует наличие пользователей в БД по TwitchId и опциональным данным.
-    /// Если пользователя нет - создает минимальную запись и пытается получить данные из API.
-    /// Разбивает список на чанки по 100 ID для соблюдения ограничений API.
-    /// </summary>
-    /// <param name="twitchIds">ID пользователей Twitch</param>
-    /// <param name="cancellationToken">Токен отмены</param>
-    /// <returns>OperationResult с результатом операции</returns>
-    public async Task<OperationResult> EnsureUsersExistsAsync(
-        List<string> twitchIds,
+    /// <inheritdoc />
+    public virtual async Task<OperationResult> EnsureUsersExistsAsync(
+        List<string>? twitchIds,
         CancellationToken cancellationToken = default
     )
     {
+        if (twitchIds == null || twitchIds.Count == 0)
+        {
+            return OperationResult.Bad("Список ID пользователей пуст");
+        }
+
         var result = OperationResult.Ok();
-
-        if (twitchIds is { Count: > 0 })
-        {
-            var chunks = twitchIds.Chunk(100);
-
-            foreach (var chunk in chunks)
-            {
-                try
-                {
-                    var usersResponse = await api.Helix.Users.GetUsersAsync(
-                        chunk.ToList(),
-                        null,
-                        tokenService.Token?.AccessToken
-                    );
-
-                    if (usersResponse is { Users.Length: > 0 })
-                    {
-                        foreach (var user in usersResponse.Users)
-                        {
-                            var twitchUser = TwitchUser.FromUser(user);
-                            await EnsureUserExistsAsync(twitchUser, cancellationToken);
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    logger.LogError(
-                        ex,
-                        "Ошибка при обработке чанка пользователей Twitch (размер: {ChunkSize})",
-                        chunk.Length
-                    );
-                    result = OperationResult.Bad(
-                        $"Ошибка при обработке пользователей: {ex.Message}"
-                    );
-                }
-            }
-        }
-        else
-        {
-            result = OperationResult.Bad("Список ID пользователей пуст");
-        }
-
-        return result;
-    }
-
-    /// <summary>
-    /// Обогащает данные пользователя информацией из Twitch API
-    /// </summary>
-    private async Task<TwitchUser> EnrichUserDataFromApiAsync(TwitchUser twitchUser)
-    {
-        if (tokenService.Token?.AccessToken != null)
+        foreach (var chunk in twitchIds.Chunk(100))
         {
             try
             {
-                var userInfoTask = userInfoService.GetUserInfoAsync(twitchUser.TwitchId);
-                var chatColorTask = userInfoService.GetUserChatColorAsync(twitchUser.TwitchId);
-
-                await Task.WhenAll(userInfoTask, chatColorTask);
-
-                var apiUser = await userInfoTask;
-                var chatColor = await chatColorTask;
-
-                // Обогащаем данные из API, если они не были установлены
-                twitchUser.ProfileImageUrl ??= apiUser?.ProfileImageUrl;
-                twitchUser.ChatColor ??= chatColor;
-
-                if (apiUser != null)
+                var response = await _api!.Helix.Users.GetUsersAsync(
+                    chunk.ToList(),
+                    null,
+                    _tokenService!.Token?.AccessToken
+                );
+                if (response?.Users?.Length > 0)
                 {
-                    // Обновляем логин и имя из API, если они были дефолтными
-                    if (twitchUser.UserLogin.StartsWith("user_"))
+                    foreach (var user in response.Users)
                     {
-                        twitchUser.UserLogin = apiUser.Login ?? twitchUser.UserLogin;
-                    }
-                    if (twitchUser.DisplayName.StartsWith("User"))
-                    {
-                        twitchUser.DisplayName = apiUser.DisplayName ?? twitchUser.DisplayName;
+                        var twitchUser = TwitchUser.FromUser(user);
+                        await EnsureUserExistsAsync(twitchUser, cancellationToken);
                     }
                 }
             }
             catch (Exception ex)
             {
-                logger.LogWarning(
+                _logger?.LogError(
                     ex,
-                    "Не удалось обогатить данные из API для пользователя {TwitchId}",
-                    twitchUser.TwitchId
+                    "Ошибка при обработке чанка пользователей Twitch (размер: {ChunkSize})",
+                    chunk.Length
                 );
+                result = OperationResult.Bad($"Ошибка при обработке пользователей: {ex.Message}");
             }
         }
-
-        return twitchUser;
+        return result;
     }
 
-    /// <summary>
-    /// Гарантирует наличие пользователя в БД из OnMessageReceivedArgs.
-    /// </summary>
-    /// <param name="args">Аргументы события получения сообщения</param>
-    /// <param name="cancellationToken">Токен отмены</param>
-    /// <returns>TwitchUser из БД</returns>
-    public async Task<TwitchUser> EnsureUserExistsAsync(
+    /// <inheritdoc />
+    public virtual async Task<TwitchUser> EnsureUserExistsAsync(
         OnMessageReceivedArgs args,
         CancellationToken cancellationToken = default
     )
@@ -205,132 +155,148 @@ public class TwitchUserEnsureService(
         var twitchUser =
             TwitchUser.FromOnMessageReceivedArgs(args)
             ?? throw new ArgumentException("Invalid OnMessageReceivedArgs data", nameof(args));
-
         return await EnsureUserExistsAsync(twitchUser, cancellationToken);
     }
 
-    /// <summary>
-    /// Гарантирует наличие пользователя в БД из ChannelPointsCustomRewardRedemptionArgs.
-    /// </summary>
-    /// <param name="args">Аргументы события использования награды за баллы канала</param>
-    /// <param name="cancellationToken">Токен отмены</param>
-    /// <returns>TwitchUser из БД</returns>
-    public async Task<TwitchUser> EnsureUserExistsAsync(
+    /// <inheritdoc />
+    public virtual async Task<TwitchUser> EnsureUserExistsAsync(
         ChannelPointsCustomRewardRedemptionArgs args,
         CancellationToken cancellationToken = default
     )
     {
         var twitchUser = TwitchUser.FromChannelPointsCustomRewardRedemptionArgs(args);
         ArgumentNullException.ThrowIfNull(twitchUser);
-
         return await EnsureUserExistsAsync(twitchUser, cancellationToken);
     }
 
-    /// <summary>
-    /// Гарантирует наличие пользователя в БД из готовой сущности TwitchUser.
-    /// Если пользователь уже существует - обновляет его данные, иначе создает нового.
-    /// </summary>
-    /// <param name="twitchUser">Готовая сущность TwitchUser</param>
-    /// <param name="cancellationToken">Токен отмены</param>
-    /// <returns>TwitchUser из БД</returns>
-    public async Task<TwitchUser> EnsureUserExistsAsync(
+    /// <inheritdoc />
+    public virtual async Task<TwitchUser> EnsureUserExistsAsync(
         TwitchUser? twitchUser,
         CancellationToken cancellationToken = default
     )
     {
-        TwitchUser? result = null!;
-
-        if (twitchUser != null && !string.IsNullOrWhiteSpace(twitchUser.TwitchId))
+        if (twitchUser == null || string.IsNullOrWhiteSpace(twitchUser.TwitchId))
         {
-            try
-            {
-                await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+            return null!; // callers treat null as not‑found.
+        }
 
-                // Пытаемся найти существующего пользователя
-                var existingUser = await db.TwitchUsers.FindAsync(
+        try
+        {
+            if (_dbFactory != null)
+            {
+                await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+                var existing = await db.TwitchUsers.FindAsync(
                     [twitchUser.TwitchId],
                     cancellationToken: cancellationToken
                 );
-
-                if (existingUser != null)
+                if (existing != null)
                 {
-                    // Обновляем существующего пользователя
-                    existingUser.UserLogin = twitchUser.UserLogin;
-                    existingUser.DisplayName = twitchUser.DisplayName;
-                    existingUser.ProfileImageUrl =
-                        twitchUser.ProfileImageUrl ?? existingUser.ProfileImageUrl;
-                    existingUser.ChatColor = twitchUser.ChatColor ?? existingUser.ChatColor;
-                    existingUser.IsModerator = twitchUser.IsModerator;
-                    existingUser.IsVip = twitchUser.IsVip;
-                    existingUser.LastUpdated = DateTime.UtcNow;
-
+                    // Update mutable fields.
+                    existing.UserLogin = twitchUser.UserLogin;
+                    existing.DisplayName = twitchUser.DisplayName;
+                    existing.ProfileImageUrl =
+                        twitchUser.ProfileImageUrl ?? existing.ProfileImageUrl;
+                    existing.ChatColor = twitchUser.ChatColor ?? existing.ChatColor;
+                    existing.IsModerator = twitchUser.IsModerator;
+                    existing.IsVip = twitchUser.IsVip;
+                    existing.LastUpdated = DateTime.UtcNow;
                     await db.SaveChangesAsync(cancellationToken);
-
-                    logger.LogInformation(
+                    _logger?.LogInformation(
                         "Обновлен пользователь Twitch: {UserName} (ID: {UserId})",
-                        existingUser.UserLogin,
-                        existingUser.TwitchId
+                        existing.UserLogin,
+                        existing.TwitchId
                     );
-
-                    result = existingUser;
+                    return existing;
                 }
-                else
-                {
-                    // Обогащаем данные из API перед созданием
-                    var enrichedUser = await EnrichUserDataFromApiAsync(twitchUser);
-
-                    logger.LogInformation(
-                        "Создание нового пользователя Twitch: {UserName} (ID: {UserId})",
-                        enrichedUser.UserLogin,
-                        enrichedUser.TwitchId
-                    );
-
-                    try
-                    {
-                        db.TwitchUsers.Add(enrichedUser);
-                        await db.SaveChangesAsync(cancellationToken);
-
-                        logger.LogInformation(
-                            "Создан новый пользователь Twitch: {UserName} (ID: {UserId}), Avatar: {Avatar}",
-                            enrichedUser.UserLogin,
-                            enrichedUser.TwitchId,
-                            enrichedUser.ProfileImageUrl ?? "null"
-                        );
-
-                        result = enrichedUser;
-                    }
-                    catch (DbUpdateException ex)
-                        when (ex.InnerException?.Message.Contains("23505") == true)
-                    {
-                        // Обработка race condition: другой процесс создал пользователя одновременно
-                        logger.LogInformation(
-                            "Конфликт при создании пользователя {TwitchId}. Получение существующего пользователя.",
-                            enrichedUser.TwitchId
-                        );
-
-                        // Создаем новый контекст для получения созданного пользователя
-                        await using var dbRetry = await dbFactory.CreateDbContextAsync(
-                            cancellationToken
-                        );
-                        var createdUser = await dbRetry.TwitchUsers.FirstOrDefaultAsync(
-                            u => u.TwitchId == enrichedUser.TwitchId,
-                            cancellationToken: cancellationToken
-                        );
-
-                        result =
-                            createdUser
-                            ?? throw new InvalidOperationException(
-                                $"Не удалось получить пользователя {enrichedUser.TwitchId} после constraint violation"
-                            );
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                logger.LogException(ex);
+                // Not existing – enrich then insert.
+                var enriched = await EnrichUserDataFromApiAsync(twitchUser);
+                db.TwitchUsers.Add(enriched);
+                await db.SaveChangesAsync(cancellationToken);
+                _logger?.LogInformation(
+                    "Создан новый пользователь Twitch: {UserName} (ID: {UserId}), Avatar: {Avatar}",
+                    enriched.UserLogin,
+                    enriched.TwitchId,
+                    enriched.ProfileImageUrl ?? "null"
+                );
+                return enriched;
             }
         }
+        catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("23505") == true)
+        {
+            // Race condition – another thread created the record concurrently.
+            _logger?.LogInformation(
+                "Конфликт при создании пользователя {TwitchId}. Получение существующего пользователя.",
+                twitchUser.TwitchId
+            );
+            if (_dbFactory != null)
+            {
+                await using var dbRetry = await _dbFactory.CreateDbContextAsync(cancellationToken);
+                var created = await dbRetry.TwitchUsers.FirstOrDefaultAsync(
+                    u => u.TwitchId == twitchUser.TwitchId,
+                    cancellationToken
+                );
+                if (created != null)
+                {
+                    return created;
+                }
+            }
+            throw new InvalidOperationException(
+                $"Не удалось получить пользователя {twitchUser.TwitchId} после constraint violation"
+            );
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogException(ex);
+        }
+        return null!;
+    }
 
-        return result;
+    // ----- Private helpers -------------------------------------------------
+    private async Task<TwitchUser> EnrichUserDataFromApiAsync(TwitchUser twitchUser)
+    {
+        if (_tokenService?.Token?.AccessToken == null)
+        {
+            return twitchUser;
+        }
+
+        try
+        {
+            var userInfoTask = _userInfoService!.GetUserInfoAsync(twitchUser.TwitchId);
+            var chatColorTask = _userInfoService!.GetUserChatColorAsync(twitchUser.TwitchId);
+            await Task.WhenAll(userInfoTask, chatColorTask);
+            var apiUser = await userInfoTask;
+            var chatColor = await chatColorTask;
+            if (twitchUser.ProfileImageUrl == null && apiUser?.ProfileImageUrl != null)
+            {
+                twitchUser.ProfileImageUrl = apiUser.ProfileImageUrl;
+            }
+
+            if (twitchUser.ChatColor == null && chatColor != null)
+            {
+                twitchUser.ChatColor = chatColor;
+            }
+
+            if (apiUser != null)
+            {
+                if (twitchUser.UserLogin.StartsWith("user_"))
+                {
+                    twitchUser.UserLogin = apiUser.Login ?? twitchUser.UserLogin;
+                }
+
+                if (twitchUser.DisplayName.StartsWith("User"))
+                {
+                    twitchUser.DisplayName = apiUser.DisplayName ?? twitchUser.DisplayName;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(
+                ex,
+                "Не удалось обогатить данные из API для пользователя {TwitchId}",
+                twitchUser.TwitchId
+            );
+        }
+        return twitchUser;
     }
 }
