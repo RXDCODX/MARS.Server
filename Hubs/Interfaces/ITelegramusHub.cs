@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using MARS.Server.Hubs.Models.AudioQuiz;
 using MARS.Server.Services.AutoArts_OBSOLETE.Entitys;
 using MARS.Server.Services.PyroAlerts.Entitys;
+using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.WaifuRoll.Entitys;
 using SignalRSwaggerGen.Attributes;
 using SignalRSwaggerGen.Enums;
@@ -93,7 +94,7 @@ public interface ITelegramusHub
     public Task AudioQuizStop();
 
     [SignalRMethod]
-    public Task FumoRoll(Fumo fumo, string displayName, string? color = null);
+    public Task FumoRoll(Fumo fumo, TwitchUser twitchUser, string? color = null);
 
     [SignalRMethod]
     public Task UpdateFumoPrizes(ICollection<FumoPrizeType> prizes);

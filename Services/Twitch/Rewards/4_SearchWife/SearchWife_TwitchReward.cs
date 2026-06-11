@@ -24,8 +24,10 @@ public class SearchWife_TwitchReward(
         "💰 Цена - 50 кредитов. Узнать кредиты - !rank/!myrank.";
     public override Color Color { get; set; } = Color.FromArgb(24, 0, 255);
     public override int Cost { get; init; } = 4;
-    public override Func<bool> IsRewardEnabled { get; set; } =
-        () => DateTime.Now.DayOfWeek != DayOfWeek.Friday;
+
+    //public override Func<bool> IsRewardEnabled { get; set; } =
+    //    () => DateTime.Now.DayOfWeek != DayOfWeek.Friday;
+    public override Func<bool> IsRewardEnabled { get; set; } = () => false;
 
     public override async Task StartAsync(CancellationToken cancellationToken)
     {
@@ -71,9 +73,9 @@ public class SearchWife_TwitchReward(
                                 // Убеждаемся, что поля аниме и манги заполнены
                                 waifu = await waifuDbHelper.EnsureMangaAndAnimeTitleExists(waifu);
 
-                                var color = await api.Helix.Chat.GetUserChatColorAsync(
-                                    [twEvent.UserId]
-                                );
+                                var color = await api.Helix.Chat.GetUserChatColorAsync([
+                                    twEvent.UserId,
+                                ]);
                                 await using AppDbContext dbContext2 =
                                     await factory.CreateDbContextAsync();
 

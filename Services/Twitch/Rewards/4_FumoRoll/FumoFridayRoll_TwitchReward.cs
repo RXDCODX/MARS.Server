@@ -25,7 +25,8 @@ public class FumoFridayRoll_TwitchReward(
     EventSubWebsocketClient wsClient,
     FumoRollService fumoRollService,
     ITwitchAPI api,
-    ITwitchClient client
+    ITwitchClient client,
+    TwitchUserEnsureService ensureService
 ) : TemporaryReward(channelRewardsService, logger, environment)
 {
     public override string AlertDisplayName { get; set; } = "🧸 Fumo Roulette";
@@ -37,8 +38,10 @@ public class FumoFridayRoll_TwitchReward(
 
     public override int Cost { get; init; } = 4;
 
-    public override Func<bool> IsRewardEnabled { get; set; } =
-        () => DateTime.Now.DayOfWeek == DayOfWeek.Friday;
+    //public override Func<bool> IsRewardEnabled { get; set; } =
+    //    () => DateTime.Now.DayOfWeek == DayOfWeek.Friday;
+
+    public override Func<bool> IsRewardEnabled { get; set; } = () => true;
 
     public override async Task StartAsync(CancellationToken cancellationToken)
     {
@@ -74,13 +77,9 @@ public class FumoFridayRoll_TwitchReward(
 
                     if (fumo is not null)
                     {
-                        var color = await api.Helix.Chat.GetUserChatColorAsync([twEvent.UserId]);
+                        var user = await ensureService.EnsureUserExistsAsync(twEvent.UserId);
 
-                        await hubContext.Clients.All.FumoRoll(
-                            fumo,
-                            twEvent.UserName,
-                            color.Data[0]?.Color
-                        );
+                        await hubContext.Clients.All.FumoRoll(fumo, user);
                     }
                     else
                     {
