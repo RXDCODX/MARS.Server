@@ -1,3 +1,10 @@
+using System;
+using System.Drawing;
+using MARS.Server.Services.Twitch.Entitys;
+using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+
 namespace MARS.Server.Services.Twitch.Rewards._2_WaifuMarriage;
 
 public class WaifuMarriage_TwitchReward(
@@ -15,5 +22,6 @@ public class WaifuMarriage_TwitchReward(
 
     public override int Cost { get; init; } = 2;
 
-    public override Func<bool> IsRewardEnabled { get; set; } = () => true;
+    public override Func<bool> IsRewardEnabled { get; set; } =
+        () => DateTime.Now.DayOfWeek != DayOfWeek.Friday;
 }

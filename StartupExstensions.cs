@@ -33,11 +33,13 @@ using MARS.Server.Services.Twitch.MiniGamesStats;
 using MARS.Server.Services.Twitch.PuntoSwitcher;
 using MARS.Server.Services.Twitch.Rewards;
 using MARS.Server.Services.Twitch.Rewards._11_RandomMemReward.Service;
+using MARS.Server.Services.Twitch.Rewards._13_FumoFriday;
 using MARS.Server.Services.Twitch.Rewards._1580_MikuBeam;
 using MARS.Server.Services.Twitch.Rewards._160_LegBum;
 using MARS.Server.Services.Twitch.Rewards._2_WaifuMarriage;
 using MARS.Server.Services.Twitch.Rewards._27_RandomArt;
 using MARS.Server.Services.Twitch.Rewards._39_MikuMonday;
+using MARS.Server.Services.Twitch.Rewards._4_FumoRoll;
 using MARS.Server.Services.Twitch.Rewards._5_AddWife;
 using MARS.Server.Services.Twitch.Rewards._6_RussianRoulette;
 using MARS.Server.Services.Twitch.Rewards._7_Quiz;
@@ -520,6 +522,11 @@ public static class StartupEstensions
             services.AddSingleton<WaifuRollEnsurenceService>();
             services.AddSingleton<WaifuPrizesService>();
             services.AddSingleton<IWaifuRollGuaranteeService, WaifuRollGuaranteeService>();
+
+            // Fumo Friday services
+            services.AddSingleton<FumoRollService>();
+            services.AddSingleton<FumoFridayRoll_TwitchReward>();
+            services.AddHostedService(sp => sp.GetRequiredService<FumoFridayRoll_TwitchReward>());
 
             // Фоновый запуск WaifuRollService
             services.AddHostedService(sp => sp.GetRequiredService<WaifuRollService>());

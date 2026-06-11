@@ -24,7 +24,8 @@ public class SearchWife_TwitchReward(
         "💰 Цена - 50 кредитов. Узнать кредиты - !rank/!myrank.";
     public override Color Color { get; set; } = Color.FromArgb(24, 0, 255);
     public override int Cost { get; init; } = 4;
-    public override Func<bool> IsRewardEnabled { get; set; } = () => true;
+    public override Func<bool> IsRewardEnabled { get; set; } =
+        () => DateTime.Now.DayOfWeek != DayOfWeek.Friday;
 
     public override async Task StartAsync(CancellationToken cancellationToken)
     {

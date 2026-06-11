@@ -1,5 +1,10 @@
-﻿using MARS.Server.Hubs.Models.AudioQuiz;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using MARS.Server.Hubs.Models.AudioQuiz;
 using MARS.Server.Services.AutoArts_OBSOLETE.Entitys;
+using MARS.Server.Services.PyroAlerts.Entitys;
+using MARS.Server.Services.WaifuRoll.Entitys;
 using SignalRSwaggerGen.Attributes;
 using SignalRSwaggerGen.Enums;
 using TwitchLib.Client.Models;
@@ -82,8 +87,14 @@ public interface ITelegramusHub
     Task AllRefund(TwitchUser user);
 
     [SignalRMethod]
-    Task AudioQuizStart(AudioQuizRoundDto round);
+    public Task AudioQuizStart(AudioQuizRoundDto round);
 
     [SignalRMethod]
-    Task AudioQuizStop();
+    public Task AudioQuizStop();
+
+    [SignalRMethod]
+    public Task FumoRoll(Fumo fumo, string displayName, string? color = null);
+
+    [SignalRMethod]
+    public Task UpdateFumoPrizes(ICollection<FumoPrizeType> prizes);
 }

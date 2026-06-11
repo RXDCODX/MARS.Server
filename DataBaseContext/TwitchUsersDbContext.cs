@@ -1,8 +1,13 @@
 ﻿using MARS.Server.Services.CinemaQueue.Entitys;
+using MARS.Server.Services.SoundRequest.Entities;
+using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.HelloVideos.Entitys;
 using MARS.Server.Services.Twitch.MiniGamesStats.Entitys;
+using MARS.Server.Services.Twitch.Rewards._13_FumoFriday.Entitys;
 using MARS.Server.Services.Twitch.Rewards.FumoFriday.Entitys;
 using MARS.Server.Services.Twitch.TwitchFollowers.Entitys;
+using MARS.Server.Services.WaifuRoll.Entitys;
+using Microsoft.EntityFrameworkCore;
 
 namespace MARS.Server.DataBaseContext;
 

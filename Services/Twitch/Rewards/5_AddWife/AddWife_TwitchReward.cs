@@ -1,3 +1,11 @@
+using System;
+using System.Drawing;
+using MARS.Server.Services.Twitch.Entitys;
+using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using TwitchLib.Api.Helix.Models.ChannelPoints.CreateCustomReward;
+
 namespace MARS.Server.Services.Twitch.Rewards._5_AddWife;
 
 public class AddWife_TwitchReward(
@@ -15,7 +23,8 @@ public class AddWife_TwitchReward(
         + " Пример: https://shikimori.one/characters/723-nami";
     public override Color Color { get; set; } = Color.FromArgb(0, 30, 255);
     public override int Cost { get; init; } = 5;
-    public override Func<bool> IsRewardEnabled { get; set; } = () => true;
+    public override Func<bool> IsRewardEnabled { get; set; } =
+        () => DateTime.Now.DayOfWeek != DayOfWeek.Friday;
 
     private protected override CreateCustomRewardsRequest CreateCustomRewardsRequest
     {

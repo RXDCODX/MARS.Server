@@ -1,10 +1,20 @@
-﻿using MARS.Server.Services.Twitch.Rewards._1580_MikuBeam;
+using System;
+using System.Threading.Tasks;
+using MARS.Server.Configuration;
+using MARS.Server.Hubs.Interfaces;
+using MARS.Server.Services.Twitch.Rewards._13_FumoFriday;
+using MARS.Server.Services.Twitch.Rewards._1580_MikuBeam;
 using MARS.Server.Services.Twitch.Rewards._39_MikuMonday;
+using MARS.Server.Services.Twitch.Rewards._4_FumoRoll;
 using MARS.Server.Services.Twitch.SoundBarService;
 using MARS.Server.Services.WaifuRoll;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using SignalRSwaggerGen.Attributes;
 using SignalRSwaggerGen.Enums;
 using Swashbuckle.AspNetCore.Annotations;
+using TwitchLib.Client.Interfaces;
 
 namespace MARS.Server.Hubs;
 
@@ -23,6 +33,7 @@ public class TelegramusHub(
     IOptions<TwitchConfiguration> twitchConfiguration,
     ITwitchClient twitchClient,
     WaifuPrizesService waifuPrizesService,
+    FumoRollService fumoRollService,
     IServiceProvider serviceProvider,
     MikuMondayTracksService mikuMondayTracksService,
     SoundMuteCoordinator coordinator
@@ -40,6 +51,8 @@ public class TelegramusHub(
         );
         var result = await waifuPrizesService.GetWaifuPrizesAsync();
         await Clients.Caller.UpdateWaifuPrizes(result.Data);
+        var fumoResult = await fumoRollService.GetFumoPrizesAsync();
+        await Clients.Caller.UpdateFumoPrizes(fumoResult.Data);
     }
 
     [SignalRMethod]

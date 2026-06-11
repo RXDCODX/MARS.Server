@@ -1,4 +1,5 @@
-﻿using MARS.Server.Services.Twitch.Rewards.FumoFriday.Entitys;
+﻿using MARS.Server.Services.Twitch.Rewards._13_FumoFriday.Entitys;
+using MARS.Server.Services.Twitch.Rewards.FumoFriday.Entitys;
 
 namespace MARS.Server.Services.Twitch.Rewards._13_FumoFriday;
 
