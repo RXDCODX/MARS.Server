@@ -86,7 +86,7 @@ public class FumoFriday_TwitchReward(
                         _cancellationToken
                     );
 
-                    var fumoUser = await dbContext.FumoUsers.FindAsync(id, _cancellationToken);
+                    var fumoUser = await dbContext.FumoUsers.FindAsync([id], _cancellationToken);
 
                     if (
                         fumoUser != null
