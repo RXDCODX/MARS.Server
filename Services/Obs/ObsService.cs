@@ -1,8 +1,3 @@
-using System;
-using System.IO;
-using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -11,19 +6,19 @@ using OBSWebsocketDotNet.Types;
 
 namespace MARS.Server.Services.Obs;
 
-public class ObsService(IOptions<ObsConfiguration> config, ILogger<ObsService> logger)
-    : IObsService,
-        IHostedService,
-        IDisposable
+public class ObsService(
+    IOBSWebsocket obs,
+    IOptions<ObsConfiguration> config,
+    ILogger<ObsService> logger
+) : IObsService, IHostedService, IDisposable
 {
     private readonly ObsConfiguration _config = config.Value;
-    private readonly OBSWebsocket _obs = new();
     private readonly SemaphoreSlim _lock = new(1, 1);
 
     private string? _savedSceneBeforePause;
     private bool _disposed;
 
-    public bool IsConnected => _obs.IsConnected;
+    public bool IsConnected => obs.IsConnected;
 
     public bool IsPaused { get; private set; }
 
@@ -51,7 +46,7 @@ public class ObsService(IOptions<ObsConfiguration> config, ILogger<ObsService> l
 
         try
         {
-            if (_obs.IsConnected)
+            if (obs.IsConnected)
             {
                 logger.LogDebug("Already connected to OBS");
                 return Task.CompletedTask;
@@ -59,7 +54,7 @@ public class ObsService(IOptions<ObsConfiguration> config, ILogger<ObsService> l
 
             logger.LogInformation("Connecting to OBS at {Url}", url);
 
-            _obs.ConnectAsync(url, _config.Password);
+            obs.ConnectAsync(url, _config.Password);
 
             logger.LogInformation("Connected to OBS successfully");
         }
@@ -76,9 +71,9 @@ public class ObsService(IOptions<ObsConfiguration> config, ILogger<ObsService> l
     {
         try
         {
-            if (_obs.IsConnected)
+            if (obs.IsConnected)
             {
-                _obs.Disconnect();
+                obs.Disconnect();
                 logger.LogInformation("Disconnected from OBS");
             }
         }
@@ -95,7 +90,7 @@ public class ObsService(IOptions<ObsConfiguration> config, ILogger<ObsService> l
     {
         EnsureConnected();
 
-        var sceneName = sourceName ?? _obs.GetCurrentProgramScene();
+        var sceneName = sourceName ?? obs.GetCurrentProgramScene();
         var screenshotDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "screenshots");
         Directory.CreateDirectory(screenshotDir);
 
@@ -105,7 +100,14 @@ public class ObsService(IOptions<ObsConfiguration> config, ILogger<ObsService> l
         await _lock.WaitAsync(cancellationToken);
         try
         {
-            _obs.SaveSourceScreenshot(sceneName, "webp", filePath, _config.ScreenshotQuality);
+            obs.SaveSourceScreenshot(
+                sceneName,
+                "webp",
+                filePath,
+                -1,
+                -1,
+                _config.ScreenshotQuality
+            );
 
             logger.LogDebug("Screenshot saved to {Path}", filePath);
 
@@ -129,13 +131,13 @@ public class ObsService(IOptions<ObsConfiguration> config, ILogger<ObsService> l
                 return ObsPauseResult.Fail("Already paused");
             }
 
-            var currentScene = _obs.GetCurrentProgramScene();
+            var currentScene = obs.GetCurrentProgramScene();
             _savedSceneBeforePause = currentScene;
 
-            var screenshotPath = await TakeScreenshotInternalAsync(currentScene, cancellationToken);
+            var screenshotPath = await TakeScreenshotInternalAsync(currentScene);
 
-            ShowFreezeFrameSource(currentScene, true);
-            HideAllContentSourcesExcept(currentScene, _config.FreezeFrameSourceName, true);
+            ShowFreezeFrameSource(currentScene);
+            HideAllContentSourcesExcept(currentScene, _config.FreezeFrameSourceName);
 
             IsPaused = true;
             logger.LogInformation("Freeze frame activated on scene {Scene}", currentScene);
@@ -165,10 +167,10 @@ public class ObsService(IOptions<ObsConfiguration> config, ILogger<ObsService> l
                 return ObsPauseResult.Fail("Not paused");
             }
 
-            var scene = _savedSceneBeforePause ?? _obs.GetCurrentProgramScene();
+            var scene = _savedSceneBeforePause ?? obs.GetCurrentProgramScene();
 
-            HideFreezeFrameSource(scene, true);
-            ShowAllContentSourcesExcept(scene, _config.FreezeFrameSourceName, true);
+            HideFreezeFrameSource(scene);
+            ShowAllContentSourcesExcept(scene, _config.FreezeFrameSourceName);
 
             IsPaused = false;
             _savedSceneBeforePause = null;
@@ -202,14 +204,14 @@ public class ObsService(IOptions<ObsConfiguration> config, ILogger<ObsService> l
                 return ObsPauseResult.Fail("Already paused");
             }
 
-            var currentScene = _obs.GetCurrentProgramScene();
+            var currentScene = obs.GetCurrentProgramScene();
             _savedSceneBeforePause = currentScene;
 
-            var screenshotPath = await TakeScreenshotInternalAsync(currentScene, cancellationToken);
+            var screenshotPath = await TakeScreenshotInternalAsync(currentScene);
 
             UpdatePauseImageSource(screenshotPath);
 
-            _obs.SetCurrentProgramScene(_config.PauseSceneName);
+            obs.SetCurrentProgramScene(_config.PauseSceneName);
 
             IsPaused = true;
             logger.LogInformation("Switched to pause scene (from {Scene})", currentScene);
@@ -241,9 +243,9 @@ public class ObsService(IOptions<ObsConfiguration> config, ILogger<ObsService> l
                 return ObsPauseResult.Fail("Not paused");
             }
 
-            var targetScene = _savedSceneBeforePause ?? _obs.GetCurrentProgramScene();
+            var targetScene = _savedSceneBeforePause ?? obs.GetCurrentProgramScene();
 
-            _obs.SetCurrentProgramScene(targetScene);
+            obs.SetCurrentProgramScene(targetScene);
 
             IsPaused = false;
             _savedSceneBeforePause = null;
@@ -280,35 +282,39 @@ public class ObsService(IOptions<ObsConfiguration> config, ILogger<ObsService> l
         };
     }
 
-    private Task<string> TakeScreenshotInternalAsync(
-        string sceneName,
-        CancellationToken cancellationToken
-    )
+    private Task<string> TakeScreenshotInternalAsync(string sceneName)
     {
-        try
-        {
-            var screenshotDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "screenshots");
-            Directory.CreateDirectory(screenshotDir);
+        var screenshotDir = Path.Combine(
+            AppDomain.CurrentDomain.BaseDirectory,
+            "screenshots"
+        );
+        Directory.CreateDirectory(screenshotDir);
 
-            var fileName = $"obs_pause_{DateTime.Now:yyyyMMdd_HHmmss}.webp";
-            var filePath = Path.Combine(screenshotDir, fileName);
+        var fileName = $"obs_pause_{DateTime.Now:yyyyMMdd_HHmmss}.webp";
+        var filePath = Path.Combine(screenshotDir, fileName);
 
-            _obs.SaveSourceScreenshot(sceneName, "webp", filePath, _config.ScreenshotQuality);
+        obs.SaveSourceScreenshot(
+            sceneName,
+            "webp",
+            filePath,
+            -1,
+            -1,
+            _config.ScreenshotQuality
+        );
 
-            return Task.FromResult(filePath);
-        }
-        catch (Exception exception)
-        {
-            return Task.FromException<string>(exception);
-        }
+        return Task.FromResult(filePath);
     }
 
-    private void ShowFreezeFrameSource(string sceneName, bool sceneItemEnabled)
+    private void ShowFreezeFrameSource(string sceneName)
     {
         try
         {
-            var itemId = _obs.GetSceneItemId(sceneName, _config.FreezeFrameSourceName, 0);
-            _obs.SetSceneItemEnabled(sceneName, itemId, sceneItemEnabled);
+            var itemId = obs.GetSceneItemId(
+                sceneName,
+                _config.FreezeFrameSourceName,
+                0
+            );
+            obs.SetSceneItemEnabled(sceneName, itemId, true);
         }
         catch (Exception ex)
         {
@@ -321,12 +327,16 @@ public class ObsService(IOptions<ObsConfiguration> config, ILogger<ObsService> l
         }
     }
 
-    private void HideFreezeFrameSource(string sceneName, bool sceneItemDisabled)
+    private void HideFreezeFrameSource(string sceneName)
     {
         try
         {
-            var itemId = _obs.GetSceneItemId(sceneName, _config.FreezeFrameSourceName, 0);
-            _obs.SetSceneItemEnabled(sceneName, itemId, !sceneItemDisabled);
+            var itemId = obs.GetSceneItemId(
+                sceneName,
+                _config.FreezeFrameSourceName,
+                0
+            );
+            obs.SetSceneItemEnabled(sceneName, itemId, false);
         }
         catch (Exception ex)
         {
@@ -339,11 +349,11 @@ public class ObsService(IOptions<ObsConfiguration> config, ILogger<ObsService> l
         }
     }
 
-    private void HideAllContentSourcesExcept(string sceneName, string excludedSourceName, bool hide)
+    private void HideAllContentSourcesExcept(string sceneName, string excludedSourceName)
     {
         try
         {
-            var items = _obs.GetSceneItemList(sceneName);
+            var items = obs.GetSceneItemList(sceneName);
             foreach (var item in items)
             {
                 if (
@@ -354,20 +364,24 @@ public class ObsService(IOptions<ObsConfiguration> config, ILogger<ObsService> l
                     continue;
                 }
 
-                _obs.SetSceneItemEnabled(sceneName, item.ItemId, !hide);
+                obs.SetSceneItemEnabled(sceneName, item.ItemId, false);
             }
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Failed to hide content sources in scene '{Scene}'", sceneName);
+            logger.LogWarning(
+                ex,
+                "Failed to hide content sources in scene '{Scene}'",
+                sceneName
+            );
         }
     }
 
-    private void ShowAllContentSourcesExcept(string sceneName, string excludedSourceName, bool show)
+    private void ShowAllContentSourcesExcept(string sceneName, string excludedSourceName)
     {
         try
         {
-            var items = _obs.GetSceneItemList(sceneName);
+            var items = obs.GetSceneItemList(sceneName);
             foreach (var item in items)
             {
                 if (
@@ -378,12 +392,16 @@ public class ObsService(IOptions<ObsConfiguration> config, ILogger<ObsService> l
                     continue;
                 }
 
-                _obs.SetSceneItemEnabled(sceneName, item.ItemId, show);
+                obs.SetSceneItemEnabled(sceneName, item.ItemId, true);
             }
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Failed to show content sources in scene '{Scene}'", sceneName);
+            logger.LogWarning(
+                ex,
+                "Failed to show content sources in scene '{Scene}'",
+                sceneName
+            );
         }
     }
 
@@ -392,7 +410,7 @@ public class ObsService(IOptions<ObsConfiguration> config, ILogger<ObsService> l
         try
         {
             var settings = new Newtonsoft.Json.Linq.JObject { { "file", imagePath } };
-            _obs.SetInputSettings(_config.PauseImageSourceName, settings, true);
+            obs.SetInputSettings(_config.PauseImageSourceName, settings, true);
         }
         catch (Exception ex)
         {
@@ -406,7 +424,7 @@ public class ObsService(IOptions<ObsConfiguration> config, ILogger<ObsService> l
 
     private void EnsureConnected()
     {
-        if (!_obs.IsConnected)
+        if (!obs.IsConnected)
         {
             throw new InvalidOperationException("Not connected to OBS");
         }
@@ -420,7 +438,7 @@ public class ObsService(IOptions<ObsConfiguration> config, ILogger<ObsService> l
         }
 
         _disposed = true;
-        _obs?.Disconnect();
+        obs?.Disconnect();
         _lock?.Dispose();
         GC.SuppressFinalize(this);
     }

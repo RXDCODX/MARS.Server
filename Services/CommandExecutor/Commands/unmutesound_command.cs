@@ -1,4 +1,6 @@
-﻿namespace MARS.Server.Services.CommandExecutor.Commands;
+﻿using MARS.Server.Services.SoundBarService;
+
+namespace MARS.Server.Services.CommandExecutor.Commands;
 
 public class unmutesound_command(SoundMuteCoordinator coordinator) : BaseCommand
 {

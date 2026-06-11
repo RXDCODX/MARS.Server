@@ -1,7 +1,15 @@
+using System;
 using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
+using MARS.Server.Configuration;
 using MARS.Server.CustomLoggers.DatabaseLogger;
 using MARS.Server.CustomLoggers.SignalRLogger;
 using MARS.Server.CustomLoggers.TelegramLogger;
+using MARS.Server.DataBaseContext;
+using MARS.Server.Exstensions;
+using MARS.Server.Hubs;
 using MARS.Server.Services.CinemaQueue;
 using MARS.Server.Services.CommandExecutor;
 using MARS.Server.Services.Configuration;
@@ -13,7 +21,14 @@ using MARS.Server.Services.MemoryStorageService;
 using MARS.Server.Services.Obs;
 using MARS.Server.Services.Twitch;
 using MARS.Server.Services.Twitch.Rewards;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi;
+using OBSWebsocketDotNet;
 using Swashbuckle.AspNetCore.Swagger;
 
 namespace MARS.Server;
@@ -198,6 +213,7 @@ public static class Program
         services.AddSingleton<IMediaTranscoder, MediaTranscoder>();
 
         // OBS Websocket service
+        services.AddSingleton<IOBSWebsocket>(sp => new OBSWebsocketDotNet.OBSWebsocket());
         services.AddSingleton<ObsService>();
         services.AddSingleton<IObsService>(sp => sp.GetRequiredService<ObsService>());
         services.AddHostedService(sp => sp.GetRequiredService<ObsService>());
