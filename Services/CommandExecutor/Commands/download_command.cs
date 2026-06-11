@@ -14,7 +14,7 @@ public class DownloadCommand(
 ) : BaseCommand
 {
     private const long MaxVideoSizeBytes = 20L * 1024 * 1024;
-    private const long FinalFallbackSizeBytes = 19L * 1024 * 1024;
+    internal const long FinalFallbackSizeBytes = 19L * 1024 * 1024;
 
     private static readonly VideoCompressionProfile[] VideoCompressionProfiles =
     [
@@ -187,7 +187,23 @@ public class DownloadCommand(
 
             preparedFile = await PrepareVideoForTelegramAsync(tempFile, cancellationToken);
 
-            // Скачиваем видео в память
+            if (preparedFile is null)
+            {
+                await client.SendMessage(
+                    message.Chat,
+                    "❌ Не удалось сжать видео до 20 МБ. Файл слишком большой для Telegram.",
+                    replyParameters: new ReplyParameters()
+                    {
+                        ChatId = message.Chat,
+                        MessageId = message.Id,
+                    },
+                    cancellationToken: cancellationToken
+                );
+
+                CleanupFiles(videoStreamFile, audioStreamFile, tempFile, null);
+                return;
+            }
+
             await using var fileStream = File.OpenRead(preparedFile);
 
             // Генерируем имя файла
@@ -212,32 +228,7 @@ public class DownloadCommand(
             }
             finally
             {
-                try
-                {
-                    if (File.Exists(videoStreamFile))
-                    {
-                        File.Delete(videoStreamFile);
-                    }
-
-                    if (File.Exists(audioStreamFile))
-                    {
-                        File.Delete(audioStreamFile);
-                    }
-
-                    if (File.Exists(tempFile))
-                    {
-                        File.Delete(tempFile);
-                    }
-
-                    if (!string.Equals(preparedFile, tempFile, StringComparison.OrdinalIgnoreCase))
-                    {
-                        if (File.Exists(preparedFile))
-                        {
-                            File.Delete(preparedFile);
-                        }
-                    }
-                }
-                catch { }
+                CleanupFiles(videoStreamFile, audioStreamFile, tempFile, preparedFile);
             }
         }
         catch (OperationCanceledException)
@@ -250,12 +241,12 @@ public class DownloadCommand(
         }
     }
 
-    private async Task<string> PrepareVideoForTelegramAsync(
+    private async Task<string?> PrepareVideoForTelegramAsync(
         string sourceFile,
         CancellationToken cancellationToken
     )
     {
-        var result = sourceFile;
+        string? result = null;
 
         if (new FileInfo(sourceFile).Length > MaxVideoSizeBytes)
         {
@@ -285,7 +276,7 @@ public class DownloadCommand(
                 catch { }
             }
 
-            if (string.Equals(result, sourceFile, StringComparison.OrdinalIgnoreCase))
+            if (result is null)
             {
                 var trimmedFile = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".mp4");
                 var fallbackSucceeded = await TryTranscodeVideoAsync(
@@ -296,7 +287,7 @@ public class DownloadCommand(
                     FinalFallbackSizeBytes
                 );
 
-                if (fallbackSucceeded)
+                if (fallbackSucceeded && new FileInfo(trimmedFile).Length <= MaxVideoSizeBytes)
                 {
                     result = trimmedFile;
                 }
@@ -309,6 +300,10 @@ public class DownloadCommand(
                     catch { }
                 }
             }
+        }
+        else
+        {
+            result = sourceFile;
         }
 
         return result;
@@ -412,14 +407,35 @@ public class DownloadCommand(
                 return;
             }
 
-            await using var fileStream = File.OpenRead(filePath);
+            var preparedFile = await PrepareAudioForTelegramAsync(filePath, cancellationToken);
+
+            if (preparedFile is null)
+            {
+                await client.SendMessage(
+                    message.Chat,
+                    "❌ Не удалось сжать аудио до 20 МБ. Файл слишком большой для Telegram.",
+                    replyParameters: new ReplyParameters()
+                    {
+                        ChatId = message.Chat,
+                        MessageId = message.Id,
+                    },
+                    cancellationToken: cancellationToken
+                );
+                try
+                {
+                    File.Delete(filePath);
+                }
+                catch { }
+                return;
+            }
+
+            await using var fileStream = File.OpenRead(preparedFile);
             var sanitizedTitle = SanitizeFileName(title);
             var fileName =
-                $"{sanitizedTitle}_{DateTime.UtcNow:yyyyMMdd_HHmmss}{Path.GetExtension(filePath)}";
+                $"{sanitizedTitle}_{DateTime.UtcNow:yyyyMMdd_HHmmss}{Path.GetExtension(preparedFile)}";
 
             try
             {
-                // Отправляем как аудио (музыку)
                 await client.SendAudio(
                     message.Chat,
                     InputFile.FromStream(fileStream),
@@ -438,6 +454,15 @@ public class DownloadCommand(
             {
                 try
                 {
+                    if (!string.Equals(preparedFile, filePath, StringComparison.OrdinalIgnoreCase))
+                    {
+                        File.Delete(preparedFile);
+                    }
+                }
+                catch { }
+
+                try
+                {
                     File.Delete(filePath);
                 }
                 catch { }
@@ -451,6 +476,148 @@ public class DownloadCommand(
         {
             logger.LogError(ex, "Ошибка при скачивании аудио {Url}", track?.Url);
         }
+    }
+
+    private async Task<string?> PrepareAudioForTelegramAsync(
+        string sourceFile,
+        CancellationToken cancellationToken
+    )
+    {
+        string? result = null;
+
+        if (new FileInfo(sourceFile).Length > MaxVideoSizeBytes)
+        {
+            var profiles = AudioCompressionProfileFactory.CreateProfiles();
+
+            foreach (var (bitrateKbps, maxSizeBytes) in profiles)
+            {
+                var compressedFile = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".mp3");
+
+                var succeeded = await TryTranscodeAudioAsync(
+                    sourceFile,
+                    compressedFile,
+                    bitrateKbps,
+                    maxSizeBytes,
+                    cancellationToken
+                );
+
+                if (succeeded && new FileInfo(compressedFile).Length <= MaxVideoSizeBytes)
+                {
+                    result = compressedFile;
+                    break;
+                }
+
+                try
+                {
+                    File.Delete(compressedFile);
+                }
+                catch { }
+            }
+        }
+        else
+        {
+            result = sourceFile;
+        }
+
+        return result;
+    }
+
+    private async Task<bool> TryTranscodeAudioAsync(
+        string inputFile,
+        string outputFile,
+        int bitrateKbps,
+        long? maxOutputSizeBytes,
+        CancellationToken cancellationToken
+    )
+    {
+        var result = false;
+
+        try
+        {
+            var outputBuilder = FFMpegArguments
+                .FromFileInput(inputFile)
+                .OutputToFile(
+                    outputFile,
+                    true,
+                    options =>
+                        options
+                            .WithAudioCodec("libmp3lame")
+                            .WithAudioBitrate(bitrateKbps)
+                            .WithCustomArgument("-y")
+                )
+                .CancellableThrough(cancellationToken);
+
+            if (maxOutputSizeBytes is not null)
+            {
+                outputBuilder = FFMpegArguments
+                    .FromFileInput(inputFile)
+                    .OutputToFile(
+                        outputFile,
+                        true,
+                        options =>
+                            options
+                                .WithAudioCodec("libmp3lame")
+                                .WithAudioBitrate(bitrateKbps)
+                                .WithCustomArgument($"-fs {maxOutputSizeBytes.Value}")
+                                .WithCustomArgument("-y")
+                    )
+                    .CancellableThrough(cancellationToken);
+            }
+
+            await outputBuilder.ProcessAsynchronously();
+
+            if (File.Exists(outputFile) && new FileInfo(outputFile).Length > 0)
+            {
+                result = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(
+                ex,
+                "FFMpegCore не смог подготовить аудио {InputFile} -> {OutputFile}",
+                inputFile,
+                outputFile
+            );
+        }
+
+        return result;
+    }
+
+    private static void CleanupFiles(
+        string? videoStreamFile,
+        string? audioStreamFile,
+        string? tempFile,
+        string? preparedFile
+    )
+    {
+        try
+        {
+            if (!string.IsNullOrEmpty(videoStreamFile) && File.Exists(videoStreamFile))
+            {
+                File.Delete(videoStreamFile);
+            }
+
+            if (!string.IsNullOrEmpty(audioStreamFile) && File.Exists(audioStreamFile))
+            {
+                File.Delete(audioStreamFile);
+            }
+
+            if (!string.IsNullOrEmpty(tempFile) && File.Exists(tempFile))
+            {
+                File.Delete(tempFile);
+            }
+
+            if (
+                !string.IsNullOrEmpty(preparedFile)
+                && !string.Equals(preparedFile, tempFile, StringComparison.OrdinalIgnoreCase)
+                && File.Exists(preparedFile)
+            )
+            {
+                File.Delete(preparedFile);
+            }
+        }
+        catch { }
     }
 
     private static string SanitizeFileName(string fileName)
@@ -476,4 +643,23 @@ public class DownloadCommand(
     }
 
     private sealed record VideoCompressionProfile(int MaxWidth, int Crf, int AudioBitrateKbps);
+}
+
+file static class AudioCompressionProfileFactory
+{
+    private static readonly int[] BitrateKbpsSequence = [96, 64, 48, 32];
+
+    public static IReadOnlyList<(int BitrateKbps, long? MaxSizeBytes)> CreateProfiles()
+    {
+        var profiles = new List<(int BitrateKbps, long? MaxSizeBytes)>();
+
+        foreach (var bitrate in BitrateKbpsSequence)
+        {
+            profiles.Add((bitrate, null));
+        }
+
+        profiles.Add((32, DownloadCommand.FinalFallbackSizeBytes));
+
+        return profiles;
+    }
 }
