@@ -4,6 +4,7 @@ using MARS.Server.Hubs.Filters;
 using MARS.Server.Services._365Genius;
 using MARS.Server.Services.Discord.Gateway;
 using MARS.Server.Services.Discord.PlayRequest;
+using MARS.Server.Services.Obs;
 using MARS.Server.Services.Framedata;
 using MARS.Server.Services.PyroAlerts;
 using MARS.Server.Services.Scoreboard;
@@ -407,6 +408,9 @@ public static class StartupEstensions
         );
         services.Configure<YandexMusicConfiguration>(
             configuration.GetSection(AppBase.Base).GetSection(YandexMusicConfiguration.SectionName)
+        );
+        services.Configure<ObsConfiguration>(
+            configuration.GetSection(AppBase.Base).GetSection(ObsConfiguration.SectionName)
         );
         services.Configure<SoundRequestConfiguration>(
             configuration.GetSection(AppBase.Base).GetSection(SoundRequestConfiguration.SectionName)

@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using MARS.Server.Configuration;
 using MARS.Server.Hubs.Interfaces;
+using MARS.Server.Services.Obs;
 using MARS.Server.Services.SoundBarService;
 using MARS.Server.Services.Twitch.Rewards._13_FumoFriday;
 using MARS.Server.Services.Twitch.Rewards._1580_MikuBeam;
@@ -36,7 +37,8 @@ public class TelegramusHub(
     FumoRollService fumoRollService,
     IServiceProvider serviceProvider,
     MikuMondayTracksService mikuMondayTracksService,
-    SoundMuteCoordinator coordinator
+    SoundMuteCoordinator coordinator,
+    IObsService obsService
 ) : Hub<ITelegramusHub>
 {
     private readonly TwitchConfiguration _twitchConfiguration =
@@ -90,5 +92,41 @@ public class TelegramusHub(
     public Task MikuMondayTracks()
     {
         return mikuMondayTracksService.GetAvailableTracksAsync();
+    }
+
+    [SignalRMethod]
+    public async Task ObsFreeze()
+    {
+        await obsService.FreezeAsync();
+    }
+
+    [SignalRMethod]
+    public async Task ObsUnfreeze()
+    {
+        await obsService.UnfreezeAsync();
+    }
+
+    [SignalRMethod]
+    public async Task ObsPauseScene()
+    {
+        await obsService.SwitchToPauseSceneAsync();
+    }
+
+    [SignalRMethod]
+    public async Task ObsUnpauseScene()
+    {
+        await obsService.SwitchFromPauseSceneAsync();
+    }
+
+    [SignalRMethod]
+    public async Task ObsTogglePause(int mode)
+    {
+        var pauseMode = mode switch
+        {
+            0 => ObsPauseMode.FreezeFrame,
+            1 => ObsPauseMode.PauseScene,
+            _ => ObsPauseMode.FreezeFrame,
+        };
+        await obsService.TogglePauseAsync(pauseMode);
     }
 }

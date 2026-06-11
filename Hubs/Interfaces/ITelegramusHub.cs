@@ -97,4 +97,19 @@ public interface ITelegramusHub
 
     [SignalRMethod]
     public Task UpdateFumoPrizes(ICollection<FumoPrizeType> prizes);
+
+    [SignalRMethod]
+    public Task ObsFreeze();
+
+    [SignalRMethod]
+    public Task ObsUnfreeze();
+
+    [SignalRMethod]
+    public Task ObsPauseScene();
+
+    [SignalRMethod]
+    public Task ObsUnpauseScene();
+
+    [SignalRMethod]
+    public Task ObsTogglePause(int mode);
 }

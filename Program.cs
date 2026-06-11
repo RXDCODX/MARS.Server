@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using MARS.Server.CustomLoggers.DatabaseLogger;
 using MARS.Server.CustomLoggers.SignalRLogger;
 using MARS.Server.CustomLoggers.TelegramLogger;
@@ -10,6 +10,7 @@ using MARS.Server.Services.Logs.Interfaces;
 using MARS.Server.Services.Logs.Services;
 using MARS.Server.Services.Media;
 using MARS.Server.Services.MemoryStorageService;
+using MARS.Server.Services.Obs;
 using MARS.Server.Services.Twitch;
 using MARS.Server.Services.Twitch.Rewards;
 using Microsoft.OpenApi;
@@ -195,6 +196,11 @@ public static class Program
         services.AddSingleton<IMediaFileStorageService, WebRootMediaFileStorageService>();
         services.AddSingleton<IMediaInspector, FfprobeMediaInspector>();
         services.AddSingleton<IMediaTranscoder, MediaTranscoder>();
+
+        // OBS Websocket service
+        services.AddSingleton<ObsService>();
+        services.AddSingleton<IObsService>(sp => sp.GetRequiredService<ObsService>());
+        services.AddHostedService(sp => sp.GetRequiredService<ObsService>());
 
         services.AddSingleton<IDbContextFactory<AppDbContext>>(contextFactory);
         services.AddHostedService<ConfigurationKeysBootstrapHostedService>();
