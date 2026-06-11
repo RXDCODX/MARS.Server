@@ -1,6 +1,8 @@
-﻿using MARS.Server.Services.Twitch.SoundBarService.Entitys;
+﻿using System;
+using System.Threading.Tasks;
+using MARS.Server.Services.SoundBarService.Entitys;
 
-namespace MARS.Server.Services.Twitch.SoundBarService;
+namespace MARS.Server.Services.SoundBarService;
 
 // Локальная реализация для разработки
 public class SoundBarServiceLocal : ISoundBar

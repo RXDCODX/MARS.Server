@@ -1,4 +1,4 @@
-namespace MARS.Server.Services.Twitch.SoundBarService.Models;
+namespace MARS.Server.Services.SoundBarService.Models;
 
 public class BagCountResponse
 {

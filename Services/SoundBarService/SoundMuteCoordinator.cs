@@ -1,8 +1,13 @@
+using System;
+using System.Threading.Tasks;
 using MARS.Server.Hubs.Models.VoiceRecognition;
-using MARS.Server.Services.Twitch.SoundBarService.Entitys;
+using MARS.Server.Services.SoundBarService.Entitys;
+using MARS.Server.Services.SoundRequest;
+using MARS.Server.Services.SoundRequest.Entities;
 using MARS.Server.Services.Twitch.Synthesizer;
+using Microsoft.Extensions.Logging;
 
-namespace MARS.Server.Services.Twitch.SoundBarService;
+namespace MARS.Server.Services.SoundBarService;
 
 public class SoundMuteCoordinator
 {
@@ -67,7 +72,7 @@ public class SoundMuteCoordinator
 
             // Сохраняем текущую громкость TTS и отправляем Volume=0
 
-            if (_isMuted == false)
+            if (!_isMuted)
             {
                 _previousTtsVolume = _ttsHubBroadcaster.CurrentVolume;
                 var ttsState = new TtsState { IsStopped = true, Volume = 0.0 };

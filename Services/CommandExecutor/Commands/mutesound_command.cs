@@ -1,6 +1,4 @@
-﻿using MARS.Server.Services.Twitch.SoundBarService;
-
-namespace MARS.Server.Services.CommandExecutor.Commands;
+﻿namespace MARS.Server.Services.CommandExecutor.Commands;
 
 public class mutesound_command(SoundMuteCoordinator coordinator) : BaseCommand
 {

@@ -1,7 +1,13 @@
-﻿using System.Diagnostics;
-using MARS.Server.Services.Twitch.SoundBarService.Entitys;
+﻿using System;
+using System.Diagnostics;
+using System.Linq;
+using System.Net.Http;
+using MARS.Server.Services.SoundBarService.Entitys;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
-namespace MARS.Server.Services.Twitch.SoundBarService;
+namespace MARS.Server.Services.SoundBarService;
 
 public class SoundBarFactory(
     IHostEnvironment environment,
@@ -18,9 +24,6 @@ public class SoundBarFactory(
     {
         var url = GetAudioControllerUrl();
         return (_instanceHttp ??= new SoundBarHttpClient(url, factory, logger));
-        //return IsRunningAsWindowsService()
-        //    ? (_instanceHttp ??= new SoundBarHttpClient(GetAudioControllerUrl(), logger))
-        //    : Instance;
     }
 
     private string GetAudioControllerUrl()

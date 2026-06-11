@@ -1,4 +1,6 @@
-﻿namespace MARS.Server.Services.Twitch.SoundBarService.Entitys;
+﻿using System.Threading.Tasks;
+
+namespace MARS.Server.Services.SoundBarService.Entitys;
 
 public interface ISoundBar
 {

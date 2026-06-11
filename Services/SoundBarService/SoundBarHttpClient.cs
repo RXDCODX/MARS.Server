@@ -1,8 +1,14 @@
-﻿using MARS.Server.Services.Twitch.SoundBarService.Entitys;
-using MARS.Server.Services.Twitch.SoundBarService.Models;
+﻿using System;
+using System.Linq;
+using System.Net.Http;
+using System.Text;
+using System.Threading.Tasks;
+using MARS.Server.Services.SoundBarService.Entitys;
+using MARS.Server.Services.SoundBarService.Models;
+using Microsoft.Extensions.Logging;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 
-namespace MARS.Server.Services.Twitch.SoundBarService;
+namespace MARS.Server.Services.SoundBarService;
 
 public class SoundBarHttpClient(
     string audioControllerUrl,
