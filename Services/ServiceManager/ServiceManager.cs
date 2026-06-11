@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using MARS.Server.Services.ServiceManager.Entitys;
 
 namespace MARS.Server.Services.ServiceManager;
@@ -56,57 +56,67 @@ public class ServiceManager : IServiceManager
 
     private async Task InitializeServiceStatesAsync()
     {
-        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
-
-        // Получаем все существующие состояния
-        var existingStates = await dbContext.ServiceStates.ToDictionaryAsync(s => s.ServiceName);
-
-        // Обрабатываем управляемые сервисы
-        foreach (var service in _managedServices.Values)
+        try
         {
-            if (!existingStates.TryGetValue(service.ServiceName, out var state))
+            await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+
+            // Получаем все существующие состояния
+            var existingStates = await dbContext.ServiceStates.ToDictionaryAsync(s => s.ServiceName);
+
+            // Обрабатываем управляемые сервисы
+            foreach (var service in _managedServices.Values)
             {
-                // Создаем новое состояние
-                state = new ServiceState
+                if (!existingStates.TryGetValue(service.ServiceName, out var state))
                 {
-                    ServiceName = service.ServiceName,
-                    DisplayName = service.DisplayName,
-                    Description = service.Description,
-                    IsServiceActive = service.IsServiceActive,
-                    Status = service.Status,
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow,
-                };
+                    // Создаем новое состояние
+                    state = new ServiceState
+                    {
+                        ServiceName = service.ServiceName,
+                        DisplayName = service.DisplayName,
+                        Description = service.Description,
+                        IsServiceActive = service.IsServiceActive,
+                        Status = service.Status,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow,
+                    };
 
-                dbContext.ServiceStates.Add(state);
-                _logger.LogInformation(
-                    "Created new service state for: {ServiceName}",
-                    service.ServiceName
-                );
+                    dbContext.ServiceStates.Add(state);
+                    _logger.LogInformation(
+                        "Created new service state for: {ServiceName}",
+                        service.ServiceName
+                    );
+                }
+                else
+                {
+                    // Обновляем существующее состояние
+                    state.DisplayName = service.DisplayName;
+                    state.Description = service.Description;
+                    state.IsServiceActive = service.IsServiceActive;
+                    state.Status = service.Status;
+                    state.UpdatedAt = DateTime.UtcNow;
+
+                    // Применяем сохраненное состояние к сервису
+                    service.IsServiceActive = state.IsServiceActive;
+
+                    _logger.LogInformation(
+                        "Updated service state for: {ServiceName}",
+                        service.ServiceName
+                    );
+
+                    // Загружаем состояние в сервис
+                    await service.LoadStateAsync(state);
+                }
             }
-            else
-            {
-                // Обновляем существующее состояние
-                state.DisplayName = service.DisplayName;
-                state.Description = service.Description;
-                state.IsServiceActive = service.IsServiceActive;
-                state.Status = service.Status;
-                state.UpdatedAt = DateTime.UtcNow;
 
-                // Применяем сохраненное состояние к сервису
-                service.IsServiceActive = state.IsServiceActive;
-
-                _logger.LogInformation(
-                    "Updated service state for: {ServiceName}",
-                    service.ServiceName
-                );
-
-                // Загружаем состояние в сервис
-                await service.LoadStateAsync(state);
-            }
+            await dbContext.SaveChangesAsync();
         }
-
-        await dbContext.SaveChangesAsync();
+        catch (Exception ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "Failed to initialize service states from database. Service state persistence disabled."
+            );
+        }
     }
 
     private static string GetServiceName(IHostedService service)

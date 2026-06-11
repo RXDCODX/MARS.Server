@@ -57,68 +57,57 @@ public class TelegramusHub(
         await Clients.Caller.UpdateFumoPrizes(fumoResult.Data);
     }
 
-    [SignalRMethod]
     public Task TwitchMsg(string msg)
     {
         return twitchClient.SendMessageToMainTwitchAsync(msg);
     }
 
-    [SignalRMethod]
     public Task UnmuteSessions()
     {
         return Task.Run(coordinator.UnmuteAsync);
     }
 
-    [SignalRMethod]
     public Task MuteAll(params string[] args)
     {
         return Task.Run(() => coordinator.MuteAsync(args));
     }
 
-    [SignalRMethod]
     public Task MikuMikuDeleteTwitchMessages()
     {
         var mikuBeamService = serviceProvider.GetRequiredService<TwitchMikuBeamRewardService>();
         return mikuBeamService.DeleteMessagesAsync();
     }
 
-    [SignalRMethod]
     public Task ExplosionGo()
     {
         return Clients.All.Explosion();
     }
 
-    [SignalRMethod]
     public Task MikuMondayTracks()
     {
         return mikuMondayTracksService.GetAvailableTracksAsync();
     }
 
-    [SignalRMethod]
     public async Task ObsFreeze()
     {
         await obsService.FreezeAsync();
     }
 
-    [SignalRMethod]
     public async Task ObsUnfreeze()
     {
         await obsService.UnfreezeAsync();
     }
 
-    [SignalRMethod]
     public async Task ObsPauseScene()
     {
         await obsService.SwitchToPauseSceneAsync();
     }
 
-    [SignalRMethod]
     public async Task ObsUnpauseScene()
     {
         await obsService.SwitchFromPauseSceneAsync();
     }
 
-    [SignalRMethod]
     public async Task ObsTogglePause(int mode)
     {
         var pauseMode = mode switch
