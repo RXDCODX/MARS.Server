@@ -58,30 +58,11 @@ public static class Program
                 Environment.GetEnvironmentVariable("ASPNETCORE_SPA_LAUNCH") ?? string.Empty
             );
 
-        var contextFactory = new AppDbContextFactory(options =>
-        {
-            options.UseQueryTrackingBehavior(QueryTrackingBehavior.TrackAll);
-            options.EnableThreadSafetyChecks();
-            if (builder.Environment.IsDevelopment())
-            {
-                options.EnableDetailedErrors();
-                options.EnableSensitiveDataLogging();
-
-                options.UseNpgsql(configuration.GetConnectionString("Dev_Path"));
-            }
-            else
-            {
-                options.UseNpgsql(configuration.GetConnectionString("Prod_Path"));
-            }
-        });
-        StaticDbContextFactory.Factory = contextFactory;
-
         //Twitch
         var loggerFactory = LoggerFactory.Create(loggingBuilder =>
         {
             if (builder.Environment.IsDevelopment())
             {
-                //loggingBuilder.SetMinimumLevel(LogLevel.Trace);
                 loggingBuilder.AddConsole();
                 loggingBuilder.SetMinimumLevel(LogLevel.Trace);
             }
@@ -172,6 +153,25 @@ public static class Program
                 ];
             });
         });
+
+        var contextFactory = new AppDbContextFactory(options =>
+        {
+            options.UseQueryTrackingBehavior(QueryTrackingBehavior.TrackAll);
+            options.EnableThreadSafetyChecks();
+            options.UseLoggerFactory(loggerFactory);
+            if (builder.Environment.IsDevelopment())
+            {
+                options.EnableDetailedErrors();
+                options.EnableSensitiveDataLogging();
+
+                options.UseNpgsql(configuration.GetConnectionString("Dev_Path"));
+            }
+            else
+            {
+                options.UseNpgsql(configuration.GetConnectionString("Prod_Path"));
+            }
+        });
+        StaticDbContextFactory.Factory = contextFactory;
 
         if (builder.Environment.IsProduction() && OperatingSystem.IsWindows())
         {

@@ -1,12 +1,15 @@
 using System;
 using System.Globalization;
 using System.Linq;
+using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using MARS.Server.DataBaseContext;
+using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Npgsql;
 
 namespace MARS.Server.Services.Twitch.WeddingAnniversary;
 
@@ -145,12 +148,14 @@ public class WeddingAnniversaryService(
                     cancellationToken
                 );
 
-                await dbContext
-                    .Hosts.Where(e => e.TwitchId == twitchId)
-                    .ExecuteUpdateAsync(
-                        e => e.SetProperty(t => t.LastWeddingCongratulatedMonths, months),
-                        cancellationToken: cancellationToken
-                    );
+                var host = await dbContext.Hosts.FindAsync([twitchId], cancellationToken);
+
+                host?.LastWeddingCongratulatedMonths = months;
+
+                if (host != null)
+                {
+                    dbContext.Hosts.Update(host);
+                }
 
                 await dbContext.SaveChangesAsync(cancellationToken);
 

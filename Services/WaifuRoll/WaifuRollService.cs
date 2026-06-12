@@ -22,7 +22,6 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using ShikimoriSharp.Classes;
 
-
 namespace MARS.Server.Services.WaifuRoll;
 
 public class WaifuRollService(
@@ -473,6 +472,9 @@ public class WaifuRollService(
                             // Обновляем время последнего приветствия
                             greet.Time = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
                             dbContext.HostsGreetings.Update(greet);
+
+                            dbContext.Entry(host).State = EntityState.Unchanged;
+
                             await dbContext.SaveChangesAsync();
 
                             result = message;
@@ -551,7 +553,10 @@ public class WaifuRollService(
                     .Where(e => !e.IsPrivated)
                     .ElementAtAsync(Random.Shared.Next(count));
 
-                var replace = message.Replace("{randomHost}", host.TwitchUser?.DisplayName ?? "Unknown");
+                var replace = message.Replace(
+                    "{randomHost}",
+                    host.TwitchUser?.DisplayName ?? "Unknown"
+                );
                 result = string.Concat(
                     "@{user}, твой супруг прислал(-а) тебе сообщение: ",
                     replace
