@@ -1,5 +1,4 @@
 using MARS.Server.Services.CommandExecutor.Adapters;
-using MARS.Server.Services.Framedata;
 using MARS.Server.Services.PyroAlerts;
 using MARS.Server.Services.Telegram.ClipboardCopy;
 using MARS.Server.Services.Telegram.GooglePhotos;
@@ -28,7 +27,6 @@ public class UpdateHandler : IUpdateHandler
         PyroAlertsHandler pyroAlertsHandler,
         RandomMemHandler randomMemHandler,
         IHostApplicationLifetime applicationLifetime,
-        Tekken8FrameData frameData,
         IDbContextFactory<AppDbContext> dbContextFactory,
         TelegramCommandService telegramCommandService,
         TelegramClipboardCopyService telegramClipboardCopyService,
@@ -45,7 +43,6 @@ public class UpdateHandler : IUpdateHandler
         {
             TelegramUpdate += pyroAlertsHandler.HandAlert;
             TelegramUpdate += randomMemHandler.HandMessage;
-            TelegramUpdate += frameData.HandAlert;
             TelegramUpdate += telegramCommandService.HandMessage;
             TelegramUpdate += telegramCommandService.HandInlineQuery;
             TelegramUpdate += telegramCommandService.HandChosenInlineResult;

@@ -5,7 +5,6 @@ using MARS.Server.Services._365Genius;
 using MARS.Server.Services.Discord.Gateway;
 using MARS.Server.Services.Discord.PlayRequest;
 using MARS.Server.Services.Obs;
-using MARS.Server.Services.Framedata;
 using MARS.Server.Services.PyroAlerts;
 using MARS.Server.Services.Scoreboard;
 using MARS.Server.Services.ServiceManager;
@@ -45,7 +44,6 @@ using MARS.Server.Services.Twitch.Rewards._4_FumoRoll;
 using MARS.Server.Services.Twitch.Rewards._5_AddWife;
 using MARS.Server.Services.Twitch.Rewards._6_RussianRoulette;
 using MARS.Server.Services.Twitch.Rewards._7_Quiz;
-using MARS.Server.Services.Twitch.Rewards._8_TekkenQuiz;
 using MARS.Server.Services.Twitch.Rewards._9_AudioQuiz;
 using MARS.Server.Services.Twitch.StreamBotNotifications;
 using MARS.Server.Services.Twitch.StreamManagement;
@@ -243,87 +241,8 @@ public static class StartupEstensions
             return twitchApi;
         });
 
-        services.AddSingleton<TwitchConnectionManager>();
-        services.AddHostedService(sp => sp.GetRequiredService<TwitchConnectionManager>());
-        services.AddSingleton<ITwitchClient>(sp =>
-            sp.GetRequiredService<TwitchConnectionManager>().Client
-        );
-
-        services.AddTwitchLibEventSubWebsockets();
-        services.AddHostedService<EventSubService>();
-
-        services.AddSingleton<TwitchStreamStartupNotifications>();
-        services.AddHostedService(sp => sp.GetRequiredService<TwitchStreamStartupNotifications>());
-        services.AddSingleton<TwitchMediaAlerts>();
-        services.AddHostedService(sp => sp.GetRequiredService<TwitchMediaAlerts>());
-        services.AddSingleton<AutoMessagesHandler>();
-        services.AddHostedService(sp => sp.GetRequiredService<AutoMessagesHandler>());
-
-        // Регистрируем сервис для работы с шаблонами сообщений Twitch
-        // services.AddSingleton<TwitchMessageBuilderService>();
-        // services.AddHostedService(sp => sp.GetRequiredService<TwitchMessageBuilderService>());
-
-        services.AddSingleton<AutoHello>();
-        services.AddHostedService(sp => sp.GetRequiredService<AutoHello>());
-
-        services.AddSingleton<AddNewWaifu>();
-        services.AddHostedService(sp => sp.GetRequiredService<AddNewWaifu>());
-        services.AddSingleton<MergeWaifu>();
-        services.AddHostedService(sp => sp.GetRequiredService<MergeWaifu>());
-        services.AddSingleton<WaifuRollCooldownNotificationService>();
-        services.AddHostedService(sp =>
-            sp.GetRequiredService<WaifuRollCooldownNotificationService>()
-        );
-        services.AddScoped<TwitchRussianRoulete>();
-        services.AddScoped<TekkenVictorina>();
-        services.AddScoped<TwitchTrivia>();
-        services.AddScoped<AudioTriviaMiniGame>();
-        services.AddSingleton<PuntoSwitcherService>();
-        services.AddSingleton<IPuntoSwitcherService>(sp =>
-            sp.GetRequiredService<PuntoSwitcherService>()
-        );
-        services.AddHostedService(sp => sp.GetRequiredService<PuntoSwitcherService>());
-        services.AddSingleton<HighlitedMessage>();
-        services.AddHostedService(sp => sp.GetRequiredService<HighlitedMessage>());
-        services.AddSingleton<HelloVideoWorker>();
-        services.AddHostedService(sp => sp.GetRequiredService<HelloVideoWorker>());
-
-        services.AddSingleton<WeddingAnniversaryService>();
-
-        services.AddSingleton<RandomArt>();
-        services.AddHostedService(sp => sp.GetRequiredService<RandomArt>());
-
-        services.AddSingleton<TwitchMessagesHubAwaker>();
-        services.AddHostedService(sp => sp.GetRequiredService<TwitchMessagesHubAwaker>());
-
-        services.AddSingleton<SoundBarFactory>();
-        services.AddSingleton<SoundMuteCoordinator>();
-
-        services.AddSingleton<AutoRewardInfoFetcher>();
-        services.AddHostedService(sp => sp.GetRequiredService<AutoRewardInfoFetcher>());
-
-        services.AddSingleton<FramedataStagingService>();
-        services.AddSingleton<FramedataStagingService>();
-        services.Configure<FramedataConfiguration>(
-            manager.GetSection(AppBase.Base).GetSection(FramedataConfiguration.SectionName)
-        );
-
-        // Настройки временных наград: словарь Cost -> enabled
-        services.Configure<TwitchRewardsOptions>(
-            manager.GetSection(AppBase.Base).GetSection(TwitchRewardsOptions.SectionName)
-        );
-        services.AddSingleton<Tekken8FrameData>();
-        services.AddHostedService(sp => sp.GetRequiredService<Tekken8FrameData>());
-
-        // Добавил в команды
-        //services.AddSingleton<TwitchFramedate>();
-        //services.AddHostedService(sp => sp.GetRequiredService<TwitchFramedate>());
-
         services.AddSingleton<MiniGamesManager>();
         services.AddHostedService(sp => sp.GetRequiredService<MiniGamesManager>());
-
-        services.AddSingleton<TekkenVictorinaLeaderbord>();
-        services.AddHostedService(sp => sp.GetRequiredService<TekkenVictorinaLeaderbord>());
 
         services.AddSingleton<YouTubeResolver>();
         services.AddSingleton<MikuMondayTracksService>();

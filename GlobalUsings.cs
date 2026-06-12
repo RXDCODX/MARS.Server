@@ -14,7 +14,6 @@ global using MARS.Server.Hubs.Interfaces;
 global using MARS.Server.Services;
 global using MARS.Server.Services.CommandExecutor.Entitys;
 global using MARS.Server.Services.CommandExecutor.Entitys.Commands;
-global using MARS.Server.Services.Framedata.Entitys;
 global using MARS.Server.Services.PyroAlerts.Entitys;
 global using MARS.Server.Services.SoundRequest;
 global using MARS.Server.Services.SoundRequest.Entities;

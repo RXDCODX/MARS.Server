@@ -1,7 +1,6 @@
-﻿using MARS.Server.Services.Twitch.Entitys.Interfaces;
+using MARS.Server.Services.Twitch.Entitys.Interfaces;
 using MARS.Server.Services.Twitch.Rewards._6_RussianRoulette;
 using MARS.Server.Services.Twitch.Rewards._7_Quiz;
-using MARS.Server.Services.Twitch.Rewards._8_TekkenQuiz;
 using MARS.Server.Services.Twitch.Rewards._9_AudioQuiz;
 
 namespace MARS.Server.Services.Twitch.Rewards;
@@ -77,19 +76,12 @@ public class MiniGamesManager(
                 }
             }
         }
-        else if (cost is 9 or 8 or 7 or 6)
+        else if (cost is 9 or 7 or 6)
         {
             var asyncServiceScope = serviceProvider.CreateAsyncScope();
 
             switch (cost)
             {
-                case 8:
-                    var tekkenVictorina =
-                        asyncServiceScope.ServiceProvider.GetRequiredService<TekkenVictorina>();
-                    tekkenVictorina.IsGameRunning = true;
-                    MiniGames.Add(8, tekkenVictorina);
-                    await tekkenVictorina.GameStart(name, userId, _cancellationToken);
-                    break;
                 case 9:
                     var audioTrivia =
                         asyncServiceScope.ServiceProvider.GetRequiredService<AudioTriviaMiniGame>();

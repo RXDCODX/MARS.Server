@@ -1,6 +1,5 @@
 using MARS.Server.Services._365Genius.Entitys;
 using MARS.Server.Services.EnvironmentVariable.Entitys;
-using MARS.Server.Services.Framedata.Entitys.Pending;
 using MARS.Server.Services.Scoreboard.Entitys;
 using MARS.Server.Services.ServiceManager.Entitys;
 using MARS.Server.Services.StreamAcrhive_UNUSED.Entitys;
@@ -51,10 +50,6 @@ public sealed partial class AppDbContext : DbContext
     public DbSet<MemeOrder> RandomMemeOrder { get; set; } = null!;
     public DbSet<MemeType> RandomMemeType { get; set; } = null!;
     public DbSet<Video365> Videos365 { get; set; } = null!;
-    public DbSet<TekkenCharacter> TekkenCharacters { get; set; } = null!;
-    public DbSet<Move> TekkenMoves { get; set; } = null!;
-    public DbSet<TekkenCharacterPending> TekkenCharactersPending { get; set; } = null!;
-    public DbSet<MovePending> TekkenMovesPending { get; set; } = null!;
     public DbSet<TelegramUpdateReceiverOffset> TelegramUpdateReceiverOffset { get; set; } = null!;
     public DbSet<WTelegramAlloweedChannel> WTelegramAlloweedChannels { get; set; } = null!;
     public DbSet<RootState> RootState { get; set; } = null!;
@@ -231,31 +226,6 @@ public sealed partial class AppDbContext : DbContext
         });
 
         // No owned types for BaseTrackInfo in new SoundRequest
-
-        modelBuilder.Entity<Move>().HasKey(o => new { o.CharacterName, o.Command });
-        modelBuilder.Entity<MovePending>().ToTable("TekkenMovesPending");
-        modelBuilder.Entity<MovePending>().HasKey(o => new { o.CharacterName, o.Command });
-
-        modelBuilder
-            .Entity<Move>()
-            .HasOne(m => m.Character)
-            .WithMany(c => c.Movelist)
-            .HasForeignKey(e => e.CharacterName)
-            .OnDelete(DeleteBehavior.NoAction); // assuming you add a CharacterId property to Move
-
-        modelBuilder
-            .Entity<TekkenCharacter>()
-            .HasMany(c => c.Movelist)
-            .WithOne(m => m.Character)
-            .HasForeignKey(e => e.CharacterName)
-            .OnDelete(DeleteBehavior.NoAction);
-
-        modelBuilder.Entity<TekkenCharacterPending>().ToTable("TekkenCharactersPending");
-
-        modelBuilder
-            .Entity<TekkenCharacter>()
-            .Property(e => e.Image)
-            .HasColumnType("varbinary(max)");
 
         modelBuilder.Entity<RootState>().ToTable("RootState");
         modelBuilder.Entity<RootState>().HasIndex(e => e.Name).IsUnique();
@@ -1377,10 +1347,6 @@ public sealed partial class AppDbContext : DbContext
         //     .HasForeignKey<PlayerState>(ps => ps.NextTrackId)
         //     .OnDelete(DeleteBehavior.Restrict);
 
-        modelBuilder
-            .Entity<TekkenCharacter>()
-            .Property(e => e.Image)
-            .HasColumnType("bytea");
     }
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)

@@ -1,4 +1,4 @@
-﻿namespace MARS.Server.Services.Twitch.MiniGamesStats.Entitys;
+namespace MARS.Server.Services.Twitch.MiniGamesStats.Entitys;
 
 public class TwitchLeaderboardUser
 {
@@ -14,9 +14,7 @@ public class TwitchLeaderboardUser
     public TwitchUser? TwitchUser { get; set; }
 
     [NotMapped]
-    public int TotalWins => TekkenVictorinaWins + RussianRouletteWins + TriviaWins;
-    public int TekkenVictorinaWins { get; set; }
-    public int TekkenVictorinaWinsWithWaifu { get; set; }
+    public int TotalWins => RussianRouletteWins + TriviaWins;
     public int RussianRouletteWins { get; set; }
     public int RussianRouletteWinsWithWaifu { get; set; }
     public int TriviaWins { get; set; }
