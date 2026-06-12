@@ -39,10 +39,8 @@ public class FumoFridayRoll_TwitchReward(
 
     public override int Cost { get; init; } = 4;
 
-    //public override Func<bool> IsRewardEnabled { get; set; } =
-    //    () => DateTime.Now.DayOfWeek == DayOfWeek.Friday;
-
-    public override Func<bool> IsRewardEnabled { get; set; } = () => true;
+    public override Func<bool> IsRewardEnabled { get; set; } =
+        () => DateTime.Now.DayOfWeek == DayOfWeek.Friday;
 
     public override async Task StartAsync(CancellationToken cancellationToken)
     {
