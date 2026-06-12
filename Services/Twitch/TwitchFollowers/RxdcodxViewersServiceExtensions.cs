@@ -1,4 +1,6 @@
-﻿namespace MARS.Server.Services.Twitch.TwitchFollowers;
+﻿using Microsoft.Extensions.DependencyInjection;
+
+namespace MARS.Server.Services.Twitch.TwitchFollowers;
 
 /// <summary>
 /// Расширения для регистрации сервиса RxdcodxViewersService

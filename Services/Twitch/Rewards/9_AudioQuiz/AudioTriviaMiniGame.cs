@@ -1,7 +1,11 @@
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
 using Cyrillic.Convert;
 using MARS.Server.Hubs.Models.AudioQuiz;
 using MARS.Server.Services.SoundRequest.Interfaces;
 using MARS.Server.Services.Twitch.Entitys.Interfaces;
+using Microsoft.Extensions.Logging;
 
 namespace MARS.Server.Services.Twitch.Rewards._9_AudioQuiz;
 

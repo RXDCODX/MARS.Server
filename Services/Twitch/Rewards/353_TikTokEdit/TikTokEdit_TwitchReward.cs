@@ -1,3 +1,7 @@
+using System.Threading;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+
 namespace MARS.Server.Services.Twitch.Rewards._353_TikTokEdit;
 
 public class TikTokEdit_TwitchReward(

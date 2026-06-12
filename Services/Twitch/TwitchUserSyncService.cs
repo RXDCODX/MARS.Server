@@ -1,4 +1,9 @@
-﻿using MARS.Server.Services.Twitch.TwitchFollowers;
+﻿using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using MARS.Server.Services.Twitch.TwitchFollowers;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using TwitchLib.Client.Models;
 using User = TwitchLib.Api.Helix.Models.Users.GetUsers.User;
 

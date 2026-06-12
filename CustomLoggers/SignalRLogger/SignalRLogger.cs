@@ -1,4 +1,5 @@
 ﻿using MARS.Server.Hubs.Models.LoggerHub;
+using Microsoft.Extensions.Logging;
 
 namespace MARS.Server.CustomLoggers.SignalRLogger;
 

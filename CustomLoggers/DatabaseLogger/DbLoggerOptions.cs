@@ -1,4 +1,6 @@
-﻿namespace MARS.Server.CustomLoggers.DatabaseLogger;
+﻿using Microsoft.Extensions.Hosting;
+
+namespace MARS.Server.CustomLoggers.DatabaseLogger;
 
 public class DbLoggerOptions
 {

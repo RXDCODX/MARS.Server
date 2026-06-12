@@ -1,4 +1,8 @@
-﻿using MARS.Server.Services.Twitch.Rewards.ChannelRewards.Entities;
+﻿using System.Linq;
+using System.Threading;
+using MARS.Server.Services.Twitch.Rewards.ChannelRewards.Entities;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace MARS.Server.Services.Twitch.Rewards.ChannelRewards;
 

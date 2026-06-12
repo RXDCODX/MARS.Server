@@ -1,4 +1,9 @@
-﻿namespace MARS.Server.Services.Twitch.StreamManagement;
+﻿using System.Linq;
+using System.Threading;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+
+namespace MARS.Server.Services.Twitch.StreamManagement;
 
 /// <summary>
 /// Сервис для обработки команды !title в Twitch чате (смена и получение названия)

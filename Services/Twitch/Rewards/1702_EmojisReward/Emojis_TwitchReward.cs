@@ -1,3 +1,8 @@
+using System.Linq;
+using System.Threading;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+
 namespace MARS.Server.Services.Twitch.Rewards._1702_EmojisReward;
 
 public class Emojis_TwitchReward(

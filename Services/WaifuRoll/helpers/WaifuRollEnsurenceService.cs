@@ -1,5 +1,6 @@
 ﻿using MARS.Server.Services.Shikimori;
 using MARS.Server.Services.Telegram;
+using Microsoft.Extensions.Logging;
 
 namespace MARS.Server.Services.WaifuRoll.helpers;
 

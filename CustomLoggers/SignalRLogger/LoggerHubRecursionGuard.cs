@@ -1,3 +1,5 @@
+using System.Threading;
+
 namespace MARS.Server.CustomLoggers.SignalRLogger;
 
 public class LoggerHubRecursionGuard

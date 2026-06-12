@@ -1,3 +1,6 @@
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+
 namespace MARS.Server.Services.Twitch.Rewards._1520_StatusQuestionTriple;
 
 public class StatusQuestionTriple_TwitchReward(

@@ -1,4 +1,6 @@
-﻿namespace MARS.Server.Controllers;
+﻿using Microsoft.Extensions.Logging;
+
+namespace MARS.Server.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]

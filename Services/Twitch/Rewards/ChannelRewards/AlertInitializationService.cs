@@ -1,4 +1,9 @@
-﻿namespace MARS.Server.Services.Twitch.Rewards.ChannelRewards;
+﻿using System.Linq;
+using System.Threading;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+
+namespace MARS.Server.Services.Twitch.Rewards.ChannelRewards;
 
 public class AlertInitializationService : BackgroundService
 {

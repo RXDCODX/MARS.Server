@@ -1,4 +1,7 @@
-﻿namespace MARS.Server.CustomLoggers.DatabaseLogger;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+
+namespace MARS.Server.CustomLoggers.DatabaseLogger;
 
 public static class DbLoggerExtensions
 {

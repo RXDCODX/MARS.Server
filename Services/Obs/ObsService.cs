@@ -1,3 +1,5 @@
+using System.IO;
+using System.Threading;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -284,23 +286,13 @@ public class ObsService(
 
     private Task<string> TakeScreenshotInternalAsync(string sceneName)
     {
-        var screenshotDir = Path.Combine(
-            AppDomain.CurrentDomain.BaseDirectory,
-            "screenshots"
-        );
+        var screenshotDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "screenshots");
         Directory.CreateDirectory(screenshotDir);
 
         var fileName = $"obs_pause_{DateTime.Now:yyyyMMdd_HHmmss}.webp";
         var filePath = Path.Combine(screenshotDir, fileName);
 
-        obs.SaveSourceScreenshot(
-            sceneName,
-            "webp",
-            filePath,
-            -1,
-            -1,
-            _config.ScreenshotQuality
-        );
+        obs.SaveSourceScreenshot(sceneName, "webp", filePath, -1, -1, _config.ScreenshotQuality);
 
         return Task.FromResult(filePath);
     }
@@ -309,11 +301,7 @@ public class ObsService(
     {
         try
         {
-            var itemId = obs.GetSceneItemId(
-                sceneName,
-                _config.FreezeFrameSourceName,
-                0
-            );
+            var itemId = obs.GetSceneItemId(sceneName, _config.FreezeFrameSourceName, 0);
             obs.SetSceneItemEnabled(sceneName, itemId, true);
         }
         catch (Exception ex)
@@ -331,11 +319,7 @@ public class ObsService(
     {
         try
         {
-            var itemId = obs.GetSceneItemId(
-                sceneName,
-                _config.FreezeFrameSourceName,
-                0
-            );
+            var itemId = obs.GetSceneItemId(sceneName, _config.FreezeFrameSourceName, 0);
             obs.SetSceneItemEnabled(sceneName, itemId, false);
         }
         catch (Exception ex)
@@ -369,11 +353,7 @@ public class ObsService(
         }
         catch (Exception ex)
         {
-            logger.LogWarning(
-                ex,
-                "Failed to hide content sources in scene '{Scene}'",
-                sceneName
-            );
+            logger.LogWarning(ex, "Failed to hide content sources in scene '{Scene}'", sceneName);
         }
     }
 
@@ -397,11 +377,7 @@ public class ObsService(
         }
         catch (Exception ex)
         {
-            logger.LogWarning(
-                ex,
-                "Failed to show content sources in scene '{Scene}'",
-                sceneName
-            );
+            logger.LogWarning(ex, "Failed to show content sources in scene '{Scene}'", sceneName);
         }
     }
 

@@ -1,4 +1,6 @@
-﻿#pragma warning disable CS8633 // Nullability in constraints for type parameter doesn't match the constraints for type parameter in implicitly implemented interface method'.
+﻿using Microsoft.Extensions.Logging;
+
+#pragma warning disable CS8633 // Nullability in constraints for type parameter doesn't match the constraints for type parameter in implicitly implemented interface method'.
 
 namespace MARS.Server.CustomLoggers.TelegramLogger;
 

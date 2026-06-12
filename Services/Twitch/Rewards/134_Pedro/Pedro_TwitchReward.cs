@@ -1,3 +1,6 @@
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+
 namespace MARS.Server.Services.Twitch.Rewards._134_Pedro;
 
 public class Pedro_TwitchReward(

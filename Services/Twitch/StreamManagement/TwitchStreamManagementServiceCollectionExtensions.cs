@@ -1,4 +1,6 @@
-﻿namespace MARS.Server.Services.Twitch.StreamManagement;
+﻿using Microsoft.Extensions.DependencyInjection;
+
+namespace MARS.Server.Services.Twitch.StreamManagement;
 
 /// <summary>
 /// Расширения для регистрации сервисов управления трансляцией Twitch

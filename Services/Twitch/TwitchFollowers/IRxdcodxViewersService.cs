@@ -1,4 +1,5 @@
-﻿using MARS.Server.Services.Twitch.TwitchFollowers.Entitys;
+﻿using System.Collections.Generic;
+using MARS.Server.Services.Twitch.TwitchFollowers.Entitys;
 
 namespace MARS.Server.Services.Twitch.TwitchFollowers;
 

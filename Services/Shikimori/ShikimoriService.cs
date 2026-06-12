@@ -1,5 +1,7 @@
-﻿using MARS.Server.Services.Shikimori.Entitys;
+﻿using System.Linq;
+using MARS.Server.Services.Shikimori.Entitys;
 using MARS.Server.Services.Telegram;
+using Microsoft.Extensions.Logging;
 using ShikimoriSharp;
 using ShikimoriSharp.Bases;
 using ShikimoriSharp.Classes;

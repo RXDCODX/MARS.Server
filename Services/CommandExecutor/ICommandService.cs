@@ -1,4 +1,7 @@
-﻿namespace MARS.Server.Services.CommandExecutor;
+﻿using System.Collections.Generic;
+using System.Threading;
+
+namespace MARS.Server.Services.CommandExecutor;
 
 /// <summary>
 /// Интерфейс для сервиса команд

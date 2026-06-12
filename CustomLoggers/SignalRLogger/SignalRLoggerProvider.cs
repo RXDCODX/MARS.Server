@@ -1,4 +1,6 @@
-﻿namespace MARS.Server.CustomLoggers.SignalRLogger;
+﻿using Microsoft.Extensions.Logging;
+
+namespace MARS.Server.CustomLoggers.SignalRLogger;
 
 public class SignalRLoggerProvider(
     SignalRLoggerOptions options,

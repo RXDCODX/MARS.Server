@@ -1,4 +1,7 @@
-﻿namespace MARS.Server.Services.CommandExecutor;
+﻿using System.Collections.Generic;
+using System.Linq;
+
+namespace MARS.Server.Services.CommandExecutor;
 
 /// <summary>
 /// Базовый класс для платформенных сервисов команд

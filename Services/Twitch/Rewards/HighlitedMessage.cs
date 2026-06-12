@@ -1,6 +1,11 @@
-﻿using System.Reflection;
+﻿using System.IO;
+using System.Linq;
+using System.Reflection;
+using System.Threading;
 using MARS.Server.Services.AutoArts_OBSOLETE.Entitys;
 using MARS.Server.Services.Twitch.PuntoSwitcher;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Hosting;
 using TwitchLib.Client.Models;
 
 namespace MARS.Server.Services.Twitch.Rewards;

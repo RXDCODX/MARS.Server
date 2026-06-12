@@ -1,4 +1,6 @@
-﻿namespace MARS.Server.Hubs.Models.TunaHub;
+﻿using System.Collections.Generic;
+
+namespace MARS.Server.Hubs.Models.TunaHub;
 
 public class Album
 {

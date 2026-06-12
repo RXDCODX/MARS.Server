@@ -1,5 +1,6 @@
 using MARS.Server.Services.Twitch.ClientMessages.AutoMessages.Interfaces;
 using MARS.Server.Services.Twitch.ClientMessages.AutoMessages.Services;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace MARS.Server.Services.Twitch.ClientMessages.AutoMessages.Extensions;
 

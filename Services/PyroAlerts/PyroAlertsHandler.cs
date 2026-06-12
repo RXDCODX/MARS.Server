@@ -1,4 +1,5 @@
-﻿using MARS.Server.Services.Telegram;
+﻿using System.Linq;
+using MARS.Server.Services.Telegram;
 using Telegram.Bot.Types.Enums;
 using MemoryStorage = MARS.Server.Services.MemoryStorageService.MemoryStorage;
 

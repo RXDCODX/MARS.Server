@@ -1,4 +1,6 @@
-﻿namespace MARS.Server.Hubs.Interfaces;
+﻿using System.Collections.Generic;
+
+namespace MARS.Server.Hubs.Interfaces;
 
 /// <summary>
 /// Интерфейс для методов, которые СЕРВЕР вызывает на КЛИЕНТЕ (уведомления)

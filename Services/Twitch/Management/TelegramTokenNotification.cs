@@ -1,6 +1,8 @@
-﻿using MARS.Server.Controllers;
+﻿using System.Linq;
+using MARS.Server.Controllers;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
+using Microsoft.Extensions.Logging;
 using Telegram.Bot.Types.Enums;
 
 namespace MARS.Server.Services.Twitch.Management;

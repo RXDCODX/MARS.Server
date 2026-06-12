@@ -1,4 +1,6 @@
-﻿using MARS.Server.Services.Telegram.GooglePhotos;
+﻿using System.Threading;
+using MARS.Server.Services.Telegram.GooglePhotos;
+using Microsoft.Extensions.Logging;
 using Telegram.Bot.Types.Enums;
 
 namespace MARS.Server.Controllers;

@@ -1,4 +1,6 @@
-﻿namespace MARS.Server.Services.StreamAcrhive_UNUSED.Models;
+﻿using System.Collections.Generic;
+
+namespace MARS.Server.Services.StreamAcrhive_UNUSED.Models;
 
 public class FFprobeOutput
 {

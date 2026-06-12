@@ -1,4 +1,9 @@
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
 using MARS.Server.Hubs.Models.VoiceRecognition;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using SevenTV;
 using TwitchUser = MARS.Server.Services.Twitch.Entitys.TwitchUser;
 

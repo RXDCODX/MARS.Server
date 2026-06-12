@@ -1,5 +1,7 @@
-﻿using MARS.Server.Services.Twitch.TwitchFollowers;
+﻿using System.Collections.Generic;
+using MARS.Server.Services.Twitch.TwitchFollowers;
 using MARS.Server.Services.Twitch.TwitchFollowers.Entitys;
+using Microsoft.Extensions.Logging;
 
 namespace MARS.Server.Controllers;
 

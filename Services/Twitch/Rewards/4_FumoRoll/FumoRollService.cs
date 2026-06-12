@@ -1,4 +1,7 @@
-﻿namespace MARS.Server.Services.Twitch.Rewards._4_FumoRoll;
+﻿using System.Collections.Generic;
+using System.Linq;
+
+namespace MARS.Server.Services.Twitch.Rewards._4_FumoRoll;
 
 public class FumoRollService(IDbContextFactory<AppDbContext> factory)
 {
