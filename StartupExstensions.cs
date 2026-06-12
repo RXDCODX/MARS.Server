@@ -76,6 +76,7 @@ using TwitchLib.Api.Core.Enums;
 using TwitchLib.Api.Core.HttpCallHandlers;
 using TwitchLib.Api.Core.Interfaces;
 using TwitchLib.Api.Interfaces;
+using TwitchLib.Client.Interfaces;
 using TwitchLib.EventSub.Websockets.Extensions;
 
 namespace MARS.Server;
@@ -215,6 +216,13 @@ public static class StartupEstensions
         IConfigurationManager manager
     )
     {
+        // Регистрируем клиент Twitch и менеджер подключения
+        services.AddSingleton<TwitchConnectionManager>();
+        services.AddHostedService(sp => sp.GetRequiredService<TwitchConnectionManager>());
+        services.AddSingleton<ITwitchClient>(sp =>
+            sp.GetRequiredService<TwitchConnectionManager>().Client
+        );
+
         // Регистрируем сервис управления наградами и кеш наград перед инициализацией временных наград
         services.AddChannelRewardsManager();
         services.InitializeTwitchRewards();
