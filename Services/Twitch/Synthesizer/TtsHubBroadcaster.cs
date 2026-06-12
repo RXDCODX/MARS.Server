@@ -1,10 +1,17 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
+using MARS.Server.Exstensions;
+using MARS.Server.Hubs.Interfaces;
 using MARS.Server.Hubs.Models.VoiceRecognition;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SevenTV;
+using TwitchLib.Client.Events;
+using TwitchLib.Client.Interfaces;
 using TwitchUser = MARS.Server.Services.Twitch.Entitys.TwitchUser;
 
 namespace MARS.Server.Services.Twitch.Synthesizer;

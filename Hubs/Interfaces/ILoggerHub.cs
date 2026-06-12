@@ -1,4 +1,5 @@
-﻿using MARS.Server.Hubs.Models.LoggerHub;
+﻿using System.Threading.Tasks;
+using MARS.Server.Hubs.Models.LoggerHub;
 using SignalRSwaggerGen.Attributes;
 
 namespace MARS.Server.Hubs.Interfaces;

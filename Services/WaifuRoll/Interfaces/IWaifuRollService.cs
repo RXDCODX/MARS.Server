@@ -1,3 +1,5 @@
+using System.Threading.Tasks;
+using MARS.Server.Services.WaifuRoll.Entitys;
 using MARS.Server.Services.WaifuRoll.Models;
 using ShikimoriSharp.Classes;
 

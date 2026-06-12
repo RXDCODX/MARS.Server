@@ -1,9 +1,18 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
+using MARS.Server.DataBaseContext;
+using MARS.Server.Exstensions;
+using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.Twitch.TwitchFollowers;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using TwitchLib.Api.Interfaces;
+using TwitchLib.Client.Events;
 using TwitchLib.Client.Models;
+using TwitchLib.EventSub.Core.EventArgs.Channel;
 
 namespace MARS.Server.Services.Twitch;
 

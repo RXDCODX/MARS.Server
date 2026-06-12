@@ -1,8 +1,15 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
+using MARS.Server.DataBaseContext;
+using MARS.Server.Exstensions;
 using MARS.Server.Services.Twitch.Rewards._6_RussianRoulette;
+using MARS.Server.Services.WaifuRoll.Entitys;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using TwitchLib.Client.Interfaces;
 
 namespace MARS.Server.Services.Twitch.Entitys.Subs;
 

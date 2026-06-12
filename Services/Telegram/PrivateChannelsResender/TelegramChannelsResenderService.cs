@@ -1,9 +1,13 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
+using MARS.Server.DataBaseContext;
 using MARS.Server.Services.Telegram.PrivateChannelsResender.Entities;
 using MARS.Server.Services.Telegram.WTelegram;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using TL;
@@ -288,7 +292,7 @@ public class TelegramChannelsResenderService(
                 _ => 0L,
             };
 
-            if (!_monitoredChannels.Contains(channelId))
+            if (!Enumerable.Contains(_monitoredChannels, channelId))
             {
                 return;
             }

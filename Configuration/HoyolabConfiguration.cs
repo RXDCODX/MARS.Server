@@ -1,5 +1,7 @@
 ﻿// ReSharper disable InconsistentNaming
 
+using System.Text.Json.Serialization;
+
 namespace MARS.Server.Configuration;
 
 public class HoyolabConfiguration

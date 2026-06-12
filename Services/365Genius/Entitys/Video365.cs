@@ -1,4 +1,8 @@
-﻿namespace MARS.Server.Services._365Genius.Entitys;
+﻿using System;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace MARS.Server.Services._365Genius.Entitys;
 
 /// <summary>
 /// Represents a video entity for the 365Genius service.

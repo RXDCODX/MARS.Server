@@ -1,3 +1,7 @@
+using System;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
 namespace MARS.Server.Services.Telegram.BotService.Entitys;
 
 public class TelegramUpdateReceiverOffset

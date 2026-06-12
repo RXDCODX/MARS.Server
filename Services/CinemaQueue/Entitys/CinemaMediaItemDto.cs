@@ -1,4 +1,6 @@
-﻿namespace MARS.Server.Services.CinemaQueue.Entitys;
+﻿using System;
+
+namespace MARS.Server.Services.CinemaQueue.Entitys;
 
 public class CinemaMediaItemDto
 {

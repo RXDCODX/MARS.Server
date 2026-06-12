@@ -1,4 +1,10 @@
-﻿namespace MARS.Server.Services.Twitch.HelloVideos.Entitys;
+﻿using System;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using MARS.Server.Services.PyroAlerts.Entitys;
+using MARS.Server.Services.Twitch.Entitys;
+
+namespace MARS.Server.Services.Twitch.HelloVideos.Entitys;
 
 public class HelloVideosUsers
 {

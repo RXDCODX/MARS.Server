@@ -1,4 +1,7 @@
-﻿namespace MARS.Server.Services.EnvironmentVariable.Entitys;
+﻿using System;
+using System.ComponentModel.DataAnnotations;
+
+namespace MARS.Server.Services.EnvironmentVariable.Entitys;
 
 /// <summary>
 /// Переменная окружения, хранимая в базе данных

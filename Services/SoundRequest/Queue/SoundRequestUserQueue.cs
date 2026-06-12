@@ -1,7 +1,13 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
+using MARS.Server.DataBaseContext;
+using MARS.Server.Services.SoundRequest.Entities;
 using MARS.Server.Services.Twitch;
+using MARS.Server.Services.Twitch.Entitys;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 
 namespace MARS.Server.Services.SoundRequest.Queue;

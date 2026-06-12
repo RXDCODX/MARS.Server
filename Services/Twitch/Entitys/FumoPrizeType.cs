@@ -1,4 +1,6 @@
-﻿namespace MARS.Server.Services.Twitch.Entitys;
+﻿using System.Text.Json.Serialization;
+
+namespace MARS.Server.Services.Twitch.Entitys;
 
 public class FumoPrizeType
 {

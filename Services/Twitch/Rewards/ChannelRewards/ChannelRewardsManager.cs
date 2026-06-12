@@ -1,8 +1,13 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
+using MARS.Server.DataBaseContext;
+using MARS.Server.Exstensions;
 using MARS.Server.Services.Twitch.Management.Entitys;
 using MARS.Server.Services.Twitch.Rewards.ChannelRewards.Entities;
 using MARS.Server.Services.Twitch.Rewards.ChannelRewards.Models;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using TwitchLib.Api.Helix.Models.ChannelPoints;

@@ -1,5 +1,7 @@
 ﻿using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
+using MARS.Server.Services.Twitch.Entitys;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 

@@ -1,4 +1,5 @@
-﻿using MARS.Server.Services.WaifuRoll.Models;
+﻿using System.Threading.Tasks;
+using MARS.Server.Services.WaifuRoll.Models;
 
 namespace MARS.Server.Services.WaifuRoll.Entitys.Interfaces;
 

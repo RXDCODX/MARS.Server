@@ -15,10 +15,8 @@
     <SpaClientUrl>http://localhost:44478</SpaClientUrl>
     <SpaLaunchCommand>yarn dev</SpaLaunchCommand>
     <OpenApiExportOnRun>false</OpenApiExportOnRun>
-    <RunArguments Condition="'$(OpenApiExportOnRun)' == 'true' and '$(RunArguments)' == ''"
-      >--generate-openapi</RunArguments>
-    <RunArguments Condition="'$(OpenApiExportOnRun)' == 'true' and '$(RunArguments)' != ''"
-      >$(RunArguments) --generate-openapi</RunArguments>
+    <RunArguments Condition="'$(OpenApiExportOnRun)' == 'true' and '$(RunArguments)' == ''">--generate-openapi</RunArguments>
+    <RunArguments Condition="'$(OpenApiExportOnRun)' == 'true' and '$(RunArguments)' != ''">$(RunArguments) --generate-openapi</RunArguments>
     <!-- Change the timeout of the proxy (defaults to 120 seconds) -->
     <SpaProxyTimeoutInSeconds>1200</SpaProxyTimeoutInSeconds>
     <!-- Optionally forward only request starting with the specified path -->
@@ -28,16 +26,10 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'" />
   <PropertyGroup>
     <IsCiBuild Condition="'$(CI)' == 'true' or '$(GITHUB_ACTIONS)' == 'true'">true</IsCiBuild>
-    <IsFolderPublish Condition="'$(WebPublishMethod)' == 'FileSystem' or '$(_TargetId)' == 'Folder'"
-      >true</IsFolderPublish>
-    <UseLocalYoutubeReExplode
-      Condition="'$(UseLocalYoutubeReExplode)' == '' and '$(IsFolderPublish)' == 'true'"
-      >true</UseLocalYoutubeReExplode>
-    <UseLocalYoutubeReExplode
-      Condition="'$(UseLocalYoutubeReExplode)' == '' and '$(IsCiBuild)' == 'true'"
-      >false</UseLocalYoutubeReExplode>
-    <UseLocalYoutubeReExplode Condition="'$(UseLocalYoutubeReExplode)' == ''"
-      >true</UseLocalYoutubeReExplode>
+    <IsFolderPublish Condition="'$(WebPublishMethod)' == 'FileSystem' or '$(_TargetId)' == 'Folder'">true</IsFolderPublish>
+    <UseLocalYoutubeReExplode Condition="'$(UseLocalYoutubeReExplode)' == '' and '$(IsFolderPublish)' == 'true'">true</UseLocalYoutubeReExplode>
+    <UseLocalYoutubeReExplode Condition="'$(UseLocalYoutubeReExplode)' == '' and '$(IsCiBuild)' == 'true'">false</UseLocalYoutubeReExplode>
+    <UseLocalYoutubeReExplode Condition="'$(UseLocalYoutubeReExplode)' == ''">true</UseLocalYoutubeReExplode>
     <RunTestsOnPublish Condition="'$(RunTestsOnPublish)' == ''">true</RunTestsOnPublish>
   </PropertyGroup>
   <ItemGroup>
@@ -121,10 +113,7 @@
     <PackageReference Include="WTelegramClient" />
   </ItemGroup>
   <ItemGroup Condition="'$(UseLocalYoutubeReExplode)' == 'true'">
-    <ProjectReference
-      Include="external\YoutubeExplode\YoutubeExplode\YoutubeExplode.csproj"
-      AdditionalProperties="ManagePackageVersionsCentrally=false;ImportDirectoryPackagesProps=false"
-    />
+    <ProjectReference Include="external\YoutubeExplode\YoutubeExplode\YoutubeExplode.csproj" AdditionalProperties="ManagePackageVersionsCentrally=false;ImportDirectoryPackagesProps=false" />
   </ItemGroup>
   <ItemGroup Condition="'$(UseLocalYoutubeReExplode)' != 'true'">
     <PackageReference Include="YoutubeExplode" />
@@ -180,6 +169,7 @@
     <Folder Include="Services\Twitch\TwitchFollowers\Entitys\" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\MARS.AudioController\MARS.AudioController.csproj" />
     <ProjectReference Include="external\YoutubeExplode\YoutubeExplode.Converter\YoutubeExplode.Converter.csproj" />
   </ItemGroup>
   <Target Name="BuildClientApp" BeforeTargets="Publish">
@@ -187,11 +177,7 @@
     <Exec WorkingDirectory="..\mars.client" Command="yarn install" />
     <Exec WorkingDirectory="..\mars.client" Command="yarn build" />
   </Target>
-  <Target
-    Name="RunTestsBeforePublish"
-    BeforeTargets="BuildClientApp"
-    Condition="'$(RunTestsOnPublish)' == 'true'"
-  >
+  <Target Name="RunTestsBeforePublish" BeforeTargets="BuildClientApp" Condition="'$(RunTestsOnPublish)' == 'true'">
     <Message Importance="high" Text="Проверка: запуск тестов перед publish..." />
     <Exec Command="dotnet test &quot;..\MARS.Tests\MARS.Tests.csproj&quot; --configuration $(Configuration) --verbosity minimal -p:UseLocalYoutubeReExplode=true" />
   </Target>
@@ -209,24 +195,11 @@
     <ItemGroup>
       <DistFiles Include="..\mars.client\dist\**\*" />
     </ItemGroup>
-    <Copy
-      SourceFiles="@(DistFiles)"
-      DestinationFolder="$(PublishDir)wwwroot\%(RecursiveDir)"
-      SkipUnchangedFiles="true"
-    />
+    <Copy SourceFiles="@(DistFiles)" DestinationFolder="$(PublishDir)wwwroot\%(RecursiveDir)" SkipUnchangedFiles="true" />
   </Target>
 
   <Target Name="Husky" BeforeTargets="Restore;CollectPackageReferences" Condition="'$(HUSKY)' != 0">
-    <Exec
-      Command="dotnet tool restore"
-      StandardOutputImportance="Low"
-      StandardErrorImportance="High"
-    />
-    <Exec
-      Command="dotnet husky install"
-      StandardOutputImportance="Low"
-      StandardErrorImportance="High"
-      WorkingDirectory="."
-    />
+    <Exec Command="dotnet tool restore" StandardOutputImportance="Low" StandardErrorImportance="High" />
+    <Exec Command="dotnet husky install" StandardOutputImportance="Low" StandardErrorImportance="High" WorkingDirectory="." />
   </Target>
 </Project>

@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using MARS.Server.Configuration;
+using MARS.Server.Exstensions;
 using MARS.Server.Hubs.Interfaces;
 using MARS.Server.Services.Obs;
 using MARS.Server.Services.SoundBarService;

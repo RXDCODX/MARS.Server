@@ -1,4 +1,6 @@
+using System;
 using System.Threading;
+using System.Threading.Tasks;
 using FFMpegCore;
 using Microsoft.Extensions.Logging;
 
@@ -10,7 +12,7 @@ public class FfprobeMediaInspector(ILogger<FfprobeMediaInspector> logger) : IMed
         long? BitrateKbps,
         double? AverageFrameRate,
         double? RawFrameRate
-    )> ProbeAsync(string filePath, CancellationToken cancellationToken = default)
+        )> ProbeAsync(string filePath, CancellationToken cancellationToken = default)
     {
         var result = (
             BitrateKbps: (long?)null,

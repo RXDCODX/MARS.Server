@@ -1,4 +1,8 @@
-﻿namespace MARS.Server.CustomLoggers.DatabaseLogger;
+﻿using System;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace MARS.Server.CustomLoggers.DatabaseLogger;
 
 public class Log
 {

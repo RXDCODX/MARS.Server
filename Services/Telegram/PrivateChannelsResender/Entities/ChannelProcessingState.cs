@@ -1,3 +1,6 @@
+using System;
+using System.ComponentModel.DataAnnotations;
+
 namespace MARS.Server.Services.Telegram.PrivateChannelsResender.Entities;
 
 /// <summary>

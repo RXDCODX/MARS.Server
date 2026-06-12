@@ -1,4 +1,8 @@
-﻿namespace MARS.Server.Services.SoundRequest.Entities;
+﻿using System;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace MARS.Server.Services.SoundRequest.Entities;
 
 /// <summary>
 /// Базовая информация о треке (песня, видео)

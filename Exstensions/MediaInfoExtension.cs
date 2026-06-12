@@ -1,4 +1,8 @@
-﻿namespace MARS.Server.Exstensions;
+﻿using System;
+using MARS.Server.Services.PyroAlerts.Entitys;
+using MARS.Server.Services.Twitch.Entitys;
+
+namespace MARS.Server.Exstensions;
 
 public static class MediaInfoExtension
 {
@@ -9,7 +13,8 @@ public static class MediaInfoExtension
             if (
                 media
                     .TextInfo.Text?.ToLower()
-                    .Contains("{user.text}", StringComparison.CurrentCultureIgnoreCase) ?? false
+                    .Contains("{user.text}", StringComparison.CurrentCultureIgnoreCase)
+                ?? false
             )
             {
                 media.TextInfo.Text = usertext.StartsWith('@')
@@ -37,12 +42,18 @@ public static class MediaInfoExtension
         {
             if (media.TextInfo.KeyWordsColor?.Contains("{user.color}") ?? false)
             {
-                media.TextInfo.KeyWordsColor = media.TextInfo.KeyWordsColor.Replace("{user.color}", user.ChatColor);
+                media.TextInfo.KeyWordsColor = media.TextInfo.KeyWordsColor.Replace(
+                    "{user.color}",
+                    user.ChatColor
+                );
             }
 
             if (media.TextInfo.TextColor?.Contains("{user.color}") ?? false)
             {
-                media.TextInfo.TextColor = media.TextInfo.TextColor?.Replace("{user.color}", user.ChatColor);
+                media.TextInfo.TextColor = media.TextInfo.TextColor?.Replace(
+                    "{user.color}",
+                    user.ChatColor
+                );
             }
 
             return media;

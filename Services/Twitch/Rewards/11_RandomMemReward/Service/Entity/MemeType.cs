@@ -1,4 +1,7 @@
-﻿namespace MARS.Server.Services.Twitch.Rewards._11_RandomMemReward.Service.Entity;
+﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace MARS.Server.Services.Twitch.Rewards._11_RandomMemReward.Service.Entity;
 
 public class MemeType
 {

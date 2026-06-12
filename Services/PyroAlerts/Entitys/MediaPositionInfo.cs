@@ -1,3 +1,5 @@
+using System;
+
 namespace MARS.Server.Services.PyroAlerts.Entitys;
 
 public class MediaPositionInfo

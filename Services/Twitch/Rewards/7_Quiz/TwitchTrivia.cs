@@ -1,11 +1,18 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
+using MARS.Server.DataBaseContext;
+using MARS.Server.Exstensions;
 using MARS.Server.Services.Twitch.Entitys.Interfaces;
 using MARS.Server.Services.Twitch.Entitys.Subs;
 using MARS.Server.Services.Twitch.Management.Entitys;
+using MARS.Server.Services.WaifuRoll.Entitys;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using TwitchLib.Client.Interfaces;
 
 namespace MARS.Server.Services.Twitch.Rewards._7_Quiz;
 

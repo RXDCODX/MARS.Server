@@ -1,6 +1,20 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
+using MARS.Server.DataBaseContext;
+using MARS.Server.Exstensions;
+using MARS.Server.Hubs;
+using MARS.Server.Hubs.Interfaces;
+using MARS.Server.Services.PyroAlerts.Entitys;
+using MARS.Server.Services.Twitch.Entitys;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
+using TwitchLib.Client.Events;
+using TwitchLib.Client.Interfaces;
+using TwitchLib.EventSub.Core.EventArgs.Channel;
+using TwitchLib.EventSub.Websockets;
 
 namespace MARS.Server.Services.Twitch.Rewards;
 

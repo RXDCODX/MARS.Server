@@ -1,4 +1,6 @@
-﻿namespace MARS.Server.Services.CommandExecutor.Entitys;
+﻿using System;
+
+namespace MARS.Server.Services.CommandExecutor.Entitys;
 
 /// <summary>
 /// Платформы, на которых могут выполняться команды

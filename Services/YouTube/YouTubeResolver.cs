@@ -1,9 +1,13 @@
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
+using System.Threading.Tasks;
+using MARS.Server.Exstensions;
+using MARS.Server.Services.SoundRequest.Entities;
 using Microsoft.Extensions.Logging;
 using YoutubeExplode;
 using YoutubeExplode.Search;
@@ -533,7 +537,7 @@ public class YouTubeResolver(ILogger<YouTubeResolver> logger)
         {
             var invalidChars = Path.GetInvalidFileNameChars();
             var safeChars = title.Select(character =>
-                invalidChars.Contains(character) ? '_' : character
+                Enumerable.Contains(invalidChars, character) ? '_' : character
             );
             var normalizedTitle = new string(safeChars.ToArray()).Trim();
             if (normalizedTitle.Length > 80)

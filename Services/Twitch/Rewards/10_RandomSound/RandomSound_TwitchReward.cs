@@ -1,12 +1,28 @@
+using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
+using MARS.Server.DataBaseContext;
+using MARS.Server.Exstensions;
+using MARS.Server.Hubs;
+using MARS.Server.Hubs.Interfaces;
+using MARS.Server.Services.PyroAlerts.Entitys;
+using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Media;
 using MARS.Server.Services.Twitch.Rewards._11_RandomMemReward.Service.Entity;
+using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Telegram.Bot;
+using TwitchLib.EventSub.Core.EventArgs.Channel;
+using TwitchLib.EventSub.Websockets;
 
 namespace MARS.Server.Services.Twitch.Rewards._10_RandomSound;
 
@@ -110,7 +126,10 @@ public class RandomSound_TwitchReward(
         return media;
     }
 
-    private static string BuildSingleFileSummary(string sourcePath, IReadOnlyList<string> transcodeReports)
+    private static string BuildSingleFileSummary(
+        string sourcePath,
+        IReadOnlyList<string> transcodeReports
+    )
     {
         var result = new StringBuilder();
 
@@ -129,7 +148,10 @@ public class RandomSound_TwitchReward(
         return result.ToString().TrimEnd();
     }
 
-    private async Task SendTranscodeNotificationAsync(string message, CancellationToken cancellationToken)
+    private async Task SendTranscodeNotificationAsync(
+        string message,
+        CancellationToken cancellationToken
+    )
     {
         try
         {

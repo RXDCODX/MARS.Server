@@ -1,15 +1,25 @@
+using System;
 using System.Threading;
+using System.Threading.Tasks;
+using MARS.Server.Configuration;
+using MARS.Server.DataBaseContext;
+using MARS.Server.Exstensions;
 using MARS.Server.Services.CommandExecutor.Adapters;
 using MARS.Server.Services.PyroAlerts;
+using MARS.Server.Services.Telegram.BotService.Entitys;
 using MARS.Server.Services.Telegram.ClipboardCopy;
 using MARS.Server.Services.Telegram.GooglePhotos;
 using MARS.Server.Services.Telegram.WTelegram;
 using MARS.Server.Services.Twitch.Rewards._11_RandomMemReward.Service;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using Telegram.Bot;
 using Telegram.Bot.Exceptions;
 using Telegram.Bot.Polling;
+using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 
 namespace MARS.Server.Services.Telegram.BotService;

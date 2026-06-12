@@ -1,3 +1,5 @@
+using System;
+
 namespace MARS.Server.Services.Telegram.ClipboardCopy;
 
 internal sealed class ClipboardRequestFiles(string[] memoryFileNames, DateTimeOffset createdAt)

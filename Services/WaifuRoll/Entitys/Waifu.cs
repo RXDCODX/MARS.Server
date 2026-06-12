@@ -1,4 +1,8 @@
-﻿namespace MARS.Server.Services.WaifuRoll.Entitys;
+﻿using System;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace MARS.Server.Services.WaifuRoll.Entitys;
 
 [Table("Waifus")]
 public class Waifu

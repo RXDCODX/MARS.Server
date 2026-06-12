@@ -1,5 +1,9 @@
 using System.Threading;
+using System.Threading.Tasks;
+using MARS.Server.Services.Twitch.Entitys;
+using TwitchLib.Client.Events;
 using TwitchLib.Client.Models;
+using TwitchLib.EventSub.Core.EventArgs.Channel;
 
 namespace MARS.Server.Services.Twitch;
 

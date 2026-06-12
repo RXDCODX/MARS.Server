@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using TwitchLib.Api.Helix.Models.ChannelPoints;
 
 namespace MARS.Server.Services.Twitch.Rewards.ChannelRewards;

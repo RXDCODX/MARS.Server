@@ -1,9 +1,16 @@
+using System;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using FFMpegCore;
+using MARS.Server.DataBaseContext;
+using MARS.Server.Exstensions;
+using MARS.Server.Services.PyroAlerts.Entitys;
 using MARS.Server.Services.Twitch.Rewards._11_RandomMemReward.Service.Entity;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 

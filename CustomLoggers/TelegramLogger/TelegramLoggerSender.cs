@@ -1,4 +1,9 @@
-﻿namespace MARS.Server.CustomLoggers.TelegramLogger;
+﻿using System;
+using System.Collections.Concurrent;
+using System.Threading.Tasks;
+using Telegram.Bot;
+
+namespace MARS.Server.CustomLoggers.TelegramLogger;
 
 public class TelegramLoggerSender : IDisposable
 {

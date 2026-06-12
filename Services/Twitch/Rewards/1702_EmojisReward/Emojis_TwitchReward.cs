@@ -1,7 +1,19 @@
+using System;
+using System.Drawing;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
+using MARS.Server.Exstensions;
+using MARS.Server.Hubs;
+using MARS.Server.Hubs.Interfaces;
+using MARS.Server.Services.Twitch.Entitys;
+using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using TwitchLib.Api.Helix.Models.ChannelPoints.CreateCustomReward;
+using TwitchLib.Client.Events;
+using TwitchLib.Client.Interfaces;
 
 namespace MARS.Server.Services.Twitch.Rewards._1702_EmojisReward;
 

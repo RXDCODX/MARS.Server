@@ -1,4 +1,6 @@
-﻿namespace MARS.Server.ApplicationState;
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace MARS.Server.ApplicationState;
 
 public partial class RootState
 {

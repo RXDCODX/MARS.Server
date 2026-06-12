@@ -1,4 +1,6 @@
-﻿namespace MARS.Server.Services.StreamAcrhive_UNUSED.Models;
+﻿using System;
+
+namespace MARS.Server.Services.StreamAcrhive_UNUSED.Models;
 
 public class VideoInfo
 {

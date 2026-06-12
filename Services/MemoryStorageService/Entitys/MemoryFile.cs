@@ -1,4 +1,6 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
+using MARS.Server.Services.PyroAlerts.Entitys;
 
 namespace MARS.Server.Services.MemoryStorageService.Entitys;
 

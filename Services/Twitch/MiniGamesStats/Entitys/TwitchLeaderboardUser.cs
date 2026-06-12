@@ -1,3 +1,7 @@
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using MARS.Server.Services.Twitch.Entitys;
+
 namespace MARS.Server.Services.Twitch.MiniGamesStats.Entitys;
 
 public class TwitchLeaderboardUser

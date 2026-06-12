@@ -1,4 +1,9 @@
-﻿namespace MARS.Server.Services.SoundRequest.Entities;
+﻿using System;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using MARS.Server.Services.Twitch.Entitys;
+
+namespace MARS.Server.Services.SoundRequest.Entities;
 
 /// <summary>
 /// Элемент очереди - заказ пользователя на воспроизведение трека

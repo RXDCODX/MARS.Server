@@ -1,4 +1,7 @@
-﻿namespace MARS.Server.Services.AutoArts_OBSOLETE.Entitys;
+﻿using System;
+using Newtonsoft.Json;
+
+namespace MARS.Server.Services.AutoArts_OBSOLETE.Entitys;
 
 public class AutoArtImage
 {

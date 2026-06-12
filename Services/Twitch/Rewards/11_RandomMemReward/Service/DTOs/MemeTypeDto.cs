@@ -1,4 +1,6 @@
-﻿namespace MARS.Server.Services.Twitch.Rewards._11_RandomMemReward.Service.DTOs;
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace MARS.Server.Services.Twitch.Rewards._11_RandomMemReward.Service.DTOs;
 
 public class MemeTypeDto
 {

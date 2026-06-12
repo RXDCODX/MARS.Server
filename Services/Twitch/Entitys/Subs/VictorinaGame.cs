@@ -1,7 +1,12 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using MARS.Server.Exstensions;
 using MARS.Server.Services.Twitch.Rewards._7_Quiz;
 using Microsoft.Extensions.Logging;
+using TwitchLib.Client.Interfaces;
 
 namespace MARS.Server.Services.Twitch.Entitys.Subs;
 

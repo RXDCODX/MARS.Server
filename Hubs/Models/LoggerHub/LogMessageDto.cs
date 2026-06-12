@@ -1,3 +1,6 @@
+using System;
+using System.Text.Json.Serialization;
+
 namespace MARS.Server.Hubs.Models.LoggerHub;
 
 public class LogMessageDto

@@ -1,4 +1,5 @@
-﻿using MARS.Server.Services.Scoreboard.Entitys;
+﻿using System.Threading.Tasks;
+using MARS.Server.Services.Scoreboard.Entitys;
 
 namespace MARS.Server.Hubs.Interfaces;
 

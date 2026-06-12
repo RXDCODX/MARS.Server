@@ -1,9 +1,15 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
+using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Management.Entitys;
 using Microsoft.Extensions.Logging;
 using TwitchLib.Api.Auth;
 using TwitchLib.Api.Helix.Models.Chat;
+using TwitchLib.Api.Interfaces;
+using TwitchLib.Client.Interfaces;
 using TwitchLib.Client.Models;
 
 namespace MARS.Server.Exstensions;
@@ -20,10 +26,7 @@ public static class TwitchExstension
 
     extension(ITwitchClient client)
     {
-        public async Task SendMessageToMainTwitchAsync<T>(
-            string message,
-            ILogger<T>? logger = null
-        )
+        public async Task SendMessageToMainTwitchAsync<T>(string message, ILogger<T>? logger = null)
             where T : class
         {
             try
@@ -49,10 +52,7 @@ public static class TwitchExstension
             }
         }
 
-        public async Task SendMessageToMainTwitchAsync(
-            string message,
-            ILogger? logger = null
-        )
+        public async Task SendMessageToMainTwitchAsync(string message, ILogger? logger = null)
         {
             try
             {
@@ -105,10 +105,7 @@ public static class TwitchExstension
             }
         }
 
-        public async Task<bool> ValidateToken<T>(
-            ILogger<T> logger,
-            string? token = null
-        )
+        public async Task<bool> ValidateToken<T>(ILogger<T> logger, string? token = null)
             where T : class
         {
             try
@@ -120,7 +117,8 @@ public static class TwitchExstension
                 return response != null;
             }
             catch (Exception e)
-                when (e.Message.Contains("invalid access token", StringComparison.OrdinalIgnoreCase))
+                when (e.Message.Contains("invalid access token", StringComparison.OrdinalIgnoreCase)
+                )
             {
                 return false;
             }
@@ -132,7 +130,8 @@ public static class TwitchExstension
         }
     }
 
-    extension<T>(IEnumerable<T> list) where T : TwitchUser
+    extension<T>(IEnumerable<T> list)
+        where T : TwitchUser
     {
         public HashSet<string> Logins => list.Select(e => e.UserLogin).ToHashSet();
 

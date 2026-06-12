@@ -1,4 +1,8 @@
-﻿namespace MARS.Server.Services.StreamAcrhive_UNUSED.Entitys;
+﻿using System;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace MARS.Server.Services.StreamAcrhive_UNUSED.Entitys;
 
 public class StreamArchiveFileChunk
 {

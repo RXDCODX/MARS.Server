@@ -1,5 +1,11 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Net.Http;
+using System.Text;
+using System.Text.Json.Serialization;
+using System.Threading.Tasks;
+using MARS.Server.Configuration;
+using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Linq;
 
 namespace MARS.Server.Services.Twitch.Rewards._27_RandomArt;

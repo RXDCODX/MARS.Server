@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using Telegram.Bot.Types;
 
 namespace MARS.Server.Exstensions;
 

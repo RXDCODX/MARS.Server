@@ -1,4 +1,6 @@
 ﻿using System.Collections.Generic;
+using System.Threading.Tasks;
+using MARS.Server.Services.WaifuRoll.Entitys;
 
 namespace MARS.Server.Services.WaifuRoll.Interfaces;
 

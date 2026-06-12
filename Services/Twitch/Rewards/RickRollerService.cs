@@ -1,3 +1,12 @@
+using System;
+using System.Threading.Tasks;
+using MARS.Server.Exstensions;
+using MARS.Server.Hubs;
+using MARS.Server.Hubs.Interfaces;
+using MARS.Server.Services.PyroAlerts.Entitys;
+using MARS.Server.Services.Twitch.Entitys;
+using Microsoft.AspNetCore.SignalR;
+
 namespace MARS.Server.Services.Twitch.Rewards;
 
 public class RickRollerService(

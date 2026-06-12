@@ -1,12 +1,17 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using DSharpPlus;
 using DSharpPlus.EventArgs;
+using MARS.Server.Services.CommandExecutor.Entitys;
+using MARS.Server.Services.CommandExecutor.Entitys.Commands;
 using MARS.Server.Services.Discord.Gateway;
 using MARS.Server.Services.Discord.PlayRequest;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using ServerDiscordConfiguration = MARS.Server.Configuration.DiscordConfiguration;
 
 namespace MARS.Server.Services.CommandExecutor.Adapters;
@@ -35,7 +40,7 @@ public class DiscordCommandService(
         commandService.GetAdminCommands(Platform.Discord);
 
     public override Func<ulong, bool> IsAdmin =>
-        userId => _discordConfiguration.AdminIdsArray.Contains(userId);
+        userId => Enumerable.Contains(_discordConfiguration.AdminIdsArray, userId);
 
     public Task StartAsync(CancellationToken cancellationToken)
     {

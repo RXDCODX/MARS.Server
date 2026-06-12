@@ -1,4 +1,6 @@
-﻿using SignalRSwaggerGen.Attributes;
+﻿using MARS.Server.Hubs.Interfaces;
+using Microsoft.AspNetCore.SignalR;
+using SignalRSwaggerGen.Attributes;
 using SignalRSwaggerGen.Enums;
 
 namespace MARS.Server.Hubs;

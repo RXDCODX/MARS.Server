@@ -1,4 +1,7 @@
-﻿namespace MARS.Server.Services.Twitch.Management.Entitys;
+﻿using System;
+using System.ComponentModel.DataAnnotations;
+
+namespace MARS.Server.Services.Twitch.Management.Entitys;
 
 public class TokenInfo
 {

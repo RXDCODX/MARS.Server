@@ -1,14 +1,26 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
+using System.Threading.Tasks;
+using MARS.Server.Configuration;
+using MARS.Server.Exstensions;
+using MARS.Server.Hubs;
+using MARS.Server.Hubs.Interfaces;
 using MARS.Server.Services.Shikimori;
+using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.WaifuRoll;
 using MARS.Server.Services.WaifuRoll.Entitys.Interfaces;
 using MARS.Server.Services.WaifuRoll.helpers;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using ShikimoriSharp.Classes;
 using TwitchLib.Api.Helix.Models.Chat;
+using TwitchLib.Api.Interfaces;
+using TwitchLib.Client.Events;
+using TwitchLib.Client.Interfaces;
 
 namespace MARS.Server.Services.Twitch.Rewards._5_AddWife;
 

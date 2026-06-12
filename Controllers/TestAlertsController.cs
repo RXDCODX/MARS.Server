@@ -1,11 +1,16 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Threading.Tasks;
 using MARS.Server.Hubs;
+using MARS.Server.Hubs.Interfaces;
+using MARS.Server.Services;
 using MARS.Server.Services.PyroAlerts.Entitys;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Hosting;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 
@@ -15,8 +20,7 @@ namespace MARS.Server.Controllers;
 [Route("api/[controller]")]
 public class TestAlertsController(
     IHubContext<TelegramusHub, ITelegramusHub> hubContext,
-    IWebHostEnvironment env,
-    IHostApplicationLifetime lifetime
+    IWebHostEnvironment env
 ) : ControllerBase
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -88,15 +92,6 @@ public class TestAlertsController(
         ActionResult<OperationResult<List<AlertSettingsEntry>>> result = Ok(
             OperationResult<List<AlertSettingsEntry>>.Ok("Настройки алертов получены", entries)
         );
-        return result;
-    }
-
-    [HttpPost("shutdown")]
-    public ActionResult<OperationResult> Shutdown()
-    {
-        lifetime.StopApplication();
-
-        ActionResult<OperationResult> result = Ok(OperationResult.Ok("Сервер выключается"));
         return result;
     }
 

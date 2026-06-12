@@ -1,4 +1,6 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using System;
+using Microsoft.Extensions.Logging;
+using Telegram.Bot;
 
 namespace MARS.Server.CustomLoggers.TelegramLogger;
 

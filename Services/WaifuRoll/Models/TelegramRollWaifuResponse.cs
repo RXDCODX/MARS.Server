@@ -1,3 +1,5 @@
+using MARS.Server.Services.WaifuRoll.Entitys;
+
 namespace MARS.Server.Services.WaifuRoll.Models;
 
 /// <summary>

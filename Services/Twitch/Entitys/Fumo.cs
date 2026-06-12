@@ -1,4 +1,8 @@
-﻿namespace MARS.Server.Services.Twitch.Entitys;
+﻿using System;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace MARS.Server.Services.Twitch.Entitys;
 
 [Table("Fumos")]
 public class Fumo

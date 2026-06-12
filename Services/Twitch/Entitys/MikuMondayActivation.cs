@@ -1,4 +1,7 @@
-﻿namespace MARS.Server.Services.Twitch.Entitys;
+﻿using System;
+using System.ComponentModel.DataAnnotations;
+
+namespace MARS.Server.Services.Twitch.Entitys;
 
 /// <summary>
 /// Запись об активации награды Miku Monday

@@ -1,3 +1,5 @@
+using System;
+
 namespace MARS.Server.Services.Twitch.Rewards.ChannelRewards.Models;
 
 /// <summary>
