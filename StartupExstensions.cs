@@ -208,6 +208,12 @@ public static class StartupEstensions
         // Регистрируем ScoreboardService
         services.AddScoped<ScoreboardService>();
 
+        services.AddSingleton<HelloVideoWorker>();
+        services.AddHostedService(sp => sp.GetRequiredService<HelloVideoWorker>());
+
+        services.AddSingleton<AutoMessagesHandler>();
+        services.AddHostedService(sp => sp.GetRequiredService<AutoMessagesHandler>());
+
         return services;
     }
 
@@ -222,6 +228,9 @@ public static class StartupEstensions
         services.AddSingleton<ITwitchClient>(sp =>
             sp.GetRequiredService<TwitchConnectionManager>().Client
         );
+
+        // Регистрируем EventSub WebSocket клиент
+        services.AddSingleton<EventSubWebsocketClient>();
 
         // Регистрируем сервис управления наградами и кеш наград перед инициализацией временных наград
         services.AddChannelRewardsManager();
@@ -378,6 +387,8 @@ public static class StartupEstensions
         services.AddSingleton<InSignalRHubService>();
         services.AddSingleton<OutSignalRHubService>();
         services.AddSingleton<SoundRequestUserQueue>();
+        services.AddSingleton<SoundBarFactory>();
+        services.AddSingleton<SoundMuteCoordinator>();
 
         // YouTube / Discord play request services
         services.AddSingleton<DiscordPlayAudioCacheService>();
@@ -469,6 +480,9 @@ public static class StartupEstensions
             services.AddSingleton<WaifuPrizesService>();
             services.AddSingleton<IWaifuRollGuaranteeService, WaifuRollGuaranteeService>();
 
+            services.AddSingleton<MergeWaifu>();
+            services.AddHostedService(sp => sp.GetRequiredService<MergeWaifu>());
+
             // Fumo Friday services
             services.AddSingleton<FumoRollService>();
             services.AddSingleton<FumoFridayRoll_TwitchReward>();
@@ -476,6 +490,8 @@ public static class StartupEstensions
 
             // Фоновый запуск WaifuRollService
             services.AddHostedService(sp => sp.GetRequiredService<WaifuRollService>());
+
+            services.AddSingleton<WeddingAnniversaryService>();
 
             return services;
         }
