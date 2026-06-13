@@ -450,6 +450,7 @@ public class WaifuRollService(
                 {
                     var isChecked = false;
                     var greet = host.HusbandGreetings;
+                    var isNewGreeting = greet is null;
 
                     if (greet is null)
                     {
@@ -487,7 +488,15 @@ public class WaifuRollService(
 
                             // Обновляем время последнего приветствия
                             greet!.Time = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
-                            dbContext.HusbandGreetings.Upsert(greet);
+
+                            if (isNewGreeting)
+                            {
+                                dbContext.HusbandGreetings.Add(greet);
+                            }
+                            else
+                            {
+                                dbContext.HusbandGreetings.Update(greet);
+                            }
 
                             dbContext.Entry(host).State = EntityState.Unchanged;
 
@@ -504,7 +513,17 @@ public class WaifuRollService(
                             var fixedmsg = await ConvertFixLinksInHelloMessages(helloMsg);
 
                             greet!.Time = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
-                            dbContext.HusbandGreetings.Upsert(greet);
+
+                            if (isNewGreeting)
+                            {
+                                dbContext.HusbandGreetings.Add(greet);
+                            }
+                            else
+                            {
+                                dbContext.HusbandGreetings.Update(greet);
+                            }
+
+                            dbContext.Entry(host).State = EntityState.Unchanged;
 
                             await dbContext.SaveChangesAsync();
 
