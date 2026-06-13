@@ -66,10 +66,10 @@ public class StateManager(
             var dbState = await db
                 .SoundRequestPlayerState.AsNoTracking()
                 .Include(s => s.CurrentQueueItem)
-                .ThenInclude(qi => qi!.Track)
+                    .ThenInclude(qi => qi!.Track)
                 .Include(s => s.CurrentQueueItem)
-                .ThenInclude(qi => qi!.RequestedByTwitchUser)
-                .FirstOrDefaultAsync(_cancellationToken);
+                    .ThenInclude(qi => qi!.RequestedByTwitchUser)
+                .SingleOrDefaultAsync(_cancellationToken);
 
             if (dbState != null)
             {
