@@ -7,7 +7,6 @@ using MARS.Server.Services.Twitch.Rewards._13_FumoFriday.Entitys;
 using MARS.Server.Services.Twitch.TwitchFollowers.Entitys;
 using MARS.Server.Services.WaifuRoll.Entitys;
 using Microsoft.EntityFrameworkCore;
-using Host = MARS.Server.Services.WaifuRoll.Entitys.Host;
 
 namespace MARS.Server.DataBaseContext;
 
@@ -20,14 +19,14 @@ public sealed partial class AppDbContext
     public DbSet<TwitchUser> TwitchUsers { get; set; } = null!;
 
     // Таблицы, связанные с пользователями Twitch
-    public DbSet<Host> Hosts { get; set; } = null!;
+    public DbSet<Husband> Husbands { get; set; } = null!;
     public DbSet<FollowerInfo> FollowersEntitys { get; set; } = null!;
     public DbSet<TwitchLeaderboardUser> TwitchLeaderboardUsers { get; set; } = null!;
     public DbSet<HelloVideosUsers> HelloVideosUsers { get; set; } = null!;
     public DbSet<FumoUser> FumoUsers { get; set; } = null!;
     public DbSet<WaifuRollGuarantee> WaifuRollGuarantees { get; set; } = null!;
-    public DbSet<HostCoolDown> HostsCoolDowns { get; set; } = null!;
-    public DbSet<HostAutoHello> HostsGreetings { get; set; } = null!;
+    public DbSet<HusbandCoolDown> HusbandCoolDowns { get; set; } = null!;
+    public DbSet<HusbandAutoHello> HusbandGreetings { get; set; } = null!;
 
     // Таблицы с опциональными связями к TwitchUser
     public DbSet<QueueItem> SoundRequestQueueItems { get; set; } = null!;
@@ -38,26 +37,26 @@ public sealed partial class AppDbContext
     /// </summary>
     public partial void OnModelCreatingTwitchUsersPartial(ModelBuilder modelBuilder)
     {
-        // Конфигурация Host
+        // Конфигурация Husband
         modelBuilder
-            .Entity<Host>()
+            .Entity<Husband>()
             .UseTpcMappingStrategy()
-            .HasOne(h => h.HostGreetings)
-            .WithOne(hg => hg.Host)
-            .HasForeignKey<HostAutoHello>(e => e.HostId)
+            .HasOne(h => h.HusbandGreetings)
+            .WithOne(hg => hg.Husband)
+            .HasForeignKey<HusbandAutoHello>(e => e.HusbandId)
             .OnDelete(DeleteBehavior.NoAction);
 
         modelBuilder
-            .Entity<Host>()
+            .Entity<Husband>()
             .UseTpcMappingStrategy()
-            .HasOne(h => h.HostCoolDown)
-            .WithOne(hcd => hcd.Host)
-            .HasForeignKey<HostCoolDown>(e => e.HostId)
+            .HasOne(h => h.HusbandCoolDown)
+            .WithOne(hcd => hcd.Husband)
+            .HasForeignKey<HusbandCoolDown>(e => e.HusbandId)
             .OnDelete(DeleteBehavior.NoAction);
 
-        // Связь Host -> TwitchUser (многие к одному)
+        // Связь Husband -> TwitchUser (многие к одному)
         modelBuilder
-            .Entity<Host>()
+            .Entity<Husband>()
             .HasOne(h => h.TwitchUser)
             .WithMany()
             .HasForeignKey(h => h.TwitchId)

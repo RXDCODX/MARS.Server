@@ -2,7 +2,6 @@ using System.Threading.Tasks;
 using MARS.Server.Services.WaifuRoll.Entitys;
 using MARS.Server.Services.WaifuRoll.Models;
 using ShikimoriSharp.Classes;
-using Host = MARS.Server.Services.WaifuRoll.Entitys.Host;
 
 namespace MARS.Server.Services.WaifuRoll.Interfaces;
 
@@ -34,11 +33,11 @@ public interface IWaifuRollService
     /// <summary>
     /// Объединение вайфу с хостом
     /// </summary>
-    /// <param name="host">Хост</param>
+    /// <param name="husband">Хост</param>
     /// <param name="waifu">Вайфу</param>
     /// <param name="makeprivate">Сделать приватной</param>
     /// <returns>Успешность операции</returns>
-    Task<bool> MergeTheWaifu(Host host, Waifu waifu, bool makeprivate = true);
+    Task<bool> MergeTheWaifu(Husband husband, Waifu waifu, bool makeprivate = true);
 
     /// <summary>
     /// Автоматическое приветствие

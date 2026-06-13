@@ -83,16 +83,16 @@ public class WaifuRollCooldownNotificationService(
 
             await using var dbContext = await dbContextFactory.CreateDbContextAsync();
             var host = await dbContext
-                .Hosts.Include(h => h.HostCoolDown)
+                .Husbands.Include(h => h.HusbandCoolDown)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(h => h.TwitchId == twEvent.UserId);
 
-            if (host?.HostCoolDown == null)
+            if (host?.HusbandCoolDown == null)
             {
                 return;
             }
 
-            var cooldownTime = host.HostCoolDown.Time.ToOffset(TimeSpan.FromHours(3));
+            var cooldownTime = host.HusbandCoolDown.Time.ToOffset(TimeSpan.FromHours(3));
             var now = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
             var timeSinceCooldownUpdate = now - cooldownTime;
 
@@ -183,19 +183,19 @@ public class WaifuRollCooldownNotificationService(
 
             await using var dbContext = await dbContextFactory.CreateDbContextAsync();
             var host = await dbContext
-                .Hosts.Include(h => h.HostCoolDown)
-                .Include(h => h.HostGreetings)
+                .Husbands.Include(h => h.HusbandCoolDown)
+                .Include(h => h.HusbandGreetings)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(h => h.TwitchId == e.ChatMessage.UserId);
 
-            if (host?.HostCoolDown == null)
+            if (host?.HusbandCoolDown == null)
             {
                 _pendingNotifications.Remove(e.ChatMessage.UserId);
                 _semaphore.Release();
                 return;
             }
 
-            var cooldownTime = host.HostCoolDown.Time.ToOffset(TimeSpan.FromHours(3));
+            var cooldownTime = host.HusbandCoolDown.Time.ToOffset(TimeSpan.FromHours(3));
             var cooldown = await waifuRollService.GetWaifuRollCoolDownAsync();
             var cooldownEnd = cooldownTime.Add(cooldown);
 

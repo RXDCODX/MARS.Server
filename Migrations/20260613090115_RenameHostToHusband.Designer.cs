@@ -3,6 +3,7 @@ using System;
 using MARS.Server.DataBaseContext;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MARS.Server.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260613090115_RenameHostToHusband")]
+    partial class RenameHostToHusband
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1166,6 +1169,48 @@ namespace MARS.Server.Migrations
                     b.ToTable("FollowersEntitys");
                 });
 
+            modelBuilder.Entity("MARS.Server.Services.WaifuRoll.Entitys.HostAutoHello", b =>
+                {
+                    b.Property<Guid>("Guid")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("HostId")
+                        .IsRequired()
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTimeOffset>("Time")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Guid");
+
+                    b.HasIndex("HostId")
+                        .IsUnique();
+
+                    b.ToTable("AutoHello");
+                });
+
+            modelBuilder.Entity("MARS.Server.Services.WaifuRoll.Entitys.HostCoolDown", b =>
+                {
+                    b.Property<Guid>("Guid")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("HostId")
+                        .IsRequired()
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTimeOffset>("Time")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Guid");
+
+                    b.HasIndex("HostId")
+                        .IsUnique();
+
+                    b.ToTable("CD");
+                });
+
             modelBuilder.Entity("MARS.Server.Services.WaifuRoll.Entitys.Husband", b =>
                 {
                     b.Property<string>("TwitchId")
@@ -1197,48 +1242,6 @@ namespace MARS.Server.Migrations
                     b.ToTable("Husbands");
 
                     b.UseTpcMappingStrategy();
-                });
-
-            modelBuilder.Entity("MARS.Server.Services.WaifuRoll.Entitys.HusbandAutoHello", b =>
-                {
-                    b.Property<Guid>("Guid")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("HusbandId")
-                        .IsRequired()
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<DateTimeOffset>("Time")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Guid");
-
-                    b.HasIndex("HusbandId")
-                        .IsUnique();
-
-                    b.ToTable("HusbandAutoHelloCooldowns");
-                });
-
-            modelBuilder.Entity("MARS.Server.Services.WaifuRoll.Entitys.HusbandCoolDown", b =>
-                {
-                    b.Property<Guid>("Guid")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("HusbandId")
-                        .IsRequired()
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<DateTimeOffset>("Time")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Guid");
-
-                    b.HasIndex("HusbandId")
-                        .IsUnique();
-
-                    b.ToTable("HusbandCoolDowns");
                 });
 
             modelBuilder.Entity("MARS.Server.Services.WaifuRoll.Entitys.Waifu", b =>
@@ -1742,6 +1745,28 @@ namespace MARS.Server.Migrations
                     b.Navigation("TwitchUser");
                 });
 
+            modelBuilder.Entity("MARS.Server.Services.WaifuRoll.Entitys.HostAutoHello", b =>
+                {
+                    b.HasOne("MARS.Server.Services.WaifuRoll.Entitys.Husband", "Host")
+                        .WithOne("HostGreetings")
+                        .HasForeignKey("MARS.Server.Services.WaifuRoll.Entitys.HostAutoHello", "HostId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("Host");
+                });
+
+            modelBuilder.Entity("MARS.Server.Services.WaifuRoll.Entitys.HostCoolDown", b =>
+                {
+                    b.HasOne("MARS.Server.Services.WaifuRoll.Entitys.Husband", "Host")
+                        .WithOne("HostCoolDown")
+                        .HasForeignKey("MARS.Server.Services.WaifuRoll.Entitys.HostCoolDown", "HostId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("Host");
+                });
+
             modelBuilder.Entity("MARS.Server.Services.WaifuRoll.Entitys.Husband", b =>
                 {
                     b.HasOne("MARS.Server.Services.Twitch.Entitys.TwitchUser", "TwitchUser")
@@ -1751,28 +1776,6 @@ namespace MARS.Server.Migrations
                         .IsRequired();
 
                     b.Navigation("TwitchUser");
-                });
-
-            modelBuilder.Entity("MARS.Server.Services.WaifuRoll.Entitys.HusbandAutoHello", b =>
-                {
-                    b.HasOne("MARS.Server.Services.WaifuRoll.Entitys.Husband", "Husband")
-                        .WithOne("HusbandGreetings")
-                        .HasForeignKey("MARS.Server.Services.WaifuRoll.Entitys.HusbandAutoHello", "HusbandId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.Navigation("Husband");
-                });
-
-            modelBuilder.Entity("MARS.Server.Services.WaifuRoll.Entitys.HusbandCoolDown", b =>
-                {
-                    b.HasOne("MARS.Server.Services.WaifuRoll.Entitys.Husband", "Husband")
-                        .WithOne("HusbandCoolDown")
-                        .HasForeignKey("MARS.Server.Services.WaifuRoll.Entitys.HusbandCoolDown", "HusbandId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.Navigation("Husband");
                 });
 
             modelBuilder.Entity("MARS.Server.Services.WaifuRoll.Entitys.WaifuRollGuarantee", b =>
@@ -1800,10 +1803,10 @@ namespace MARS.Server.Migrations
 
             modelBuilder.Entity("MARS.Server.Services.WaifuRoll.Entitys.Husband", b =>
                 {
-                    b.Navigation("HusbandCoolDown")
+                    b.Navigation("HostCoolDown")
                         .IsRequired();
 
-                    b.Navigation("HusbandGreetings")
+                    b.Navigation("HostGreetings")
                         .IsRequired();
                 });
 #pragma warning restore 612, 618

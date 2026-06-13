@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace MARS.Server.Services.WaifuRoll.Entitys;
 
-[Table("Waifus")]
+[Table(nameof(Waifu) + "s")]
 public class Waifu
 {
     [Key]

@@ -21,7 +21,6 @@ using Microsoft.EntityFrameworkCore.DynamicLinq;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using ShikimoriSharp.Classes;
-using Host = MARS.Server.Services.WaifuRoll.Entitys.Host;
 
 namespace MARS.Server.Services.WaifuRoll;
 
@@ -44,7 +43,7 @@ public class WaifuRollService(
 
     /// <summary>
     /// Словарь семафоров для синхронизации операций по TwitchId
-    /// Предотвращает race condition при создании Host
+    /// Предотвращает race condition при создании Husband
     /// </summary>
     private readonly ConcurrentDictionary<string, SemaphoreWrapper> _hostSemaphores = new();
 
@@ -116,14 +115,14 @@ public class WaifuRollService(
 
                 await using AppDbContext dbContext = await factory.CreateDbContextAsync();
                 var host = dbContext
-                    .Hosts.Include(e => e.HostCoolDown)
+                    .Husbands.Include(e => e.HusbandCoolDown)
                     .FirstOrDefault(e => e.TwitchId == id);
-                var cd = host?.HostCoolDown;
+                var cd = host?.HusbandCoolDown;
                 if (host != null)
                 {
                     if (cd is not null)
                     {
-                        if (cd.HostId == host.TwitchId)
+                        if (cd.HusbandId == host.TwitchId)
                         {
                             var now = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
                             var cdTime = cd.Time.ToOffset(TimeSpan.FromHours(3));
@@ -138,41 +137,41 @@ public class WaifuRollService(
                         }
                         else
                         {
-                            cd.HostId = host.TwitchId;
+                            cd.HusbandId = host.TwitchId;
                             cd.Time = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
 
-                            dbContext.HostsCoolDowns.Update(cd);
+                            dbContext.HusbandCoolDowns.Update(cd);
                             pass = true;
                         }
                     }
                     else
                     {
-                        cd = new HostCoolDown { HostId = id };
-                        host.HostCoolDown = cd;
+                        cd = new HusbandCoolDown { HusbandId = id };
+                        host.HusbandCoolDown = cd;
 
-                        dbContext.Hosts.Update(host);
+                        dbContext.Husbands.Update(host);
 
                         pass = true;
                     }
                 }
                 else
                 {
-                    // Гарантируем наличие пользователя в TwitchUsers перед созданием Host
+                    // Гарантируем наличие пользователя в TwitchUsers перед созданием Husband
                     if (twitchUserEnsureService is not null)
                     {
                         await twitchUserEnsureService.EnsureUserExistsAsync(id);
                     }
 
-                    cd = new HostCoolDown { HostId = id };
+                    cd = new HusbandCoolDown { HusbandId = id };
 
-                    host = new Host
+                    host = new Husband
                     {
                         TwitchId = id,
-                        HostGreetings = new HostAutoHello { HostId = id },
-                        HostCoolDown = cd,
+                        HusbandGreetings = new HusbandAutoHello { HusbandId = id },
+                        HusbandCoolDown = cd,
                     };
 
-                    await dbContext.Hosts.AddAsync(host);
+                    await dbContext.Husbands.AddAsync(host);
 
                     pass = true;
                 }
@@ -215,7 +214,7 @@ public class WaifuRollService(
                             waifu.OrderCount = waifu.OrderCount;
                         }
 
-                        host.HostCoolDown.Time = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
+                        host.HusbandCoolDown.Time = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
 
                         waifu.LastOrder = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
 
@@ -259,7 +258,7 @@ public class WaifuRollService(
                 await using var dbContext = await factory.CreateDbContextAsync();
 
                 var host = await dbContext
-                    .Hosts.Include(e => e.TwitchUser)
+                    .Husbands.Include(e => e.TwitchUser)
                     .FirstOrDefaultAsync(e =>
                         e.TwitchUser != null
                         && EF.Functions.Like(e.TwitchUser.DisplayName, $"%{name}%")
@@ -282,7 +281,7 @@ public class WaifuRollService(
 
                     if (waifu is { IsPrivated: true })
                     {
-                        var husband = await dbContext.Hosts.FirstAsync(e =>
+                        var husband = await dbContext.Husbands.FirstAsync(e =>
                             e.WaifuBrideId == waifu.ShikiId
                         );
                         response.Husband = husband;
@@ -294,7 +293,7 @@ public class WaifuRollService(
                         && !string.IsNullOrWhiteSpace(host.WaifuBrideId)
                     )
                     {
-                        response.Husband = await dbContext.Hosts.FirstOrDefaultAsync(e =>
+                        response.Husband = await dbContext.Husbands.FirstOrDefaultAsync(e =>
                             e.WaifuBrideId == host.WaifuBrideId
                         );
                     }
@@ -391,7 +390,7 @@ public class WaifuRollService(
         return result;
     }
 
-    public async Task<bool> MergeTheWaifu(Host? host, Waifu? waifu, bool makeprivate = true)
+    public async Task<bool> MergeTheWaifu(Husband? host, Waifu? waifu, bool makeprivate = true)
     {
         var result = false;
 
@@ -413,7 +412,7 @@ public class WaifuRollService(
             }
 
             dbContext.Waifus.Update(waifu);
-            dbContext.Hosts.Update(host);
+            dbContext.Husbands.Update(host);
 
             result = await dbContext.SaveChangesAsync() != 0;
         }
@@ -435,15 +434,15 @@ public class WaifuRollService(
                 await using AppDbContext dbContext = await factory.CreateDbContextAsync();
 
                 var host = await dbContext
-                    .Hosts.Include(e => e.HostGreetings)
-                    .Include(e => e.HostCoolDown)
+                    .Husbands.Include(e => e.HusbandGreetings)
+                    .Include(e => e.HusbandCoolDown)
                     .AsNoTracking()
                     .FirstOrDefaultAsync(e => e.TwitchId == id);
 
                 if (host is { IsPrivated: true })
                 {
                     var isChecked = false;
-                    var greet = host.HostGreetings;
+                    var greet = host.HusbandGreetings;
 
                     if (greet.Time <= DateTimeOffset.Now.AddHours(-20))
                     {
@@ -472,7 +471,7 @@ public class WaifuRollService(
 
                             // Обновляем время последнего приветствия
                             greet.Time = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
-                            dbContext.HostsGreetings.Update(greet);
+                            dbContext.HusbandGreetings.Update(greet);
 
                             dbContext.Entry(host).State = EntityState.Unchanged;
 
@@ -489,7 +488,7 @@ public class WaifuRollService(
                             var fixedmsg = await ConvertFixLinksInHelloMessages(helloMsg);
 
                             greet.Time = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
-                            dbContext.HostsGreetings.Update(greet);
+                            dbContext.HusbandGreetings.Update(greet);
 
                             await dbContext.SaveChangesAsync();
 
@@ -509,18 +508,18 @@ public class WaifuRollService(
                 }
                 else if (host == null)
                 {
-                    // Гарантируем наличие пользователя в TwitchUsers перед созданием Host
+                    // Гарантируем наличие пользователя в TwitchUsers перед созданием Husband
                     await twitchUserEnsureService.EnsureUserExistsAsync(id);
 
-                    host = new Host
+                    host = new Husband
                     {
                         TwitchId = id,
-                        HostCoolDown = new HostCoolDown { HostId = id },
-                        HostGreetings = new HostAutoHello { HostId = id },
+                        HusbandCoolDown = new HusbandCoolDown { HusbandId = id },
+                        HusbandGreetings = new HusbandAutoHello { HusbandId = id },
                     };
 
-                    host.HostCoolDown.Host = null;
-                    host.HostGreetings.Host = null;
+                    host.HusbandCoolDown.Husband = null;
+                    host.HusbandGreetings.Husband = null;
 
                     await dbContext.AddAsync(host);
                     await dbContext.SaveChangesAsync();
@@ -542,21 +541,21 @@ public class WaifuRollService(
         if (!string.IsNullOrWhiteSpace(message) && message.Contains("{randomHost}"))
         {
             await using AppDbContext dbContext = await factory.CreateDbContextAsync();
-            var count = dbContext.Hosts.Count(e => !e.IsPrivated);
+            var count = dbContext.Husbands.Count(e => !e.IsPrivated);
 
             if (count > 0)
             {
-                Host host = await dbContext
-                    .Hosts.AsNoTracking()
-                    .Include(e => e.HostCoolDown)
-                    .Include(e => e.HostGreetings)
+                Husband husband = await dbContext
+                    .Husbands.AsNoTracking()
+                    .Include(e => e.HusbandCoolDown)
+                    .Include(e => e.HusbandGreetings)
                     .Include(e => e.TwitchUser)
                     .Where(e => !e.IsPrivated)
                     .ElementAtAsync(Random.Shared.Next(count));
 
                 var replace = message.Replace(
                     "{randomHost}",
-                    host.TwitchUser?.DisplayName ?? "Unknown"
+                    husband.TwitchUser?.DisplayName ?? "Unknown"
                 );
                 result = string.Concat(
                     "@{user}, твой супруг прислал(-а) тебе сообщение: ",

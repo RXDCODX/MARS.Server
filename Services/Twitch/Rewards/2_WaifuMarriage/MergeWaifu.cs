@@ -23,7 +23,6 @@ using TwitchLib.Api.Interfaces;
 using TwitchLib.Client.Interfaces;
 using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Websockets;
-using Host = MARS.Server.Services.WaifuRoll.Entitys.Host;
 
 namespace MARS.Server.Services.Twitch.Rewards._2_WaifuMarriage;
 
@@ -55,7 +54,7 @@ public class MergeWaifu(
 
     /// <summary>
     /// Словарь семафоров для синхронизации операций по UserId
-    /// Предотвращает race condition при создании Host
+    /// Предотвращает race condition при создании Husband
     /// </summary>
     private readonly ConcurrentDictionary<string, SemaphoreWrapper> _hostSemaphores = new();
 
@@ -118,9 +117,9 @@ public class MergeWaifu(
                         _cancellationToken
                     );
 
-                    // Загружаем Host с TwitchUser
+                    // Загружаем Husband с TwitchUser
                     var host = await dbContext
-                        .Hosts.Include(h => h.TwitchUser)
+                        .Husbands.Include(h => h.TwitchUser)
                         .FirstOrDefaultAsync(h => h.TwitchId == twEvent.UserId, _cancellationToken);
 
                     if (host is not null)
@@ -170,7 +169,7 @@ public class MergeWaifu(
                                     if (host.TwitchUser == null)
                                     {
                                         throw new InvalidOperationException(
-                                            $"TwitchUser не найден для Host {twEvent.UserId}"
+                                            $"TwitchUser не найден для Husband {twEvent.UserId}"
                                         );
                                     }
 
@@ -341,17 +340,17 @@ public class MergeWaifu(
                         }
                     }
 
-                    // Гарантируем наличие пользователя в TwitchUsers перед созданием Host
+                    // Гарантируем наличие пользователя в TwitchUsers перед созданием Husband
                     await twitchUserEnsureService.EnsureUserExistsAsync(args, _cancellationToken);
 
-                    host = new Host
+                    host = new Husband
                     {
                         TwitchId = twEvent.UserId,
-                        HostCoolDown = new HostCoolDown { HostId = twEvent.UserId },
-                        HostGreetings = new HostAutoHello { HostId = twEvent.UserId },
+                        HusbandCoolDown = new HusbandCoolDown { HusbandId = twEvent.UserId },
+                        HusbandGreetings = new HusbandAutoHello { HusbandId = twEvent.UserId },
                     };
 
-                    dbContext.Hosts.Add(host);
+                    dbContext.Husbands.Add(host);
 
                     await dbContext.SaveChangesAsync(_cancellationToken);
 
@@ -371,11 +370,11 @@ public class MergeWaifu(
         }
     }
 
-    public async Task<(Waifu? waifu, Host? host)> Unmerge(string nickname)
+    public async Task<(Waifu? waifu, Husband? host)> Unmerge(string nickname)
     {
         await using var dbContext = await factory.CreateDbContextAsync(_cancellationToken);
         var host = await dbContext
-            .Hosts.Include(e => e.TwitchUser)
+            .Husbands.Include(e => e.TwitchUser)
             .SingleOrDefaultAsync(
                 e =>
                     e.TwitchUser != null
@@ -403,7 +402,7 @@ public class MergeWaifu(
                 )
                 {
                     dbContext.Waifus.Update(waifu);
-                    dbContext.Hosts.Update(host);
+                    dbContext.Husbands.Update(host);
                     await twitchUserEnsureService.EnsureUserExistsAsync(
                         host.TwitchId,
                         _cancellationToken
@@ -421,11 +420,11 @@ public class MergeWaifu(
         return (null, null);
     }
 
-    public async Task<(Waifu? waifu, Host? host)> Unmerge(int id)
+    public async Task<(Waifu? waifu, Husband? host)> Unmerge(int id)
     {
         await using var dbContext = await factory.CreateDbContextAsync(_cancellationToken);
 
-        var host = await dbContext.Hosts.SingleOrDefaultAsync(
+        var host = await dbContext.Husbands.SingleOrDefaultAsync(
             e => e.TwitchId == id.ToString(),
             _cancellationToken
         );
@@ -450,7 +449,7 @@ public class MergeWaifu(
                 )
                 {
                     dbContext.Waifus.Update(waifu);
-                    dbContext.Hosts.Update(host);
+                    dbContext.Husbands.Update(host);
                 }
 
                 await dbContext.SaveChangesAsync(_cancellationToken);

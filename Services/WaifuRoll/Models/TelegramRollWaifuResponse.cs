@@ -1,5 +1,4 @@
 using MARS.Server.Services.WaifuRoll.Entitys;
-using Host = MARS.Server.Services.WaifuRoll.Entitys.Host;
 
 namespace MARS.Server.Services.WaifuRoll.Models;
 
@@ -16,10 +15,10 @@ public class TelegramRollWaifuResponse
     /// <summary>
     /// Хост, который заказал вайфу
     /// </summary>
-    public Host? Host { get; set; }
+    public Husband? Host { get; set; }
 
     /// <summary>
     /// Муж/жена вайфу (если вайфу приватизирована)
     /// </summary>
-    public Host? Husband { get; set; }
+    public Husband? Husband { get; set; }
 }

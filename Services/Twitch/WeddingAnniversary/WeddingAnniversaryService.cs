@@ -82,7 +82,7 @@ public class WeddingAnniversaryService(
                 );
 
                 var host = await dbContext
-                    .Hosts.AsNoTracking()
+                    .Husbands.AsNoTracking()
                     .FirstOrDefaultAsync(e => e.TwitchId == twitchId, cancellationToken);
 
                 if (host is { IsPrivated: true, WhenPrivated: { } weddingDate })
@@ -148,13 +148,13 @@ public class WeddingAnniversaryService(
                     cancellationToken
                 );
 
-                var host = await dbContext.Hosts.FindAsync([twitchId], cancellationToken);
+                var host = await dbContext.Husbands.FindAsync([twitchId], cancellationToken);
 
                 host?.LastWeddingCongratulatedMonths = months;
 
                 if (host != null)
                 {
-                    dbContext.Hosts.Update(host);
+                    dbContext.Husbands.Update(host);
                 }
 
                 await dbContext.SaveChangesAsync(cancellationToken);

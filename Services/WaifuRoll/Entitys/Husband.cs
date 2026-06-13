@@ -5,8 +5,8 @@ using MARS.Server.Services.Twitch.Entitys;
 
 namespace MARS.Server.Services.WaifuRoll.Entitys;
 
-[Table("Hosts")]
-public class Host
+[Table(nameof(Husband) + "s")]
+public class Husband
 {
     [Key]
     [DatabaseGenerated(DatabaseGeneratedOption.None)]
@@ -23,7 +23,7 @@ public class Host
     public long OrderCount { get; set; }
     public string? WaifuRollId { get; set; }
     public DateTimeOffset? WhenPrivated { get; set; }
-    public required HostAutoHello HostGreetings { get; set; }
-    public required HostCoolDown HostCoolDown { get; set; }
+    public required HusbandAutoHello HusbandGreetings { get; set; }
+    public required HusbandCoolDown HusbandCoolDown { get; set; }
     public int? LastWeddingCongratulatedMonths { get; set; }
 }

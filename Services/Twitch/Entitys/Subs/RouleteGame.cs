@@ -10,7 +10,6 @@ using MARS.Server.Services.WaifuRoll.Entitys;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using TwitchLib.Client.Interfaces;
-using Host = MARS.Server.Services.WaifuRoll.Entitys.Host;
 
 namespace MARS.Server.Services.Twitch.Entitys.Subs;
 
@@ -76,14 +75,14 @@ public class RouleteGame(
             {
                 await using AppDbContext context =
                     await factory.CreateDbContextAsync(token) ?? throw new Exception("еблан?");
-                Host host =
-                    await context.Hosts.FindAsync(shotPlayer.TwitchId)
+                Husband husband =
+                    await context.Husbands.FindAsync(shotPlayer.TwitchId)
                     ?? throw new NullReferenceException(
-                        "Обращение к спассеному host'у который был спасен"
+                        "Обращение к спассеному husband'у который был спасен"
                     );
                 Waifu waifu =
                     await context.Waifus.FirstOrDefaultAsync(
-                        e => e.ShikiId == host.WaifuBrideId,
+                        e => e.ShikiId == husband.WaifuBrideId,
                         token
                     ) ?? throw new NullReferenceException("не найдена зарегестрированная жена");
                 await client.SendMessageToMainTwitchAsync(
@@ -131,7 +130,7 @@ public class RouleteGame(
             return false;
         }
         await using AppDbContext dbcontext = await factory.CreateDbContextAsync(token);
-        Host? host = await dbcontext.Hosts.FindAsync(shotPlayer.TwitchId);
+        Husband? host = await dbcontext.Husbands.FindAsync(shotPlayer.TwitchId);
 
         if (host?.IsPrivated == false)
         {

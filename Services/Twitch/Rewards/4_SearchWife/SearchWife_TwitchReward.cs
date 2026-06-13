@@ -97,19 +97,19 @@ public class SearchWife_TwitchReward(
                                 await using AppDbContext dbContext2 =
                                     await factory.CreateDbContextAsync();
 
-                                // Загружаем Host с TwitchUser
+                                // Загружаем Husband с TwitchUser
                                 var husband =
                                     await dbContext2
-                                        .Hosts.Include(h => h.TwitchUser)
+                                        .Husbands.Include(h => h.TwitchUser)
                                         .AsNoTracking()
                                         .FirstOrDefaultAsync(h => h.TwitchId == twEvent.UserId)
-                                    ?? throw new NullReferenceException("Host не найден");
+                                    ?? throw new NullReferenceException("Husband не найден");
 
                                 // Проверяем что TwitchUser загружен
                                 if (husband.TwitchUser == null)
                                 {
                                     throw new InvalidOperationException(
-                                        $"TwitchUser не найден для Host {twEvent.UserId}"
+                                        $"TwitchUser не найден для Husband {twEvent.UserId}"
                                     );
                                 }
 
@@ -125,10 +125,10 @@ public class SearchWife_TwitchReward(
                             await using AppDbContext dbContext =
                                 await factory.CreateDbContextAsync();
                             var hostRoolWaifu = await dbContext
-                                .Hosts.Include(host1 => host1.HostCoolDown)
+                                .Husbands.Include(host1 => host1.HusbandCoolDown)
                                 .AsNoTracking()
                                 .FirstOrDefaultAsync(e => e.TwitchId == twEvent.UserId);
-                            var time = hostRoolWaifu?.HostCoolDown?.Time.ToOffset(
+                            var time = hostRoolWaifu?.HusbandCoolDown?.Time.ToOffset(
                                 TimeSpan.FromHours(3)
                             );
 

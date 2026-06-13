@@ -9,7 +9,6 @@ using MARS.Server.Services.WaifuRoll.Entitys;
 using SignalRSwaggerGen.Attributes;
 using SignalRSwaggerGen.Enums;
 using TwitchLib.Client.Models;
-using Host = MARS.Server.Services.WaifuRoll.Entitys.Host;
 
 namespace MARS.Server.Hubs.Interfaces;
 
@@ -26,13 +25,18 @@ public interface ITelegramusHub
     public Task WaifuRoll(
         Waifu content,
         string displayName,
-        Host? waifuHusband,
+        Husband? waifuHusband,
         string? color = null
     );
 
     [SignalRMethod]
     public Task AddNewWaifu(Waifu content, string displayName, string? color = null);
-    public Task MergeWaifu(Waifu content, Host host, string? avatar = null, string? color = null);
+    public Task MergeWaifu(
+        Waifu content,
+        Husband husband,
+        string? avatar = null,
+        string? color = null
+    );
     public Task FumoFriday(string displayName, string? color = null);
     public Task NewMessage(string id, ChatMessage message);
     public Task DeleteMessage(string id);

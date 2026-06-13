@@ -1,6 +1,5 @@
 ﻿using MARS.Server.Services.WaifuRoll.Entitys;
 using Microsoft.EntityFrameworkCore.Migrations;
-using Host = MARS.Server.Services.WaifuRoll.Entitys.Host;
 
 #nullable disable
 
@@ -12,17 +11,17 @@ public partial class PopulateHostCDAndAutoHello : Migration
     /// <inheritdoc />
     protected override void Up(MigrationBuilder migrationBuilder)
     {
-        // Добавление записей в CD (HostCoolDown) для всех hosts, у которых их нет
+        // Добавление записей в CD (HusbandCoolDown) для всех hosts, у которых их нет
         migrationBuilder.Sql(
             $@"
-                INSERT INTO ""CD"" (""{nameof(HostCoolDown.Guid)}"", ""{nameof(HostCoolDown.HostId)}"", ""{nameof(HostCoolDown.Time)}"")
+                INSERT INTO ""CD"" (""{nameof(HusbandCoolDown.Guid)}"", ""{nameof(HusbandCoolDown.HusbandId)}"", ""{nameof(HusbandCoolDown.Time)}"")
                 SELECT 
                     gen_random_uuid(),
-                    h.""{nameof(Host.TwitchId)}"",
+                    h.""{nameof(Husband.TwitchId)}"",
                     NOW() AT TIME ZONE 'UTC'
                 FROM ""Hosts"" h
                 WHERE NOT EXISTS (
-                    SELECT 1 FROM ""CD"" cd WHERE cd.""{nameof(HostCoolDown.HostId)}"" = h.""{nameof(Host.TwitchId)}""
+                    SELECT 1 FROM ""CD"" cd WHERE cd.""{nameof(HusbandCoolDown.HusbandId)}"" = h.""{nameof(Husband.TwitchId)}""
                 );
             "
         );
@@ -30,14 +29,14 @@ public partial class PopulateHostCDAndAutoHello : Migration
         // Добавление записей в AutoHello (HostAutoHello) для всех hosts, у которых их нет
         migrationBuilder.Sql(
             $@"
-                INSERT INTO ""AutoHello"" (""{nameof(HostAutoHello.Guid)}"", ""{nameof(HostAutoHello.HostId)}"", ""{nameof(HostAutoHello.Time)}"")
+                INSERT INTO ""AutoHello"" (""{nameof(HusbandAutoHello.Guid)}"", ""{nameof(HusbandAutoHello.HusbandId)}"", ""{nameof(HusbandAutoHello.Time)}"")
                 SELECT 
                     gen_random_uuid(),
-                    h.""{nameof(Host.TwitchId)}"",
+                    h.""{nameof(Husband.TwitchId)}"",
                     NOW() AT TIME ZONE 'UTC'
                 FROM ""Hosts"" h
                 WHERE NOT EXISTS (
-                    SELECT 1 FROM ""AutoHello"" ah WHERE ah.""{nameof(HostAutoHello.HostId)}"" = h.""{nameof(Host.TwitchId)}""
+                    SELECT 1 FROM ""AutoHello"" ah WHERE ah.""{nameof(HusbandAutoHello.HusbandId)}"" = h.""{nameof(Husband.TwitchId)}""
                 );
             "
         );

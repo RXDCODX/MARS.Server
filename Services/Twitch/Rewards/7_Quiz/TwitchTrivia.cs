@@ -57,7 +57,7 @@ public class TwitchTrivia(
                 Waifu? waifu = null;
                 await using AppDbContext context = await dbContextFactory.CreateDbContextAsync();
 
-                var host = await context.Hosts.FindAsync(userId);
+                var host = await context.Husbands.FindAsync(userId);
 
                 if (host is { IsPrivated: true } && !NoWaifuHelpUsers.Contains(userId))
                 {
