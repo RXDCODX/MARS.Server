@@ -16,6 +16,7 @@ using TwitchLib.Api.Helix.Models.EventSub;
 using TwitchLib.Api.Interfaces;
 using TwitchLib.EventSub.Websockets;
 using TwitchLib.EventSub.Websockets.Core.EventArgs;
+using Timer = System.Timers.Timer;
 
 namespace MARS.Server.Services.Twitch.Management;
 

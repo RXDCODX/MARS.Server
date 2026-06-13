@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Threading;
+using Telegram.Bot.Types;
 
 namespace MARS.Server.Services.Telegram.ClipboardCopy;
 

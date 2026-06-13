@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using TwitchLib.Api.Interfaces;
+using Timer = System.Timers.Timer;
 
 namespace MARS.Server.Services.Twitch.AutoInfoFetch;
 

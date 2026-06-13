@@ -1,5 +1,6 @@
 ﻿using MARS.Server.Services.WaifuRoll.Entitys;
 using Microsoft.EntityFrameworkCore.Migrations;
+using Host = MARS.Server.Services.WaifuRoll.Entitys.Host;
 
 #nullable disable
 

@@ -2,6 +2,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using MARS.Server.DataBaseContext;
 using MARS.Server.Services.Telegram.BotService.Entitys;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Telegram.Bot;
 using Telegram.Bot.Polling;

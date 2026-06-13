@@ -31,6 +31,14 @@ public class TestAlertsController(
     [HttpPost("alert")]
     public async Task<ActionResult<OperationResult>> SendAlert([FromBody] MediaDto dto)
     {
+        if (dto.MediaInfo.MetaInfo.IsFreezeRequired && dto.MediaInfo.MetaInfo.Priority != MediaAlertPriority.High)
+        {
+            ActionResult<OperationResult> badResult = Ok(
+                OperationResult.Bad("IsFreezeRequired может быть true только когда Priority = High")
+            );
+            return badResult;
+        }
+
         await hubContext.Clients.All.Alert(dto);
 
         ActionResult<OperationResult> result = Ok(OperationResult.Ok("Alert sent"));
@@ -40,6 +48,17 @@ public class TestAlertsController(
     [HttpPost("alerts-batch")]
     public async Task<ActionResult<OperationResult>> SendAlertsBatch([FromBody] MediaDto[] dtos)
     {
+        foreach (var dto in dtos)
+        {
+            if (dto.MediaInfo.MetaInfo.IsFreezeRequired && dto.MediaInfo.MetaInfo.Priority != MediaAlertPriority.High)
+            {
+                ActionResult<OperationResult> badResult = Ok(
+                    OperationResult.Bad("IsFreezeRequired может быть true только когда Priority = High")
+                );
+                return badResult;
+            }
+        }
+
         await hubContext.Clients.All.Alerts(dtos);
 
         ActionResult<OperationResult> result = Ok(OperationResult.Ok($"{dtos.Length} alerts sent"));

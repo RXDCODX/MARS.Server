@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using MARS.Server.DataBaseContext;
 using MARS.Server.Services.Twitch;
+using MARS.Server.Services.WaifuRoll.Entitys;
 using MARS.Server.Services.WaifuRoll.Entitys.Interfaces;
 using MARS.Server.Services.WaifuRoll.Models;
 using Microsoft.EntityFrameworkCore;

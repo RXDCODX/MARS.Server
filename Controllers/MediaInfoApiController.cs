@@ -217,6 +217,10 @@ public class MediaInfoApiController(
                 {
                     result = Ok(OperationResult<ApiMediaInfo?>.Bad("Не удалось разобрать алерт", null));
                 }
+                else if (!IsFreezeRuleValid(alert.MetaInfo))
+                {
+                    result = Ok(OperationResult<ApiMediaInfo?>.Bad("IsFreezeRequired может быть true только когда Priority = High", null));
+                }
                 else if (request.File is null)
                 {
                     result = Ok(OperationResult<ApiMediaInfo?>.Bad("Файл не передан", null));
@@ -330,6 +334,10 @@ public class MediaInfoApiController(
                 if (alert is null)
                 {
                     result = Ok(OperationResult<ApiMediaInfo?>.Bad("Не удалось разобрать алерт", null));
+                }
+                else if (!IsFreezeRuleValid(alert.MetaInfo))
+                {
+                    result = Ok(OperationResult<ApiMediaInfo?>.Bad("IsFreezeRequired может быть true только когда Priority = High", null));
                 }
                 else if (id != alert.Id)
                 {
@@ -609,5 +617,10 @@ public class MediaInfoApiController(
         }
 
         return result;
+    }
+
+    private static bool IsFreezeRuleValid(MediaMetaInfo metaInfo)
+    {
+        return !metaInfo.IsFreezeRequired || metaInfo.Priority == MediaAlertPriority.High;
     }
 }

@@ -9,6 +9,7 @@ using MARS.Server.Services.WaifuRoll.Entitys;
 using SignalRSwaggerGen.Attributes;
 using SignalRSwaggerGen.Enums;
 using TwitchLib.Client.Models;
+using Host = MARS.Server.Services.WaifuRoll.Entitys.Host;
 
 namespace MARS.Server.Hubs.Interfaces;
 
@@ -98,19 +99,4 @@ public interface ITelegramusHub
 
     [SignalRMethod]
     public Task UpdateFumoPrizes(ICollection<FumoPrizeType> prizes);
-
-    [SignalRMethod]
-    public Task ObsFreeze();
-
-    [SignalRMethod]
-    public Task ObsUnfreeze();
-
-    [SignalRMethod]
-    public Task ObsPauseScene();
-
-    [SignalRMethod]
-    public Task ObsUnpauseScene();
-
-    [SignalRMethod]
-    public Task ObsTogglePause(int mode);
 }

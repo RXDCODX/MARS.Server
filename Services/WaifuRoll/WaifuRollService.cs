@@ -21,6 +21,7 @@ using Microsoft.EntityFrameworkCore.DynamicLinq;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using ShikimoriSharp.Classes;
+using Host = MARS.Server.Services.WaifuRoll.Entitys.Host;
 
 namespace MARS.Server.Services.WaifuRoll;
 

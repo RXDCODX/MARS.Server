@@ -7,6 +7,7 @@ using MARS.Server.Services.Twitch.Rewards._13_FumoFriday.Entitys;
 using MARS.Server.Services.Twitch.TwitchFollowers.Entitys;
 using MARS.Server.Services.WaifuRoll.Entitys;
 using Microsoft.EntityFrameworkCore;
+using Host = MARS.Server.Services.WaifuRoll.Entitys.Host;
 
 namespace MARS.Server.DataBaseContext;
 

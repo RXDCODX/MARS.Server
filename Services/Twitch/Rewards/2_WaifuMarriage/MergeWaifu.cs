@@ -23,7 +23,7 @@ using TwitchLib.Api.Interfaces;
 using TwitchLib.Client.Interfaces;
 using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Websockets;
-
+using Host = MARS.Server.Services.WaifuRoll.Entitys.Host;
 
 namespace MARS.Server.Services.Twitch.Rewards._2_WaifuMarriage;
 
@@ -131,7 +131,7 @@ public class MergeWaifu(
                         if (!host.IsPrivated)
                         {
                             var waifu = await dbContext.Waifus.FindAsync(
-                                host.WaifuRollId,
+                                [host.WaifuRollId],
                                 _cancellationToken
                             );
                             if (waifu is { IsPrivated: false })
@@ -174,9 +174,9 @@ public class MergeWaifu(
                                         );
                                     }
 
-                                    var color = await api.Helix.Chat.GetUserChatColorAsync(
-                                        [twEvent.UserId]
-                                    );
+                                    var color = await api.Helix.Chat.GetUserChatColorAsync([
+                                        twEvent.UserId,
+                                    ]);
 
                                     // Используем аватарку из TwitchUser вместо отдельного запроса к API
                                     await hubContext.Clients.All.MergeWaifu(

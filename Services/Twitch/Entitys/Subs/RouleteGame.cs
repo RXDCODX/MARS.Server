@@ -10,6 +10,7 @@ using MARS.Server.Services.WaifuRoll.Entitys;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using TwitchLib.Client.Interfaces;
+using Host = MARS.Server.Services.WaifuRoll.Entitys.Host;
 
 namespace MARS.Server.Services.Twitch.Entitys.Subs;
 

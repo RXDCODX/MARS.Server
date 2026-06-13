@@ -2,6 +2,7 @@ using System.Threading.Tasks;
 using MARS.Server.Services.WaifuRoll.Entitys;
 using MARS.Server.Services.WaifuRoll.Models;
 using ShikimoriSharp.Classes;
+using Host = MARS.Server.Services.WaifuRoll.Entitys.Host;
 
 namespace MARS.Server.Services.WaifuRoll.Interfaces;
 

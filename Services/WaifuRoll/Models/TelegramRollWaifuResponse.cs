@@ -1,4 +1,5 @@
 using MARS.Server.Services.WaifuRoll.Entitys;
+using Host = MARS.Server.Services.WaifuRoll.Entitys.Host;
 
 namespace MARS.Server.Services.WaifuRoll.Models;
 
