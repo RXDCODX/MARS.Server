@@ -370,7 +370,7 @@ public class TwitchConnectionManager : IHostedService, IAsyncDisposable
             {
                 try
                 {
-                    await _client.ReconnectAsync();
+                    await _client.ConnectAsync();
                 }
                 catch (InvalidOperationException ex)
                     when (ex.Message.Contains(

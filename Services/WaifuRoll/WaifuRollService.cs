@@ -487,7 +487,7 @@ public class WaifuRollService(
 
                             // Обновляем время последнего приветствия
                             greet!.Time = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
-                            dbContext.HusbandGreetings.AddOrUpdate(greet);
+                            dbContext.HusbandGreetings.Upsert(greet);
 
                             dbContext.Entry(host).State = EntityState.Unchanged;
 
@@ -504,7 +504,7 @@ public class WaifuRollService(
                             var fixedmsg = await ConvertFixLinksInHelloMessages(helloMsg);
 
                             greet!.Time = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
-                            dbContext.HusbandGreetings.AddOrUpdate(greet);
+                            dbContext.HusbandGreetings.Upsert(greet);
 
                             await dbContext.SaveChangesAsync();
 

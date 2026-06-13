@@ -32,23 +32,20 @@ public class RandomMemOnline(
 {
     private WTelegramClient? _client;
 
-    public static bool IsStop
+    public bool IsStop
     {
         get;
         set
         {
-            if (StaticDbContextFactory.Factory != null)
-            {
-                using var dbContext = StaticDbContextFactory.Factory.CreateDbContext();
-                var state = dbContext.RootState.SingleOrDefault(e =>
-                    e.Name == RootStateKeys.RandomMemeOnlineIsStop
-                );
+            using var dbContext = factory.CreateDbContext();
+            var state = dbContext.RootState.SingleOrDefault(e =>
+                e.Name == RootStateKeys.RandomMemeOnlineIsStop
+            );
 
-                if (state is not null)
-                {
-                    state.Value = value.ToString();
-                    dbContext.SaveChanges();
-                }
+            if (state is not null)
+            {
+                state.Value = value.ToString();
+                dbContext.SaveChanges();
             }
 
             field = value;
@@ -139,8 +136,8 @@ public class RandomMemOnline(
                     case MessageMediaPhoto photo:
                         if (photo.photo is Photo photoa)
                         {
-                            await Task.Factory.StartNew(
-                                () => ProcessPhoto(photoa, message.message)
+                            await Task.Factory.StartNew(() =>
+                                ProcessPhoto(photoa, message.message)
                             );
                         }
                         break;
@@ -164,15 +161,15 @@ public class RandomMemOnline(
                                     case Storage_FileType.jpeg
                                     or Storage_FileType.png
                                     or Storage_FileType.webp:
-                                        await Task.Factory.StartNew(
-                                            () => ProcessPhotoDocument(doc, message.message)
+                                        await Task.Factory.StartNew(() =>
+                                            ProcessPhotoDocument(doc, message.message)
                                         );
                                         break;
                                     case Storage_FileType.gif
                                     or Storage_FileType.mov
                                     or Storage_FileType.mp4:
-                                        await Task.Factory.StartNew(
-                                            () => ProcessVideoDocument(doc, message.message)
+                                        await Task.Factory.StartNew(() =>
+                                            ProcessVideoDocument(doc, message.message)
                                         );
                                         break;
                                 }

@@ -171,7 +171,6 @@ public static class Program
                 options.UseNpgsql(configuration.GetConnectionString("Prod_Path"));
             }
         });
-        StaticDbContextFactory.Factory = contextFactory;
 
         if (builder.Environment.IsProduction() && OperatingSystem.IsWindows())
         {

@@ -7,7 +7,7 @@ using MARS.Server.Services.Twitch.Rewards._11_RandomMemReward.Service;
 
 namespace MARS.Server.Services.CommandExecutor.Commands;
 
-public class RandomMemCommand() : BaseCommand
+public class RandomMemCommand(RandomMemOnline randomMemOnline) : BaseCommand
 {
     public override string CommandName => "randommem";
     public override string Description => "Включает или выключает онлайн-режим рандомных мемов";
@@ -22,11 +22,11 @@ public class RandomMemCommand() : BaseCommand
         CancellationToken cancellationToken = default
     )
     {
-        var usage = RandomMemOnline.IsStop
+        var usage = randomMemOnline.IsStop
             ? "Включил рандом мем онлайн!"
             : "Выключил рандом мем онлайн!";
 
-        RandomMemOnline.IsStop = !RandomMemOnline.IsStop;
+        randomMemOnline.IsStop = !randomMemOnline.IsStop;
 
         return Task.FromResult(usage);
     }
