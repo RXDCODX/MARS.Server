@@ -6,6 +6,7 @@ using MARS.Server.Hubs.Interfaces;
 using MARS.Server.Services.PyroAlerts.Entitys;
 using MARS.Server.Services.Twitch.Entitys;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Configuration;
 
 namespace MARS.Server.Services.Twitch.Rewards;
 

@@ -23,7 +23,7 @@ public class Husband
     public long OrderCount { get; set; }
     public string? WaifuRollId { get; set; }
     public DateTimeOffset? WhenPrivated { get; set; }
-    public required HusbandAutoHello HusbandGreetings { get; set; }
-    public required HusbandCoolDown HusbandCoolDown { get; set; }
+    public required HusbandAutoHello? HusbandGreetings { get; set; }
+    public required HusbandCoolDown? HusbandCoolDown { get; set; }
     public int? LastWeddingCongratulatedMonths { get; set; }
 }

@@ -1,12 +1,13 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Newtonsoft.Json.Linq;
 using OBSWebsocketDotNet;
-using OBSWebsocketDotNet.Types;
 
 namespace MARS.Server.Services.Obs;
 
@@ -20,11 +21,14 @@ public class ObsService(
     private readonly SemaphoreSlim _lock = new(1, 1);
 
     private string? _savedSceneBeforePause;
+    private List<SceneItemState>? _cachedSceneItemStates;
     private bool _disposed;
 
     public bool IsConnected => obs.IsConnected;
 
     public bool IsPaused { get; private set; }
+
+    private sealed record SceneItemState(int ItemId, string SourceName, string? GroupName, bool WasEnabled);
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
@@ -141,7 +145,7 @@ public class ObsService(
             var screenshotPath = await TakeScreenshotInternalAsync(currentScene);
 
             ShowFreezeFrameSource(currentScene);
-            HideAllContentSourcesExcept(currentScene, _config.FreezeFrameSourceName);
+            HideNonAlertSourcesAndCache(currentScene);
 
             IsPaused = true;
             logger.LogInformation("Freeze frame activated on scene {Scene}", currentScene);
@@ -174,7 +178,7 @@ public class ObsService(
             var scene = _savedSceneBeforePause ?? obs.GetCurrentProgramScene();
 
             HideFreezeFrameSource(scene);
-            ShowAllContentSourcesExcept(scene, _config.FreezeFrameSourceName);
+            RestoreCachedSources(scene);
 
             IsPaused = false;
             _savedSceneBeforePause = null;
@@ -335,16 +339,55 @@ public class ObsService(
         }
     }
 
-    private void HideAllContentSourcesExcept(string sceneName, string excludedSourceName)
+    private List<SceneItemState> GetSceneItemsWithGroupInfo(string sceneName)
+    {
+        var response = obs.SendRequest(
+            "GetSceneItemList",
+            new JObject { { "sceneName", sceneName } }
+        );
+
+        var items = (JArray?)response["sceneItems"] ?? [];
+        var result = new List<SceneItemState>(items.Count);
+
+        foreach (var item in items)
+        {
+            result.Add(
+                new SceneItemState(
+                    item["sceneItemId"]?.Value<int>() ?? 0,
+                    item["sourceName"]?.Value<string>() ?? string.Empty,
+                    item["groupName"]?.Value<string>(),
+                    item["sceneItemEnabled"]?.Value<bool>() ?? false
+                )
+            );
+        }
+
+        return result;
+    }
+
+    private void HideNonAlertSourcesAndCache(string sceneName)
     {
         try
         {
-            var items = obs.GetSceneItemList(sceneName);
+            var items = GetSceneItemsWithGroupInfo(sceneName);
+            _cachedSceneItemStates = items;
+
             foreach (var item in items)
             {
                 if (
-                    item.SourceName == excludedSourceName
+                    item.SourceName == _config.FreezeFrameSourceName
                     || item.SourceName == _config.PauseImageSourceName
+                )
+                {
+                    continue;
+                }
+
+                if (
+                    !string.IsNullOrEmpty(item.GroupName)
+                    && string.Equals(
+                        item.GroupName,
+                        _config.AlertsGroupName,
+                        StringComparison.OrdinalIgnoreCase
+                    )
                 )
                 {
                     continue;
@@ -359,27 +402,47 @@ public class ObsService(
         }
     }
 
-    private void ShowAllContentSourcesExcept(string sceneName, string excludedSourceName)
+    private void RestoreCachedSources(string sceneName)
     {
+        if (_cachedSceneItemStates == null)
+        {
+            return;
+        }
+
         try
         {
-            var items = obs.GetSceneItemList(sceneName);
-            foreach (var item in items)
+            foreach (var item in _cachedSceneItemStates)
             {
                 if (
-                    item.SourceName == excludedSourceName
+                    item.SourceName == _config.FreezeFrameSourceName
                     || item.SourceName == _config.PauseImageSourceName
                 )
                 {
                     continue;
                 }
 
-                obs.SetSceneItemEnabled(sceneName, item.ItemId, true);
+                if (
+                    !string.IsNullOrEmpty(item.GroupName)
+                    && string.Equals(
+                        item.GroupName,
+                        _config.AlertsGroupName,
+                        StringComparison.OrdinalIgnoreCase
+                    )
+                )
+                {
+                    continue;
+                }
+
+                obs.SetSceneItemEnabled(sceneName, item.ItemId, item.WasEnabled);
             }
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Failed to show content sources in scene '{Scene}'", sceneName);
+            logger.LogWarning(ex, "Failed to restore content sources in scene '{Scene}'", sceneName);
+        }
+        finally
+        {
+            _cachedSceneItemStates = null;
         }
     }
 

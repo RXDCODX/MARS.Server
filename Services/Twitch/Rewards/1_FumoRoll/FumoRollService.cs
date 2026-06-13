@@ -1,12 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using MARS.Server.DataBaseContext;
+﻿using MARS.Server.DataBaseContext;
 using MARS.Server.Services.Twitch.Entitys;
 using Microsoft.EntityFrameworkCore;
 
-namespace MARS.Server.Services.Twitch.Rewards._4_FumoRoll;
+namespace MARS.Server.Services.Twitch.Rewards._1_FumoRoll;
 
 public class FumoRollService(IDbContextFactory<AppDbContext> factory)
 {

@@ -214,7 +214,14 @@ public class WaifuRollService(
                             waifu.OrderCount = waifu.OrderCount;
                         }
 
-                        host.HusbandCoolDown.Time = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
+                        host.HusbandCoolDown ??= new HusbandCoolDown()
+                        {
+                            HusbandId = host.TwitchId,
+                        };
+
+                        host.HusbandCoolDown.Time = DateTimeOffset.Now.ToOffset(
+                            TimeSpan.FromHours(3)
+                        );
 
                         waifu.LastOrder = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
 
@@ -444,7 +451,16 @@ public class WaifuRollService(
                     var isChecked = false;
                     var greet = host.HusbandGreetings;
 
-                    if (greet.Time <= DateTimeOffset.Now.AddHours(-20))
+                    if (greet is null)
+                    {
+                        greet = new HusbandAutoHello()
+                        {
+                            HusbandId = host.TwitchId,
+                            Time = DateTimeOffset.Now,
+                        };
+                        isChecked = true;
+                    }
+                    else if (greet.Time <= DateTimeOffset.Now.AddHours(-20))
                     {
                         isChecked = true;
                     }
@@ -470,8 +486,8 @@ public class WaifuRollService(
                                 );
 
                             // Обновляем время последнего приветствия
-                            greet.Time = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
-                            dbContext.HusbandGreetings.Update(greet);
+                            greet!.Time = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
+                            dbContext.HusbandGreetings.AddOrUpdate(greet);
 
                             dbContext.Entry(host).State = EntityState.Unchanged;
 
@@ -487,8 +503,8 @@ public class WaifuRollService(
                             var helloMsg = await GetHelloText();
                             var fixedmsg = await ConvertFixLinksInHelloMessages(helloMsg);
 
-                            greet.Time = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
-                            dbContext.HusbandGreetings.Update(greet);
+                            greet!.Time = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
+                            dbContext.HusbandGreetings.AddOrUpdate(greet);
 
                             await dbContext.SaveChangesAsync();
 

@@ -17,4 +17,6 @@ public class ObsConfiguration
     public string PauseImageSourceName { get; set; } = "__pause_image__";
 
     public int ScreenshotQuality { get; set; } = 80;
+
+    public string AlertsGroupName { get; set; } = "Alerts";
 }

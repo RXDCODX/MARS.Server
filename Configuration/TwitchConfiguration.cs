@@ -10,4 +10,6 @@ public class TwitchConfiguration
     public string AccessToken { get; set; }
     public string RefreshToken { get; set; }
     public string OAuth { get; set; }
+
+    public string TransportProtocol { get; set; } = "WebSocket";
 }

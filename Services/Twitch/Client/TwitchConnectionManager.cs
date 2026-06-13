@@ -8,17 +8,27 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using TwitchLib.Client;
+using TwitchLib.Client.Enums;
 using TwitchLib.Client.Interfaces;
 using TwitchLib.Client.Models;
+using TwitchLib.Communication.Clients;
+using TwitchLib.Communication.Enums;
+using TwitchLib.Communication.Interfaces;
+using TwitchLib.Communication.Models;
 
 namespace MARS.Server.Services.Twitch.Client;
 
-public class TwitchConnectionManager : IHostedService
+public class TwitchConnectionManager : IHostedService, IAsyncDisposable
 {
     private readonly ILogger<TwitchConnectionManager> _logger;
+    private readonly IOptionsMonitor<TwitchConfiguration> _twitchOptions;
+    private readonly ILoggerFactory _loggerFactory;
 
     private readonly TwitchClient _client;
+    private IClient _transport = null!;
     private readonly ConnectionCredentials _credentials;
+    private string _currentOAuth;
+    private IDisposable? _changeToken;
     private bool _initialized;
 
     private bool IsConnected => _client.IsConnected;
@@ -42,19 +52,61 @@ public class TwitchConnectionManager : IHostedService
 
     public TwitchConnectionManager(
         ILogger<TwitchConnectionManager> logger,
-        IOptions<TwitchConfiguration> twitchOptions,
+        IOptionsMonitor<TwitchConfiguration> twitchOptions,
         ILoggerFactory loggerFactory
     )
     {
         _logger = logger;
+        _twitchOptions = twitchOptions;
+        _loggerFactory = loggerFactory;
 
-        _client = new TwitchClient(loggerFactory: loggerFactory);
+        var config = twitchOptions.CurrentValue;
 
-        _credentials = new ConnectionCredentials(
-            TwitchExstension.BotName,
-            twitchOptions.Value.OAuth
+        _transport = CreateTransportClient(config.TransportProtocol);
+        _client = CreateTwitchClient(config.TransportProtocol);
+
+        _currentOAuth = config.OAuth;
+
+        _credentials = new ConnectionCredentials(TwitchExstension.BotName, _currentOAuth);
+
+        _changeToken = twitchOptions.OnChange(OnConfigurationChanged);
+
+        WireEvents();
+    }
+
+    private IClient CreateTransportClient(string protocol)
+    {
+        var options = new ClientOptions(
+            reconnectionPolicy: new NoReconnectionPolicy(),
+            useSsl: true,
+            disconnectWait: 1500,
+            clientType: ClientType.Chat
         );
 
+        if (string.Equals(protocol, "Tcp", StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogInformation("Using TCP transport for Twitch connection");
+            return new TcpClient(options, _loggerFactory.CreateLogger<TcpClient>());
+        }
+
+        _logger.LogInformation("Using WebSocket transport for Twitch connection");
+        return new WebSocketClient(options, _loggerFactory.CreateLogger<WebSocketClient>());
+    }
+
+    private TwitchClient CreateTwitchClient(string protocol)
+    {
+        var isTcp = string.Equals(protocol, "Tcp", StringComparison.OrdinalIgnoreCase);
+
+        return new TwitchClient(
+            client: _transport,
+            protocol: isTcp ? ClientProtocol.TCP : ClientProtocol.WebSocket,
+            sendOptions: new SendOptions(),
+            loggerFactory: _loggerFactory
+        );
+    }
+
+    private void WireEvents()
+    {
         _client.OnConnected += (_, _) =>
         {
             _lastConnectedAt = DateTimeOffset.Now;
@@ -90,6 +142,37 @@ public class TwitchConnectionManager : IHostedService
 
             return Task.CompletedTask;
         };
+    }
+
+    private void OnConfigurationChanged(TwitchConfiguration config, string? name)
+    {
+        var currentProtocol = _transport is TcpClient ? "Tcp" : "WebSocket";
+
+        if (
+            !string.Equals(
+                currentProtocol,
+                config.TransportProtocol,
+                StringComparison.OrdinalIgnoreCase
+            ) && !_manualDisconnect
+        )
+        {
+            _logger.LogWarning(
+                "Twitch transport protocol change from {Old} to {New} requires service restart. Reconnect to apply.",
+                currentProtocol,
+                config.TransportProtocol
+            );
+        }
+
+        if (
+            !string.Equals(_currentOAuth, config.OAuth, StringComparison.Ordinal)
+            && _client.IsConnected
+            && !_manualDisconnect
+        )
+        {
+            _logger.LogInformation("Twitch OAuth token changed, reconnecting...");
+            _currentOAuth = config.OAuth;
+            _ = ReconnectAsync();
+        }
     }
 
     public async Task StartAsync(CancellationToken cancellationToken)
@@ -129,6 +212,17 @@ public class TwitchConnectionManager : IHostedService
         {
             _logger.LogError(ex, "Error while stopping Twitch client");
         }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _changeToken?.Dispose();
+
+        await StopAsync(default);
+
+        (_transport as IDisposable)?.Dispose();
+        _reconnectLock.Dispose();
+        _connectLock.Dispose();
     }
 
     public string GetStatus()
@@ -276,7 +370,7 @@ public class TwitchConnectionManager : IHostedService
             {
                 try
                 {
-                    await _client.ConnectAsync();
+                    await _client.ReconnectAsync();
                 }
                 catch (InvalidOperationException ex)
                     when (ex.Message.Contains(
