@@ -137,6 +137,8 @@ public class ObsService(
             var currentScene = obs.GetCurrentProgramScene();
             _savedSceneBeforePause = currentScene;
 
+            EnsurePauseSceneSetup(currentScene);
+
             var screenshotPath = await TakeScreenshotInternalAsync(currentScene);
 
             UpdatePauseImageSource(screenshotPath);
@@ -173,6 +175,7 @@ public class ObsService(
             var scene = _savedSceneBeforePause ?? obs.GetCurrentProgramScene();
 
             HidePauseScreenScene(scene);
+            RemovePauseInput();
 
             IsPaused = false;
             _savedSceneBeforePause = null;
@@ -301,7 +304,7 @@ public class ObsService(
     {
         try
         {
-            var itemId = obs.GetSceneItemId(sceneName, _config.PauseScreenSceneName, 0);
+            var itemId = obs.GetSceneItemId(sceneName, _config.PauseSceneName, 0);
             obs.SetSceneItemEnabled(sceneName, itemId, true);
         }
         catch (Exception ex)
@@ -309,7 +312,7 @@ public class ObsService(
             logger.LogWarning(
                 ex,
                 "Pause screen scene '{PauseScene}' not found in scene '{Scene}'",
-                _config.PauseScreenSceneName,
+                _config.PauseSceneName,
                 sceneName
             );
         }
@@ -319,7 +322,7 @@ public class ObsService(
     {
         try
         {
-            var itemId = obs.GetSceneItemId(sceneName, _config.PauseScreenSceneName, 0);
+            var itemId = obs.GetSceneItemId(sceneName, _config.PauseSceneName, 0);
             obs.SetSceneItemEnabled(sceneName, itemId, false);
         }
         catch (Exception ex)
@@ -327,8 +330,67 @@ public class ObsService(
             logger.LogWarning(
                 ex,
                 "Pause screen scene '{PauseScene}' not found in scene '{Scene}'",
-                _config.PauseScreenSceneName,
+                _config.PauseSceneName,
                 sceneName
+            );
+        }
+    }
+
+    private void EnsurePauseSceneSetup(string sceneName)
+    {
+        try
+        {
+            obs.GetInputSettings(_config.PauseImageSourceName);
+            return;
+        }
+        catch
+        {
+            // Input doesn't exist — will create below
+        }
+
+        try
+        {
+            var defaultSettings = new JObject { { "file", "" } };
+            obs.CreateInput(
+                sceneName,
+                _config.PauseImageSourceName,
+                "image_source",
+                defaultSettings,
+                false
+            );
+
+            logger.LogInformation(
+                "Created pause image source '{Source}' in scene '{Scene}'",
+                _config.PauseImageSourceName,
+                sceneName
+            );
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(
+                ex,
+                "Failed to create pause image source '{Source}'",
+                _config.PauseImageSourceName
+            );
+        }
+    }
+
+    private void RemovePauseInput()
+    {
+        try
+        {
+            obs.RemoveInput(_config.PauseImageSourceName);
+            logger.LogInformation(
+                "Removed pause image source '{Source}'",
+                _config.PauseImageSourceName
+            );
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(
+                ex,
+                "Failed to remove pause image source '{Source}'",
+                _config.PauseImageSourceName
             );
         }
     }

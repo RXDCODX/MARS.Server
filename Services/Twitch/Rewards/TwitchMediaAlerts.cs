@@ -51,7 +51,8 @@ public class TwitchMediaAlerts(
                     var context = await dbContextFactory.CreateDbContextAsync(_token);
 
                     var alert = context.Alerts.FirstOrDefault(e =>
-                        e.MetaInfo.TwitchGuid.ToString() == args.ChatMessage.CustomRewardId
+                        e.MetaInfo.IsEnabled
+                        && e.MetaInfo.TwitchGuid.ToString() == args.ChatMessage.CustomRewardId
                     );
 
                     if (alert != null)
@@ -77,7 +78,7 @@ public class TwitchMediaAlerts(
         var mediaList = dbContext
             .Alerts.AsNoTracking()
             .AsEnumerable()
-            .Where(e => e.MetaInfo.TwitchGuid == Guid.Parse(message.CustomRewardId))
+            .Where(e => e.MetaInfo.IsEnabled && e.MetaInfo.TwitchGuid == Guid.Parse(message.CustomRewardId))
             .ToList();
 
         MediaInfo? mediaOld = null;
@@ -135,7 +136,7 @@ public class TwitchMediaAlerts(
                 var mediaList = dbContext
                     .Alerts.AsNoTracking()
                     .AsEnumerable()
-                    .Where(e => e.MetaInfo.TwitchPointsCost == message.Reward.Cost)
+                    .Where(e => e.MetaInfo.IsEnabled && e.MetaInfo.TwitchPointsCost == message.Reward.Cost)
                     .ToList();
 
                 MediaInfo? mediaOld = null;

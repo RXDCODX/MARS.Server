@@ -18,6 +18,7 @@ public class MediaMetaInfo : IValidatableObject
     /// From 0 to 100
     /// </summary>
     public int Volume { get; set; } = 100;
+    public bool IsEnabled { get; set; } = true;
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {

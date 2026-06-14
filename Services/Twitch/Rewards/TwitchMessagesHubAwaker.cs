@@ -74,6 +74,7 @@ public class TwitchMessagesHubAwaker(
                 await foreach (
                     var info in dbContext
                         .Alerts.AsNoTracking()
+                        .Where(e => e.MetaInfo.IsEnabled)
                         .AsAsyncEnumerable()
                         .WithCancellation(_token)
                 )
