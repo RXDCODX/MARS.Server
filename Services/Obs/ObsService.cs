@@ -60,8 +60,6 @@ public class ObsService(
             logger.LogInformation("Connecting to OBS at {Url}", url);
 
             obs.ConnectAsync(url, _config.Password);
-
-            logger.LogInformation("Connected to OBS successfully");
         }
         catch (Exception ex)
         {
@@ -370,12 +368,18 @@ public class ObsService(
             logger.LogWarning(ex, "Reconnect attempt failed");
         }
 
-        if (!obs.IsConnected)
+        for (var i = 0; i < 50; i++)
         {
-            throw new InvalidOperationException("Not connected to OBS");
+            if (obs.IsConnected)
+            {
+                logger.LogInformation("Reconnected to OBS successfully");
+                return;
+            }
+
+            await Task.Delay(100);
         }
 
-        logger.LogInformation("Reconnected to OBS successfully");
+        throw new InvalidOperationException("Not connected to OBS");
     }
 
     public void Dispose()
