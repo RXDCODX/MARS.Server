@@ -635,5 +635,13 @@ public static class StartupEstensions
 
             return services;
         }
+
+        internal IServiceCollection AddObsServices()
+        {
+            services.AddSingleton<HttpObsService>();
+            services.AddSingleton<IObsService>(sp => sp.GetRequiredService<HttpObsService>());
+
+            return services;
+        }
     }
 }

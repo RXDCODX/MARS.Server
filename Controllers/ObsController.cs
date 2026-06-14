@@ -23,9 +23,9 @@ public class ObsController(IObsService obsService) : ControllerBase
     }
 
     [HttpPost("disconnect")]
-    public ActionResult Disconnect()
+    public async Task<ActionResult> Disconnect(CancellationToken cancellationToken)
     {
-        obsService.DisconnectAsync();
+        await obsService.DisconnectAsync(cancellationToken);
         return Ok(new { message = "Disconnected from OBS" });
     }
 

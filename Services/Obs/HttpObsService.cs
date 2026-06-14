@@ -4,21 +4,15 @@ using Microsoft.Extensions.Options;
 
 namespace MARS.Server.Services.Obs;
 
-public class HttpObsService : IObsService
+public class HttpObsService(
+    IHttpClientFactory factory,
+    ILogger<HttpObsService> logger,
+    IHostEnvironment environment
+) : IObsService
 {
-    private readonly HttpClient _httpClient;
-    private readonly ILogger<HttpObsService> _logger;
-
-    public HttpObsService(
-        HttpClient httpClient,
-        IOptions<ObsConfiguration> config,
-        ILogger<HttpObsService> logger
-    )
-    {
-        _httpClient = httpClient;
-        _httpClient.BaseAddress = new Uri(config.Value.ServiceUrl);
-        _logger = logger;
-    }
+    private readonly Uri _baseAddress = new(
+        environment.IsDevelopment() ? "http://localhost:30691" : "http://localhost:30695"
+    );
 
     public bool IsConnected { get; private set; }
 
@@ -26,22 +20,30 @@ public class HttpObsService : IObsService
 
     public async Task ConnectAsync(CancellationToken cancellationToken = default)
     {
-        var response = await _httpClient.PostAsync("/api/obs/connect", null, cancellationToken);
+        using var httpClient = factory.CreateClient("ObsConnector");
+        httpClient.BaseAddress = _baseAddress;
+        var response = await httpClient.PostAsync("/api/obs/connect", null, cancellationToken);
         response.EnsureSuccessStatusCode();
         await RefreshStatusAsync(cancellationToken);
     }
 
-    public async void DisconnectAsync()
+    public async Task DisconnectAsync(CancellationToken cancellationToken = default)
     {
         try
         {
-            var response = await _httpClient.PostAsync("/api/obs/disconnect", null);
+            using var httpClient = factory.CreateClient("ObsConnector");
+            httpClient.BaseAddress = _baseAddress;
+            var response = await httpClient.PostAsync(
+                "/api/obs/disconnect",
+                null,
+                cancellationToken
+            );
             response.EnsureSuccessStatusCode();
-            await RefreshStatusAsync();
+            await RefreshStatusAsync(cancellationToken);
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to disconnect from OBS via AudioController");
+            logger.LogWarning(ex, "Failed to disconnect from OBS via AudioController");
         }
     }
 
@@ -50,8 +52,10 @@ public class HttpObsService : IObsService
         CancellationToken cancellationToken = default
     )
     {
+        using var httpClient = factory.CreateClient("ObsConnector");
+        httpClient.BaseAddress = _baseAddress;
         var url = $"/api/obs/screenshot?sourceName={sourceName ?? string.Empty}";
-        var response = await _httpClient.PostAsync(url, null, cancellationToken);
+        var response = await httpClient.PostAsync(url, null, cancellationToken);
         response.EnsureSuccessStatusCode();
 
         var dto = await response.Content.ReadFromJsonAsync<ScreenshotResponse>(
@@ -101,7 +105,9 @@ public class HttpObsService : IObsService
     {
         try
         {
-            var response = await _httpClient.PostAsync(url, null, cancellationToken);
+            using var httpClient = factory.CreateClient("ObsConnector");
+            httpClient.BaseAddress = _baseAddress;
+            var response = await httpClient.PostAsync(url, null, cancellationToken);
 
             var dto = await response.Content.ReadFromJsonAsync<PauseResultDto>(
                 cancellationToken: cancellationToken
@@ -117,7 +123,7 @@ public class HttpObsService : IObsService
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "OBS command failed: {Url}", url);
+            logger.LogWarning(ex, "OBS command failed: {Url}", url);
             return ObsPauseResult.Fail(ex.Message);
         }
     }
@@ -126,10 +132,9 @@ public class HttpObsService : IObsService
     {
         try
         {
-            var response = await _httpClient.GetAsync(
-                "/api/obs/status",
-                cancellationToken
-            );
+            using var httpClient = factory.CreateClient("ObsConnector");
+            httpClient.BaseAddress = _baseAddress;
+            var response = await httpClient.GetAsync("/api/obs/status", cancellationToken);
             response.EnsureSuccessStatusCode();
 
             var status = await response.Content.ReadFromJsonAsync<StatusDto>(
@@ -144,7 +149,7 @@ public class HttpObsService : IObsService
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to refresh OBS status");
+            logger.LogWarning(ex, "Failed to refresh OBS status");
         }
     }
 

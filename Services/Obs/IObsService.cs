@@ -11,7 +11,7 @@ public interface IObsService
 
     Task ConnectAsync(CancellationToken cancellationToken = default);
 
-    void DisconnectAsync();
+    Task DisconnectAsync(CancellationToken cancellationToken = default);
 
     Task<string> ScreenshotAsync(
         string? sourceName = null,

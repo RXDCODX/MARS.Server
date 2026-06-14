@@ -203,15 +203,13 @@ public static class Program
             .AddGameServices()
             .AddExternalApiServices()
             .AddSpecializedServices()
-            .AddSoundRequest();
+            .AddSoundRequest()
+            .AddObsServices();
 
         // Media file storage
         services.AddSingleton<IMediaFileStorageService, WebRootMediaFileStorageService>();
         services.AddSingleton<IMediaInspector, FfprobeMediaInspector>();
         services.AddSingleton<IMediaTranscoder, MediaTranscoder>();
-
-        // OBS client — communicates with MARS.AudioController's OBS API
-        services.AddHttpClient<IObsService, HttpObsService>();
 
         services.AddSingleton<IDbContextFactory<AppDbContext>>(contextFactory);
         services.AddHostedService<ConfigurationKeysBootstrapHostedService>();
