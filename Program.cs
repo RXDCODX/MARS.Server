@@ -28,7 +28,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi;
-using OBSWebsocketDotNet;
 using Swashbuckle.AspNetCore.Swagger;
 
 namespace MARS.Server;
@@ -211,11 +210,8 @@ public static class Program
         services.AddSingleton<IMediaInspector, FfprobeMediaInspector>();
         services.AddSingleton<IMediaTranscoder, MediaTranscoder>();
 
-        // OBS Websocket service
-        services.AddSingleton<IOBSWebsocket>(sp => new OBSWebsocketDotNet.OBSWebsocket());
-        services.AddSingleton<ObsService>();
-        services.AddSingleton<IObsService>(sp => sp.GetRequiredService<ObsService>());
-        services.AddHostedService(sp => sp.GetRequiredService<ObsService>());
+        // OBS client — communicates with MARS.AudioController's OBS API
+        services.AddHttpClient<IObsService, HttpObsService>();
 
         services.AddSingleton<IDbContextFactory<AppDbContext>>(contextFactory);
         services.AddHostedService<ConfigurationKeysBootstrapHostedService>();

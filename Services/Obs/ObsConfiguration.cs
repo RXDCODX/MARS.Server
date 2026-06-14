@@ -15,4 +15,6 @@ public class ObsConfiguration
     public string PauseImageSourceName { get; set; } = "__pause_image__";
 
     public int ScreenshotQuality { get; set; } = 80;
+
+    public string ServiceUrl { get; set; } = "http://localhost:30691";
 }
