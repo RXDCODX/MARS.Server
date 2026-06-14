@@ -29,7 +29,10 @@ public class CommandExecutorService(CommandFactory commandFactory)
         }
     }
 
-    public string[] GetUserCommands(CancellationToken cancellationToken = default)
+    public string[] GetUserCommands(
+        bool isAddDescription = true,
+        CancellationToken cancellationToken = default
+    )
     {
         string[] result = [];
 
@@ -41,14 +44,17 @@ public class CommandExecutorService(CommandFactory commandFactory)
                     .Values.Where(c =>
                         !c.IsAdminCommand && c.IsVisibleIn(CommandVisibility.FullList)
                     )
-                    .Select(c => $"/{c.CommandName} - {c.Description}"),
+                    .Select(c => $"{c.CommandName} - {c.Description}"),
             ];
         }
 
         return result;
     }
 
-    public string[] GetAdminCommands(CancellationToken cancellationToken = default)
+    public string[] GetAdminCommands(
+        bool isAddDescription = true,
+        CancellationToken cancellationToken = default
+    )
     {
         string[] result = [];
 
@@ -60,7 +66,7 @@ public class CommandExecutorService(CommandFactory commandFactory)
                     .Values.Where(c =>
                         c.IsAdminCommand && c.IsVisibleIn(CommandVisibility.FullList)
                     )
-                    .Select(c => $"/{c.CommandName} - {c.Description}"),
+                    .Select(c => $"{c.CommandName} - {c.Description}"),
             ];
         }
 
@@ -69,6 +75,7 @@ public class CommandExecutorService(CommandFactory commandFactory)
 
     public string[] GetUserCommands(
         Platform platforms,
+        bool isAddDescription = true,
         CancellationToken cancellationToken = default
     )
     {
@@ -84,7 +91,7 @@ public class CommandExecutorService(CommandFactory commandFactory)
                         && c.IsAvailableOnPlatform(platforms)
                         && c.IsVisibleIn(CommandVisibility.FullList)
                     )
-                    .Select(c => $"/{c.CommandName} - {c.Description}"),
+                    .Select(c => $"{c.CommandName} - {c.Description}"),
             ];
         }
 
@@ -93,6 +100,7 @@ public class CommandExecutorService(CommandFactory commandFactory)
 
     public string[] GetAdminCommands(
         Platform platforms,
+        bool isAddDescription = true,
         CancellationToken cancellationToken = default
     )
     {
@@ -108,7 +116,7 @@ public class CommandExecutorService(CommandFactory commandFactory)
                         && c.IsAvailableOnPlatform(platforms)
                         && c.IsVisibleIn(CommandVisibility.FullList)
                     )
-                    .Select(c => $"/{c.CommandName} - {c.Description}"),
+                    .Select(c => $"{c.CommandName} - {c.Description}"),
             ];
         }
 
@@ -139,7 +147,10 @@ public class CommandExecutorService(CommandFactory commandFactory)
         return result;
     }
 
-    public BaseCommand[] GetUserCommandsInfo(CancellationToken cancellationToken = default)
+    public BaseCommand[] GetUserCommandsInfo(
+        bool isAddDescription = true,
+        CancellationToken cancellationToken = default
+    )
     {
         BaseCommand[] result = [];
 
@@ -151,7 +162,10 @@ public class CommandExecutorService(CommandFactory commandFactory)
         return result;
     }
 
-    public BaseCommand[] GetAdminCommandsInfo(CancellationToken cancellationToken = default)
+    public BaseCommand[] GetAdminCommandsInfo(
+        bool isAddDescription = true,
+        CancellationToken cancellationToken = default
+    )
     {
         BaseCommand[] result = [];
 
@@ -165,6 +179,7 @@ public class CommandExecutorService(CommandFactory commandFactory)
 
     public BaseCommand[] GetUserCommandsInfo(
         Platform platforms,
+        bool isAddDescription = true,
         CancellationToken cancellationToken = default
     )
     {
@@ -208,6 +223,7 @@ public class CommandExecutorService(CommandFactory commandFactory)
 
     public BaseCommand[] GetAdminCommandsInfo(
         Platform platforms,
+        bool isAddDescription = true,
         CancellationToken cancellationToken = default
     )
     {

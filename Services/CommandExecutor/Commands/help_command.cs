@@ -88,9 +88,14 @@ public class HelpCommand(ICommandService commandService) : BaseCommand
 
             if (!string.IsNullOrWhiteSpace(commandName))
             {
-                var userCommands = commandService.GetUserCommandsInfo(platform, cancellationToken);
+                var userCommands = commandService.GetUserCommandsInfo(
+                    platform,
+                    true,
+                    cancellationToken
+                );
                 var adminCommands = commandService.GetAdminCommandsInfo(
                     platform,
+                    true,
                     cancellationToken
                 );
 

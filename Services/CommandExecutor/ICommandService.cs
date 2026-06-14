@@ -17,30 +17,46 @@ public interface ICommandService
     /// </summary>
     /// <param name="cancellationToken">Токен отмены</param>
     /// <returns>Массив названий пользовательских команд</returns>
-    string[] GetUserCommands(CancellationToken cancellationToken = default);
+    string[] GetUserCommands(
+        bool isAddDescription = true,
+        CancellationToken cancellationToken = default
+    );
 
     /// <summary>
     /// Получить названия админских команд
     /// </summary>
     /// <param name="cancellationToken">Токен отмены</param>
     /// <returns>Массив названий админских команд</returns>
-    string[] GetAdminCommands(CancellationToken cancellationToken = default);
+    string[] GetAdminCommands(
+        bool isAddDescription = true,
+        CancellationToken cancellationToken = default
+    );
 
     /// <summary>
     /// Получить названия пользовательских команд для указанных платформ
     /// </summary>
     /// <param name="platforms">Платформы для фильтрации команд</param>
     /// <param name="cancellationToken">Токен отмены</param>
+    /// <param name="b"></param>
     /// <returns>Массив названий пользовательских команд</returns>
-    string[] GetUserCommands(Platform platforms, CancellationToken cancellationToken = default);
+    string[] GetUserCommands(
+        Platform platforms,
+        bool isAddDescription = true,
+        CancellationToken cancellationToken = default
+    );
 
     /// <summary>
     /// Получить названия админских команд для указанных платформ
     /// </summary>
     /// <param name="platforms">Платформы для фильтрации команд</param>
     /// <param name="cancellationToken">Токен отмены</param>
+    /// <param name="b"></param>
     /// <returns>Массив названий админских команд</returns>
-    string[] GetAdminCommands(Platform platforms, CancellationToken cancellationToken = default);
+    string[] GetAdminCommands(
+        Platform platforms,
+        bool isAddDescription = true,
+        CancellationToken cancellationToken = default
+    );
 
     CommandParameterInfo[]? GetCommandParameters(
         string commandName,
@@ -52,14 +68,20 @@ public interface ICommandService
     /// </summary>
     /// <param name="cancellationToken">Токен отмены</param>
     /// <returns>Массив информации о пользовательских командах</returns>
-    BaseCommand[] GetUserCommandsInfo(CancellationToken cancellationToken = default);
+    BaseCommand[] GetUserCommandsInfo(
+        bool isAddDescription = true,
+        CancellationToken cancellationToken = default
+    );
 
     /// <summary>
     /// Получить информацию об админских командах
     /// </summary>
     /// <param name="cancellationToken">Токен отмены</param>
     /// <returns>Массив информации об админских командах</returns>
-    BaseCommand[] GetAdminCommandsInfo(CancellationToken cancellationToken = default);
+    BaseCommand[] GetAdminCommandsInfo(
+        bool isAddDescription = true,
+        CancellationToken cancellationToken = default
+    );
 
     /// <summary>
     /// Получить информацию о пользовательских командах для указанных платформ
@@ -69,6 +91,7 @@ public interface ICommandService
     /// <returns>Массив информации о пользовательских командах</returns>
     BaseCommand[] GetUserCommandsInfo(
         Platform platforms,
+        bool isAddDescription = true,
         CancellationToken cancellationToken = default
     );
 
@@ -88,6 +111,7 @@ public interface ICommandService
     /// <returns>Массив информации об админских командах</returns>
     BaseCommand[] GetAdminCommandsInfo(
         Platform platforms,
+        bool isAddDescription = true,
         CancellationToken cancellationToken = default
     );
 

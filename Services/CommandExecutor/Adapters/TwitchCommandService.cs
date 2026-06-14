@@ -32,10 +32,14 @@ public class TwitchCommandService : PlatformCommandServiceBase<string>, IHostedS
     public override char[] CommandPrefixes => ['!'];
 
     public override IEnumerable<string> UserCommands =>
-        _commandService.GetUserCommands(Platform.Twitch).Select(c => $"!{c}");
+        _commandService
+            .GetUserCommands(Platform.Twitch, false, CancellationToken.None)
+            .Select(c => $"!{c}");
 
     public override IEnumerable<string> AdminCommands =>
-        _commandService.GetAdminCommands(Platform.Twitch).Select(c => $"!{c}");
+        _commandService
+            .GetAdminCommands(Platform.Twitch, false, CancellationToken.None)
+            .Select(c => $"!{c}");
 
     public override Func<string, bool> IsAdmin =>
         (userId) => userId.Equals(TwitchExstension.ChannelId, StringComparison.OrdinalIgnoreCase);

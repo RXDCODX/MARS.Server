@@ -26,8 +26,9 @@ public class TelegramCommandService(
     private const int InlineCacheTimeSeconds = 45;
     private const int InlineMaxResults = 30;
     private static readonly TimeSpan InlineResultPayloadTtl = TimeSpan.FromMinutes(5);
-    private readonly ConcurrentDictionary<string, InlineResultPayload> _inlineResultPayloads =
-        new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, InlineResultPayload> _inlineResultPayloads = new(
+        StringComparer.Ordinal
+    );
 
     public override Platform Platform => Platform.Telegram;
 
@@ -437,9 +438,7 @@ public class TelegramCommandService(
         var matchedCommands = commands
             .Where(c =>
                 c.CommandName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)
-                || c.Aliases.Any(a =>
-                    a.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)
-                )
+                || c.Aliases.Any(a => a.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
                 || c.Description.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)
             )
             .Take(InlineMaxResults);
@@ -600,8 +599,7 @@ public class TelegramCommandService(
                         }
                         else
                         {
-                            result =
-                                $"Команда '{commandName}' доступна только администраторам.";
+                            result = $"Команда '{commandName}' доступна только администраторам.";
                         }
                     }
                     else
@@ -713,7 +711,10 @@ public class TelegramCommandService(
         {
             var adminInline = commandService
                 .GetAdminCommandsInfo(Platform.Telegram)
-                .Where(c => c.IsVisibleIn(CommandVisibility.Inline) && (c.SupportsInline || c.SupportsMediaInline));
+                .Where(c =>
+                    c.IsVisibleIn(CommandVisibility.Inline)
+                    && (c.SupportsInline || c.SupportsMediaInline)
+                );
 
             result = result.Concat(adminInline);
         }
