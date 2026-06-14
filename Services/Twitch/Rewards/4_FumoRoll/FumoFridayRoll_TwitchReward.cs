@@ -11,7 +11,7 @@ using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Core.SubscriptionTypes.Channel;
 using TwitchLib.EventSub.Websockets;
 
-namespace MARS.Server.Services.Twitch.Rewards._1_FumoRoll;
+namespace MARS.Server.Services.Twitch.Rewards._4_FumoRoll;
 
 public class FumoFridayRoll_TwitchReward(
     ChannelRewardsService channelRewardsService,
@@ -32,6 +32,8 @@ public class FumoFridayRoll_TwitchReward(
     public override Color Color { get; set; } = Color.FromArgb(255, 182, 193);
 
     public override int Cost { get; init; } = 1;
+
+    protected override bool IsRewardActive => IsRewardEnabled();
 
     public override Func<bool> IsRewardEnabled { get; set; } =
         () => DateTime.Now.DayOfWeek == DayOfWeek.Friday;
@@ -59,7 +61,7 @@ public class FumoFridayRoll_TwitchReward(
             twEvent.BroadcasterUserId.Equals(
                 TwitchExstension.ChannelId,
                 StringComparison.OrdinalIgnoreCase
-            )
+            ) && IsRewardActive
         )
         {
             if (twEvent.Reward.Cost == Cost)

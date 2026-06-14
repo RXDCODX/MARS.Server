@@ -93,7 +93,7 @@ public class ObsService(
         CancellationToken cancellationToken = default
     )
     {
-        EnsureConnected();
+        await EnsureConnectedAsync();
 
         var sceneName = sourceName ?? obs.GetCurrentProgramScene();
         var screenshotDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "screenshots");
@@ -129,7 +129,7 @@ public class ObsService(
         await _lock.WaitAsync(cancellationToken);
         try
         {
-            EnsureConnected();
+            await EnsureConnectedAsync();
 
             if (IsPaused)
             {
@@ -165,7 +165,7 @@ public class ObsService(
         await _lock.WaitAsync(cancellationToken);
         try
         {
-            EnsureConnected();
+            await EnsureConnectedAsync();
 
             if (!IsPaused)
             {
@@ -201,7 +201,7 @@ public class ObsService(
         await _lock.WaitAsync(cancellationToken);
         try
         {
-            EnsureConnected();
+            await EnsureConnectedAsync();
 
             if (IsPaused)
             {
@@ -240,7 +240,7 @@ public class ObsService(
         await _lock.WaitAsync(cancellationToken);
         try
         {
-            EnsureConnected();
+            await EnsureConnectedAsync();
 
             if (!IsPaused)
             {
@@ -352,12 +352,30 @@ public class ObsService(
         }
     }
 
-    private void EnsureConnected()
+    private async Task EnsureConnectedAsync()
     {
+        if (obs.IsConnected)
+        {
+            return;
+        }
+
+        logger.LogWarning("OBS not connected, attempting to reconnect...");
+
+        try
+        {
+            await ConnectAsync();
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Reconnect attempt failed");
+        }
+
         if (!obs.IsConnected)
         {
             throw new InvalidOperationException("Not connected to OBS");
         }
+
+        logger.LogInformation("Reconnected to OBS successfully");
     }
 
     public void Dispose()

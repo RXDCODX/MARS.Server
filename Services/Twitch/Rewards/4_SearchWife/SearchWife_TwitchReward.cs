@@ -43,6 +43,8 @@ public class SearchWife_TwitchReward(
     public override Color Color { get; set; } = Color.FromArgb(24, 0, 255);
     public override int Cost { get; init; } = 4;
 
+    protected override bool IsRewardActive => IsRewardEnabled();
+
     public override Func<bool> IsRewardEnabled { get; set; } =
         () => DateTime.Now.DayOfWeek != DayOfWeek.Friday;
 
@@ -69,7 +71,7 @@ public class SearchWife_TwitchReward(
             twEvent.BroadcasterUserId.Equals(
                 TwitchExstension.ChannelId,
                 StringComparison.OrdinalIgnoreCase
-            )
+            ) && IsRewardActive
         )
         {
             if (twEvent.Reward.Cost == Cost)

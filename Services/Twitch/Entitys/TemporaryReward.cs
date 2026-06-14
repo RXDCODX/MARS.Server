@@ -45,6 +45,9 @@ public abstract class TemporaryReward(
     public abstract Func<bool> IsRewardEnabled { get; set; }
     internal virtual Guid? TwitchRewardId { get; private set; }
 
+    protected virtual bool IsRewardActive { get; } = true;
+    private protected bool IsRewardActivityWasConfermed = false;
+
     public virtual async Task StartAsync(CancellationToken cancellationToken)
     {
         logger.LogInformation(
@@ -58,52 +61,64 @@ public abstract class TemporaryReward(
         );
         _timer = new PeriodicTimer(TimeSpan.FromMinutes(5));
 
-        var custom = IsRewardEnabled();
-        var effective = ComputeEffectiveEnabled(custom);
-        await EnsureRewardStateAsync(effective);
+        if (IsRewardActive)
+        {
+            IsRewardActivityWasConfermed = true;
+            var custom = IsRewardEnabled();
+            var effective = ComputeEffectiveEnabled(custom);
+            await EnsureRewardStateAsync(effective);
+        }
+
         _runningTask = RunTimerLoopAsync(_cancellationTokenSource.Token);
     }
 
     public virtual async Task StopAsync(CancellationToken cancelToken)
     {
-        logger.LogInformation("Остановка временной награды: {AlertName}", AlertDisplayName);
+        if (IsRewardActivityWasConfermed)
+        {
+            logger.LogInformation("Остановка временной награды: {AlertName}", AlertDisplayName);
 
 #pragma warning disable CS8602 // Dereference of a possibly null reference.
-        await _cancellationTokenSource?.CancelAsync();
+            await _cancellationTokenSource?.CancelAsync();
 #pragma warning restore CS8602 // Dereference of a possibly null reference.
 
-        if (_timer != null)
-        {
-            _timer?.Dispose();
-            _timer = null;
-        }
-
-        if (_runningTask != null)
-        {
-            try
+            if (_timer != null)
             {
-                await _runningTask.WaitAsync(cancelToken);
+                _timer?.Dispose();
+                _timer = null;
             }
-            catch (TaskCanceledException) { }
-            catch (OperationCanceledException) { }
 
-            _runningTask = null;
+            if (_runningTask != null)
+            {
+                try
+                {
+                    await _runningTask.WaitAsync(cancelToken);
+                }
+                catch (TaskCanceledException) { }
+                catch (OperationCanceledException) { }
+
+                _runningTask = null;
+            }
+
+            _cancellationTokenSource?.Dispose();
+            _cancellationTokenSource = null;
+
+            // Награда должна сохраняться в системе, при остановке просто выключаем
+            await EnsureRewardStateAsync(false);
         }
-
-        _cancellationTokenSource?.Dispose();
-        _cancellationTokenSource = null;
-
-        // Награда должна сохраняться в системе, при остановке просто выключаем
-        await EnsureRewardStateAsync(false);
     }
 
     private async Task RunTimerLoopAsync(CancellationToken cancellationToken)
     {
         while (_timer != null && await _timer.WaitForNextTickAsync(cancellationToken))
         {
-            var custom = IsRewardEnabled();
-            var effective = ComputeEffectiveEnabled(custom);
-            await ExecuteRewardStateAsync(effective, cancellationToken);
+            if (IsRewardActive)
+            {
+                IsRewardActivityWasConfermed = true;
+                var custom = IsRewardEnabled();
+                var effective = ComputeEffectiveEnabled(custom);
+                await ExecuteRewardStateAsync(effective, cancellationToken);
+            }
         }
     }
 

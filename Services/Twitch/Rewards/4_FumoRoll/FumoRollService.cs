@@ -2,7 +2,7 @@
 using MARS.Server.Services.Twitch.Entitys;
 using Microsoft.EntityFrameworkCore;
 
-namespace MARS.Server.Services.Twitch.Rewards._1_FumoRoll;
+namespace MARS.Server.Services.Twitch.Rewards._4_FumoRoll;
 
 public class FumoRollService(IDbContextFactory<AppDbContext> factory)
 {
