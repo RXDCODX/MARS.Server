@@ -21,14 +21,11 @@ public class ObsService(
     private readonly SemaphoreSlim _lock = new(1, 1);
 
     private string? _savedSceneBeforePause;
-    private List<SceneItemState>? _cachedSceneItemStates;
     private bool _disposed;
 
     public bool IsConnected => obs.IsConnected;
 
     public bool IsPaused { get; private set; }
-
-    private sealed record SceneItemState(int ItemId, string SourceName, string? GroupName, bool WasEnabled);
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
@@ -144,17 +141,17 @@ public class ObsService(
 
             var screenshotPath = await TakeScreenshotInternalAsync(currentScene);
 
-            ShowFreezeFrameSource(currentScene);
-            HideNonAlertSourcesAndCache(currentScene);
+            UpdatePauseImageSource(screenshotPath);
+            ShowPauseScreenScene(currentScene);
 
             IsPaused = true;
-            logger.LogInformation("Freeze frame activated on scene {Scene}", currentScene);
+            logger.LogInformation("Pause activated on scene {Scene}", currentScene);
 
             return ObsPauseResult.Ok(true, screenshotPath);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to activate freeze frame");
+            logger.LogError(ex, "Failed to activate pause");
             return ObsPauseResult.Fail(ex.Message);
         }
         finally
@@ -177,19 +174,18 @@ public class ObsService(
 
             var scene = _savedSceneBeforePause ?? obs.GetCurrentProgramScene();
 
-            HideFreezeFrameSource(scene);
-            RestoreCachedSources(scene);
+            HidePauseScreenScene(scene);
 
             IsPaused = false;
             _savedSceneBeforePause = null;
 
-            logger.LogInformation("Freeze frame deactivated");
+            logger.LogInformation("Pause deactivated");
 
             return ObsPauseResult.Ok(false);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to deactivate freeze frame");
+            logger.LogError(ex, "Failed to deactivate pause");
             return ObsPauseResult.Fail(ex.Message);
         }
         finally
@@ -303,146 +299,39 @@ public class ObsService(
         return Task.FromResult(filePath);
     }
 
-    private void ShowFreezeFrameSource(string sceneName)
+    private void ShowPauseScreenScene(string sceneName)
     {
         try
         {
-            var itemId = obs.GetSceneItemId(sceneName, _config.FreezeFrameSourceName, 0);
+            var itemId = obs.GetSceneItemId(sceneName, _config.PauseScreenSceneName, 0);
             obs.SetSceneItemEnabled(sceneName, itemId, true);
         }
         catch (Exception ex)
         {
             logger.LogWarning(
                 ex,
-                "Freeze frame source '{Source}' not found in scene '{Scene}'",
-                _config.FreezeFrameSourceName,
+                "Pause screen scene '{PauseScene}' not found in scene '{Scene}'",
+                _config.PauseScreenSceneName,
                 sceneName
             );
         }
     }
 
-    private void HideFreezeFrameSource(string sceneName)
+    private void HidePauseScreenScene(string sceneName)
     {
         try
         {
-            var itemId = obs.GetSceneItemId(sceneName, _config.FreezeFrameSourceName, 0);
+            var itemId = obs.GetSceneItemId(sceneName, _config.PauseScreenSceneName, 0);
             obs.SetSceneItemEnabled(sceneName, itemId, false);
         }
         catch (Exception ex)
         {
             logger.LogWarning(
                 ex,
-                "Freeze frame source '{Source}' not found in scene '{Scene}'",
-                _config.FreezeFrameSourceName,
+                "Pause screen scene '{PauseScene}' not found in scene '{Scene}'",
+                _config.PauseScreenSceneName,
                 sceneName
             );
-        }
-    }
-
-    private List<SceneItemState> GetSceneItemsWithGroupInfo(string sceneName)
-    {
-        var response = obs.SendRequest(
-            "GetSceneItemList",
-            new JObject { { "sceneName", sceneName } }
-        );
-
-        var items = (JArray?)response["sceneItems"] ?? [];
-        var result = new List<SceneItemState>(items.Count);
-
-        foreach (var item in items)
-        {
-            result.Add(
-                new SceneItemState(
-                    item["sceneItemId"]?.Value<int>() ?? 0,
-                    item["sourceName"]?.Value<string>() ?? string.Empty,
-                    item["groupName"]?.Value<string>(),
-                    item["sceneItemEnabled"]?.Value<bool>() ?? false
-                )
-            );
-        }
-
-        return result;
-    }
-
-    private void HideNonAlertSourcesAndCache(string sceneName)
-    {
-        try
-        {
-            var items = GetSceneItemsWithGroupInfo(sceneName);
-            _cachedSceneItemStates = items;
-
-            foreach (var item in items)
-            {
-                if (
-                    item.SourceName == _config.FreezeFrameSourceName
-                    || item.SourceName == _config.PauseImageSourceName
-                )
-                {
-                    continue;
-                }
-
-                if (
-                    !string.IsNullOrEmpty(item.GroupName)
-                    && string.Equals(
-                        item.GroupName,
-                        _config.AlertsGroupName,
-                        StringComparison.OrdinalIgnoreCase
-                    )
-                )
-                {
-                    continue;
-                }
-
-                obs.SetSceneItemEnabled(sceneName, item.ItemId, false);
-            }
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarning(ex, "Failed to hide content sources in scene '{Scene}'", sceneName);
-        }
-    }
-
-    private void RestoreCachedSources(string sceneName)
-    {
-        if (_cachedSceneItemStates == null)
-        {
-            return;
-        }
-
-        try
-        {
-            foreach (var item in _cachedSceneItemStates)
-            {
-                if (
-                    item.SourceName == _config.FreezeFrameSourceName
-                    || item.SourceName == _config.PauseImageSourceName
-                )
-                {
-                    continue;
-                }
-
-                if (
-                    !string.IsNullOrEmpty(item.GroupName)
-                    && string.Equals(
-                        item.GroupName,
-                        _config.AlertsGroupName,
-                        StringComparison.OrdinalIgnoreCase
-                    )
-                )
-                {
-                    continue;
-                }
-
-                obs.SetSceneItemEnabled(sceneName, item.ItemId, item.WasEnabled);
-            }
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarning(ex, "Failed to restore content sources in scene '{Scene}'", sceneName);
-        }
-        finally
-        {
-            _cachedSceneItemStates = null;
         }
     }
 

@@ -12,11 +12,9 @@ public class ObsConfiguration
 
     public string PauseSceneName { get; set; } = "Pause";
 
-    public string FreezeFrameSourceName { get; set; } = "__freeze_frame__";
+    public string PauseScreenSceneName { get; set; } = "PauseScreenScene";
 
     public string PauseImageSourceName { get; set; } = "__pause_image__";
 
     public int ScreenshotQuality { get; set; } = 80;
-
-    public string AlertsGroupName { get; set; } = "Alerts";
 }
