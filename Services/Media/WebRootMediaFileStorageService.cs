@@ -9,25 +9,22 @@ using Microsoft.Extensions.Logging;
 
 namespace MARS.Server.Services.Media;
 
-public class WebRootMediaFileStorageService : IMediaFileStorageService
+public class WebRootMediaFileStorageService(
+    IWebHostEnvironment env,
+    ILogger<WebRootMediaFileStorageService> logger
+) : IMediaFileStorageService
 {
     private const string DefaultFolderName = "Alerts/uploaded_mems";
 
-    private readonly IWebHostEnvironment _env;
-    private readonly ILogger<WebRootMediaFileStorageService> _logger;
-
-    public WebRootMediaFileStorageService(IWebHostEnvironment env, ILogger<WebRootMediaFileStorageService> logger)
-    {
-        _env = env;
-        _logger = logger;
-    }
-
-    public async Task<MediaFileInfo> SaveFileAsync(IFormFile file, string? targetRelativePathHint = null)
+    public async Task<MediaFileInfo> SaveFileAsync(
+        IFormFile file,
+        string? targetRelativePathHint = null
+    )
     {
         var extension = Path.GetExtension(file.FileName) ?? string.Empty;
         var relativePath = ResolveRelativePath(targetRelativePathHint, extension);
         var fullPath = Path.Combine(
-            _env.WebRootPath,
+            env.WebRootPath,
             relativePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar)
         );
 
@@ -63,7 +60,7 @@ public class WebRootMediaFileStorageService : IMediaFileStorageService
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to copy media file to dev copies");
+            logger.LogWarning(ex, "Failed to copy media file to dev copies");
         }
 
         return info;
@@ -71,7 +68,10 @@ public class WebRootMediaFileStorageService : IMediaFileStorageService
 
     public Task DeleteFileAsync(string relativePath)
     {
-        var full = Path.Combine(_env.WebRootPath, relativePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+        var full = Path.Combine(
+            env.WebRootPath,
+            relativePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar)
+        );
         if (File.Exists(full))
         {
             File.Delete(full);
@@ -84,7 +84,7 @@ public class WebRootMediaFileStorageService : IMediaFileStorageService
     {
         var normalizedRelativePath = NormalizePath(relativePath);
         var sourceFull = Path.Combine(
-            _env.WebRootPath,
+            env.WebRootPath,
             normalizedRelativePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar)
         );
 
@@ -94,7 +94,9 @@ public class WebRootMediaFileStorageService : IMediaFileStorageService
         }
 
         var devWebRoot = ResolveDevWebRoot();
-        var devRelativePath = normalizedRelativePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
+        var devRelativePath = normalizedRelativePath
+            .TrimStart('/')
+            .Replace('/', Path.DirectorySeparatorChar);
         var destFull = Path.Combine(devWebRoot, devRelativePath);
 
         var destDirectory = Path.GetDirectoryName(destFull);
@@ -108,12 +110,17 @@ public class WebRootMediaFileStorageService : IMediaFileStorageService
         return Task.CompletedTask;
     }
 
-    private static string ResolveRelativePath(string? targetRelativePathHint, string sourceExtension)
+    private static string ResolveRelativePath(
+        string? targetRelativePathHint,
+        string sourceExtension
+    )
     {
         if (string.IsNullOrWhiteSpace(targetRelativePathHint))
         {
             var defaultFileName = $"{Guid.NewGuid()}{sourceExtension}";
-            return "/" + Path.Combine(DefaultFolderName, defaultFileName).Replace(Path.DirectorySeparatorChar, '/');
+            return "/"
+                + Path.Combine(DefaultFolderName, defaultFileName)
+                    .Replace(Path.DirectorySeparatorChar, '/');
         }
 
         var normalizedHint = NormalizePath(targetRelativePathHint);
@@ -147,7 +154,7 @@ public class WebRootMediaFileStorageService : IMediaFileStorageService
             }
         }
 
-        return _env.WebRootPath;
+        return env.WebRootPath;
     }
 
     private static string? FindProjectRoot(string startPath)
@@ -174,12 +181,15 @@ public class WebRootMediaFileStorageService : IMediaFileStorageService
 
     private static string NormalizePath(string path)
     {
-        if (string.IsNullOrWhiteSpace(path)) return path;
+        if (string.IsNullOrWhiteSpace(path))
+            return path;
 
         var single = path.Replace("//", "/");
-        while (single.Contains("//")) single = single.Replace("//", "/");
+        while (single.Contains("//"))
+            single = single.Replace("//", "/");
 
-        if (!single.StartsWith('/')) single = "/" + single;
+        if (!single.StartsWith('/'))
+            single = "/" + single;
         return single;
     }
 }
