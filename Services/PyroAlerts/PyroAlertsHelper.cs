@@ -185,6 +185,7 @@ public class PyroAlertsHelper(ILogger<PyroAlertsHelper> logger) : ITelegramusSer
                     : message.Sticker != null ? await client.GetFile(message.Sticker.FileId)
                     : message.Animation != null ? await client.GetFile(message.Animation.FileId)
                     : message.Document != null ? await client.GetFile(message.Document.FileId)
+                    : message.Audio != null ? await client.GetFile(message.Audio.FileId)
                     : null;
             }
         }

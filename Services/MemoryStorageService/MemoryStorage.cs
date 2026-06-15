@@ -136,6 +136,8 @@ public static class MemoryStorage
             return;
         }
 
+        await Task.Delay(TimeSpan.FromSeconds(2));
+
         while (true)
         {
             var isRemoved = FileStorage.TryRemove(fileName, out var removedDescription);
