@@ -292,30 +292,7 @@ public class TwitchCommandService : PlatformCommandServiceBase<string>, IHostedS
     /// </summary>
     /// <param name="response">Ответ команды</param>
     /// <returns>Валидный ответ</returns>
-    public override string ValidateResponse(string response)
-    {
-        var result = response ?? string.Empty;
-
-        if (!string.IsNullOrEmpty(response))
-        {
-            var maxLength = GetMaxResponseLength();
-
-            response = response.Replace("\n", " ");
-
-            if (response.Length > maxLength)
-            {
-                // Для Twitch используем более короткую обрезку
-                var truncated = response.Substring(0, maxLength - 5);
-                result = truncated + "...";
-            }
-            else
-            {
-                result = response;
-            }
-        }
-
-        return result;
-    }
+    public override string ValidateResponse(string response) => response;
 
     public Task StartAsync(CancellationToken cancellationToken)
     {

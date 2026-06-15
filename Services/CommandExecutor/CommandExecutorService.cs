@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -44,7 +44,11 @@ public class CommandExecutorService(CommandFactory commandFactory)
                     .Values.Where(c =>
                         !c.IsAdminCommand && c.IsVisibleIn(CommandVisibility.FullList)
                     )
-                    .Select(c => $"{c.CommandName} - {c.Description}"),
+                    .Select(c =>
+                        isAddDescription
+                            ? $"{c.CommandName} - {c.Description}"
+                            : c.CommandName
+                    ),
             ];
         }
 
@@ -66,7 +70,11 @@ public class CommandExecutorService(CommandFactory commandFactory)
                     .Values.Where(c =>
                         c.IsAdminCommand && c.IsVisibleIn(CommandVisibility.FullList)
                     )
-                    .Select(c => $"{c.CommandName} - {c.Description}"),
+                    .Select(c =>
+                        isAddDescription
+                            ? $"{c.CommandName} - {c.Description}"
+                            : c.CommandName
+                    ),
             ];
         }
 
@@ -91,7 +99,11 @@ public class CommandExecutorService(CommandFactory commandFactory)
                         && c.IsAvailableOnPlatform(platforms)
                         && c.IsVisibleIn(CommandVisibility.FullList)
                     )
-                    .Select(c => $"{c.CommandName} - {c.Description}"),
+                    .Select(c =>
+                        isAddDescription
+                            ? $"{c.CommandName} - {c.Description}"
+                            : c.CommandName
+                    ),
             ];
         }
 
@@ -116,7 +128,11 @@ public class CommandExecutorService(CommandFactory commandFactory)
                         && c.IsAvailableOnPlatform(platforms)
                         && c.IsVisibleIn(CommandVisibility.FullList)
                     )
-                    .Select(c => $"{c.CommandName} - {c.Description}"),
+                    .Select(c =>
+                        isAddDescription
+                            ? $"{c.CommandName} - {c.Description}"
+                            : c.CommandName
+                    ),
             ];
         }
 

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -21,8 +21,40 @@ public static class TwitchExstension
     public const string BotName = "catisaai";
     public const string BotId = "888848441";
     public const string SevenTvUserId = "01G9FVE50G00022RD2T09E7QXC";
+    private const int MaxMessageLength = 500;
 
     public static ConcurrentBag<TwitchUser> BlackList = [];
+
+    private static List<string> SplitMessage(string message)
+    {
+        var normalized = message.Replace("\r\n", " ").Replace("\n", " ").Replace("  ", " ").Trim();
+
+        return SplitBySpaces(normalized);
+    }
+
+    private static List<string> SplitBySpaces(string text)
+    {
+        var chunks = new List<string>();
+
+        while (text.Length > MaxMessageLength)
+        {
+            var splitAt = text.LastIndexOf(' ', MaxMessageLength);
+            if (splitAt <= 0)
+            {
+                splitAt = MaxMessageLength;
+            }
+
+            chunks.Add(text[..splitAt]);
+            text = text[splitAt..].TrimStart(' ');
+        }
+
+        if (text.Length > 0)
+        {
+            chunks.Add(text);
+        }
+
+        return chunks;
+    }
 
     extension(ITwitchClient client)
     {
@@ -43,7 +75,10 @@ public static class TwitchExstension
                 JoinedChannel? channel = client.GetJoinedChannel(Channel);
                 if (channel != null)
                 {
-                    await client.SendMessageAsync(channel, message);
+                    foreach (var chunk in SplitMessage(message))
+                    {
+                        await client.SendMessageAsync(channel, chunk);
+                    }
                 }
             }
             catch (Exception e)
@@ -68,7 +103,10 @@ public static class TwitchExstension
                 JoinedChannel? channel = client.GetJoinedChannel(Channel);
                 if (channel != null)
                 {
-                    await client.SendMessageAsync(channel, message);
+                    foreach (var chunk in SplitMessage(message))
+                    {
+                        await client.SendMessageAsync(channel, chunk);
+                    }
                 }
             }
             catch (Exception e)
@@ -91,13 +129,16 @@ public static class TwitchExstension
             color ??= AnnouncementColors.Primary;
             try
             {
-                await client.Helix.Chat.SendChatAnnouncementAsync(
-                    ChannelId,
-                    ChannelId,
-                    message,
-                    color,
-                    userToken?.AccessToken
-                );
+                foreach (var chunk in SplitMessage(message))
+                {
+                    await client.Helix.Chat.SendChatAnnouncementAsync(
+                        ChannelId,
+                        ChannelId,
+                        chunk,
+                        color,
+                        userToken?.AccessToken
+                    );
+                }
             }
             catch (Exception ex)
             {

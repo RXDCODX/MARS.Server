@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,6 +15,7 @@ public interface ICommandService
     /// <summary>
     /// Получить названия пользовательских команд
     /// </summary>
+    /// <param name="isAddDescription">Добавлять ли описание к названиям команд</param>
     /// <param name="cancellationToken">Токен отмены</param>
     /// <returns>Массив названий пользовательских команд</returns>
     string[] GetUserCommands(
@@ -25,6 +26,7 @@ public interface ICommandService
     /// <summary>
     /// Получить названия админских команд
     /// </summary>
+    /// <param name="isAddDescription">Добавлять ли описание к названиям команд</param>
     /// <param name="cancellationToken">Токен отмены</param>
     /// <returns>Массив названий админских команд</returns>
     string[] GetAdminCommands(
@@ -36,8 +38,8 @@ public interface ICommandService
     /// Получить названия пользовательских команд для указанных платформ
     /// </summary>
     /// <param name="platforms">Платформы для фильтрации команд</param>
+    /// <param name="isAddDescription">Добавлять ли описание к названиям команд</param>
     /// <param name="cancellationToken">Токен отмены</param>
-    /// <param name="b"></param>
     /// <returns>Массив названий пользовательских команд</returns>
     string[] GetUserCommands(
         Platform platforms,
@@ -49,8 +51,8 @@ public interface ICommandService
     /// Получить названия админских команд для указанных платформ
     /// </summary>
     /// <param name="platforms">Платформы для фильтрации команд</param>
+    /// <param name="isAddDescription">Добавлять ли описание к названиям команд</param>
     /// <param name="cancellationToken">Токен отмены</param>
-    /// <param name="b"></param>
     /// <returns>Массив названий админских команд</returns>
     string[] GetAdminCommands(
         Platform platforms,
@@ -66,6 +68,7 @@ public interface ICommandService
     /// <summary>
     /// Получить информацию о пользовательских командах
     /// </summary>
+    /// <param name="isAddDescription">Добавлять ли описание к информации о командах</param>
     /// <param name="cancellationToken">Токен отмены</param>
     /// <returns>Массив информации о пользовательских командах</returns>
     BaseCommand[] GetUserCommandsInfo(
@@ -76,6 +79,7 @@ public interface ICommandService
     /// <summary>
     /// Получить информацию об админских командах
     /// </summary>
+    /// <param name="isAddDescription">Добавлять ли описание к информации о командах</param>
     /// <param name="cancellationToken">Токен отмены</param>
     /// <returns>Массив информации об админских командах</returns>
     BaseCommand[] GetAdminCommandsInfo(
@@ -87,6 +91,7 @@ public interface ICommandService
     /// Получить информацию о пользовательских командах для указанных платформ
     /// </summary>
     /// <param name="platforms">Платформы для фильтрации команд</param>
+    /// <param name="isAddDescription">Добавлять ли описание к информации о командах</param>
     /// <param name="cancellationToken">Токен отмены</param>
     /// <returns>Массив информации о пользовательских командах</returns>
     BaseCommand[] GetUserCommandsInfo(
@@ -107,6 +112,7 @@ public interface ICommandService
     /// Получить информацию об админских командах для указанных платформ
     /// </summary>
     /// <param name="platforms">Платформы для фильтрации команд</param>
+    /// <param name="isAddDescription">Добавлять ли описание к информации о командах</param>
     /// <param name="cancellationToken">Токен отмены</param>
     /// <returns>Массив информации об админских командах</returns>
     BaseCommand[] GetAdminCommandsInfo(
