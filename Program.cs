@@ -60,6 +60,7 @@ public static class Program
         //Twitch
         var loggerFactory = LoggerFactory.Create(loggingBuilder =>
         {
+            loggingBuilder.AddConfiguration(builder.Configuration);
             if (builder.Environment.IsDevelopment())
             {
                 loggingBuilder.AddConsole();
@@ -70,6 +71,7 @@ public static class Program
                 loggingBuilder.AddConsole();
                 if (OperatingSystem.IsWindows())
                 {
+                    loggingBuilder.AddEventSourceLogger();
                     loggingBuilder.AddEventLog();
                 }
                 loggingBuilder.SetMinimumLevel(LogLevel.Information);
