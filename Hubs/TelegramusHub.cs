@@ -12,6 +12,7 @@ using MARS.Server.Services.Twitch.Rewards._4_FumoRoll;
 using MARS.Server.Services.WaifuRoll;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SignalRSwaggerGen.Attributes;
 using SignalRSwaggerGen.Enums;
@@ -39,7 +40,8 @@ public class TelegramusHub(
     IServiceProvider serviceProvider,
     MikuMondayTracksService mikuMondayTracksService,
     SoundMuteCoordinator coordinator,
-    IObsService obsService
+    IObsService obsService,
+    ILogger<TelegramusHub> logger
 ) : Hub<ITelegramusHub>
 {
     private readonly TwitchConfiguration _twitchConfiguration =
@@ -56,6 +58,12 @@ public class TelegramusHub(
         await Clients.Caller.UpdateWaifuPrizes(result.Data);
         var fumoResult = await fumoRollService.GetFumoPrizesAsync();
         await Clients.Caller.UpdateFumoPrizes(fumoResult.Data);
+    }
+
+    public Task LogError(string errorMessage, LogLevel logLevel = LogLevel.Error)
+    {
+        logger.Log(logLevel, "Client error: {ErrorMessage}", errorMessage);
+        return Task.CompletedTask;
     }
 
     public Task TwitchMsg(string msg)
