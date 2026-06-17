@@ -14,12 +14,13 @@ namespace MARS.Server.Services.Twitch.Synthesizer;
 
 public sealed class SevenTvEmoteService(
     IDbContextFactory<AppDbContext> dbContextFactory,
-    ILogger<SevenTvEmoteService> logger
+    ILogger<SevenTvEmoteService> logger,
+    SevenTVClient? sevenTvClient = null
 ) : BackgroundService, ISevenTvEmoteService
 {
     private static readonly TimeSpan RefreshInterval = TimeSpan.FromMinutes(10);
 
-    private readonly SevenTVClient _sevenTvClient = new();
+    internal readonly SevenTVClient _sevenTvClient = sevenTvClient ?? new();
     private readonly Lock _emotesLock = new();
 
     private HashSet<string> _emoteNames = new(StringComparer.OrdinalIgnoreCase);
