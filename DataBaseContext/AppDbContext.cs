@@ -12,6 +12,7 @@ using MARS.Server.Services.Telegram.DiscordBridge.Entities;
 using MARS.Server.Services.Telegram.PrivateChannelsResender.Entities;
 using MARS.Server.Services.Twitch.ClientMessages.AutoMessages.Entitys;
 using MARS.Server.Services.Twitch.Entitys;
+using MARS.Server.Services.Twitch.Synthesizer.Entitys;
 using MARS.Server.Services.Twitch.HelloVideos.Entitys;
 using MARS.Server.Services.Twitch.Management.Entitys;
 using MARS.Server.Services.Twitch.Rewards._11_RandomMemReward.Service.Entity;
@@ -79,6 +80,7 @@ public sealed partial class AppDbContext : DbContext
     public DbSet<Fumo> Fumos { get; set; } = null!;
     public DbSet<EnvironmentVariable> EnvironmentVariables { get; set; } = null!;
     public DbSet<ChannelProcessingState> ChannelProcessingStates { get; set; } = null!;
+    public DbSet<SevenTvEmote> SevenTvEmotes { get; set; } = null!;
     public DbSet<TelegramDiscordChannelBinding> TelegramDiscordChannelBindings { get; set; } =
         null!;
     public DbSet<TelegramDiscordChannelState> TelegramDiscordChannelStates { get; set; } = null!;

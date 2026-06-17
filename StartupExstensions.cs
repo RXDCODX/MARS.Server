@@ -569,6 +569,10 @@ public static class StartupEstensions
 
         internal IServiceCollection AddSyntheziaServices()
         {
+            services.AddSingleton<ISevenTvEmoteService, SevenTvEmoteService>();
+            services.AddHostedService(sp =>
+                (SevenTvEmoteService)sp.GetRequiredService<ISevenTvEmoteService>()
+            );
             services.AddSingleton<TtsHubBroadcaster>();
             services.AddSingleton<ITtsHubBroadcaster>(sp =>
                 sp.GetRequiredService<TtsHubBroadcaster>()
