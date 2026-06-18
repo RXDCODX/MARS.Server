@@ -185,7 +185,7 @@ public class TelegramClipboardCopyService(
         if (_triggerWaitBuffers.TryRemove(chatId, out var triggerBuffer))
         {
             result = triggerBuffer.HasTrigger;
-            triggerBuffer.TimeoutCts?.Cancel();
+            await triggerBuffer.TimeoutCts?.CancelAsync()!;
             triggerBuffer.TimeoutCts?.Dispose();
             logger.LogInformation(
                 "Trigger checked: chatId={ChatId}, hasTrigger={HasTrigger}",

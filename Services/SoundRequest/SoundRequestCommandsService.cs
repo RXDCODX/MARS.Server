@@ -319,7 +319,7 @@ public class SoundRequestCommandsService(
 
                     await NotifyQueueChangedAsync();
 
-                    if (itemsToCancel.Count == 1 && itemsToCancel[0].Track != null)
+                    if (itemsToCancel is [{ Track: not null }])
                     {
                         result = $"Отменён трек: {itemsToCancel[0].Track?.Title ?? "Пусто"}";
                     }

@@ -25,6 +25,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi;
@@ -44,12 +45,12 @@ public static class Program
             arg.Equals(GenerateOpenApiArgument, StringComparison.OrdinalIgnoreCase)
         );
 
-        var builder = WebApplication.CreateBuilder(new WebApplicationOptions { Args = args });
+        var builder = WebApplication.CreateBuilder(
+            new WebApplicationOptions { Args = args, ApplicationName = "MARS.Server" }
+        );
 
         var services = builder.Services;
         var configuration = builder.Configuration;
-
-        var directory = AppDomain.CurrentDomain.BaseDirectory;
 
         var isSpa =
             !builder.Environment.IsProduction()
@@ -60,7 +61,8 @@ public static class Program
         //Twitch
         var loggerFactory = LoggerFactory.Create(loggingBuilder =>
         {
-            loggingBuilder.AddConfiguration(builder.Configuration);
+            loggingBuilder.AddConfiguration(builder.Configuration.GetSection("Logging"));
+
             if (builder.Environment.IsDevelopment())
             {
                 loggingBuilder.AddConsole();
@@ -155,6 +157,8 @@ public static class Program
             });
         });
 
+        builder.Services.Replace(new ServiceDescriptor(typeof(ILoggerFactory), loggerFactory));
+
         var contextFactory = new AppDbContextFactory(options =>
         {
             options.UseQueryTrackingBehavior(QueryTrackingBehavior.TrackAll);
@@ -187,8 +191,7 @@ public static class Program
                 throw new NullReferenceException();
             }
 
-            directory = servicePath;
-            Environment.CurrentDirectory = directory;
+            Environment.CurrentDirectory = servicePath;
         }
 
         /////////////////////////////////////////////////////////////////////////////////////////
@@ -229,8 +232,6 @@ public static class Program
         //services.AddSingleton<IFFmpegService, FFmpegService>();
         //services.AddSingleton<IStreamArchiveService, StreamArchiveService>();
         //services.AddHostedService<StreamArchiveWorker>();
-
-        services.AddSingleton(loggerFactory);
 
         // Добавляем сервис перехвата клавиатуры
         services.AddKeyboardHookService();

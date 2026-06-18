@@ -989,8 +989,7 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
                     );
 
                 var isTrackAlmostEnded =
-                    !playback.IsPlaying
-                    && playback.DurationMs > 0
+                    playback is { IsPlaying: false, DurationMs: > 0 }
                     && playback.ProgressMs >= playback.DurationMs - 1200;
 
                 var graceMs = Math.Max(0, _spotifyConfiguration.UserPlaybackPriorityGraceMs);

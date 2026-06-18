@@ -121,6 +121,20 @@ public class SoundBarHttpClient(
         }
     }
 
+    public async Task<bool> CheckHealthAsync()
+    {
+        try
+        {
+            using var httpClient = factory.CreateClient("Mute Service");
+            var response = await httpClient.GetAsync($"{audioControllerUrl}/api/soundbar/bagcount");
+            return response.IsSuccessStatusCode;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     public void Dispose()
     {
         GC.SuppressFinalize(this);

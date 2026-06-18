@@ -38,6 +38,8 @@ public class EventSubService(
     private readonly CancellationToken _cancellationToken = lifetime.ApplicationStopping;
     private volatile bool _firstActivation = true;
 
+    public virtual bool IsWebSocketConnected => !string.IsNullOrWhiteSpace(wsClient.SessionId);
+
     public async Task UpdateEventSubAsync()
     {
         if (!_firstActivation)

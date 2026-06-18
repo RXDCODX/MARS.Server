@@ -7,6 +7,12 @@ using System.Threading.Tasks;
 using MARS.Server.Services;
 using MARS.Server.Services.ServiceManager;
 using MARS.Server.Services.ServiceManager.Entitys;
+using MARS.Server.Services.SoundBarService.Entitys;
+using MARS.Server.Services.Twitch.Client;
+using MARS.Server.Services.Twitch.Management;
+using MARS.Server.Services.Twitch.PuntoSwitcher;
+using MARS.Server.Services.Twitch.Synthesizer;
+using MARS.Server.Services.Twitch.WeddingAnniversary;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 
@@ -19,7 +25,11 @@ namespace MARS.Server.Controllers;
 [Route("api/[controller]")]
 public class ServerStatsController(
     IServiceManager serviceManager,
-    ILogger<ServerStatsController> logger
+    ILogger<ServerStatsController> logger,
+    EventSubService eventSubService,
+    TwitchConnectionManager twitchConnectionManager,
+    ISoundBar soundBar,
+    WeddingAnniversaryService weddingAnniversaryService
 ) : ControllerBase
 {
     private static readonly Stopwatch UptimeStopwatch = Stopwatch.StartNew();
@@ -45,6 +55,11 @@ public class ServerStatsController(
             var services = await serviceManager.GetAllServicesAsync();
             var serviceList = services.ToList();
 
+            var audioControllerConnected = await soundBar.CheckHealthAsync();
+            var nearestAnniversary = await weddingAnniversaryService.GetNearestAnniversaryAsync(
+                cancellationToken
+            );
+
             var stats = new ServerStatsResponse
             {
                 CpuUsagePercent = cpuUsage,
@@ -60,6 +75,14 @@ public class ServerStatsController(
                 RuntimeVersion = RuntimeInformation.FrameworkDescription,
                 MachineName = Environment.MachineName,
                 ProcessorCount = Environment.ProcessorCount,
+                IsEventSubConnected = eventSubService.IsWebSocketConnected,
+                IsTwitchChatConnected = twitchConnectionManager.IsConnected,
+                IsAudioControllerConnected = audioControllerConnected,
+                IsTtsConnected = audioControllerConnected,
+                IsPuntoSwitcherEnabled = PuntoSwitcherState.IsFilterEnabled,
+                NearestWeddingAnniversaryName = nearestAnniversary?.AnniversaryName,
+                NearestWeddingAnniversaryDate = nearestAnniversary?.AnniversaryDate,
+                NearestWeddingAnniversaryUser = nearestAnniversary?.DisplayName,
             };
 
             result = Ok(
@@ -176,4 +199,44 @@ public class ServerStatsResponse
     /// Количество процессоров
     /// </summary>
     public int ProcessorCount { get; set; }
+
+    /// <summary>
+    /// Подключен ли WebSocket EventSub к Twitch
+    /// </summary>
+    public bool IsEventSubConnected { get; set; }
+
+    /// <summary>
+    /// Подключен ли Twitch Chat
+    /// </summary>
+    public bool IsTwitchChatConnected { get; set; }
+
+    /// <summary>
+    /// Подключен ли AudioController (SoundBar)
+    /// </summary>
+    public bool IsAudioControllerConnected { get; set; }
+
+    /// <summary>
+    /// Подключен ли AudioController (TTS)
+    /// </summary>
+    public bool IsTtsConnected { get; set; }
+
+    /// <summary>
+    /// Включён ли PuntoSwitcher для чата
+    /// </summary>
+    public bool IsPuntoSwitcherEnabled { get; set; }
+
+    /// <summary>
+    /// Название ближайшей годовщины свадьбы
+    /// </summary>
+    public string? NearestWeddingAnniversaryName { get; set; }
+
+    /// <summary>
+    /// Дата ближайшей годовщины свадьбы
+    /// </summary>
+    public DateTimeOffset? NearestWeddingAnniversaryDate { get; set; }
+
+    /// <summary>
+    /// Пользователь ближайшей годовщины свадьбы
+    /// </summary>
+    public string? NearestWeddingAnniversaryUser { get; set; }
 }

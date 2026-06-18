@@ -25,13 +25,13 @@ public class TwitchConnectionManager : IHostedService, IAsyncDisposable
     private readonly ILoggerFactory _loggerFactory;
 
     private readonly TwitchClient _client;
-    private IClient _transport = null!;
+    private readonly IClient _transport;
     private readonly ConnectionCredentials _credentials;
     private string _currentOAuth;
-    private IDisposable? _changeToken;
+    private readonly IDisposable? _changeToken;
     private bool _initialized;
 
-    private bool IsConnected => _client.IsConnected;
+    public bool IsConnected => _client.IsConnected;
     private DateTimeOffset? _lastConnectedAt;
     private DateTimeOffset? _lastDisconnectedAt;
     private string? _lastDisconnectReason;
@@ -194,7 +194,7 @@ public class TwitchConnectionManager : IHostedService, IAsyncDisposable
         try
         {
             _manualDisconnect = true;
-            _reconnectCts?.Cancel();
+            await _reconnectCts?.CancelAsync()!;
 
             if (_reconnectTask != null)
             {
@@ -218,7 +218,7 @@ public class TwitchConnectionManager : IHostedService, IAsyncDisposable
     {
         _changeToken?.Dispose();
 
-        await StopAsync(default);
+        await StopAsync(CancellationToken.None);
 
         (_transport as IDisposable)?.Dispose();
         _reconnectLock.Dispose();
@@ -244,7 +244,7 @@ public class TwitchConnectionManager : IHostedService, IAsyncDisposable
             _logger.LogInformation("Manual Twitch reconnect requested");
 
             _manualDisconnect = true;
-            _reconnectCts?.Cancel();
+            await _reconnectCts?.CancelAsync()!;
 
             if (_client.IsConnected)
             {

@@ -148,7 +148,7 @@ public class PuntoSwitcherService : BackgroundService, IPuntoSwitcherService
             )
             {
                 var fixedMessage = TryFixMessage(args.ChatMessage.Message);
-                if (fixedMessage.Success && fixedMessage.Data.HasChanges)
+                if (fixedMessage is { Success: true, Data.HasChanges: true })
                 {
                     TryOverrideMessage(args.ChatMessage, fixedMessage.Data.CorrectedMessage);
                 }

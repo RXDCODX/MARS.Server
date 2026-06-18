@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
@@ -61,6 +62,96 @@ public class WeddingAnniversaryService(
         (1080, "Гранитная свадьба"),
         (1200, "Платиновая (красная) свадьба"),
     ];
+
+    /// <summary>
+    /// Получить ближайшую годовщину среди всех женатых пользователей,
+    /// которую ещё не поздравляли и дата которой уже наступила (или наступает сегодня).
+    /// Неотмеченные (неженатые) пользователи не учитываются.
+    /// Возвращает null, если нет подходящих годовщин.
+    /// </summary>
+    public virtual async Task<NearestAnniversaryDto?> GetNearestAnniversaryAsync(
+        CancellationToken cancellationToken = default
+    )
+    {
+        NearestAnniversaryDto? result = null;
+
+        try
+        {
+            await using var dbContext = await dbContextFactory.CreateDbContextAsync(
+                cancellationToken
+            );
+
+            var marriedUsers = await dbContext
+                .Husbands.AsNoTracking()
+                .Include(h => h.TwitchUser)
+                .Where(h => h.IsPrivated && h.WhenPrivated != null)
+                .ToListAsync(cancellationToken);
+
+            var today = DateTimeOffset.Now.ToLocalTime().Date;
+            NearestAnniversaryDto? nearest = null;
+            DateTimeOffset? nearestDate = null;
+
+            foreach (var user in marriedUsers)
+            {
+                if (user.WhenPrivated is null)
+                {
+                    continue;
+                }
+
+                var weddingDate = user.WhenPrivated.Value;
+                var lastMonths = user.LastWeddingCongratulatedMonths ?? -1;
+
+                foreach (var anniversary in AnniversaryDefinitions.OrderBy(d => d.Months))
+                {
+                    if (anniversary.Months <= lastMonths)
+                    {
+                        continue;
+                    }
+
+                    var anniversaryDate = weddingDate.AddMonths(anniversary.Months);
+                    if (anniversaryDate.Date >= today)
+                    {
+                        if (nearestDate is null || anniversaryDate < nearestDate)
+                        {
+                            nearestDate = anniversaryDate;
+                            nearest = new NearestAnniversaryDto
+                            {
+                                TwitchId = user.TwitchId,
+                                DisplayName =
+                                    user.TwitchUser?.DisplayName ?? user.TwitchId,
+                                AnniversaryName = anniversary.Name,
+                                AnniversaryDate = anniversaryDate,
+                                Months = anniversary.Months,
+                            };
+                        }
+
+                        break;
+                    }
+                }
+            }
+
+            result = nearest;
+
+            if (result != null)
+            {
+                logger.LogInformation(
+                    "Найдена ближайшая годовщина: {User} - {Name} ({Date})",
+                    result.DisplayName,
+                    result.AnniversaryName,
+                    result.AnniversaryDate
+                );
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(
+                ex,
+                "Ошибка при поиске ближайшей годовщины среди всех пользователей"
+            );
+        }
+
+        return result;
+    }
 
     /// <summary>
     /// Получить следующую непосланную годовщину для пользователя (если она уже наступила).
@@ -267,4 +358,13 @@ public class WeddingAnniversaryService(
 
         return result;
     }
+}
+
+public class NearestAnniversaryDto
+{
+    public required string TwitchId { get; set; }
+    public required string DisplayName { get; set; }
+    public required string AnniversaryName { get; set; }
+    public DateTimeOffset AnniversaryDate { get; set; }
+    public int Months { get; set; }
 }

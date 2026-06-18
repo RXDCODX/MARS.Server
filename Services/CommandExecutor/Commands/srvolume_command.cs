@@ -39,7 +39,7 @@ public class SrVolumeCommand(StateManager stateManager) : BaseCommand
             var volumeText = volumeObj?.ToString();
             if (int.TryParse(volumeText, out var volume))
             {
-                if (volume >= 0 && volume <= 100)
+                if (volume is >= 0 and <= 100)
                 {
                     await stateManager.SetVolumeAsync(volume, notify: true);
                     result = $"Громкость звуковых запросов установлена на {volume}%";

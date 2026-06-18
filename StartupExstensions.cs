@@ -16,6 +16,7 @@ using MARS.Server.Services.ServiceManager;
 using MARS.Server.Services.Shikimori;
 using MARS.Server.Services.Shikimori.Entitys;
 using MARS.Server.Services.SoundBarService;
+using MARS.Server.Services.SoundBarService.Entitys;
 using MARS.Server.Services.SoundRequest;
 using MARS.Server.Services.SoundRequest.Interfaces;
 using MARS.Server.Services.SoundRequest.Queue;
@@ -350,6 +351,9 @@ public static class StartupEstensions
         services.AddHostedService(sp => sp.GetRequiredService<TwitchMessagesHubAwaker>());
 
         services.AddSingleton<SoundBarFactory>();
+        services.AddSingleton<ISoundBar>(sp =>
+            sp.GetRequiredService<SoundBarFactory>().CreateSoundBar()
+        );
         services.AddSingleton<SoundMuteCoordinator>();
 
         services.AddSingleton<AutoRewardInfoFetcher>();
@@ -444,6 +448,9 @@ public static class StartupEstensions
         services.AddSingleton<OutSignalRHubService>();
         services.AddSingleton<SoundRequestUserQueue>();
         services.AddSingleton<SoundBarFactory>();
+        services.AddSingleton<ISoundBar>(sp =>
+            sp.GetRequiredService<SoundBarFactory>().CreateSoundBar()
+        );
         services.AddSingleton<SoundMuteCoordinator>();
 
         // YouTube / Discord play request services

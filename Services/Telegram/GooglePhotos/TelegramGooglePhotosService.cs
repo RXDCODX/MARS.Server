@@ -26,7 +26,7 @@ public class TelegramGooglePhotosService(
 
     public async Task HandMessage(ITelegramBotClient client, Update update)
     {
-        if (update.Type == UpdateType.Message && update.Message is { } message)
+        if (update is { Type: UpdateType.Message, Message: { } message })
         {
             if (message.Chat.Id == _config.TelegramChatId)
             {

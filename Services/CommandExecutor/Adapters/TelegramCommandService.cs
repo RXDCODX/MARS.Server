@@ -250,7 +250,7 @@ public class TelegramCommandService(
 
     public async Task HandInlineQuery(ITelegramBotClient _, Update update)
     {
-        if (update?.Type == UpdateType.InlineQuery && update.InlineQuery is { } inlineQuery)
+        if (update is { Type: UpdateType.InlineQuery, InlineQuery: { } inlineQuery })
         {
             try
             {
@@ -284,8 +284,8 @@ public class TelegramCommandService(
     public async Task HandChosenInlineResult(ITelegramBotClient _, Update update)
     {
         if (
-            update?.Type == UpdateType.ChosenInlineResult
-            && update.ChosenInlineResult is { } chosenInlineResult
+            update is
+            { Type: UpdateType.ChosenInlineResult, ChosenInlineResult: { } chosenInlineResult }
         )
         {
             try

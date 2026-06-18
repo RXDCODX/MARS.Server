@@ -593,12 +593,18 @@ public class DiscordPlayRequestService(
         {
             var option = command.Options.FirstOrDefault();
             result =
-                command.Description == "Поиск трека или прямая загрузка по YouTube-ссылке"
-                && command.Options.Count == 1
+                command
+                    is {
+                        Description: "Поиск трека или прямая загрузка по YouTube-ссылке",
+                        Options.Count: 1
+                    }
                 && option is not null
-                && option.Name == QueryOptionName
-                && option.Type == DiscordApplicationCommandOptionType.String
-                && option.Required == false;
+                && option
+                    is {
+                        Name: QueryOptionName,
+                        Type: DiscordApplicationCommandOptionType.String,
+                        Required: false
+                    };
         }
 
         return result;

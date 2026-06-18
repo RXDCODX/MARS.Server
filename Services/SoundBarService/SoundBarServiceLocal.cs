@@ -43,4 +43,9 @@ public class SoundBarServiceLocal : ISoundBar
 
         return result;
     }
+
+    public Task<bool> CheckHealthAsync()
+    {
+        return Task.FromResult(true);
+    }
 }

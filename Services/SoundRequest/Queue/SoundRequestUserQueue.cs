@@ -615,7 +615,7 @@ public class SoundRequestUserQueue(
     /// </summary>
     public async Task<QueueItem?> MoveQueueItemToPositionAsync(Guid queueItemId, int newPosition)
     {
-        var state = stateManager?.GetState().State;
+        var state = (await stateManager?.GetStateAsync()!).State;
         if (
             newPosition == 0
             && (

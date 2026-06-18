@@ -114,7 +114,7 @@ public sealed class ConfigurationKeysBootstrapHostedService(
         var result = typeof(RootStateKeys)
             .GetFields(BindingFlags.Public | BindingFlags.Static)
             .Where(field =>
-                field.IsLiteral && !field.IsInitOnly && field.FieldType == typeof(string)
+                field is { IsLiteral: true, IsInitOnly: false } && field.FieldType == typeof(string)
             )
             .Select(field => field.GetRawConstantValue()?.ToString())
             .Where(value => !string.IsNullOrWhiteSpace(value))
