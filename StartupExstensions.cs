@@ -585,6 +585,7 @@ public static class StartupEstensions
                 sp.GetRequiredService<TtsHubBroadcaster>()
             );
             services.AddHostedService(sp => sp.GetRequiredService<TtsHubBroadcaster>());
+            services.AddSingleton<ITtsMessageFilterService, TtsMessageFilterService>();
             return services;
         }
 

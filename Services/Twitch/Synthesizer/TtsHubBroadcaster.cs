@@ -19,7 +19,8 @@ public class TtsHubBroadcaster(
     ILogger<TtsHubBroadcaster> logger,
     ITwitchClient client,
     IHostApplicationLifetime lifetime,
-    ISevenTvEmoteService sevenTvEmoteService
+    ISevenTvEmoteService sevenTvEmoteService,
+    ITtsMessageFilterService ttsMessageFilterService
 ) : BackgroundService, ITtsHubBroadcaster
 {
     private const string TtsConsumersGroupName = "tts-consumers";
@@ -60,6 +61,26 @@ public class TtsHubBroadcaster(
         {
             logger.LogWarning("TTS broadcast was skipped because the user or message is empty.");
             return;
+        }
+
+        if (ttsMessageFilterService.IsFilterEnabled)
+        {
+            var filterResult = ttsMessageFilterService.FilterMessage(
+                message,
+                user.TwitchId
+            );
+
+            if (!filterResult)
+            {
+                logger.LogInformation(
+                    "TTS broadcast was skipped by filter for user {User}: {Reason}",
+                    user.DisplayName,
+                    filterResult.Message
+                );
+                return;
+            }
+
+            message = filterResult.Data;
         }
 
         try

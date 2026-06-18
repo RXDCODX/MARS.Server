@@ -31,7 +31,7 @@ public class FumoFridayRoll_TwitchReward(
 
     public override Color Color { get; set; } = Color.FromArgb(255, 182, 193);
 
-    public override int Cost { get; init; } = 1;
+    public override int Cost { get; init; } = 4;
 
     protected override bool IsRewardActive => IsRewardEnabled();
 

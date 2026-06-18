@@ -143,6 +143,13 @@ public sealed class ConfigurationKeysBootstrapHostedService(
                 Description = "Флаг включения фильтра PuntoSwitcher",
                 TypeDescription = "bool",
             },
+            RootStateKeys.TtsFilterEnabled => new RootState
+            {
+                Name = key,
+                Value = true.ToString(),
+                Description = "Флаг включения фильтра дубликатов TTS сообщений",
+                TypeDescription = "bool",
+            },
             RootStateKeys.WaifuRollCooldownMinutes => new RootState
             {
                 Name = key,

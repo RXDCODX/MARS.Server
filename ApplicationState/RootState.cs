@@ -19,6 +19,7 @@ public static class RootStateKeys
     public const string SoundRequestProvider = "SoundRequestProvider";
     public const string RandomMemeOnlineIsStop = "RandomMemeOnlineIsStop";
     public const string PuntoSwitcherFilterEnabled = "PuntoSwitcherFilterEnabled";
+    public const string TtsFilterEnabled = "TtsFilterEnabled";
     public const string WaifuRollCooldownMinutes = "WaifuRollCooldownMinutes";
     public const string TwitchFumoFridayNightVideoPath = "TwitchFumoFridayNightVideoPath";
     public const string WTelegramMtProxyUrl = "WTelegramMtProxyUrl";

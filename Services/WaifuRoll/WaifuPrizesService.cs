@@ -65,7 +65,7 @@ public class WaifuPrizesService(
                         new PrizeType
                         {
                             Id = waifuWithTitles.ShikiId,
-                            Image = ShikimoriSite + "/" + waifuWithTitles.ImageUrl,
+                            Image = ShikimoriSite + waifuWithTitles.ImageUrl,
                             Text = waifuWithTitles.Name,
                         }
                     );

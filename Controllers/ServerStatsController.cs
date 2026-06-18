@@ -4,6 +4,8 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using MARS.Server.ApplicationState;
+using MARS.Server.DataBaseContext;
 using MARS.Server.Services;
 using MARS.Server.Services.ServiceManager;
 using MARS.Server.Services.ServiceManager.Entitys;
@@ -14,6 +16,7 @@ using MARS.Server.Services.Twitch.PuntoSwitcher;
 using MARS.Server.Services.Twitch.Synthesizer;
 using MARS.Server.Services.Twitch.WeddingAnniversary;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace MARS.Server.Controllers;
@@ -29,7 +32,9 @@ public class ServerStatsController(
     EventSubService eventSubService,
     TwitchConnectionManager twitchConnectionManager,
     ISoundBar soundBar,
-    WeddingAnniversaryService weddingAnniversaryService
+    WeddingAnniversaryService weddingAnniversaryService,
+    ITtsMessageFilterService ttsFilterService,
+    IDbContextFactory<AppDbContext> dbContextFactory
 ) : ControllerBase
 {
     private static readonly Stopwatch UptimeStopwatch = Stopwatch.StartNew();
@@ -80,6 +85,7 @@ public class ServerStatsController(
                 IsAudioControllerConnected = audioControllerConnected,
                 IsTtsConnected = audioControllerConnected,
                 IsPuntoSwitcherEnabled = PuntoSwitcherState.IsFilterEnabled,
+                IsTtsFilterEnabled = ttsFilterService.IsFilterEnabled,
                 NearestWeddingAnniversaryName = nearestAnniversary?.AnniversaryName,
                 NearestWeddingAnniversaryDate = nearestAnniversary?.AnniversaryDate,
                 NearestWeddingAnniversaryUser = nearestAnniversary?.DisplayName,
@@ -98,6 +104,50 @@ public class ServerStatsController(
                     new ServerStatsResponse()
                 )
             );
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Переключить фильтр дубликатов TTS сообщений
+    /// </summary>
+    [HttpPost("toggle-tts-filter")]
+    public async Task<
+        ActionResult<OperationResult<bool>>
+    > ToggleTtsFilter(CancellationToken cancellationToken = default)
+    {
+        ActionResult<OperationResult<bool>> result;
+
+        try
+        {
+            var nextState = !ttsFilterService.IsFilterEnabled;
+
+            await using var db = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+            var rootState = await db.RootState.FirstOrDefaultAsync(
+                e => e.Name == RootStateKeys.TtsFilterEnabled,
+                cancellationToken
+            );
+
+            if (rootState is not null)
+            {
+                rootState.Value = nextState.ToString();
+                await db.SaveChangesAsync(cancellationToken);
+            }
+
+            ttsFilterService.IsFilterEnabled = nextState;
+
+            result = Ok(
+                OperationResult<bool>.Ok(
+                    nextState ? "Фильтр TTS включён" : "Фильтр TTS выключен",
+                    nextState
+                )
+            );
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при переключении фильтра TTS");
+            result = Ok(OperationResult<bool>.Bad("Ошибка при переключении фильтра", false));
         }
 
         return result;
@@ -224,6 +274,11 @@ public class ServerStatsResponse
     /// Включён ли PuntoSwitcher для чата
     /// </summary>
     public bool IsPuntoSwitcherEnabled { get; set; }
+
+    /// <summary>
+    /// Включён ли фильтр дубликатов TTS сообщений
+    /// </summary>
+    public bool IsTtsFilterEnabled { get; set; }
 
     /// <summary>
     /// Название ближайшей годовщины свадьбы
