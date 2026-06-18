@@ -21,7 +21,13 @@ public class WaifuPrizesService(
     IHostApplicationLifetime lifetime
 ) : ITelegramusService, IWaifuPrizesService
 {
-    private string ShikimoriSite => shikiOptions.Value.ShikimoriSite;
+    private string ShikimoriSite =>
+        shikiOptions.Value.ShikimoriSite.EndsWith('/')
+            ? shikiOptions.Value.ShikimoriSite.Substring(
+                shikiOptions.Value.ShikimoriSite.Length - 1,
+                1
+            )
+            : shikiOptions.Value.ShikimoriSite;
 
     public async Task<OperationResult<ICollection<PrizeType>>> GetWaifuPrizesAsync()
     {
@@ -61,11 +67,15 @@ public class WaifuPrizesService(
                         dbContext
                     );
 
+                    var imageUrl = waifuWithTitles.ImageUrl.StartsWith('/')
+                        ? waifuWithTitles.ImageUrl
+                        : "/" + waifuWithTitles.ImageUrl;
+
                     prizes.Add(
                         new PrizeType
                         {
                             Id = waifuWithTitles.ShikiId,
-                            Image = ShikimoriSite + waifuWithTitles.ImageUrl,
+                            Image = ShikimoriSite + imageUrl,
                             Text = waifuWithTitles.Name,
                         }
                     );
