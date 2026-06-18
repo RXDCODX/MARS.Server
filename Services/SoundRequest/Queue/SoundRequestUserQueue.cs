@@ -615,7 +615,8 @@ public class SoundRequestUserQueue(
     /// </summary>
     public async Task<QueueItem?> MoveQueueItemToPositionAsync(Guid queueItemId, int newPosition)
     {
-        var state = (await stateManager?.GetStateAsync()!).State;
+        // ReSharper disable once MethodHasAsyncOverload
+        var state = stateManager?.GetState().State;
         if (
             newPosition == 0
             && (
