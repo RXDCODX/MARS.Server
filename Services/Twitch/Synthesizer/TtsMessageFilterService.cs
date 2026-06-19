@@ -11,11 +11,13 @@ using Microsoft.Extensions.Logging;
 
 namespace MARS.Server.Services.Twitch.Synthesizer;
 
-public class TtsMessageFilterService : ITtsMessageFilterService
+public class TtsMessageFilterService(
+    IDbContextFactory<AppDbContext>? dbContextFactory = null,
+    ILogger<TtsMessageFilterService>? logger = null,
+    TimeSpan? dedupWindow = null
+) : ITtsMessageFilterService
 {
-    private readonly IDbContextFactory<AppDbContext>? _dbContextFactory;
-    private readonly ILogger<TtsMessageFilterService>? _logger;
-    private readonly TimeSpan _dedupWindow;
+    private readonly TimeSpan _dedupWindow = dedupWindow ?? TimeSpan.FromSeconds(30);
 
     private readonly ConcurrentDictionary<string, DateTime> _recentMessages = new(
         StringComparer.OrdinalIgnoreCase
@@ -26,27 +28,16 @@ public class TtsMessageFilterService : ITtsMessageFilterService
 
     public bool IsFilterEnabled { get; set; } = true;
 
-    public TtsMessageFilterService(
-        IDbContextFactory<AppDbContext>? dbContextFactory = null,
-        ILogger<TtsMessageFilterService>? logger = null,
-        TimeSpan? dedupWindow = null
-    )
-    {
-        _dbContextFactory = dbContextFactory;
-        _logger = logger;
-        _dedupWindow = dedupWindow ?? TimeSpan.FromSeconds(30);
-    }
-
     public async Task LoadStateAsync(CancellationToken cancellationToken = default)
     {
-        if (_dbContextFactory is null)
+        if (dbContextFactory is null)
         {
             return;
         }
 
         try
         {
-            await using var db = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
+            await using var db = await dbContextFactory.CreateDbContextAsync(cancellationToken);
             var value = await db
                 .RootState.AsNoTracking()
                 .Where(e => e.Name == RootStateKeys.TtsFilterEnabled)
@@ -60,7 +51,7 @@ public class TtsMessageFilterService : ITtsMessageFilterService
         }
         catch (Exception ex)
         {
-            _logger?.LogWarning(ex, "Failed to load TtsFilterEnabled state from DB, using default.");
+            logger?.LogWarning(ex, "Failed to load TtsFilterEnabled state from DB, using default.");
         }
     }
 
@@ -146,11 +137,7 @@ public class TtsMessageFilterService : ITtsMessageFilterService
 
             while (
                 i + count < words.Length
-                && string.Equals(
-                    words[i + count],
-                    current,
-                    StringComparison.OrdinalIgnoreCase
-                )
+                && string.Equals(words[i + count], current, StringComparison.OrdinalIgnoreCase)
             )
             {
                 count++;
