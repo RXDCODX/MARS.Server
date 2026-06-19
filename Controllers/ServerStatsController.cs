@@ -34,6 +34,7 @@ public class ServerStatsController(
     ISoundBar soundBar,
     WeddingAnniversaryService weddingAnniversaryService,
     ITtsMessageFilterService ttsFilterService,
+    IPuntoSwitcherService puntoSwitcherService,
     IDbContextFactory<AppDbContext> dbContextFactory
 ) : ControllerBase
 {
@@ -84,7 +85,7 @@ public class ServerStatsController(
                 IsTwitchChatConnected = twitchConnectionManager.IsConnected,
                 IsAudioControllerConnected = audioControllerConnected,
                 IsTtsConnected = audioControllerConnected,
-                IsPuntoSwitcherEnabled = PuntoSwitcherState.IsFilterEnabled,
+                IsPuntoSwitcherEnabled = puntoSwitcherService.IsFilterEnabled,
                 IsTtsFilterEnabled = ttsFilterService.IsFilterEnabled,
                 NearestWeddingAnniversaryName = nearestAnniversary?.AnniversaryName,
                 NearestWeddingAnniversaryDate = nearestAnniversary?.AnniversaryDate,
@@ -148,6 +149,50 @@ public class ServerStatsController(
         {
             logger.LogError(ex, "Ошибка при переключении фильтра TTS");
             result = Ok(OperationResult<bool>.Bad("Ошибка при переключении фильтра", false));
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Переключить PuntoSwitcher фильтрацию
+    /// </summary>
+    [HttpPost("toggle-punto-switcher")]
+    public async Task<
+        ActionResult<OperationResult<bool>>
+    > TogglePuntoSwitcher(CancellationToken cancellationToken = default)
+    {
+        ActionResult<OperationResult<bool>> result;
+
+        try
+        {
+            var nextState = !puntoSwitcherService.IsFilterEnabled;
+
+            await using var db = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+            var rootState = await db.RootState.FirstOrDefaultAsync(
+                e => e.Name == RootStateKeys.PuntoSwitcherFilterEnabled,
+                cancellationToken
+            );
+
+            if (rootState is not null)
+            {
+                rootState.Value = nextState.ToString();
+                await db.SaveChangesAsync(cancellationToken);
+            }
+
+            puntoSwitcherService.IsFilterEnabled = nextState;
+
+            result = Ok(
+                OperationResult<bool>.Ok(
+                    nextState ? "PuntoSwitcher включён" : "PuntoSwitcher выключен",
+                    nextState
+                )
+            );
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при переключении PuntoSwitcher");
+            result = Ok(OperationResult<bool>.Bad("Ошибка при переключении PuntoSwitcher", false));
         }
 
         return result;

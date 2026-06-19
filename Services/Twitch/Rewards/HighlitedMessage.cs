@@ -64,7 +64,7 @@ public class HighlitedMessage(
                         );
 
                         var message = args.ChatMessage;
-                        if (PuntoSwitcherState.IsFilterEnabled)
+                        if (puntoSwitcherService.IsFilterEnabled)
                         {
                             var fixedMessage = puntoSwitcherService.TryFixMessage(
                                 args.ChatMessage.Message

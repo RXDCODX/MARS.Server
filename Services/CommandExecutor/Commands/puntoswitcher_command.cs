@@ -10,7 +10,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace MARS.Server.Services.CommandExecutor.Commands;
 
-public class PuntoSwitcherCommand(IDbContextFactory<AppDbContext> dbContextFactory) : BaseCommand
+public class PuntoSwitcherCommand(
+    IDbContextFactory<AppDbContext> dbContextFactory,
+    IPuntoSwitcherService puntoSwitcherService
+) : BaseCommand
 {
     public override string CommandName => "puntoswitcher";
     public override string Description =>
@@ -39,7 +42,7 @@ public class PuntoSwitcherCommand(IDbContextFactory<AppDbContext> dbContextFacto
             var currentState = bool.TryParse(rootState.Value, out var isEnabled) && isEnabled;
             var nextState = !currentState;
             rootState.Value = nextState.ToString();
-            PuntoSwitcherState.IsFilterEnabled = nextState;
+            puntoSwitcherService.IsFilterEnabled = nextState;
 
             await db.SaveChangesAsync(cancellationToken);
 
