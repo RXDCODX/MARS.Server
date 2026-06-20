@@ -60,9 +60,9 @@ public class TelegramusHub(
         await Clients.Caller.UpdateFumoPrizes(fumoResult.Data);
     }
 
-    public Task LogError(string errorMessage, LogLevel logLevel = LogLevel.Error)
+    public Task LogError(string errorMessage)
     {
-        logger.Log(logLevel, "Client error: {ErrorMessage}", errorMessage);
+        logger.LogError("Client error: {ErrorMessage}", errorMessage);
         return Task.CompletedTask;
     }
 
