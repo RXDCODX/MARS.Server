@@ -14,7 +14,7 @@ public class SrCommand(SoundRequestCommandsService soundRequestCommandsService) 
     public override string Description => "Добавить трек в очередь звуковых запросов";
     public override bool IsAdminCommand => false;
 
-    public override Platform[] AvailablePlatforms => [Platform.Twitch];
+    public override Platform[] AvailablePlatforms => [Platform.Twitch, Platform.Api];
 
     public override string[] Aliases => ["soundrequest"];
 

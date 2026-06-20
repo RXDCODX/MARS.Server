@@ -15,7 +15,7 @@ public class QueueQueuePositionCommand(SoundRequestCommandsService soundRequestC
     public override string Description => "Показать вашу позицию в очереди звуковых запросов";
     public override bool IsAdminCommand => false;
 
-    public override Platform[] AvailablePlatforms => [Platform.Twitch];
+    public override Platform[] AvailablePlatforms => [Platform.Twitch, Platform.Api];
 
     public override CommandVisibility Visibility => CommandVisibility.All;
 

@@ -14,7 +14,7 @@ public class SrWrongCommand(SoundRequestCommandsService soundRequestCommandsServ
     public override string Description => "Отменить последний заказанный трек или плейлист";
     public override bool IsAdminCommand => false;
 
-    public override Platform[] AvailablePlatforms => [Platform.Twitch];
+    public override Platform[] AvailablePlatforms => [Platform.Twitch, Platform.Api];
 
     public override CommandVisibility Visibility => CommandVisibility.All;
 
