@@ -1,40 +1,50 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
+using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using MARS.Server.DataBaseContext;
 using MARS.Server.Exstensions;
 using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using TwitchLib.Api.Interfaces;
+using Microsoft.Extensions.Options;
 using TwitchLib.Client.Interfaces;
 using TwitchLib.EventSub.Core.EventArgs.Channel;
+using TwitchLib.EventSub.Core.Models;
+using TwitchLib.EventSub.Core.Models.ChannelPoints;
+using TwitchLib.EventSub.Core.SubscriptionTypes.Channel;
 using TwitchLib.EventSub.Websockets;
 
 namespace MARS.Server.Services.Twitch.Rewards._1_AutoClipReward;
 
-/// <inheritdoc />
 public class AutoClip_TwitchReward(
     ITwitchClient client,
-    ITwitchAPI api,
     IHostApplicationLifetime lifetime,
     IHostEnvironment hostEnvironment,
-    TokenService tokenService,
     ILogger<AutoClip_TwitchReward> logger,
     EventSubWebsocketClient wsClient,
-    ChannelRewardsService channelRewardsService
+    ChannelRewardsService channelRewardsService,
+    IDbContextFactory<AppDbContext> dbContextFactory,
+    IOptionsMonitor<TwitchRewardsOptions> rewardsOptions
 ) : TemporaryReward(channelRewardsService, logger, hostEnvironment)
 {
-    public override string AlertDisplayName { get; set; } = "🎬 Клипнуть!";
+    public override string AlertDisplayName { get; set; } = "🎲 Случайная награда!";
     public override string AlertDescription { get; set; } =
-        "🎥 Сделать автоклип последних 30 секунд стрима!";
+        "🎲 Активирует 1 случайную награду канала!";
     public override Color Color { get; set; }
     public override int Cost { get; init; } = 1;
     public override Func<bool> IsRewardEnabled { get; set; } = () => true;
 
     private readonly CancellationToken _cancellationToken = lifetime.ApplicationStopping;
+
+    private static readonly List<int> RecentCosts = [];
+    private static readonly Lock RecentCostsLock = new();
 
     public override Task StartAsync(CancellationToken stoppingToken)
     {
@@ -58,28 +68,22 @@ public class AutoClip_TwitchReward(
     )
     {
         var twEvent = args.Payload.Event;
-        var userName = twEvent.UserName;
-        var cost = twEvent.Reward.Cost;
 
-        if (cost == Cost && IsRewardEnabled())
+        if (
+            twEvent.BroadcasterUserId.Equals(
+                TwitchExstension.ChannelId,
+                StringComparison.OrdinalIgnoreCase
+            )
+            && twEvent.Reward.Cost == Cost
+            && IsRewardEnabled()
+        )
         {
             await Task.Factory.StartNew(
                 async () =>
                 {
                     try
                     {
-                        var response = await api
-                            .Helix.Clips.CreateClipAsync(
-                                TwitchExstension.ChannelId,
-                                tokenService.Token?.AccessToken
-                            )
-                            .ConfigureAwait(false);
-
-                        var editUrl = response.CreatedClips[0].EditUrl;
-
-                        await client.SendMessageToMainTwitchAsync(
-                            $"@{userName}, вот твоя ссылка для редактирования - {editUrl}"
-                        );
+                        await ActivateRandomReward(sender, twEvent);
                     }
                     catch (Exception e)
                     {
@@ -88,6 +92,147 @@ public class AutoClip_TwitchReward(
                 },
                 _cancellationToken
             );
+        }
+    }
+
+    private async Task ActivateRandomReward(
+        object? sender,
+        ChannelPointsCustomRewardRedemption originalEvent
+    )
+    {
+        var candidateCosts = new HashSet<int>();
+
+        // a) Coded rewards — collect costs from handlers subscribed to EventSub
+        var eventField = typeof(EventSubWebsocketClient).GetField(
+            "ChannelPointsCustomRewardRedemptionAdd",
+            BindingFlags.Instance | BindingFlags.NonPublic
+        );
+
+        var eventDelegate = (MulticastDelegate?)eventField?.GetValue(wsClient);
+
+        if (eventDelegate != null)
+        {
+            foreach (var handler in eventDelegate.GetInvocationList())
+            {
+                if (handler.Target is TemporaryReward reward && reward.Cost != Cost)
+                {
+                    candidateCosts.Add(reward.Cost);
+                }
+            }
+        }
+
+        // b) DB Alerts — collect distinct TwitchPointsCost
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(_cancellationToken);
+
+        var alertCosts = await dbContext
+            .Alerts.AsNoTracking()
+            .Where(a => a.MetaInfo.IsEnabled && a.MetaInfo.TwitchPointsCost > 0)
+            .Select(a => a.MetaInfo.TwitchPointsCost)
+            .Distinct()
+            .ToListAsync(_cancellationToken);
+
+        foreach (var c in alertCosts)
+        {
+            candidateCosts.Add(c);
+        }
+
+        // c) Exclude self
+        candidateCosts.Remove(Cost);
+
+        // d) Exclude by config
+        var excluded = rewardsOptions.CurrentValue?.ExcludeFromRandomPool;
+
+        if (excluded != null)
+        {
+            foreach (var ex in excluded)
+            {
+                candidateCosts.Remove(ex);
+            }
+        }
+
+        // e) Exclude last 7 used
+        lock (RecentCostsLock)
+        {
+            foreach (var recent in RecentCosts)
+            {
+                candidateCosts.Remove(recent);
+            }
+        }
+
+        if (candidateCosts.Count == 0)
+        {
+            await client.SendMessageToMainTwitchAsync(
+                $"@{originalEvent.UserName}, нет доступных случайных наград :(",
+                logger
+            );
+
+            return;
+        }
+
+        // 2. Pick random
+        var chosenCost = candidateCosts.ElementAt(Random.Shared.Next(candidateCosts.Count));
+
+        // 3. Track recent
+        lock (RecentCostsLock)
+        {
+            RecentCosts.Add(chosenCost);
+
+            while (RecentCosts.Count > 7)
+            {
+                RecentCosts.RemoveAt(0);
+            }
+        }
+
+        // 4. Construct fake args with the chosen cost
+        var fakeArgs = new ChannelPointsCustomRewardRedemptionArgs();
+
+        fakeArgs.Payload = new EventSubNotificationPayload<ChannelPointsCustomRewardRedemption>
+        {
+            Event = new ChannelPointsCustomRewardRedemption
+            {
+                Id = Guid.NewGuid().ToString(),
+                BroadcasterUserId = TwitchExstension.ChannelId,
+                BroadcasterUserName = TwitchExstension.Channel,
+                BroadcasterUserLogin = TwitchExstension.Channel,
+                UserId = originalEvent.UserId,
+                UserName = originalEvent.UserName,
+                UserLogin = originalEvent.UserLogin,
+                UserInput = string.Empty,
+                Status = "fulfilled",
+                Reward = new RedemptionReward
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    Cost = chosenCost,
+                    Title = "Random Reward",
+                },
+                RedeemedAt = DateTimeOffset.UtcNow,
+            },
+        };
+
+        // 5. Chat notification
+        await client.SendMessageToMainTwitchAsync(
+            $"@{originalEvent.UserName}, активирована случайная награда за {chosenCost} баллов!",
+            logger
+        );
+
+        // 6. Invoke all handlers — only the one with matching cost acts
+        if (eventDelegate != null)
+        {
+            foreach (var handler in eventDelegate.GetInvocationList())
+            {
+                try
+                {
+                    handler.DynamicInvoke(sender ?? wsClient, fakeArgs);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(
+                        ex,
+                        "Ошибка при вызове handler'а награды для Cost {Cost}",
+                        chosenCost
+                    );
+                }
+            }
         }
     }
 }
