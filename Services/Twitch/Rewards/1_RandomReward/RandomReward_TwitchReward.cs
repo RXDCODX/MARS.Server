@@ -1,18 +1,10 @@
-using System;
-using System.Collections.Generic;
 using System.Drawing;
-using System.Linq;
 using System.Reflection;
-using System.Threading;
-using System.Threading.Tasks;
 using MARS.Server.DataBaseContext;
 using MARS.Server.Exstensions;
 using MARS.Server.Services.Twitch.Entitys;
-using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using TwitchLib.Client.Interfaces;
 using TwitchLib.EventSub.Core.EventArgs.Channel;
@@ -21,13 +13,13 @@ using TwitchLib.EventSub.Core.Models.ChannelPoints;
 using TwitchLib.EventSub.Core.SubscriptionTypes.Channel;
 using TwitchLib.EventSub.Websockets;
 
-namespace MARS.Server.Services.Twitch.Rewards._1_AutoClipReward;
+namespace MARS.Server.Services.Twitch.Rewards._1_RandomReward;
 
-public class AutoClip_TwitchReward(
+public class RandomReward_TwitchReward(
     ITwitchClient client,
     IHostApplicationLifetime lifetime,
     IHostEnvironment hostEnvironment,
-    ILogger<AutoClip_TwitchReward> logger,
+    ILogger<RandomReward_TwitchReward> logger,
     EventSubWebsocketClient wsClient,
     ChannelRewardsService channelRewardsService,
     IDbContextFactory<AppDbContext> dbContextFactory,
