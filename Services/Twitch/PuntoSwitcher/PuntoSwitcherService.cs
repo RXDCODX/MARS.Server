@@ -20,13 +20,8 @@ public class PuntoSwitcherService : BackgroundService, IPuntoSwitcherService
 {
     private readonly ITwitchClient? _twitchClient;
     private readonly IDbContextFactory<AppDbContext>? _dbContextFactory;
-    private bool _isFilterEnabled = true;
 
-    public bool IsFilterEnabled
-    {
-        get => _isFilterEnabled;
-        set => _isFilterEnabled = value;
-    }
+    public bool IsFilterEnabled { get; set; } = true;
 
     public PuntoSwitcherService() { }
 
@@ -136,13 +131,13 @@ public class PuntoSwitcherService : BackgroundService, IPuntoSwitcherService
 
         if (bool.TryParse(rootStateValue, out var isEnabled))
         {
-            _isFilterEnabled = isEnabled;
+            IsFilterEnabled = isEnabled;
         }
     }
 
     private Task OnMessageReceived(object? sender, OnMessageReceivedArgs args)
     {
-        if (_isFilterEnabled)
+        if (IsFilterEnabled)
         {
             if (
                 args.ChatMessage.Channel.Equals(
