@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Concurrent;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -602,14 +601,14 @@ public class WaifuRollService(
         return result;
     }
 
-    private static ValueTask<string> GetHelloText()
+    private async Task<string> GetHelloText()
     {
-        var lines = File.ReadAllLines(
-            Path.Combine(Directory.GetCurrentDirectory(), "AutoHelloMessages.txt")
-        );
-        var index = Random.Shared.Next(lines.Length);
+        await using var dbContext = await factory.CreateDbContextAsync();
 
-        return ValueTask.FromResult(lines[index]);
+        var count = await dbContext.AutoHelloMessages.CountAsync();
+        var index = Random.Shared.Next(count);
+
+        return (await dbContext.AutoHelloMessages.OrderBy(e => e.Order).Skip(index).FirstAsync()).Text;
     }
 
     public async Task<TimeSpan> GetWaifuRollCoolDownAsync()

@@ -27,6 +27,7 @@ public sealed partial class AppDbContext
     public DbSet<WaifuRollGuarantee> WaifuRollGuarantees { get; set; } = null!;
     public DbSet<HusbandCoolDown> HusbandCoolDowns { get; set; } = null!;
     public DbSet<HusbandAutoHello> HusbandGreetings { get; set; } = null!;
+    public DbSet<AutoHelloMessage> AutoHelloMessages { get; set; } = null!;
 
     // Таблицы с опциональными связями к TwitchUser
     public DbSet<QueueItem> SoundRequestQueueItems { get; set; } = null!;

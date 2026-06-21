@@ -148,9 +148,6 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </None>
-    <None Update="AutoHelloMessages.txt">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
     <None Update="WTelegram\WTelegram.session">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
