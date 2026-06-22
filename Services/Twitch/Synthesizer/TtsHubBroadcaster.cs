@@ -51,6 +51,11 @@ public class TtsHubBroadcaster(
         CancellationToken cancellationToken
     ) => BroadcastStateAsync(state, cancellationToken);
 
+    Task ITtsHubBroadcaster.BroadcastReassignVoiceAsync(
+        string userId,
+        CancellationToken cancellationToken
+    ) => BroadcastReassignVoiceAsync(userId, cancellationToken);
+
     public async Task BroadcastAsync(
         TwitchUser? user,
         string message,
@@ -123,6 +128,28 @@ public class TtsHubBroadcaster(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to broadcast TTS state to hub consumers.");
+        }
+    }
+
+    public async Task BroadcastReassignVoiceAsync(
+        string userId,
+        CancellationToken cancellationToken = default
+    )
+    {
+        try
+        {
+            await hubContext.Clients
+                .Group(TtsConsumersGroupName)
+                .ReassignVoice(userId);
+
+            logger.LogInformation(
+                "Voice reassign broadcast sent to hub consumers for user {UserId}",
+                userId
+            );
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to broadcast voice reassign to hub consumers.");
         }
     }
 

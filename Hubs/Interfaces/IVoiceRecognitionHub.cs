@@ -23,4 +23,10 @@ public interface IVoiceRecognitionHub
     /// </summary>
     /// <param name="state">TTS state payload.</param>
     Task UpdateTtsState(TtsState state);
+
+    /// <summary>
+    /// Request reassigning a random voice for a given user on the AudioController.
+    /// </summary>
+    /// <param name="userId">Twitch user ID.</param>
+    Task ReassignVoice(string userId);
 }

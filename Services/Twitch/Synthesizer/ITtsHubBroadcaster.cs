@@ -16,4 +16,6 @@ public interface ITtsHubBroadcaster
     );
 
     Task BroadcastStateAsync(TtsState? state, CancellationToken cancellationToken = default);
+
+    Task BroadcastReassignVoiceAsync(string userId, CancellationToken cancellationToken = default);
 }

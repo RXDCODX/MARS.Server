@@ -104,7 +104,7 @@ public abstract class TemporaryReward(
             _cancellationTokenSource = null;
 
             // Награда должна сохраняться в системе, при остановке просто выключаем
-            await EnsureRewardStateAsync(false);
+            //await EnsureRewardStateAsync(false);
         }
     }
 
