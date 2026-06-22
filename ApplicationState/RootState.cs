@@ -32,6 +32,7 @@ public static class RootStateKeys
     public const string SoundRequestSpotifyDisplayName = "SoundRequestSpotifyDisplayName";
     public const string SoundRequestSpotifyUserId = "SoundRequestSpotifyUserId";
     public const string SoundRequestSpotifyAvatarUrl = "SoundRequestSpotifyAvatarUrl";
+    public const string RandomRewardCooldownSeconds = "RandomRewardCooldownSeconds";
     public const string SoundRequestSpotifyProduct = "SoundRequestSpotifyProduct";
     public const string SoundRequestSpotifyDeviceId = "SoundRequestSpotifyDeviceId";
     public const string SoundRequestSpotifyOAuthState = "SoundRequestSpotifyOAuthState";

@@ -1,5 +1,7 @@
+using System.Collections.Concurrent;
 using System.Drawing;
 using System.Reflection;
+using MARS.Server.ApplicationState;
 using MARS.Server.DataBaseContext;
 using MARS.Server.Exstensions;
 using MARS.Server.Services.Twitch.Entitys;
@@ -37,6 +39,10 @@ public class RandomReward_TwitchReward(
 
     private static readonly List<int> RecentCosts = [];
     private static readonly Lock RecentCostsLock = new();
+
+    private static readonly ConcurrentDictionary<string, DateTime> UserCooldowns = new(
+        StringComparer.OrdinalIgnoreCase
+    );
 
     public override Task StartAsync(CancellationToken stoppingToken)
     {
@@ -92,6 +98,27 @@ public class RandomReward_TwitchReward(
         ChannelPointsCustomRewardRedemption originalEvent
     )
     {
+        var userId = originalEvent.UserId;
+        var now = DateTime.UtcNow;
+        var cooldown = await GetRandomRewardCooldownAsync();
+
+        if (UserCooldowns.TryGetValue(userId, out var lastUsed))
+        {
+            var elapsed = now - lastUsed;
+
+            if (elapsed < cooldown)
+            {
+                var remaining = (int)(cooldown - elapsed).TotalSeconds;
+
+                await client.SendMessageToMainTwitchAsync(
+                    $"@{originalEvent.UserName}, подождите ещё {remaining}с перед повторным использованием!",
+                    logger
+                );
+
+                return;
+            }
+        }
+
         var candidateCosts = new HashSet<int>();
 
         // a) Coded rewards — collect costs from handlers subscribed to EventSub
@@ -226,5 +253,23 @@ public class RandomReward_TwitchReward(
                 }
             }
         }
+
+        UserCooldowns[userId] = DateTime.UtcNow;
+    }
+
+    private async Task<TimeSpan> GetRandomRewardCooldownAsync()
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(_cancellationToken);
+
+        var value = await dbContext
+            .RootState.AsNoTracking()
+            .Where(e => e.Name == RootStateKeys.RandomRewardCooldownSeconds)
+            .Select(e => e.Value)
+            .FirstOrDefaultAsync(_cancellationToken);
+
+        var seconds =
+            long.TryParse(value, out var parsed) && parsed > 0 ? parsed : 60;
+
+        return TimeSpan.FromSeconds(seconds);
     }
 }

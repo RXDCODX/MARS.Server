@@ -164,6 +164,13 @@ public sealed class ConfigurationKeysBootstrapHostedService(
                 Description = "Путь до видео для Fumo Friday Night",
                 TypeDescription = "string",
             },
+            RootStateKeys.RandomRewardCooldownSeconds => new RootState
+            {
+                Name = key,
+                Value = 60L.ToString(),
+                Description = "Кулдаун награды RandomReward для одного пользователя в секундах",
+                TypeDescription = "long",
+            },
             RootStateKeys.SoundRequestProvider => new RootState
             {
                 Name = key,
