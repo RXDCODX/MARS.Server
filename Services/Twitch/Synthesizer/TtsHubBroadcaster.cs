@@ -90,7 +90,27 @@ public class TtsHubBroadcaster(
 
         try
         {
-            await hubContext.Clients.Group(TtsConsumersGroupName).PlayTts(user, message);
+            var ttsUser = user;
+
+            if (!string.IsNullOrWhiteSpace(user.AliasNickname))
+            {
+                ttsUser = new TwitchUser
+                {
+                    TwitchId = user.TwitchId,
+                    UserLogin = user.UserLogin,
+                    DisplayName = user.AliasNickname,
+                    ProfileImageUrl = user.ProfileImageUrl,
+                    ChatColor = user.ChatColor,
+                    IsModerator = user.IsModerator,
+                    IsVip = user.IsVip,
+                    FollowedAt = user.FollowedAt,
+                    LastUpdated = user.LastUpdated,
+                    CreatedAt = user.CreatedAt,
+                    IsInBlockList = user.IsInBlockList,
+                };
+            }
+
+            await hubContext.Clients.Group(TtsConsumersGroupName).PlayTts(ttsUser, message);
             logger.LogInformation(
                 "TTS broadcast was sent to hub consumers for user {User}",
                 user.DisplayName

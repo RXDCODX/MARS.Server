@@ -97,6 +97,12 @@ public class TwitchUser
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     /// <summary>
+    /// Алиас (прозвище) для TTS вместо оригинального DisplayName
+    /// </summary>
+    [MaxLength(100)]
+    public string? AliasNickname { get; set; }
+
+    /// <summary>
     /// Флаг указывающий, что юзер в черном списке
     /// </summary>
     public bool IsInBlockList { get; set; } = false;

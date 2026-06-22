@@ -20,8 +20,8 @@ public class CloseGame_TwitchReward(
     EventSubWebsocketClient wsClient
 ) : TemporaryReward(channelRewardsService, logger, environment)
 {
-    public override string AlertDisplayName { get; set; } = "💻 Выключить теккен";
-    public override string AlertDescription { get; set; } = "❌ Закрывает игрульку";
+    public override string AlertDisplayName { get; set; } = "💻 Выключить игру";
+    public override string AlertDescription { get; set; } = "❌ Закрывает Tekken 8 или Dota 2";
     public override Color Color { get; set; } = Color.FromArgb(0, 128, 255);
     public override int Cost { get; init; } = 6666;
     public override Func<bool> IsRewardEnabled { get; set; } = () => true;
@@ -52,18 +52,22 @@ public class CloseGame_TwitchReward(
         {
             await Task.Factory.StartNew(() =>
             {
-                var processes = Process.GetProcessesByName("Polaris-Win64-Shipping");
-                foreach (var process in processes)
+                var processNames = new[] { "Polaris-Win64-Shipping", "dota2" };
+                foreach (var name in processNames)
                 {
-                    try
+                    var processes = Process.GetProcessesByName(name);
+                    foreach (var process in processes)
                     {
-                        process.CloseMainWindow();
-                        process.Kill();
-                        process.WaitForExit(); // Ожидаем завершение процесса
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.LogException(ex);
+                        try
+                        {
+                            process.CloseMainWindow();
+                            process.Kill();
+                            process.WaitForExit();
+                        }
+                        catch (Exception ex)
+                        {
+                            logger.LogException(ex);
+                        }
                     }
                 }
             });
