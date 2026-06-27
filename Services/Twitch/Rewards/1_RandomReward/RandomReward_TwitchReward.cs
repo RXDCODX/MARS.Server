@@ -1,12 +1,19 @@
+using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Drawing;
+using System.Linq;
 using System.Reflection;
+using System.Threading;
+using System.Threading.Tasks;
 using MARS.Server.ApplicationState;
 using MARS.Server.DataBaseContext;
 using MARS.Server.Exstensions;
 using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using TwitchLib.Client.Interfaces;
 using TwitchLib.EventSub.Core.EventArgs.Channel;
@@ -120,6 +127,7 @@ public class RandomReward_TwitchReward(
         }
 
         var candidateCosts = new HashSet<int>();
+        var rewardNames = new Dictionary<int, string>();
 
         // a) Coded rewards — collect costs from handlers subscribed to EventSub
         var eventField = typeof(EventSubWebsocketClient).GetField(
@@ -136,6 +144,7 @@ public class RandomReward_TwitchReward(
                 if (handler.Target is TemporaryReward reward && reward.Cost != Cost)
                 {
                     candidateCosts.Add(reward.Cost);
+                    rewardNames[reward.Cost] = reward.AlertDisplayName;
                 }
             }
         }
@@ -203,34 +212,39 @@ public class RandomReward_TwitchReward(
         }
 
         // 4. Construct fake args with the chosen cost
-        var fakeArgs = new ChannelPointsCustomRewardRedemptionArgs();
-
-        fakeArgs.Payload = new EventSubNotificationPayload<ChannelPointsCustomRewardRedemption>
+        var fakeArgs = new ChannelPointsCustomRewardRedemptionArgs
         {
-            Event = new ChannelPointsCustomRewardRedemption
+            Payload = new EventSubNotificationPayload<ChannelPointsCustomRewardRedemption>
             {
-                Id = Guid.NewGuid().ToString(),
-                BroadcasterUserId = TwitchExstension.ChannelId,
-                BroadcasterUserName = TwitchExstension.Channel,
-                BroadcasterUserLogin = TwitchExstension.Channel,
-                UserId = originalEvent.UserId,
-                UserName = originalEvent.UserName,
-                UserLogin = originalEvent.UserLogin,
-                UserInput = string.Empty,
-                Status = "fulfilled",
-                Reward = new RedemptionReward
+                Event = new ChannelPointsCustomRewardRedemption
                 {
                     Id = Guid.NewGuid().ToString(),
-                    Cost = chosenCost,
-                    Title = "Random Reward",
+                    BroadcasterUserId = TwitchExstension.ChannelId,
+                    BroadcasterUserName = TwitchExstension.Channel,
+                    BroadcasterUserLogin = TwitchExstension.Channel,
+                    UserId = originalEvent.UserId,
+                    UserName = originalEvent.UserName,
+                    UserLogin = originalEvent.UserLogin,
+                    UserInput = string.Empty,
+                    Status = "fulfilled",
+                    Reward = new RedemptionReward
+                    {
+                        Id = Guid.NewGuid().ToString(),
+                        Cost = chosenCost,
+                        Title = "Random Reward",
+                    },
+                    RedeemedAt = DateTimeOffset.UtcNow,
                 },
-                RedeemedAt = DateTimeOffset.UtcNow,
             },
         };
 
         // 5. Chat notification
+        var rewardName = rewardNames.GetValueOrDefault(chosenCost);
+
         await client.SendMessageToMainTwitchAsync(
-            $"@{originalEvent.UserName}, активирована случайная награда за {chosenCost} баллов!",
+            rewardName != null
+                ? $"@{originalEvent.UserName}, активирована случайная награда \"{rewardName}\" за {chosenCost} баллов!"
+                : $"@{originalEvent.UserName}, активирована случайная награда за {chosenCost} баллов!",
             logger
         );
 
@@ -267,8 +281,7 @@ public class RandomReward_TwitchReward(
             .Select(e => e.Value)
             .FirstOrDefaultAsync(_cancellationToken);
 
-        var seconds =
-            long.TryParse(value, out var parsed) && parsed > 0 ? parsed : 60;
+        var seconds = long.TryParse(value, out var parsed) && parsed > 0 ? parsed : 60;
 
         return TimeSpan.FromSeconds(seconds);
     }

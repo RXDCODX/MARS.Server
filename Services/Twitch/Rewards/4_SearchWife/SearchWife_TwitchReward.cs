@@ -39,7 +39,7 @@ public class SearchWife_TwitchReward(
 ) : TemporaryReward(channelRewardsService, logger, environment)
 {
     public override string AlertDisplayName { get; set; } = "🔍 Поиск супруга";
-    public override string AlertDescription { get; set; } = string.Empty;
+    public override string AlertDescription { get; set; } = "⠀";
     public override Color Color { get; set; } = Color.FromArgb(24, 0, 255);
     public override int Cost { get; init; } = 4;
 
