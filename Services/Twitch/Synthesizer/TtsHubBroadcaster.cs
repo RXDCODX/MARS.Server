@@ -20,7 +20,8 @@ public class TtsHubBroadcaster(
     ITwitchClient client,
     IHostApplicationLifetime lifetime,
     ISevenTvEmoteService sevenTvEmoteService,
-    ITtsMessageFilterService ttsMessageFilterService
+    ITtsMessageFilterService ttsMessageFilterService,
+    TwitchUserEnsureService twitchUserEnsureService
 ) : BackgroundService, ITtsHubBroadcaster
 {
     private const string TtsConsumersGroupName = "tts-consumers";
@@ -68,12 +69,11 @@ public class TtsHubBroadcaster(
             return;
         }
 
+        user = await twitchUserEnsureService.EnsureUserExistsAsync(user, cancellationToken);
+
         if (ttsMessageFilterService.IsFilterEnabled)
         {
-            var filterResult = ttsMessageFilterService.FilterMessage(
-                message,
-                user.TwitchId
-            );
+            var filterResult = ttsMessageFilterService.FilterMessage(message, user.TwitchId);
 
             if (!filterResult)
             {
@@ -158,9 +158,7 @@ public class TtsHubBroadcaster(
     {
         try
         {
-            await hubContext.Clients
-                .Group(TtsConsumersGroupName)
-                .ReassignVoice(userId);
+            await hubContext.Clients.Group(TtsConsumersGroupName).ReassignVoice(userId);
 
             logger.LogInformation(
                 "Voice reassign broadcast sent to hub consumers for user {UserId}",
