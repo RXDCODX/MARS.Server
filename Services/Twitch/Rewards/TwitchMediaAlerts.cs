@@ -40,6 +40,7 @@ public class TwitchMediaAlerts(
             .ForMessageReceived(args)
             .RequireChannel()
             .SkipBlacklisted()
+            .RequireFollower()
             .RequireServiceActive(IsServiceActive)
             .ValidateAsync();
 
@@ -80,7 +81,9 @@ public class TwitchMediaAlerts(
         var mediaList = dbContext
             .Alerts.AsNoTracking()
             .AsEnumerable()
-            .Where(e => e.MetaInfo.IsEnabled && e.MetaInfo.TwitchGuid == Guid.Parse(message.CustomRewardId))
+            .Where(e =>
+                e.MetaInfo.IsEnabled && e.MetaInfo.TwitchGuid == Guid.Parse(message.CustomRewardId)
+            )
             .ToList();
 
         MediaInfo? mediaOld = null;
@@ -142,7 +145,9 @@ public class TwitchMediaAlerts(
             var mediaList = dbContext
                 .Alerts.AsNoTracking()
                 .AsEnumerable()
-                .Where(e => e.MetaInfo.IsEnabled && e.MetaInfo.TwitchPointsCost == message.Reward.Cost)
+                .Where(e =>
+                    e.MetaInfo.IsEnabled && e.MetaInfo.TwitchPointsCost == message.Reward.Cost
+                )
                 .ToList();
 
             MediaInfo? mediaOld = null;
@@ -176,9 +181,7 @@ public class TwitchMediaAlerts(
                         mediaClone.FixAlertText(user, string.Empty);
                         mediaClone.FixAlertColor(user);
 
-                        await hubContext.Clients.All.Alert(
-                            new MediaDto { MediaInfo = mediaClone }
-                        );
+                        await hubContext.Clients.All.Alert(new MediaDto { MediaInfo = mediaClone });
                     }
                 );
             }
