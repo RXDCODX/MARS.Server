@@ -1,10 +1,11 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using MARS.Server.DataBaseContext;
 using MARS.Server.Exstensions;
+using MARS.Server.Services.Twitch.Validation;
 using MARS.Server.Services.WaifuRoll;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
@@ -22,7 +23,8 @@ public class WaifuRollCooldownNotificationService(
     ITwitchClient twitchClient,
     WaifuRollService waifuRollService,
     IDbContextFactory<AppDbContext> dbContextFactory,
-    ILogger<WaifuRollCooldownNotificationService> logger
+    ILogger<WaifuRollCooldownNotificationService> logger,
+    ITwitchEventValidationService validator
 ) : BackgroundService
 {
     private const int WaifuRollCost = 4;
@@ -56,21 +58,18 @@ public class WaifuRollCooldownNotificationService(
         ChannelPointsCustomRewardRedemptionArgs e
     )
     {
-        var twEvent = e.Payload.Event;
-        if (
-            !twEvent.BroadcasterUserId.Equals(
-                TwitchExstension.ChannelId,
-                StringComparison.OrdinalIgnoreCase
-            )
-        )
+        var result = await validator
+            .ForRedemption(e)
+            .RequireBroadcasterUserId()
+            .RequireCost(WaifuRollCost)
+            .ValidateAsync();
+
+        if (result.IsInvalid)
         {
             return;
         }
 
-        if (twEvent.Reward.Cost != WaifuRollCost)
-        {
-            return;
-        }
+        var twEvent = e.Payload.Event;
 
         try
         {
@@ -134,26 +133,14 @@ public class WaifuRollCooldownNotificationService(
 
     private async Task OnMessageReceived(object? sender, OnMessageReceivedArgs e)
     {
-        if (
-            !e.ChatMessage.Channel.Equals(
-                TwitchExstension.Channel,
-                StringComparison.OrdinalIgnoreCase
-            )
-        )
-        {
-            return;
-        }
+        var result = await validator
+            .ForMessageReceived(e)
+            .RequireChannel()
+            .SkipBlacklisted()
+            .RequireUserId()
+            .ValidateAsync();
 
-        if (
-            TwitchExstension.BlackList.Logins.Any(t =>
-                t.Equals(e.ChatMessage.Username, StringComparison.OrdinalIgnoreCase)
-            )
-        )
-        {
-            return;
-        }
-
-        if (string.IsNullOrWhiteSpace(e.ChatMessage.UserId))
+        if (result.IsInvalid)
         {
             return;
         }

@@ -8,6 +8,7 @@ using MARS.Server.Hubs.Interfaces;
 using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
+using MARS.Server.Services.Twitch.Validation;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -31,7 +32,8 @@ public class AllRefund_TwitchReward(
     ITwitchAPI api,
     TokenService tokenService,
     ITwitchClient client,
-    TwitchUserEnsureService twitchUserEnsureService
+    TwitchUserEnsureService twitchUserEnsureService,
+    ITwitchEventValidationService validator
 ) : TemporaryReward(channelRewardsService, logger, environment)
 {
     public override string AlertDisplayName { get; set; } = "💣 Алармагеддон 💣";
@@ -64,50 +66,51 @@ public class AllRefund_TwitchReward(
 
     private async Task OnRewardActivation(object? sender, ChannelPointsCustomRewardRedemptionArgs e)
     {
-        var twEvent = e.Payload.Event;
+        var vr = await validator
+            .ForRedemption(e)
+            .RequireBroadcasterUserId()
+            .RequireRewardEnabled(IsRewardEnabled)
+            .RequireCost(Cost)
+            .ValidateAsync();
 
-        if (
-            twEvent.Reward.Cost == Cost
-            && twEvent.BroadcasterUserLogin.Equals(
-                TwitchExstension.Channel,
-                StringComparison.OrdinalIgnoreCase
-            )
-            && IsRewardEnabled()
-        )
+        if (vr.IsInvalid)
         {
-            var twitchUser = TwitchUser.FromChannelPointsCustomRewardRedemptionArgs(e)!;
+            return;
+        }
 
-            twitchUser = await twitchUserEnsureService.EnsureUserExistsAsync(twitchUser);
+        var twEvent = e.Payload.Event;
+        var twitchUser = TwitchUser.FromChannelPointsCustomRewardRedemptionArgs(e)!;
+
+        twitchUser = await twitchUserEnsureService.EnsureUserExistsAsync(twitchUser);
+
+        // Отправляем сообщение пользователю о возврате баллов
+        await api.SendAnnouncementToMainTwitchAsync(
+            $"@{twEvent.UserName}, активировал @{AlertDisplayName}! Начинайте тратить баллы через 10 секунд!",
+            tokenService.Token,
+            AnnouncementColors.Primary,
+            logger
+        );
+
+        await hubContext.Clients.All.AllRefund(twitchUser);
+
+        await Task.Delay(TimeSpan.FromSeconds(10));
+
+        IsRedemptionActive = true;
+
+        await Task.Factory.StartNew(async () =>
+        {
+            await Task.Delay(TimeSpan.FromMinutes(1));
 
             // Отправляем сообщение пользователю о возврате баллов
             await api.SendAnnouncementToMainTwitchAsync(
-                $"@{twEvent.UserName}, активировал @{AlertDisplayName}! Начинайте тратить баллы через 10 секунд!",
+                $"@{AlertDisplayName} закончился! Всем спасибо за участие!",
                 tokenService.Token,
                 AnnouncementColors.Primary,
                 logger
             );
 
-            await hubContext.Clients.All.AllRefund(twitchUser);
-
-            await Task.Delay(TimeSpan.FromSeconds(10));
-
-            IsRedemptionActive = true;
-
-            await Task.Factory.StartNew(async () =>
-            {
-                await Task.Delay(TimeSpan.FromMinutes(1));
-
-                // Отправляем сообщение пользователю о возврате баллов
-                await api.SendAnnouncementToMainTwitchAsync(
-                    $"@{AlertDisplayName} закончился! Всем спасибо за участие!",
-                    tokenService.Token,
-                    AnnouncementColors.Primary,
-                    logger
-                );
-
-                IsRedemptionActive = false;
-            });
-        }
+            IsRedemptionActive = false;
+        });
     }
 
     public override async Task StopAsync(CancellationToken cancellationToken)
@@ -123,52 +126,58 @@ public class AllRefund_TwitchReward(
         ChannelPointsCustomRewardRedemptionArgs args
     )
     {
+        var vr = await validator
+            .ForRedemption(args)
+            .RequireBroadcasterUserId()
+            .RequireRewardEnabled(IsRewardEnabled)
+            .RequireCost(Cost)
+            .ValidateAsync();
+
+        if (vr.IsInvalid)
+        {
+            return;
+        }
+
         var twEvent = args.Payload.Event;
 
-        if (
-            twEvent.Reward.Cost == Cost
-            && twEvent.BroadcasterUserLogin.Equals(
-                TwitchExstension.Channel,
-                StringComparison.OrdinalIgnoreCase
-            )
-            && IsRedemptionActive
-            && IsRewardEnabled()
-        )
+        if (!IsRedemptionActive)
         {
-            try
-            {
-                logger.LogInformation(
-                    "Возврат баллов для пользователя {UserName} во время работыы супер возращения баллов",
-                    twEvent.UserName
-                );
+            return;
+        }
 
-                // Возвращаем баллы пользователю
-                await api.Helix.ChannelPoints.UpdateRedemptionStatusAsync(
-                    TwitchExstension.ChannelId,
-                    twEvent.Reward.Id,
-                    [args.Payload.Event.Id],
-                    new UpdateCustomRewardRedemptionStatusRequest
-                    {
-                        Status = CustomRewardRedemptionStatus.CANCELED,
-                    },
-                    tokenService.Token?.AccessToken
-                );
+        try
+        {
+            logger.LogInformation(
+                "Возврат баллов для пользователя {UserName} во время работыы супер возращения баллов",
+                twEvent.UserName
+            );
 
-                // Отправляем сообщение пользователю о возврате баллов
-                await client.SendMessageToMainTwitchAsync(
-                    $"@{twEvent.UserName}, твои {Cost} баллов были возвращены!",
-                    logger
-                );
+            // Возвращаем баллы пользователю
+            await api.Helix.ChannelPoints.UpdateRedemptionStatusAsync(
+                TwitchExstension.ChannelId,
+                twEvent.Reward.Id,
+                [args.Payload.Event.Id],
+                new UpdateCustomRewardRedemptionStatusRequest
+                {
+                    Status = CustomRewardRedemptionStatus.CANCELED,
+                },
+                tokenService.Token?.AccessToken
+            );
 
-                logger.LogInformation(
-                    "Баллы успешно возвращены пользователю {UserName}",
-                    twEvent.UserName
-                );
-            }
-            catch (Exception ex)
-            {
-                logger.LogException(ex);
-            }
+            // Отправляем сообщение пользователю о возврате баллов
+            await client.SendMessageToMainTwitchAsync(
+                $"@{twEvent.UserName}, твои {Cost} баллов были возвращены!",
+                logger
+            );
+
+            logger.LogInformation(
+                "Баллы успешно возвращены пользователю {UserName}",
+                twEvent.UserName
+            );
+        }
+        catch (Exception ex)
+        {
+            logger.LogException(ex);
         }
     }
 }

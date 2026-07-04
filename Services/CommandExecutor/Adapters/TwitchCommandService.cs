@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -7,6 +7,7 @@ using MARS.Server.Exstensions;
 using MARS.Server.Services.CommandExecutor.Entitys;
 using MARS.Server.Services.CommandExecutor.Entitys.Commands;
 using MARS.Server.Services.Twitch;
+using MARS.Server.Services.Twitch.Validation;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -24,6 +25,7 @@ public class TwitchCommandService : PlatformCommandServiceBase<string>, IHostedS
     private readonly ITwitchClient _client;
     private readonly ILogger<TwitchCommandService> _logger;
     private readonly IServiceProvider _serviceProvider;
+    private readonly ITwitchEventValidationService _validator;
 
     public override Platform Platform => Platform.Twitch;
 
@@ -52,13 +54,15 @@ public class TwitchCommandService : PlatformCommandServiceBase<string>, IHostedS
         ITwitchClient client,
         IServiceProvider serviceProviderProvider,
         IHostApplicationLifetime lifetime,
-        ILogger<TwitchCommandService> logger
+        ILogger<TwitchCommandService> logger,
+        ITwitchEventValidationService validator
     )
     {
         _commandService = commandService;
         _client = client;
         _serviceProvider = serviceProviderProvider;
         _logger = logger;
+        _validator = validator;
 
         lifetime.ApplicationStarted.Register(() =>
         {
@@ -73,158 +77,161 @@ public class TwitchCommandService : PlatformCommandServiceBase<string>, IHostedS
 
     private async Task ClientOnOnMessageReceived(object? sender, OnMessageReceivedArgs e)
     {
-        if (
-            TwitchExstension.BlackList.Logins.All(t =>
-                !t.Equals(e.ChatMessage.Username, StringComparison.OrdinalIgnoreCase)
-            )
-        )
+        var result = await _validator
+            .ForMessageReceived(e)
+            .SkipBlacklisted()
+            .ValidateAsync();
+
+        if (result.IsInvalid)
         {
-            await Task.Factory.StartNew(async () =>
+            return;
+        }
+
+        await Task.Factory.StartNew(async () =>
+        {
+            try
             {
+                var message = e.ChatMessage.Message;
+                var username = e.ChatMessage.Username;
+                var userId = e.ChatMessage.UserId;
+
+                // Проверяем, что сообщение начинается с префикса команды
+                if (!StartsWithCommandPrefix(message))
+                {
+                    return;
+                }
+
+                // Разбираем команду
+                var commandParts = message.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
+                if (commandParts.Length == 0)
+                {
+                    return;
+                }
+
+                var commandName = TrimCommandPrefix(commandParts[0]);
+                var input = commandParts.Length > 1 ? commandParts[1] : "";
+
+                // Обработка специальной команды commands
+                if (commandName.Equals("commands", StringComparison.OrdinalIgnoreCase))
+                {
+                    var includeAdminCommands = IsAdmin.Invoke(userId);
+
+                    var commandsList = GetCommandsList(
+                        userId,
+                        UserCommands,
+                        AdminCommands,
+                        includeAdminCommands
+                    );
+                    await SendMessage(commandsList);
+                    return;
+                }
+
+                // Обработка специальной команды c (краткий список)
+                if (commandName.Equals("c", StringComparison.OrdinalIgnoreCase))
+                {
+                    var includeAdminCommands = IsAdmin.Invoke(userId);
+
+                    var shortCommandsList = GetShortCommandsList(userId, includeAdminCommands);
+                    await SendMessage(shortCommandsList);
+                    return;
+                }
+
+                // Проверяем, доступна ли команда
+                if (!_commandService.IsCommandAvailable(commandName, Platform.Twitch))
+                {
+                    return;
+                }
+
+                // Получаем описание параметров команды
+                var commandInfo = _commandService.GetCommandParameters(commandName);
+                var requiredParams = (commandInfo ?? Array.Empty<CommandParameterInfo>())
+                    .Where(p => p.Required)
+                    .ToArray();
+
+                var inputParts = string.IsNullOrWhiteSpace(input)
+                    ? Array.Empty<string>()
+                    : BaseCommand.ParseParametersWithQuotes(input);
+
+                if (inputParts.Length < requiredParams.Length)
+                {
+                    var missingParam = requiredParams[inputParts.Length];
+                    await SendMessage(
+                        $"Не хватает параметра '{missingParam.Name}'. Использование: !{commandName} {string.Join(" ", requiredParams.Select(p => $"<{p.Name}>"))}"
+                    );
+                    return;
+                }
+
+                // Проверяем права доступа для админских команд (если параметр показывает admin)
+                if (_commandService.IsAdminCommand(commandName) && !IsUserAdmin(userId))
+                {
+                    await SendMessage(
+                        $"Команда '{commandName}' доступна только администраторам."
+                    );
+                    return;
+                }
+
+                // Выполняем команду через ICommandService, собрав параметры
+                string result;
                 try
                 {
-                    var message = e.ChatMessage.Message;
-                    var username = e.ChatMessage.Username;
-                    var userId = e.ChatMessage.UserId;
+                    var parameters = _commandService.ParseParameters(input, commandInfo);
 
-                    // Проверяем, что сообщение начинается с префикса команды
-                    if (!StartsWithCommandPrefix(message))
-                    {
-                        return;
-                    }
-
-                    // Разбираем команду
-                    var commandParts = message.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
-                    if (commandParts.Length == 0)
-                    {
-                        return;
-                    }
-
-                    var commandName = TrimCommandPrefix(commandParts[0]);
-                    var input = commandParts.Length > 1 ? commandParts[1] : "";
-
-                    // Обработка специальной команды commands
-                    if (commandName.Equals("commands", StringComparison.OrdinalIgnoreCase))
-                    {
-                        var includeAdminCommands = IsAdmin.Invoke(userId);
-
-                        var commandsList = GetCommandsList(
-                            userId,
-                            UserCommands,
-                            AdminCommands,
-                            includeAdminCommands
-                        );
-                        await SendMessage(commandsList);
-                        return;
-                    }
-
-                    // Обработка специальной команды c (краткий список)
-                    if (commandName.Equals("c", StringComparison.OrdinalIgnoreCase))
-                    {
-                        var includeAdminCommands = IsAdmin.Invoke(userId);
-
-                        var shortCommandsList = GetShortCommandsList(userId, includeAdminCommands);
-                        await SendMessage(shortCommandsList);
-                        return;
-                    }
-
-                    // Проверяем, доступна ли команда
-                    if (!_commandService.IsCommandAvailable(commandName, Platform.Twitch))
-                    {
-                        return;
-                    }
-
-                    // Получаем описание параметров команды
-                    var commandInfo = _commandService.GetCommandParameters(commandName);
-                    var requiredParams = (commandInfo ?? Array.Empty<CommandParameterInfo>())
-                        .Where(p => p.Required)
-                        .ToArray();
-
-                    var inputParts = string.IsNullOrWhiteSpace(input)
-                        ? Array.Empty<string>()
-                        : BaseCommand.ParseParametersWithQuotes(input);
-
-                    if (inputParts.Length < requiredParams.Length)
-                    {
-                        var missingParam = requiredParams[inputParts.Length];
-                        await SendMessage(
-                            $"Не хватает параметра '{missingParam.Name}'. Использование: !{commandName} {string.Join(" ", requiredParams.Select(p => $"<{p.Name}>"))}"
-                        );
-                        return;
-                    }
-
-                    // Проверяем права доступа для админских команд (если параметр показывает admin)
-                    if (_commandService.IsAdminCommand(commandName) && !IsUserAdmin(userId))
-                    {
-                        await SendMessage(
-                            $"Команда '{commandName}' доступна только администраторам."
-                        );
-                        return;
-                    }
-
-                    // Выполняем команду через ICommandService, собрав параметры
-                    string result;
-                    try
-                    {
-                        var parameters = _commandService.ParseParameters(input, commandInfo);
-
-                        // Гарантируем наличие пользователя в БД и добавляем в параметры
-                        var userEnsureService = _serviceProvider
-                            .CreateAsyncScope()
-                            .ServiceProvider.GetRequiredService<TwitchUserEnsureService>();
-                        var twitchUser = await userEnsureService.EnsureUserExistsAsync(
-                            e.ChatMessage
-                        );
-                        parameters["user"] = twitchUser;
-
-                        // Дополнительные контекстные параметры для адаптера
-                        parameters["username"] = username;
-                        parameters["userId"] = userId;
-                        parameters["channel"] = e.ChatMessage.Channel;
-                        parameters["rawMessage"] = message;
-                        parameters["platform"] = Platform.Twitch;
-
-                        // Выполняем команду через сервис
-                        result = await _commandService.ExecuteCommandAsync(
-                            commandName,
-                            parameters,
-                            Platform.Twitch
-                        );
-
-                        // Валидируем ответ для платформы
-                        result = ValidateResponse(result);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(
-                            ex,
-                            "Ошибка при выполнении команды '{CommandName}' пользователем '{Username}'",
-                            commandName,
-                            username
-                        );
-                        await SendMessage(
-                            $"Ошибка при выполнении команды '{commandName}': {ex.Message}"
-                        );
-                        return;
-                    }
-
-                    // Отправляем результат
-                    await SendMessage(result);
-
-                    _logger.LogInformation(
-                        "Команда '{CommandName}' выполнена пользователем '{Username}' с результатом: {Result}",
-                        commandName,
-                        username,
-                        result
+                    // Гарантируем наличие пользователя в БД и добавляем в параметры
+                    var userEnsureService = _serviceProvider
+                        .CreateAsyncScope()
+                        .ServiceProvider.GetRequiredService<TwitchUserEnsureService>();
+                    var twitchUser = await userEnsureService.EnsureUserExistsAsync(
+                        e.ChatMessage
                     );
+                    parameters["user"] = twitchUser;
+
+                    // Дополнительные контекстные параметры для адаптера
+                    parameters["username"] = username;
+                    parameters["userId"] = userId;
+                    parameters["channel"] = e.ChatMessage.Channel;
+                    parameters["rawMessage"] = message;
+                    parameters["platform"] = Platform.Twitch;
+
+                    // Выполняем команду через сервис
+                    result = await _commandService.ExecuteCommandAsync(
+                        commandName,
+                        parameters,
+                        Platform.Twitch
+                    );
+
+                    // Валидируем ответ для платформы
+                    result = ValidateResponse(result);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Ошибка при обработке команды Twitch");
-                    await SendMessage("Произошла ошибка при выполнении команды. Попробуйте позже.");
+                    _logger.LogError(
+                        ex,
+                        "Ошибка при выполнении команды '{CommandName}' пользователем '{Username}'",
+                        commandName,
+                        username
+                    );
+                    await SendMessage(
+                        $"Ошибка при выполнении команды '{commandName}': {ex.Message}"
+                    );
+                    return;
                 }
-            });
-        }
+
+                // Отправляем результат
+                await SendMessage(result);
+
+                _logger.LogInformation(
+                    "Команда '{CommandName}' выполнена пользователем '{Username}' с результатом: {Result}",
+                    commandName,
+                    username,
+                    result
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Ошибка при обработке команды Twitch");
+                await SendMessage("Произошла ошибка при выполнении команды. Попробуйте позже.");
+            }
+        });
     }
 
     /// <summary>

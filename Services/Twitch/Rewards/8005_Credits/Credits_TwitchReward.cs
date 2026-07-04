@@ -7,6 +7,7 @@ using MARS.Server.Hubs;
 using MARS.Server.Hubs.Interfaces;
 using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
+using MARS.Server.Services.Twitch.Validation;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -20,7 +21,8 @@ public class Credits_TwitchReward(
     ILogger<Credits_TwitchReward> logger,
     IHostEnvironment environment,
     IHubContext<TelegramusHub, ITelegramusHub> hubContext,
-    EventSubWebsocketClient wsClient
+    EventSubWebsocketClient wsClient,
+    ITwitchEventValidationService validator
 ) : TemporaryReward(channelRewardsService, logger, environment)
 {
     public override string AlertDisplayName { get; set; } = "🎬 Credits";
@@ -53,40 +55,38 @@ public class Credits_TwitchReward(
         ChannelPointsCustomRewardRedemptionArgs args
     )
     {
-        if (!IsServiceActive)
+        var vr = await validator
+            .ForRedemption(args)
+            .RequireBroadcasterUserId()
+            .RequireServiceActive(IsServiceActive)
+            .RequireCost(Cost)
+            .ValidateAsync();
+
+        if (vr.IsInvalid)
         {
             return;
         }
 
         var twEvent = args.Payload.Event;
 
-        if (
-            twEvent.Reward.Cost == Cost
-            && twEvent.BroadcasterUserLogin.Equals(
-                TwitchExstension.Channel,
-                StringComparison.OrdinalIgnoreCase
-            )
-        )
+        try
         {
-            try
-            {
-                logger.LogInformation(
-                    "Credits награда активирована пользователем {UserName} за {Cost} баллов",
-                    twEvent.UserName,
-                    twEvent.Reward.Cost
-                );
+            logger.LogInformation(
+                "Credits награда активирована пользователем {UserName} за {Cost} баллов",
+                twEvent.UserName,
+                twEvent.Reward.Cost
+            );
 
-                await hubContext.Clients.All.Credits();
+            await hubContext.Clients.All.Credits();
 
-                logger.LogInformation(
-                    "Credits эффект активирован для пользователя {UserName}",
-                    twEvent.UserName
-                );
-            }
-            catch (Exception ex)
-            {
-                logger.LogException(ex);
-            }
+            logger.LogInformation(
+                "Credits эффект активирован для пользователя {UserName}",
+                twEvent.UserName
+            );
+        }
+        catch (Exception ex)
+        {
+            logger.LogException(ex);
         }
     }
 }

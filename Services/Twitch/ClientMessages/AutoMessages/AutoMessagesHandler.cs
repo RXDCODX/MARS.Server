@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -8,6 +8,7 @@ using MARS.Server.Exstensions;
 using MARS.Server.Hubs;
 using MARS.Server.Hubs.Interfaces;
 using MARS.Server.Services.Twitch.ClientMessages.AutoMessages.Entitys;
+using MARS.Server.Services.Twitch.Validation;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
@@ -22,7 +23,8 @@ public class AutoMessagesHandler(
     ILogger<AutoMessagesHandler> logger,
     IDbContextFactory<AppDbContext> dbContextFactory,
     IHostApplicationLifetime applicationLifetime,
-    IHubContext<TelegramusHub, ITelegramusHub> hubContext
+    IHubContext<TelegramusHub, ITelegramusHub> hubContext,
+    ITwitchEventValidationService validator
 ) : BackgroundService
 {
     private const string Channel = TwitchExstension.Channel;
@@ -38,22 +40,25 @@ public class AutoMessagesHandler(
 
     public async Task OnMessageReceived(object? sender, OnMessageReceivedArgs args)
     {
+        var result = await validator
+            .ForMessageReceived(args)
+            .RequireChannel()
+            .SkipBlacklisted()
+            .ValidateAsync();
+
+        if (result.IsInvalid)
+        {
+            return;
+        }
+
+        MessagesCounter++;
+
         if (
-            args.ChatMessage.Channel.Equals(Channel, StringComparison.OrdinalIgnoreCase)
-            && !TwitchExstension.BlackList.Logins.Any(t =>
-                t.Equals(args.ChatMessage.Username, StringComparison.OrdinalIgnoreCase)
-            )
+            MessagesCounter >= 70
+            && LastPostDateTime.Add(TimeSpan.FromMinutes(45)) < DateTimeOffset.Now
         )
         {
-            MessagesCounter++;
-
-            if (
-                MessagesCounter >= 70
-                && LastPostDateTime.Add(TimeSpan.FromMinutes(45)) < DateTimeOffset.Now
-            )
-            {
-                await ExecuteAutoMessage();
-            }
+            await ExecuteAutoMessage();
         }
     }
 

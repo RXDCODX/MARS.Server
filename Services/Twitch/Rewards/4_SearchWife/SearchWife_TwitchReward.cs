@@ -9,6 +9,7 @@ using MARS.Server.Hubs;
 using MARS.Server.Hubs.Interfaces;
 using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
+using MARS.Server.Services.Twitch.Validation;
 using MARS.Server.Services.WaifuRoll;
 using MARS.Server.Services.WaifuRoll.Entitys;
 using MARS.Server.Services.WaifuRoll.helpers;
@@ -35,7 +36,8 @@ public class SearchWife_TwitchReward(
     ITwitchAPI api,
     ITwitchClient client,
     IDbContextFactory<AppDbContext> factory,
-    RickRollerService rickRollerService
+    RickRollerService rickRollerService,
+    ITwitchEventValidationService validator
 ) : TemporaryReward(channelRewardsService, logger, environment)
 {
     public override string AlertDisplayName { get; set; } = "🔍 Поиск супруга";
@@ -66,97 +68,96 @@ public class SearchWife_TwitchReward(
         ChannelPointsCustomRewardRedemptionArgs args
     )
     {
-        ChannelPointsCustomRewardRedemption? twEvent = args.Payload.Event;
-        if (
-            twEvent.BroadcasterUserId.Equals(
-                TwitchExstension.ChannelId,
-                StringComparison.OrdinalIgnoreCase
-            ) && IsRewardActive
-        )
+        var vr = await validator
+            .ForRedemption(args)
+            .RequireBroadcasterUserId()
+            .RequireRewardEnabled(IsRewardEnabled)
+            .RequireCost(Cost)
+            .ValidateAsync();
+
+        if (vr.IsInvalid)
         {
-            if (twEvent.Reward.Cost == Cost)
-            {
-                await Task.Factory.StartNew(async () =>
-                {
-                    await rickRollerService.TryRickRollAsync(
-                        TwitchUser.FromChannelPointsCustomRewardRedemptionArgs(args)!,
-                        async () =>
-                        {
-                            Waifu? waifu = await waifuRollService.RollTheWaifu(
-                                twEvent.UserId,
-                                twEvent.UserName
-                            );
-
-                            if (waifu is not null)
-                            {
-                                // Убеждаемся, что поля аниме и манги заполнены
-                                waifu = await waifuDbHelper.EnsureMangaAndAnimeTitleExists(waifu);
-
-                                var color = await api.Helix.Chat.GetUserChatColorAsync([
-                                    twEvent.UserId,
-                                ]);
-                                await using AppDbContext dbContext2 =
-                                    await factory.CreateDbContextAsync();
-
-                                // Загружаем Husband с TwitchUser
-                                var husband =
-                                    await dbContext2
-                                        .Husbands.Include(h => h.TwitchUser)
-                                        .AsNoTracking()
-                                        .FirstOrDefaultAsync(h => h.TwitchId == twEvent.UserId)
-                                    ?? throw new NullReferenceException("Husband не найден");
-
-                                // Проверяем что TwitchUser загружен
-                                if (husband.TwitchUser == null)
-                                {
-                                    throw new InvalidOperationException(
-                                        $"TwitchUser не найден для Husband {twEvent.UserId}"
-                                    );
-                                }
-
-                                await hubContext.Clients.All.WaifuRoll(
-                                    waifu,
-                                    twEvent.UserName,
-                                    husband,
-                                    color.Data[0]?.Color
-                                );
-                                return;
-                            }
-
-                            await using AppDbContext dbContext =
-                                await factory.CreateDbContextAsync();
-                            var hostRoolWaifu = await dbContext
-                                .Husbands.Include(host1 => host1.HusbandCoolDown)
-                                .AsNoTracking()
-                                .FirstOrDefaultAsync(e => e.TwitchId == twEvent.UserId);
-                            var time = hostRoolWaifu?.HusbandCoolDown?.Time.ToOffset(
-                                TimeSpan.FromHours(3)
-                            );
-
-                            if (time != null)
-                            {
-                                DateTimeOffset notNullTime = time.Value;
-                                var cooldown = await waifuRollService.GetWaifuRollCoolDownAsync();
-                                TimeSpan wasteTime =
-                                    notNullTime.Add(cooldown)
-                                    - DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
-
-                                var culture = CultureInfo.GetCultureInfo("ru-RU");
-                                var message =
-                                    $"@{{user}}, Кулдаун ({(wasteTime.Hours != 0 ? wasteTime.Hours.ToString(culture) + ":" : null)}{wasteTime.Minutes.ToString(culture)}:{wasteTime.Seconds.ToString(culture)})!";
-                                message = AnswersForTwitchRewards.ReplaceKeywordsInAnswer(
-                                    twEvent.UserName,
-                                    message,
-                                    null,
-                                    null,
-                                    waifu
-                                );
-                                await client.SendMessageToMainTwitchAsync(message, logger);
-                            }
-                        }
-                    );
-                });
-            }
+            return;
         }
+
+        var twEvent = args.Payload.Event;
+
+        await Task.Factory.StartNew(async () =>
+        {
+            await rickRollerService.TryRickRollAsync(
+                TwitchUser.FromChannelPointsCustomRewardRedemptionArgs(args)!,
+                async () =>
+                {
+                    Waifu? waifu = await waifuRollService.RollTheWaifu(
+                        twEvent.UserId,
+                        twEvent.UserName
+                    );
+
+                    if (waifu is not null)
+                    {
+                        waifu = await waifuDbHelper.EnsureMangaAndAnimeTitleExists(waifu);
+
+                        var color = await api.Helix.Chat.GetUserChatColorAsync([
+                            twEvent.UserId,
+                        ]);
+                        await using AppDbContext dbContext2 =
+                            await factory.CreateDbContextAsync();
+
+                        var husband =
+                            await dbContext2
+                                .Husbands.Include(h => h.TwitchUser)
+                                .AsNoTracking()
+                                .FirstOrDefaultAsync(h => h.TwitchId == twEvent.UserId)
+                            ?? throw new NullReferenceException("Husband не найден");
+
+                        if (husband.TwitchUser == null)
+                        {
+                            throw new InvalidOperationException(
+                                $"TwitchUser не найден для Husband {twEvent.UserId}"
+                            );
+                        }
+
+                        await hubContext.Clients.All.WaifuRoll(
+                            waifu,
+                            twEvent.UserName,
+                            husband,
+                            color.Data[0]?.Color
+                        );
+                        return;
+                    }
+
+                    await using AppDbContext dbContext =
+                        await factory.CreateDbContextAsync();
+                    var hostRoolWaifu = await dbContext
+                        .Husbands.Include(host1 => host1.HusbandCoolDown)
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(e => e.TwitchId == twEvent.UserId);
+                    var time = hostRoolWaifu?.HusbandCoolDown?.Time.ToOffset(
+                        TimeSpan.FromHours(3)
+                    );
+
+                    if (time != null)
+                    {
+                        DateTimeOffset notNullTime = time.Value;
+                        var cooldown = await waifuRollService.GetWaifuRollCoolDownAsync();
+                        TimeSpan wasteTime =
+                            notNullTime.Add(cooldown)
+                            - DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
+
+                        var culture = CultureInfo.GetCultureInfo("ru-RU");
+                        var message =
+                            $"@{{user}}, Кулдаун ({(wasteTime.Hours != 0 ? wasteTime.Hours.ToString(culture) + ":" : null)}{wasteTime.Minutes.ToString(culture)}:{wasteTime.Seconds.ToString(culture)})!";
+                        message = AnswersForTwitchRewards.ReplaceKeywordsInAnswer(
+                            twEvent.UserName,
+                            message,
+                            null,
+                            null,
+                            waifu
+                        );
+                        await client.SendMessageToMainTwitchAsync(message, logger);
+                    }
+                }
+            );
+        });
     }
 }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -10,6 +10,7 @@ using MARS.Server.Hubs.Interfaces;
 using MARS.Server.Services.AutoArts_OBSOLETE.Entitys;
 using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.PuntoSwitcher;
+using MARS.Server.Services.Twitch.Validation;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Hosting;
@@ -25,11 +26,23 @@ public class HighlitedMessage(
     IPuntoSwitcherService puntoSwitcherService,
     ITwitchClient client,
     IHostApplicationLifetime applicationLifetime,
-    RickRollerService rickRollerService
+    RickRollerService rickRollerService,
+    ITwitchEventValidationService validator
 ) : BackgroundService
 {
     internal async Task TwitchClientOnNormalMessage(object? sender, OnMessageReceivedArgs args)
     {
+        var vr = await validator
+            .ForMessageReceived(args)
+            .RequireChannel()
+            .SkipBlacklisted()
+            .ValidateAsync();
+
+        if (vr.IsInvalid)
+        {
+            return;
+        }
+
         if (
             (
                 args.ChatMessage.UserDetail.IsVip
@@ -37,13 +50,6 @@ public class HighlitedMessage(
                 || args.ChatMessage.IsBroadcaster
             )
             && args.ChatMessage.IsHighlighted
-            && args.ChatMessage.Channel.Equals(
-                TwitchExstension.Channel,
-                StringComparison.OrdinalIgnoreCase
-            )
-            && !TwitchExstension.BlackList.Logins.Any(t =>
-                t.Equals(args.ChatMessage.Username, StringComparison.OrdinalIgnoreCase)
-            )
         )
         {
             await Task.Factory.StartNew(async () =>

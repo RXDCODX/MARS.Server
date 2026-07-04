@@ -11,6 +11,7 @@ using MARS.Server.DataBaseContext;
 using MARS.Server.Exstensions;
 using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
+using MARS.Server.Services.Twitch.Validation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -32,7 +33,8 @@ public class RandomReward_TwitchReward(
     EventSubWebsocketClient wsClient,
     ChannelRewardsService channelRewardsService,
     IDbContextFactory<AppDbContext> dbContextFactory,
-    IOptionsMonitor<TwitchRewardsOptions> rewardsOptions
+    IOptionsMonitor<TwitchRewardsOptions> rewardsOptions,
+    ITwitchEventValidationService validator
 ) : TemporaryReward(channelRewardsService, logger, hostEnvironment)
 {
     public override string AlertDisplayName { get; set; } = "🎲 Случайная награда!";
@@ -72,32 +74,34 @@ public class RandomReward_TwitchReward(
         ChannelPointsCustomRewardRedemptionArgs args
     )
     {
+        var vr = await validator
+            .ForRedemption(args)
+            .RequireBroadcasterUserId()
+            .RequireCost(Cost)
+            .RequireRewardEnabled(IsRewardEnabled)
+            .ValidateAsync();
+
+        if (vr.IsInvalid)
+        {
+            return;
+        }
+
         var twEvent = args.Payload.Event;
 
-        if (
-            twEvent.BroadcasterUserId.Equals(
-                TwitchExstension.ChannelId,
-                StringComparison.OrdinalIgnoreCase
-            )
-            && twEvent.Reward.Cost == Cost
-            && IsRewardEnabled()
-        )
-        {
-            await Task.Factory.StartNew(
-                async () =>
+        await Task.Factory.StartNew(
+            async () =>
+            {
+                try
                 {
-                    try
-                    {
-                        await ActivateRandomReward(sender, twEvent);
-                    }
-                    catch (Exception e)
-                    {
-                        logger.LogException(e);
-                    }
-                },
-                _cancellationToken
-            );
-        }
+                    await ActivateRandomReward(sender, twEvent);
+                }
+                catch (Exception e)
+                {
+                    logger.LogException(e);
+                }
+            },
+            _cancellationToken
+        );
     }
 
     private async Task ActivateRandomReward(

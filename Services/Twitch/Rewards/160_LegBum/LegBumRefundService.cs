@@ -1,9 +1,10 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using MARS.Server.Exstensions;
 using MARS.Server.Services.Twitch.Management;
+using MARS.Server.Services.Twitch.Validation;
 using MARS.Server.Services.Twitch.Management.Entitys;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -25,7 +26,8 @@ public class LegBumRefundService(
     ILogger<LegBumRefundService> logger,
     EventSubWebsocketClient wsClient,
     TokenService tokenService,
-    LegBum_TwitchReward reward
+    LegBum_TwitchReward reward,
+    ITwitchEventValidationService validator
 ) : BackgroundService, ITwitchReward
 {
     public bool IsServiceActive { get; set; } = true;
@@ -55,7 +57,14 @@ public class LegBumRefundService(
         ChannelPointsCustomRewardRedemptionArgs args
     )
     {
-        if (!IsServiceActive)
+        var vr = await validator
+            .ForRedemption(args)
+            .RequireBroadcasterUserId()
+            .RequireServiceActive(IsServiceActive)
+            .RequireCost(Cost)
+            .ValidateAsync();
+
+        if (vr.IsInvalid)
         {
             return;
         }
@@ -64,15 +73,7 @@ public class LegBumRefundService(
 
         var twEvent = args.Payload.Event;
 
-        // Проверяем, что это награда за 160 баллов и от нужного канала
-        if (
-            twEvent.Reward.Cost == Cost
-            && twEvent.BroadcasterUserLogin.Equals(
-                TwitchExstension.Channel,
-                StringComparison.OrdinalIgnoreCase
-            )
-            && reward.TwitchRewardId.HasValue
-        )
+        if (reward.TwitchRewardId.HasValue)
         {
             try
             {

@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using MARS.Server.ApplicationState;
 using MARS.Server.DataBaseContext;
 using MARS.Server.Exstensions;
+using MARS.Server.Services.Twitch.Validation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using TwitchLib.Client.Events;
@@ -20,6 +21,7 @@ public class PuntoSwitcherService : BackgroundService, IPuntoSwitcherService
 {
     private readonly ITwitchClient? _twitchClient;
     private readonly IDbContextFactory<AppDbContext>? _dbContextFactory;
+    private readonly ITwitchEventValidationService? _validator;
 
     public bool IsFilterEnabled { get; set; } = true;
 
@@ -27,11 +29,13 @@ public class PuntoSwitcherService : BackgroundService, IPuntoSwitcherService
 
     public PuntoSwitcherService(
         ITwitchClient twitchClient,
-        IDbContextFactory<AppDbContext> dbContextFactory
+        IDbContextFactory<AppDbContext> dbContextFactory,
+        ITwitchEventValidationService validator
     )
     {
         _twitchClient = twitchClient;
         _dbContextFactory = dbContextFactory;
+        _validator = validator;
     }
 
     private static readonly HashSet<string> ProtectedTokens =
@@ -135,29 +139,27 @@ public class PuntoSwitcherService : BackgroundService, IPuntoSwitcherService
         }
     }
 
-    private Task OnMessageReceived(object? sender, OnMessageReceivedArgs args)
+    private async Task OnMessageReceived(object? sender, OnMessageReceivedArgs args)
     {
-        if (IsFilterEnabled)
+        if (IsFilterEnabled && _validator is not null)
         {
-            if (
-                args.ChatMessage.Channel.Equals(
-                    TwitchExstension.Channel,
-                    StringComparison.OrdinalIgnoreCase
-                )
-                && !TwitchExstension.BlackList.Logins.Any(t =>
-                    t.Equals(args.ChatMessage.Username, StringComparison.OrdinalIgnoreCase)
-                )
-            )
+            var result = await _validator
+                .ForMessageReceived(args)
+                .RequireChannel()
+                .SkipBlacklisted()
+                .ValidateAsync();
+
+            if (result.IsInvalid)
             {
-                var fixedMessage = TryFixMessage(args.ChatMessage.Message);
-                if (fixedMessage is { Success: true, Data.HasChanges: true })
-                {
-                    TryOverrideMessage(args.ChatMessage, fixedMessage.Data.CorrectedMessage);
-                }
+                return;
+            }
+
+            var fixedMessage = TryFixMessage(args.ChatMessage.Message);
+            if (fixedMessage is { Success: true, Data.HasChanges: true })
+            {
+                TryOverrideMessage(args.ChatMessage, fixedMessage.Data.CorrectedMessage);
             }
         }
-
-        return Task.CompletedTask;
     }
 
     private static ChatMessage TryOverrideMessage(ChatMessage source, string correctedMessage)

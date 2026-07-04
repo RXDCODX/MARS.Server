@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using MARS.Server.Exstensions;
 using MARS.Server.Hubs.Interfaces;
 using MARS.Server.Hubs.Models.VoiceRecognition;
+using MARS.Server.Services.Twitch.Validation;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -21,7 +22,8 @@ public class TtsHubBroadcaster(
     IHostApplicationLifetime lifetime,
     ISevenTvEmoteService sevenTvEmoteService,
     ITtsMessageFilterService ttsMessageFilterService,
-    TwitchUserEnsureService twitchUserEnsureService
+    TwitchUserEnsureService twitchUserEnsureService,
+    ITwitchEventValidationService validator
 ) : BackgroundService, ITtsHubBroadcaster
 {
     private const string TtsConsumersGroupName = "tts-consumers";
@@ -188,32 +190,32 @@ public class TtsHubBroadcaster(
 
     private async Task ClientOnOnMessageReceived(object? sender, OnMessageReceivedArgs args)
     {
-        if (
-            args.ChatMessage.Channel.Equals(
-                TwitchExstension.Channel,
-                StringComparison.OrdinalIgnoreCase
-            )
-            && !TwitchExstension.BlackList.Logins.Any(u =>
-                u.Equals(args.ChatMessage.Username, StringComparison.OrdinalIgnoreCase)
-            )
-        )
-        {
-            var messageWithoutEmotes = RemoveSevenTvEmotes(args.ChatMessage.Message);
-            if (string.IsNullOrWhiteSpace(messageWithoutEmotes))
-            {
-                return;
-            }
+        var vr = await validator
+            .ForMessageReceived(args)
+            .RequireChannel()
+            .SkipBlacklisted()
+            .ValidateAsync();
 
-            await Task.Factory.StartNew(
-                () =>
-                    BroadcastAsync(
-                        TwitchUser.FromOnMessageReceivedArgs(args)!,
-                        messageWithoutEmotes,
-                        lifetime.ApplicationStopping
-                    ),
-                cancellationToken: lifetime.ApplicationStopping
-            );
+        if (vr.IsInvalid)
+        {
+            return;
         }
+
+        var messageWithoutEmotes = RemoveSevenTvEmotes(args.ChatMessage.Message);
+        if (string.IsNullOrWhiteSpace(messageWithoutEmotes))
+        {
+            return;
+        }
+
+        await Task.Factory.StartNew(
+            () =>
+                BroadcastAsync(
+                    TwitchUser.FromOnMessageReceivedArgs(args)!,
+                    messageWithoutEmotes,
+                    lifetime.ApplicationStopping
+                ),
+            cancellationToken: lifetime.ApplicationStopping
+        );
     }
 
     private string RemoveSevenTvEmotes(string message)

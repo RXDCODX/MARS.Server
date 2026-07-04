@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Drawing;
 using System.Linq;
 using System.Threading;
@@ -8,6 +8,7 @@ using MARS.Server.Hubs;
 using MARS.Server.Hubs.Interfaces;
 using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
+using MARS.Server.Services.Twitch.Validation;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -30,7 +31,8 @@ public class TwitchMikuMondayRewardService(
     MikuMondayTracksService tracksService,
     ITwitchClient twitchClient,
     IHostEnvironment environment,
-    RickRollerService rickRollerService
+    RickRollerService rickRollerService,
+    ITwitchEventValidationService validator
 ) : TemporaryReward(channelRewardsService, logger, environment)
 {
     public override string AlertDisplayName { get; set; } = "🎤 Miku Monday [BETA TEST]";
@@ -77,19 +79,18 @@ public class TwitchMikuMondayRewardService(
         ChannelPointsCustomRewardRedemptionArgs args
     )
     {
-        var twEvent = args.Payload.Event;
+        var vr = await validator
+            .ForRedemption(args)
+            .RequireBroadcasterUserId()
+            .RequireCost(Cost)
+            .ValidateAsync();
 
-        // Проверяем, что это награда за нужное количество баллов и от нужного канала
-        if (
-            twEvent.Reward.Cost != Cost
-            || !twEvent.BroadcasterUserLogin.Equals(
-                TwitchExstension.Channel,
-                StringComparison.OrdinalIgnoreCase
-            )
-        )
+        if (vr.IsInvalid)
         {
             return;
         }
+
+        var twEvent = args.Payload.Event;
 
         try
         {
@@ -210,15 +211,9 @@ public class TwitchMikuMondayRewardService(
                     // Отправляем данные на фронт
                     await hubContext.Clients.All.MikuMonday(mikuMondayData);
 
-                    // Отправляем сообщение в чат
                     var trackArtist =
                         trackResult.Track.BaseTrackInfo?.Authors?.FirstOrDefault() ?? "Unknown";
                     var trackTitle = trackResult.Track.BaseTrackInfo?.TrackName ?? "Unknown";
-
-                    //await twitchClient.SendMessageToMainTwitchAsync(
-                    //    $"@{twEvent.UserName} получил трек #{trackResult.Track.Number}: {trackArtist} - {trackTitle} 🎤 Осталось треков: {trackResult.AvailableTracks.Count}",
-                    //    logger
-                    //);
 
                     logger.LogInformation(
                         "Miku Monday эффект активирован для {UserType} {UserName}, трек: #{Number} {Artist} - {Title}",

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -8,6 +8,7 @@ using MARS.Server.Exstensions;
 using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.Twitch.TwitchFollowers;
+using MARS.Server.Services.Twitch.Validation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -27,7 +28,8 @@ public class TwitchUserSyncService(
     TwitchUserInfoService userInfoService,
     TokenService tokenService,
     ILogger<TwitchUserSyncService> logger,
-    IHostApplicationLifetime lifetime
+    IHostApplicationLifetime lifetime,
+    ITwitchEventValidationService validator
 ) : BackgroundService
 {
     private readonly SemaphoreSlim _semaphore = new(1, 1);
@@ -54,23 +56,13 @@ public class TwitchUserSyncService(
 
     private async Task OnMessageReceived(object? sender, OnMessageReceivedArgs e)
     {
-        // Пропускаем сообщения не из основного канала
-        if (
-            !e.ChatMessage.Channel.Equals(
-                TwitchExstension.Channel,
-                StringComparison.OrdinalIgnoreCase
-            )
-        )
-        {
-            return;
-        }
+        var result = await validator
+            .ForMessageReceived(e)
+            .RequireChannel()
+            .SkipBlacklisted()
+            .ValidateAsync();
 
-        // Пропускаем ботов и черный список
-        if (
-            TwitchExstension.BlackList.Logins.Any(t =>
-                t.Equals(e.ChatMessage.Username, StringComparison.OrdinalIgnoreCase)
-            )
-        )
+        if (result.IsInvalid)
         {
             return;
         }

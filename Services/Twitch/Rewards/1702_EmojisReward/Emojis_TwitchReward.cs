@@ -8,6 +8,7 @@ using MARS.Server.Hubs;
 using MARS.Server.Hubs.Interfaces;
 using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
+using MARS.Server.Services.Twitch.Validation;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -24,7 +25,8 @@ public class Emojis_TwitchReward(
     IHubContext<TelegramusHub, ITelegramusHub> hubContext,
     IHostApplicationLifetime lifetime,
     ITwitchClient client,
-    RickRollerService rickRollerService
+    RickRollerService rickRollerService,
+    ITwitchEventValidationService validator
 ) : TemporaryReward(channelRewardsService, logger, environment)
 {
     public override string AlertDisplayName { get; set; } = "😀 Эмодзи!";
@@ -64,35 +66,28 @@ public class Emojis_TwitchReward(
 
     private async Task ClientOnOnMessageReceived(object? sender, OnMessageReceivedArgs e)
     {
-        if (
-            !string.IsNullOrWhiteSpace(e.ChatMessage.CustomRewardId)
-            && !TwitchExstension.BlackList.Logins.Any(t =>
-                t.Equals(e.ChatMessage.Username, StringComparison.OrdinalIgnoreCase)
-            )
-        )
-        {
-            await Task.Factory.StartNew(
-                async () =>
-                {
-                    var message = e.ChatMessage;
+        var vr = await validator
+            .ForMessageReceived(e)
+            .SkipBlacklisted()
+            .RequireRewardId()
+            .RequireChannel()
+            .RequireRewardGuid(TwitchRewardId)
+            .ValidateAsync();
 
-                    if (
-                        TwitchRewardId.HasValue
-                        && message.CustomRewardId == TwitchRewardId.Value.ToString()
-                        && message.Channel.Equals(
-                            TwitchExstension.Channel,
-                            StringComparison.OrdinalIgnoreCase
-                        )
-                    )
-                    {
-                        await rickRollerService.TryRickRollAsync(
-                            TwitchUser.FromOnMessageReceivedArgs(e)!,
-                            () => hubContext.Clients.All.MakeScreenEmojisParticles(message)
-                        );
-                    }
-                },
-                _token
-            );
+        if (vr.IsInvalid)
+        {
+            return;
         }
+
+        await Task.Factory.StartNew(
+            async () =>
+            {
+                await rickRollerService.TryRickRollAsync(
+                    TwitchUser.FromOnMessageReceivedArgs(e)!,
+                    () => hubContext.Clients.All.MakeScreenEmojisParticles(e.ChatMessage)
+                );
+            },
+            _token
+        );
     }
 }

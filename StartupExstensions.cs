@@ -58,6 +58,7 @@ using MARS.Server.Services.Twitch.StreamBotNotifications;
 using MARS.Server.Services.Twitch.StreamManagement;
 using MARS.Server.Services.Twitch.Synthesizer;
 using MARS.Server.Services.Twitch.TwitchFollowers;
+using MARS.Server.Services.Twitch.Validation;
 using MARS.Server.Services.Twitch.WeddingAnniversary;
 using MARS.Server.Services.WaifuRoll;
 using MARS.Server.Services.WaifuRoll.Entitys.Interfaces;
@@ -265,6 +266,8 @@ public static class StartupEstensions
 
             return twitchApi;
         });
+
+        services.AddSingleton<ITwitchEventValidationService, TwitchEventValidationService>();
 
         services.AddSingleton<MiniGamesManager>();
         services.AddHostedService(sp => sp.GetRequiredService<MiniGamesManager>());

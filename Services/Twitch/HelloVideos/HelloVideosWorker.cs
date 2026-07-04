@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -9,6 +9,7 @@ using MARS.Server.Hubs;
 using MARS.Server.Hubs.Interfaces;
 using MARS.Server.Services.PyroAlerts.Entitys;
 using MARS.Server.Services.Twitch.Entitys;
+using MARS.Server.Services.Twitch.Validation;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
@@ -23,7 +24,8 @@ public class HelloVideoWorker(
     ILogger<HelloVideoWorker> logger,
     IHostApplicationLifetime hostApplicationLifetime,
     IHubContext<TelegramusHub, ITelegramusHub> hubContext,
-    ITwitchClient client
+    ITwitchClient client,
+    ITwitchEventValidationService validator
 ) : BackgroundService
 {
     private readonly CancellationToken _token = hostApplicationLifetime.ApplicationStopping;
@@ -46,81 +48,81 @@ public class HelloVideoWorker(
 
     public async Task OnMessageReceived(object? sender, OnMessageReceivedArgs args)
     {
-        if ((args.ChatMessage.Channel != TwitchExstension.Channel || !IsServiceActive))
+        var result = await validator
+            .ForMessageReceived(args)
+            .RequireChannel()
+            .RequireServiceActive(IsServiceActive)
+            .SkipBlacklisted()
+            .ValidateAsync();
+
+        if (result.IsInvalid)
         {
             return;
         }
 
-        if (
-            !TwitchExstension.BlackList.Logins.Any(t =>
-                t.Equals(args.ChatMessage.Username, StringComparison.OrdinalIgnoreCase)
-            )
-        )
-        {
-            await Task.Factory.StartNew(
-                async () =>
+        await Task.Factory.StartNew(
+            async () =>
+            {
+                try
                 {
-                    try
+                    var now = DateTimeOffset.Now;
+                    await using var dbContext = await dbContextFactory.CreateDbContextAsync(
+                        _token
+                    );
+                    var user = await dbContext.FumoUsers.FindAsync(
+                        [args.ChatMessage.UserId],
+                        _token
+                    );
+
+                    if (now.DayOfWeek == DayOfWeek.Friday && user != null)
                     {
-                        var now = DateTimeOffset.Now;
-                        await using var dbContext = await dbContextFactory.CreateDbContextAsync(
+                        return;
+                    }
+
+                    if (_users.Contains(args.ChatMessage.Id))
+                    {
+                        return;
+                    }
+
+                    var notifUser = await dbContext
+                        .HelloVideosUsers.Include(e => e.MediaInfo)
+                        .FirstOrDefaultAsync(
+                            e => e.TwitchId == args.ChatMessage.UserId,
                             _token
                         );
-                        var user = await dbContext.FumoUsers.FindAsync(
-                            [args.ChatMessage.UserId],
-                            _token
-                        );
 
-                        if (now.DayOfWeek == DayOfWeek.Friday && user != null)
+                    if (notifUser != null)
+                    {
+                        if (notifUser.LastTimeNotif.Day != now.Day)
                         {
-                            return;
-                        }
+                            notifUser.LastTimeNotif = now;
+                            await dbContext.SaveChangesAsync(_token);
 
-                        if (_users.Contains(args.ChatMessage.Id))
-                        {
-                            return;
-                        }
-
-                        var notifUser = await dbContext
-                            .HelloVideosUsers.Include(e => e.MediaInfo)
-                            .FirstOrDefaultAsync(
-                                e => e.TwitchId == args.ChatMessage.UserId,
-                                _token
+                            notifUser.MediaInfo.FixAlertText(
+                                args.ChatMessage.DisplayName,
+                                args.ChatMessage.Message
+                            );
+                            notifUser.MediaInfo.FixAlertColor(
+                                TwitchUser.FromOnMessageReceivedArgs(args)!
                             );
 
-                        if (notifUser != null)
-                        {
-                            if (notifUser.LastTimeNotif.Day != now.Day)
-                            {
-                                notifUser.LastTimeNotif = now;
-                                await dbContext.SaveChangesAsync(_token);
+                            notifUser.MediaInfo.MetaInfo.Priority = MediaAlertPriority.High;
 
-                                notifUser.MediaInfo.FixAlertText(
-                                    args.ChatMessage.DisplayName,
-                                    args.ChatMessage.Message
-                                );
-                                notifUser.MediaInfo.FixAlertColor(
-                                    TwitchUser.FromOnMessageReceivedArgs(args)!
-                                );
+                            var mediaDto = new MediaDto { MediaInfo = notifUser.MediaInfo };
 
-                                notifUser.MediaInfo.MetaInfo.Priority = MediaAlertPriority.High;
-
-                                var mediaDto = new MediaDto { MediaInfo = notifUser.MediaInfo };
-
-                                await hubContext.Clients.All.Alert(mediaDto);
-                            }
-
-                            _users.Add(args.ChatMessage.Id);
+                            await hubContext.Clients.All.Alert(mediaDto);
                         }
+
+                        _users.Add(args.ChatMessage.Id);
                     }
-                    catch (Exception ex)
-                    {
-                        logger.LogException(ex);
-                    }
-                },
-                _token
-            );
-        }
+                }
+                catch (Exception ex)
+                {
+                    logger.LogException(ex);
+                }
+            },
+            _token
+        );
     }
 
     public async Task<string?> TestVideo(string name, string? color = "white")

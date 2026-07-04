@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Drawing;
 using System.Threading;
 using System.Threading.Tasks;
@@ -7,6 +7,7 @@ using MARS.Server.Hubs;
 using MARS.Server.Hubs.Interfaces;
 using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
+using MARS.Server.Services.Twitch.Validation;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -27,7 +28,8 @@ public class FumoFridayRoll_TwitchReward(
     FumoRollService fumoRollService,
     ITwitchAPI api,
     ITwitchClient client,
-    TwitchUserEnsureService ensureService
+    TwitchUserEnsureService ensureService,
+    ITwitchEventValidationService validator
 ) : TemporaryReward(channelRewardsService, logger, environment)
 {
     public override string AlertDisplayName { get; set; } = "🧸 Fumo Roulette";
@@ -61,35 +63,35 @@ public class FumoFridayRoll_TwitchReward(
         ChannelPointsCustomRewardRedemptionArgs args
     )
     {
-        ChannelPointsCustomRewardRedemption? twEvent = args.Payload.Event;
-        if (
-            twEvent.BroadcasterUserId.Equals(
-                TwitchExstension.ChannelId,
-                StringComparison.OrdinalIgnoreCase
-            ) && IsRewardActive
-        )
+        var vr = await validator
+            .ForRedemption(args)
+            .RequireBroadcasterUserId()
+            .RequireRewardEnabled(IsRewardEnabled)
+            .RequireCost(Cost)
+            .ValidateAsync();
+
+        if (vr.IsInvalid)
         {
-            if (twEvent.Reward.Cost == Cost)
-            {
-                await Task.Factory.StartNew(async () =>
-                {
-                    var fumo = await fumoRollService.RollTheFumo();
-
-                    if (fumo is not null)
-                    {
-                        var user = await ensureService.EnsureUserExistsAsync(twEvent.UserId);
-
-                        await hubContext.Clients.All.FumoRoll(fumo, user);
-                    }
-                    else
-                    {
-                        await client.SendMessageToMainTwitchAsync(
-                            $"@{twEvent.UserName}, не удалось найти Fumo :(",
-                            logger
-                        );
-                    }
-                });
-            }
+            return;
         }
+
+        await Task.Factory.StartNew(async () =>
+        {
+            var fumo = await fumoRollService.RollTheFumo();
+
+            if (fumo is not null)
+            {
+                var user = await ensureService.EnsureUserExistsAsync(args.Payload.Event.UserId);
+
+                await hubContext.Clients.All.FumoRoll(fumo, user);
+            }
+            else
+            {
+                await client.SendMessageToMainTwitchAsync(
+                    $"@{args.Payload.Event.UserName}, не удалось найти Fumo :(",
+                    logger
+                );
+            }
+        });
     }
 }

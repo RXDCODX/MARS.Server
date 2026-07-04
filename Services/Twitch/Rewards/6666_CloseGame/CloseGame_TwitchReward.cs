@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using MARS.Server.Exstensions;
 using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
+using MARS.Server.Services.Twitch.Validation;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using TwitchLib.EventSub.Core.EventArgs.Channel;
@@ -17,7 +18,8 @@ public class CloseGame_TwitchReward(
     ChannelRewardsService channelRewardsService,
     ILogger<CloseGame_TwitchReward> logger,
     IHostEnvironment environment,
-    EventSubWebsocketClient wsClient
+    EventSubWebsocketClient wsClient,
+    ITwitchEventValidationService validator
 ) : TemporaryReward(channelRewardsService, logger, environment)
 {
     public override string AlertDisplayName { get; set; } = "💻 Выключить игру";
@@ -46,31 +48,38 @@ public class CloseGame_TwitchReward(
         ChannelPointsCustomRewardRedemptionArgs args
     )
     {
-        var twEvent = args.Payload.Event;
-        var cost = twEvent.Reward.Cost;
-        if (cost == Cost && IsRewardEnabled())
+        var vr = await validator
+            .ForRedemption(args)
+            .RequireBroadcasterUserId()
+            .RequireRewardEnabled(IsRewardEnabled)
+            .RequireCost(Cost)
+            .ValidateAsync();
+
+        if (vr.IsInvalid)
         {
-            await Task.Factory.StartNew(() =>
+            return;
+        }
+
+        await Task.Factory.StartNew(() =>
+        {
+            var processNames = new[] { "Polaris-Win64-Shipping", "dota2" };
+            foreach (var name in processNames)
             {
-                var processNames = new[] { "Polaris-Win64-Shipping", "dota2" };
-                foreach (var name in processNames)
+                var processes = Process.GetProcessesByName(name);
+                foreach (var process in processes)
                 {
-                    var processes = Process.GetProcessesByName(name);
-                    foreach (var process in processes)
+                    try
                     {
-                        try
-                        {
-                            process.CloseMainWindow();
-                            process.Kill();
-                            process.WaitForExit();
-                        }
-                        catch (Exception ex)
-                        {
-                            logger.LogException(ex);
-                        }
+                        process.CloseMainWindow();
+                        process.Kill();
+                        process.WaitForExit();
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogException(ex);
                     }
                 }
-            });
-        }
+            }
+        });
     }
 }

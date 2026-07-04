@@ -15,6 +15,7 @@ using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Media;
 using MARS.Server.Services.Twitch.Rewards._11_RandomMemReward.Service.Entity;
 using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
+using MARS.Server.Services.Twitch.Validation;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
@@ -37,7 +38,8 @@ public class RandomMem_TwitchReward(
     ITelegramBotClient telegramBotClient,
     IHostApplicationLifetime applicationLifetime,
     EventSubWebsocketClient wsClient,
-    RickRollerService rickRollerService
+    RickRollerService rickRollerService,
+    ITwitchEventValidationService validator
 ) : TemporaryReward(channelRewardsService, logger, environment)
 {
     public override string AlertDisplayName { get; set; } = "😂 Random Mem";
@@ -69,31 +71,33 @@ public class RandomMem_TwitchReward(
         ChannelPointsCustomRewardRedemptionArgs args
     )
     {
+        var vr = await validator
+            .ForRedemption(args)
+            .RequireBroadcasterUserId()
+            .RequireCost(Cost)
+            .ValidateAsync();
+
+        if (vr.IsInvalid)
+        {
+            return;
+        }
+
         var twEvent = args.Payload.Event;
 
-        if (
-            twEvent.BroadcasterUserId.Equals(
-                TwitchExstension.ChannelId,
-                StringComparison.OrdinalIgnoreCase
-            )
-            && twEvent.Reward.Cost == Cost
-        )
-        {
-            await rickRollerService.TryRickRollAsync(
-                TwitchUser.FromChannelPointsCustomRewardRedemptionArgs(args)!,
-                async () =>
-                {
-                    var media = await GetMeme(twEvent.UserName);
+        await rickRollerService.TryRickRollAsync(
+            TwitchUser.FromChannelPointsCustomRewardRedemptionArgs(args)!,
+            async () =>
+            {
+                var media = await GetMeme(twEvent.UserName);
 
-                    if (media is not null)
-                    {
-                        await hubContext.Clients.All.RandomMem(
-                            new MediaDto(media) { MediaInfo = media }
-                        );
-                    }
+                if (media is not null)
+                {
+                    await hubContext.Clients.All.RandomMem(
+                        new MediaDto(media) { MediaInfo = media }
+                    );
                 }
-            );
-        }
+            }
+        );
     }
 
     private Task<MediaInfo?> GetMeme(string? displayName)

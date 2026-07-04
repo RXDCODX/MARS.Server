@@ -7,6 +7,7 @@ using MARS.Server.Hubs;
 using MARS.Server.Hubs.Interfaces;
 using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
+using MARS.Server.Services.Twitch.Validation;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -22,7 +23,8 @@ public class Confetti_TwitchReward(
     IHubContext<TelegramusHub, ITelegramusHub> hubContext,
     EventSubWebsocketClient wsClient,
     IHostApplicationLifetime lifetime,
-    RickRollerService rickRollerService
+    RickRollerService rickRollerService,
+    ITwitchEventValidationService validator
 ) : TemporaryReward(channelRewardsService, logger, environment)
 {
     public override string AlertDisplayName { get; set; } = "🎉 Конфетти!";
@@ -53,19 +55,20 @@ public class Confetti_TwitchReward(
         ChannelPointsCustomRewardRedemptionArgs args
     )
     {
-        var twEvent = args.Payload.Event;
-        if (
-            twEvent.Reward.Cost == Cost
-            && twEvent.BroadcasterUserLogin.Equals(
-                TwitchExstension.Channel,
-                StringComparison.OrdinalIgnoreCase
-            )
-        )
+        var vr = await validator
+            .ForRedemption(args)
+            .RequireBroadcasterUserId()
+            .RequireCost(Cost)
+            .ValidateAsync();
+
+        if (vr.IsInvalid)
         {
-            await rickRollerService.TryRickRollAsync(
-                TwitchUser.FromChannelPointsCustomRewardRedemptionArgs(args)!,
-                () => hubContext.Clients.All.MakeScreenParticles(TwitchScreenParticles.Confetty)
-            );
+            return;
         }
+
+        await rickRollerService.TryRickRollAsync(
+            TwitchUser.FromChannelPointsCustomRewardRedemptionArgs(args)!,
+            () => hubContext.Clients.All.MakeScreenParticles(TwitchScreenParticles.Confetty)
+        );
     }
 }

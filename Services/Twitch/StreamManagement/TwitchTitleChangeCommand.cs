@@ -1,8 +1,9 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using MARS.Server.Exstensions;
+using MARS.Server.Services.Twitch.Validation;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using TwitchLib.Client.Events;
@@ -16,7 +17,8 @@ namespace MARS.Server.Services.Twitch.StreamManagement;
 public class TwitchTitleChangeCommand(
     TwitchStreamManagementService streamManagementService,
     ITwitchClient client,
-    ILogger<TwitchTitleChangeCommand> logger
+    ILogger<TwitchTitleChangeCommand> logger,
+    ITwitchEventValidationService validator
 ) : BackgroundService
 {
     public bool IsServiceActive { get; set; } = true;
@@ -42,7 +44,13 @@ public class TwitchTitleChangeCommand(
 
     private async Task OnMessageReceived(object? sender, OnMessageReceivedArgs args)
     {
-        if (!IsServiceActive)
+        var result = await validator
+            .ForMessageReceived(args)
+            .RequireServiceActive(IsServiceActive)
+            .SkipBlacklisted()
+            .ValidateAsync();
+
+        if (result.IsInvalid)
         {
             return;
         }
@@ -53,12 +61,7 @@ public class TwitchTitleChangeCommand(
         var isBroadcaster = args.ChatMessage.IsBroadcaster;
 
         // Проверяем, что это команда !title
-        if (
-            message.StartsWith(CommandPrefix, StringComparison.OrdinalIgnoreCase)
-            && !TwitchExstension.BlackList.Logins.Any(t =>
-                t.Equals(args.ChatMessage.Username, StringComparison.OrdinalIgnoreCase)
-            )
-        )
+        if (message.StartsWith(CommandPrefix, StringComparison.OrdinalIgnoreCase))
         {
             await Task.Run(async () =>
             {

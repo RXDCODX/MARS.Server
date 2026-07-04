@@ -9,6 +9,7 @@ using MARS.Server.Hubs;
 using MARS.Server.Hubs.Interfaces;
 using MARS.Server.Services.Shikimori;
 using MARS.Server.Services.Twitch.Management;
+using MARS.Server.Services.Twitch.Validation;
 using MARS.Server.Services.WaifuRoll;
 using MARS.Server.Services.WaifuRoll.Entitys.Interfaces;
 using MARS.Server.Services.WaifuRoll.helpers;
@@ -35,7 +36,8 @@ public class AddNewWaifu(
     TokenService tokenService,
     IWaifuRollGuaranteeService guaranteeService,
     WaifuRollEnsurenceService waifuDbHelper,
-    AddWife_TwitchReward reward
+    AddWife_TwitchReward reward,
+    ITwitchEventValidationService validator
 ) : BackgroundService
 {
     private readonly ShikimoriClientOptions _options = options.Value;
@@ -50,29 +52,18 @@ public class AddNewWaifu(
         OnMessageReceivedArgs onMessageReceivedArgs
     )
     {
-        var broadcasterId = onMessageReceivedArgs.ChatMessage.RoomId;
-        var rewardId = onMessageReceivedArgs.ChatMessage.CustomRewardId;
+        var result = await validator
+            .ForMessageReceived(onMessageReceivedArgs)
+            .RequireRewardId()
+            .RequireBroadcasterId()
+            .RequireRewardGuid(RewardGuid)
+            .SkipBlacklisted()
+            .ValidateAsync();
 
-        if (string.IsNullOrWhiteSpace(rewardId))
+        if (result.IsInvalid)
         {
             return;
         }
-
-        if (!broadcasterId.Equals(TwitchExstension.ChannelId, StringComparison.OrdinalIgnoreCase))
-        {
-            return;
-        }
-
-        if (
-            RewardGuid.HasValue
-            && Guid.Parse(rewardId) == RewardGuid
-            && !TwitchExstension.BlackList.Logins.Any(t =>
-                t.Equals(
-                    onMessageReceivedArgs.ChatMessage.Username,
-                    StringComparison.OrdinalIgnoreCase
-                )
-            )
-        )
         {
             await Task.Factory.StartNew(async () =>
             {

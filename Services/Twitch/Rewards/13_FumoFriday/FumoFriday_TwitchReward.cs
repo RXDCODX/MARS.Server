@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
@@ -11,6 +11,7 @@ using MARS.Server.Hubs.Interfaces;
 using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Rewards._13_FumoFriday.Entitys;
 using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
+using MARS.Server.Services.Twitch.Validation;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
@@ -33,7 +34,8 @@ public class FumoFriday_TwitchReward(
     EventSubWebsocketClient wsClient,
     TwitchUserEnsureService twitchUserEnsureService,
     IHubContext<TelegramusHub, ITelegramusHub> alertsHub,
-    IHostEnvironment environment
+    IHostEnvironment environment,
+    ITwitchEventValidationService validator
 ) : TemporaryReward(channelRewardsService, logger, environment)
 {
     public override string AlertDisplayName { get; set; } = "🌙 Fumo Friday";
@@ -83,12 +85,13 @@ public class FumoFriday_TwitchReward(
 
     public async Task OnMessageReceived(object? sender, OnMessageReceivedArgs e)
     {
-        if (
-            !IsServiceActive
-            || TwitchExstension.BlackList.Logins.Any(t =>
-                t.Equals(e.ChatMessage.Username, StringComparison.OrdinalIgnoreCase)
-            )
-        )
+        var vr = await validator
+            .ForMessageReceived(e)
+            .RequireServiceActive(IsServiceActive)
+            .SkipBlacklisted()
+            .ValidateAsync();
+
+        if (vr.IsInvalid)
         {
             return;
         }
@@ -135,12 +138,13 @@ public class FumoFriday_TwitchReward(
         ChannelPointsCustomRewardRedemptionArgs args
     )
     {
-        if (!IsServiceActive)
-        {
-            return;
-        }
+        var vr = await validator
+            .ForRedemption(args)
+            .RequireServiceActive(IsServiceActive)
+            .RequireBroadcasterUserLogin()
+            .ValidateAsync();
 
-        if (args.Payload.Event.BroadcasterUserLogin != TwitchExstension.Channel)
+        if (vr.IsInvalid)
         {
             return;
         }

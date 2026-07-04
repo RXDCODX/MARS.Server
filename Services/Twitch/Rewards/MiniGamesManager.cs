@@ -8,6 +8,7 @@ using MARS.Server.Services.Twitch.Entitys.Interfaces;
 using MARS.Server.Services.Twitch.Rewards._6_RussianRoulette;
 using MARS.Server.Services.Twitch.Rewards._7_Quiz;
 using MARS.Server.Services.Twitch.Rewards._9_AudioQuiz;
+using MARS.Server.Services.Twitch.Validation;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using TwitchLib.Client.Events;
@@ -21,7 +22,8 @@ public class MiniGamesManager(
     IServiceProvider serviceProvider,
     IHostApplicationLifetime lifetime,
     ITwitchClient client,
-    EventSubWebsocketClient wsClient
+    EventSubWebsocketClient wsClient,
+    ITwitchEventValidationService validator
 ) : IHostedService
 {
     public bool IsServiceActive { get; set; } = true;
@@ -56,7 +58,12 @@ public class MiniGamesManager(
         ChannelPointsCustomRewardRedemptionArgs args
     )
     {
-        if (!IsServiceActive)
+        var vr = await validator
+            .ForRedemption(args)
+            .RequireServiceActive(IsServiceActive)
+            .ValidateAsync();
+
+        if (vr.IsInvalid)
         {
             return;
         }
@@ -141,12 +148,13 @@ public class MiniGamesManager(
 
     private async Task ClientOnMessageReceived(object? sender, OnMessageReceivedArgs e)
     {
-        if (
-            !IsServiceActive
-            || TwitchExstension.BlackList.Logins.Any(t =>
-                t.Equals(e.ChatMessage.Username, StringComparison.OrdinalIgnoreCase)
-            )
-        )
+        var vr = await validator
+            .ForMessageReceived(e)
+            .RequireServiceActive(IsServiceActive)
+            .SkipBlacklisted()
+            .ValidateAsync();
+
+        if (vr.IsInvalid)
         {
             return;
         }

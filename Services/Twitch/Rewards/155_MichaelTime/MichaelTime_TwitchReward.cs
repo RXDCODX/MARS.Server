@@ -7,6 +7,7 @@ using MARS.Server.Hubs;
 using MARS.Server.Hubs.Interfaces;
 using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
+using MARS.Server.Services.Twitch.Validation;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -22,7 +23,8 @@ public class MichaelTime_TwitchReward(
     IHubContext<TelegramusHub, ITelegramusHub> hubContext,
     EventSubWebsocketClient wsClient,
     IHostApplicationLifetime lifetime,
-    RickRollerService rickRollerService
+    RickRollerService rickRollerService,
+    ITwitchEventValidationService validator
 ) : TemporaryReward(channelRewardsService, logger, environment)
 {
     public override string AlertDisplayName { get; set; } = "⏰ Michael Time!";
@@ -59,41 +61,43 @@ public class MichaelTime_TwitchReward(
         ChannelPointsCustomRewardRedemptionArgs args
     )
     {
+        var vr = await validator
+            .ForRedemption(args)
+            .RequireBroadcasterUserId()
+            .RequireCost(Cost)
+            .ValidateAsync();
+
+        if (vr.IsInvalid)
+        {
+            return;
+        }
+
         var twEvent = args.Payload.Event;
 
-        if (
-            twEvent.Reward.Cost == Cost
-            && twEvent.BroadcasterUserLogin.Equals(
-                TwitchExstension.Channel,
-                StringComparison.OrdinalIgnoreCase
-            )
-        )
+        try
         {
-            try
-            {
-                await rickRollerService.TryRickRollAsync(
-                    TwitchUser.FromChannelPointsCustomRewardRedemptionArgs(args)!,
-                    async () =>
-                    {
-                        logger.LogInformation(
-                            "MichaelJackson награда активирована пользователем {UserName} за {Cost} баллов",
-                            twEvent.UserName,
-                            twEvent.Reward.Cost
-                        );
+            await rickRollerService.TryRickRollAsync(
+                TwitchUser.FromChannelPointsCustomRewardRedemptionArgs(args)!,
+                async () =>
+                {
+                    logger.LogInformation(
+                        "MichaelJackson награда активирована пользователем {UserName} за {Cost} баллов",
+                        twEvent.UserName,
+                        twEvent.Reward.Cost
+                    );
 
-                        await hubContext.Clients.All.MichaelJackson();
+                    await hubContext.Clients.All.MichaelJackson();
 
-                        logger.LogInformation(
-                            "MichaelJackson эффект активирован для пользователя {UserName}",
-                            twEvent.UserName
-                        );
-                    }
-                );
-            }
-            catch (Exception ex)
-            {
-                logger.LogException(ex);
-            }
+                    logger.LogInformation(
+                        "MichaelJackson эффект активирован для пользователя {UserName}",
+                        twEvent.UserName
+                    );
+                }
+            );
+        }
+        catch (Exception ex)
+        {
+            logger.LogException(ex);
         }
     }
 }

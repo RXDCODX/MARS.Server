@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -8,6 +8,7 @@ using MARS.Server.Hubs;
 using MARS.Server.Hubs.Interfaces;
 using MARS.Server.Services.PyroAlerts.Entitys;
 using MARS.Server.Services.Twitch.Entitys;
+using MARS.Server.Services.Twitch.Validation;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
@@ -25,7 +26,8 @@ public class TwitchMediaAlerts(
     IHostApplicationLifetime applicationLifetime,
     EventSubWebsocketClient wsClient,
     RickRollerService rickRollerService,
-    TwitchUserEnsureService twitchUserEnsureService
+    TwitchUserEnsureService twitchUserEnsureService,
+    ITwitchEventValidationService validator
 ) : BackgroundService
 {
     private readonly CancellationToken _token = applicationLifetime.ApplicationStopping;
@@ -34,35 +36,35 @@ public class TwitchMediaAlerts(
 
     internal async Task TwitchClientOnNormalMessage(object? sender, OnMessageReceivedArgs args)
     {
-        if (
-            args.ChatMessage.Channel.Equals(
-                TwitchExstension.Channel,
-                StringComparison.OrdinalIgnoreCase
-            )
-            && !TwitchExstension.BlackList.Logins.Any(u =>
-                u.Equals(args.ChatMessage.Username, StringComparison.OrdinalIgnoreCase)
-            )
-            && IsServiceActive
-        )
+        var vr = await validator
+            .ForMessageReceived(args)
+            .RequireChannel()
+            .SkipBlacklisted()
+            .RequireServiceActive(IsServiceActive)
+            .ValidateAsync();
+
+        if (vr.IsInvalid)
         {
-            await Task.Run(
-                async () =>
-                {
-                    var context = await dbContextFactory.CreateDbContextAsync(_token);
-
-                    var alert = context.Alerts.FirstOrDefault(e =>
-                        e.MetaInfo.IsEnabled
-                        && e.MetaInfo.TwitchGuid.ToString() == args.ChatMessage.CustomRewardId
-                    );
-
-                    if (alert != null)
-                    {
-                        await SendAlert(args);
-                    }
-                },
-                _token
-            );
+            return;
         }
+
+        await Task.Run(
+            async () =>
+            {
+                var context = await dbContextFactory.CreateDbContextAsync(_token);
+
+                var alert = context.Alerts.FirstOrDefault(e =>
+                    e.MetaInfo.IsEnabled
+                    && e.MetaInfo.TwitchGuid.ToString() == args.ChatMessage.CustomRewardId
+                );
+
+                if (alert != null)
+                {
+                    await SendAlert(args);
+                }
+            },
+            _token
+        );
     }
 
     private async Task SendAlert(OnMessageReceivedArgs args)
@@ -117,65 +119,68 @@ public class TwitchMediaAlerts(
         ChannelPointsCustomRewardRedemptionArgs args
     )
     {
-        if (
-            args.Payload.Event.BroadcasterUserId.Equals(
-                TwitchExstension.ChannelId,
-                StringComparison.OrdinalIgnoreCase
-            ) && IsServiceActive
-        )
+        var vr = await validator
+            .ForRedemption(args)
+            .RequireBroadcasterUserId()
+            .RequireServiceActive(IsServiceActive)
+            .ValidateAsync();
+
+        if (vr.IsInvalid)
         {
-            var value = args.Payload.Event;
+            return;
+        }
 
-            if (string.IsNullOrWhiteSpace(value.UserInput))
+        var value = args.Payload.Event;
+
+        if (string.IsNullOrWhiteSpace(value.UserInput))
+        {
+            var message = value;
+
+            await using AppDbContext dbContext = await dbContextFactory.CreateDbContextAsync(
+                _token
+            );
+            var mediaList = dbContext
+                .Alerts.AsNoTracking()
+                .AsEnumerable()
+                .Where(e => e.MetaInfo.IsEnabled && e.MetaInfo.TwitchPointsCost == message.Reward.Cost)
+                .ToList();
+
+            MediaInfo? mediaOld = null;
+
+            switch (mediaList.Count)
             {
-                var message = value;
-
-                await using AppDbContext dbContext = await dbContextFactory.CreateDbContextAsync(
-                    _token
-                );
-                var mediaList = dbContext
-                    .Alerts.AsNoTracking()
-                    .AsEnumerable()
-                    .Where(e => e.MetaInfo.IsEnabled && e.MetaInfo.TwitchPointsCost == message.Reward.Cost)
-                    .ToList();
-
-                MediaInfo? mediaOld = null;
-
-                switch (mediaList.Count)
+                case 1:
+                    mediaOld = mediaList[0];
+                    break;
+                case > 1:
                 {
-                    case 1:
-                        mediaOld = mediaList[0];
-                        break;
-                    case > 1:
+                    var index = Random.Shared.Next(mediaList.Count);
+                    mediaOld = mediaList[index];
+                    break;
+                }
+            }
+
+            if (mediaOld != null)
+            {
+                await rickRollerService.TryRickRollAsync(
+                    TwitchUser.FromChannelPointsCustomRewardRedemptionArgs(args)!,
+                    async () =>
                     {
-                        var index = Random.Shared.Next(mediaList.Count);
-                        mediaOld = mediaList[index];
-                        break;
+                        var mediaClone = mediaOld.CloneTo();
+
+                        var user = await twitchUserEnsureService.EnsureUserExistsAsync(
+                            TwitchUser.FromChannelPointsCustomRewardRedemptionArgs(args)!,
+                            _token
+                        );
+
+                        mediaClone.FixAlertText(user, string.Empty);
+                        mediaClone.FixAlertColor(user);
+
+                        await hubContext.Clients.All.Alert(
+                            new MediaDto { MediaInfo = mediaClone }
+                        );
                     }
-                }
-
-                if (mediaOld != null)
-                {
-                    await rickRollerService.TryRickRollAsync(
-                        TwitchUser.FromChannelPointsCustomRewardRedemptionArgs(args)!,
-                        async () =>
-                        {
-                            var mediaClone = mediaOld.CloneTo();
-
-                            var user = await twitchUserEnsureService.EnsureUserExistsAsync(
-                                TwitchUser.FromChannelPointsCustomRewardRedemptionArgs(args)!,
-                                _token
-                            );
-
-                            mediaClone.FixAlertText(user, string.Empty);
-                            mediaClone.FixAlertColor(user);
-
-                            await hubContext.Clients.All.Alert(
-                                new MediaDto { MediaInfo = mediaClone }
-                            );
-                        }
-                    );
-                }
+                );
             }
         }
     }

@@ -1,10 +1,11 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using MARS.Server.DataBaseContext;
 using MARS.Server.Exstensions;
 using MARS.Server.Services.CinemaQueue.Entitys;
 using MARS.Server.Services.CinemaQueue.Interfaces;
+using MARS.Server.Services.Twitch.Validation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -20,7 +21,8 @@ public class TwitchCinemaQueueService(
     ILogger<TwitchCinemaQueueService> logger,
     ITwitchClient twitchClient,
     IMediaMetadataService metadataService,
-    IDbContextFactory<AppDbContext> dbFactory
+    IDbContextFactory<AppDbContext> dbFactory,
+    ITwitchEventValidationService validator
 ) : BackgroundService
 {
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
@@ -50,17 +52,23 @@ public class TwitchCinemaQueueService(
     {
         try
         {
+            var vr = await validator
+                .ForRedemption(e)
+                .RequireCost(1602)
+                .ValidateAsync();
+
+            if (vr.IsInvalid)
+            {
+                return;
+            }
+
             logger.LogInformation(
                 "Channel points redemption: {RewardTitle} by {UserName}",
                 e.Payload.Event.Reward.Title,
                 e.Payload.Event.UserName
             );
 
-            // Проверяем, является ли это наградой для добавления в очередь
-            if (IsCinemaQueueReward(e.Payload.Event.Reward.Cost))
-            {
-                await HandleCinemaQueueRedemption(e);
-            }
+            await HandleCinemaQueueRedemption(e);
         }
         catch (Exception ex)
         {

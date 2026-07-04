@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -9,6 +9,7 @@ using MARS.Server.Hubs;
 using MARS.Server.Hubs.Interfaces;
 using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Management;
+using MARS.Server.Services.Twitch.Validation;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
@@ -36,7 +37,8 @@ public class TwitchMikuBeamRewardService(
     IHostApplicationLifetime lifetime,
     IDbContextFactory<AppDbContext> factory,
     RickRollerService rickRollerService,
-    MikuBeam_TwitchReward reward
+    MikuBeam_TwitchReward reward,
+    ITwitchEventValidationService validator
 ) : BackgroundService
 {
     private readonly HashSet<string> _allUserIds = []; // Все ID пользователей для отображения (включая модераторов)
@@ -65,30 +67,18 @@ public class TwitchMikuBeamRewardService(
         return Task.CompletedTask;
     }
 
-    private Task OnMessageReceived(object? sender, OnMessageReceivedArgs e)
+    private async Task OnMessageReceived(object? sender, OnMessageReceivedArgs e)
     {
-        if (
-            !e.ChatMessage.Channel.Equals(
-                TwitchExstension.Channel,
-                StringComparison.OrdinalIgnoreCase
-            )
-        )
-        {
-            return Task.CompletedTask;
-        }
+        var vr = await validator
+            .ForMessageReceived(e)
+            .RequireChannel()
+            .SkipBlacklisted()
+            .RequireUserId()
+            .ValidateAsync();
 
-        if (
-            TwitchExstension.BlackList.Logins.Any(u =>
-                u.Equals(e.ChatMessage.Username, StringComparison.OrdinalIgnoreCase)
-            )
-        )
+        if (vr.IsInvalid)
         {
-            return Task.CompletedTask;
-        }
-
-        if (string.IsNullOrWhiteSpace(e.ChatMessage.UserId))
-        {
-            return Task.CompletedTask;
+            return;
         }
 
         // ID пользователя добавляем всегда (включая модераторов и стримера)
@@ -107,8 +97,6 @@ public class TwitchMikuBeamRewardService(
         }
 
         _semaphoreSlim.Release();
-
-        return Task.CompletedTask;
     }
 
     private async Task OnChannelPointsCustomRewardRedemption(
@@ -116,18 +104,18 @@ public class TwitchMikuBeamRewardService(
         ChannelPointsCustomRewardRedemptionArgs args
     )
     {
-        var twEvent = args.Payload.Event;
+        var vr = await validator
+            .ForRedemption(args)
+            .RequireBroadcasterUserLogin()
+            .RequireCost(reward.Cost)
+            .ValidateAsync();
 
-        if (
-            twEvent.Reward.Cost != reward.Cost
-            || !twEvent.BroadcasterUserLogin.Equals(
-                TwitchExstension.Channel,
-                StringComparison.OrdinalIgnoreCase
-            )
-        )
+        if (vr.IsInvalid)
         {
             return;
         }
+
+        var twEvent = args.Payload.Event;
 
         await rickRollerService.TryRickRollAsync(
             TwitchUser.FromChannelPointsCustomRewardRedemptionArgs(args)!,
