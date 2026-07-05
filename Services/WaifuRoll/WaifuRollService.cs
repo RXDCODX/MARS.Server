@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Linq;
+using System.Linq.Dynamic.Core;
 using System.Threading;
 using System.Threading.Tasks;
 using MARS.Server.ApplicationState;
@@ -185,8 +186,10 @@ public class WaifuRollService(
                 if (pass)
                 {
                     var waifu = await dbContext
-                        .Waifus.Where(e => !e.IsPrivated)
+                        .Waifus
                         .OrderBy(e => e.LastOrder)
+                        .Take(10)
+                        .OrderBy(x => Random.Shared.Next())
                         .FirstOrDefaultAsync();
 
                     if (waifu != null)
