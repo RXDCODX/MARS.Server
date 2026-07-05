@@ -19,6 +19,9 @@ public class Fumo
     public required string Character { get; set; }
 
     [MaxLength(100)]
+    public string? CharacterTranslit { get; set; }
+
+    [MaxLength(100)]
     public string? Origin { get; set; }
 
     [Required]

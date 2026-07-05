@@ -1,4 +1,5 @@
-﻿using MARS.Server.DataBaseContext;
+﻿using Cyrillic.Convert;
+using MARS.Server.DataBaseContext;
 using MARS.Server.Services.Twitch.Entitys;
 using Microsoft.EntityFrameworkCore;
 
@@ -20,6 +21,11 @@ public class FumoRollService(IDbContextFactory<AppDbContext> factory)
             {
                 fumo.OrderCount++;
                 fumo.LastOrder = DateTimeOffset.Now;
+
+                if (string.IsNullOrWhiteSpace(fumo.CharacterTranslit))
+                {
+                    fumo.CharacterTranslit = fumo.Character.ToRussianCyrillic();
+                }
 
                 dbContext.Fumos.Update(fumo);
                 await dbContext.SaveChangesAsync();
