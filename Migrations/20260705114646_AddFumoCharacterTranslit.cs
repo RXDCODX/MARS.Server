@@ -2,28 +2,27 @@
 
 #nullable disable
 
-namespace MARS.Server.Migrations
+namespace MARS.Server.Migrations;
+
+/// <inheritdoc />
+public partial class AddFumoCharacterTranslit : Migration
 {
     /// <inheritdoc />
-    public partial class AddFumoCharacterTranslit : Migration
+    protected override void Up(MigrationBuilder migrationBuilder)
     {
-        /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.AddColumn<string>(
-                name: "CharacterTranslit",
-                table: "Fumos",
-                type: "character varying(100)",
-                maxLength: 100,
-                nullable: true);
-        }
+        migrationBuilder.AddColumn<string>(
+            name: "CharacterTranslit",
+            table: "Fumos",
+            type: "character varying(100)",
+            maxLength: 100,
+            nullable: true);
+    }
 
-        /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.DropColumn(
-                name: "CharacterTranslit",
-                table: "Fumos");
-        }
+    /// <inheritdoc />
+    protected override void Down(MigrationBuilder migrationBuilder)
+    {
+        migrationBuilder.DropColumn(
+            name: "CharacterTranslit",
+            table: "Fumos");
     }
 }
