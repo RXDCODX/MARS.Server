@@ -76,6 +76,7 @@ public class Emojis_TwitchReward(
 
         if (vr.IsInvalid)
         {
+            await client.SendMessageToMainTwitchAsync($"@{e.ChatMessage.Username}, " + vr.FirstError);
             return;
         }
 

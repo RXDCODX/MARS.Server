@@ -109,6 +109,7 @@ public class MergeWaifu(
 
         if (vr.IsInvalid)
         {
+            await client.SendMessageToMainTwitchAsync($"@{args.Payload.Event.UserName}, " + vr.FirstError);
             return;
         }
 

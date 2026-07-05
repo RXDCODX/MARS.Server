@@ -62,6 +62,7 @@ public class AddNewWaifu(
 
         if (result.IsInvalid)
         {
+            await client.SendMessageToMainTwitchAsync($"@{onMessageReceivedArgs.ChatMessage.Username}, " + result.FirstError);
             return;
         }
         {

@@ -9,6 +9,7 @@ using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
 using MARS.Server.Services.Twitch.Validation;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using TwitchLib.Client.Interfaces;
 using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Websockets;
 
@@ -19,6 +20,7 @@ public class CloseGame_TwitchReward(
     ILogger<CloseGame_TwitchReward> logger,
     IHostEnvironment environment,
     EventSubWebsocketClient wsClient,
+    ITwitchClient client,
     ITwitchEventValidationService validator
 ) : TemporaryReward(channelRewardsService, logger, environment)
 {
@@ -57,6 +59,7 @@ public class CloseGame_TwitchReward(
 
         if (vr.IsInvalid)
         {
+            await client.SendMessageToMainTwitchAsync($"@{args.Payload.Event.UserName}, " + vr.FirstError);
             return;
         }
 

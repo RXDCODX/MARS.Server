@@ -49,6 +49,7 @@ public class AutoHello : BackgroundService
 
         if (result.IsInvalid)
         {
+            await _client.SendMessageToMainTwitchAsync($"@{args.ChatMessage.Username}, " + result.FirstError);
             return;
         }
 

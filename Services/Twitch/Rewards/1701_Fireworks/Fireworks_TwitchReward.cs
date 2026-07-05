@@ -11,6 +11,7 @@ using MARS.Server.Services.Twitch.Validation;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using TwitchLib.Client.Interfaces;
 using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Websockets;
 
@@ -24,6 +25,7 @@ public class Fireworks_TwitchReward(
     EventSubWebsocketClient wsClient,
     IHostApplicationLifetime lifetime,
     RickRollerService rickRollerService,
+    ITwitchClient client,
     ITwitchEventValidationService validator
 ) : TemporaryReward(channelRewardsService, logger, environment)
 {
@@ -66,6 +68,7 @@ public class Fireworks_TwitchReward(
 
         if (vr.IsInvalid)
         {
+            await client.SendMessageToMainTwitchAsync($"@{args.Payload.Event.UserName}, " + vr.FirstError);
             return;
         }
 

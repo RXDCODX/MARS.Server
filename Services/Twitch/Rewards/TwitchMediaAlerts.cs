@@ -46,6 +46,7 @@ public class TwitchMediaAlerts(
 
         if (vr.IsInvalid)
         {
+            await client.SendMessageToMainTwitchAsync($"@{args.ChatMessage.Username}, " + vr.FirstError);
             return;
         }
 
@@ -130,6 +131,7 @@ public class TwitchMediaAlerts(
 
         if (vr.IsInvalid)
         {
+            await client.SendMessageToMainTwitchAsync($"@{args.Payload.Event.UserName}, " + vr.FirstError);
             return;
         }
 

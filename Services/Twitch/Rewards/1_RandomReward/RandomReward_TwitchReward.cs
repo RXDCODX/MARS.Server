@@ -83,6 +83,7 @@ public class RandomReward_TwitchReward(
 
         if (vr.IsInvalid)
         {
+            await client.SendMessageToMainTwitchAsync($"@{args.Payload.Event.UserName}, " + vr.FirstError);
             return;
         }
 

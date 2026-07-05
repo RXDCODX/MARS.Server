@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using TwitchLib.Api.Interfaces;
+using TwitchLib.Client.Interfaces;
 using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Websockets;
 
@@ -28,6 +29,7 @@ public class GaoAlert_TwitchReward(
     EventSubWebsocketClient wsClient,
     IHostApplicationLifetime lifetime,
     RickRollerService rickRollerService,
+    ITwitchClient client,
     ITwitchEventValidationService validator
 ) : TemporaryReward(channelRewardsService, logger, environment)
 {
@@ -73,6 +75,7 @@ public class GaoAlert_TwitchReward(
 
         if (vr.IsInvalid)
         {
+            await client.SendMessageToMainTwitchAsync($"@{args.Payload.Event.UserName}, " + vr.FirstError);
             return;
         }
 

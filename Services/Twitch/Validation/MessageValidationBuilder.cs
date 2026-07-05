@@ -26,7 +26,7 @@ public sealed class MessageValidationBuilder(
                 )
             )
             {
-                throw new ValidationException("Message is not from the main channel");
+                throw new ValidationException("Эта команда работает только в основном канале");
             }
 
             return Task.CompletedTask;
@@ -46,7 +46,7 @@ public sealed class MessageValidationBuilder(
                 )
             )
             {
-                throw new ValidationException("Message is not from the broadcaster");
+                throw new ValidationException("Эта команда доступна только стримеру");
             }
 
             return Task.CompletedTask;
@@ -65,7 +65,7 @@ public sealed class MessageValidationBuilder(
                 )
             )
             {
-                throw new ValidationException("User is in the blacklist");
+                throw new ValidationException("У вас нет доступа к этой команде");
             }
 
             return Task.CompletedTask;
@@ -80,7 +80,7 @@ public sealed class MessageValidationBuilder(
         {
             if (string.IsNullOrWhiteSpace(args.ChatMessage.CustomRewardId))
             {
-                throw new ValidationException("Reward ID is empty");
+                throw new ValidationException("Не удалось определить награду");
             }
 
             return Task.CompletedTask;
@@ -95,13 +95,13 @@ public sealed class MessageValidationBuilder(
         {
             if (!expected.HasValue)
             {
-                throw new ValidationException("Reward GUID is not configured");
+                throw new ValidationException("Награда не настроена");
             }
 
             var rewardId = args.ChatMessage.CustomRewardId;
             if (string.IsNullOrWhiteSpace(rewardId) || Guid.Parse(rewardId) != expected)
             {
-                throw new ValidationException("Reward GUID does not match");
+                throw new ValidationException("Награда не найдена");
             }
 
             return Task.CompletedTask;
@@ -116,7 +116,7 @@ public sealed class MessageValidationBuilder(
         {
             if (!isActive)
             {
-                throw new ValidationException("Service is not active");
+                throw new ValidationException("Сервис временно неактивен");
             }
 
             return Task.CompletedTask;
@@ -131,7 +131,7 @@ public sealed class MessageValidationBuilder(
         {
             if (string.IsNullOrWhiteSpace(args.ChatMessage.UserId))
             {
-                throw new ValidationException("User ID is empty");
+                throw new ValidationException("Не удалось определить пользователя");
             }
 
             return Task.CompletedTask;
@@ -148,13 +148,13 @@ public sealed class MessageValidationBuilder(
 
             if (string.IsNullOrWhiteSpace(userId))
             {
-                throw new ValidationException("Cannot check follower status: User ID is empty");
+                throw new ValidationException("Не удалось проверить подписку");
             }
 
             var follower = await followerDb.GetFollowerFromDbAsync(userId);
             if (follower == null)
             {
-                throw new ValidationException("User is not a follower");
+                throw new ValidationException("Подпишись на канал, чтобы использовать эту команду");
             }
         });
 

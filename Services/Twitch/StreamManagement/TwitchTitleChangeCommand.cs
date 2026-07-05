@@ -52,6 +52,7 @@ public class TwitchTitleChangeCommand(
 
         if (result.IsInvalid)
         {
+            await client.SendMessageToMainTwitchAsync($"@{args.ChatMessage.Username}, " + result.FirstError);
             return;
         }
 

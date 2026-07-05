@@ -151,6 +151,7 @@ public class PuntoSwitcherService : BackgroundService, IPuntoSwitcherService
 
             if (result.IsInvalid)
             {
+                await _twitchClient!.SendMessageToMainTwitchAsync($"@{args.ChatMessage.Username}, " + result.FirstError);
                 return;
             }
 

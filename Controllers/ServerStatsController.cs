@@ -27,7 +27,6 @@ namespace MARS.Server.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 public class ServerStatsController(
-    IServiceManager serviceManager,
     ILogger<ServerStatsController> logger,
     EventSubService eventSubService,
     TwitchConnectionManager twitchConnectionManager,
@@ -58,9 +57,6 @@ public class ServerStatsController(
             var gcHeap = GC.GetTotalMemory(forceFullCollection: false);
             var cpuUsage = GetCpuUsage(process);
 
-            var services = await serviceManager.GetAllServicesAsync();
-            var serviceList = services.ToList();
-
             var audioControllerConnected = await soundBar.CheckHealthAsync();
             var nearestAnniversary = await weddingAnniversaryService.GetNearestAnniversaryAsync(
                 cancellationToken
@@ -75,8 +71,8 @@ public class ServerStatsController(
                 MemoryTotalBytes = totalMemory,
                 UptimeSeconds = UptimeStopwatch.Elapsed.TotalSeconds,
                 ThreadCount = process.Threads.Count,
-                ActiveServicesCount = serviceList.Count(s => s.Status == ServiceStatus.Running),
-                TotalServicesCount = serviceList.Count,
+                ActiveServicesCount = 0,
+                TotalServicesCount = 0,
                 OsVersion = Environment.OSVersion.ToString(),
                 RuntimeVersion = RuntimeInformation.FrameworkDescription,
                 MachineName = Environment.MachineName,
@@ -114,9 +110,9 @@ public class ServerStatsController(
     /// Переключить фильтр дубликатов TTS сообщений
     /// </summary>
     [HttpPost("toggle-tts-filter")]
-    public async Task<
-        ActionResult<OperationResult<bool>>
-    > ToggleTtsFilter(CancellationToken cancellationToken = default)
+    public async Task<ActionResult<OperationResult<bool>>> ToggleTtsFilter(
+        CancellationToken cancellationToken = default
+    )
     {
         ActionResult<OperationResult<bool>> result;
 
@@ -158,9 +154,9 @@ public class ServerStatsController(
     /// Переключить PuntoSwitcher фильтрацию
     /// </summary>
     [HttpPost("toggle-punto-switcher")]
-    public async Task<
-        ActionResult<OperationResult<bool>>
-    > TogglePuntoSwitcher(CancellationToken cancellationToken = default)
+    public async Task<ActionResult<OperationResult<bool>>> TogglePuntoSwitcher(
+        CancellationToken cancellationToken = default
+    )
     {
         ActionResult<OperationResult<bool>> result;
 
@@ -203,9 +199,10 @@ public class ServerStatsController(
         try
         {
             var cpuTime = process.TotalProcessorTime;
-            var uptime = process.ExitTime == DateTime.MaxValue
-                ? DateTime.UtcNow - process.StartTime.ToUniversalTime()
-                : process.ExitTime - process.StartTime;
+            var uptime =
+                process.ExitTime == DateTime.MaxValue
+                    ? DateTime.UtcNow - process.StartTime.ToUniversalTime()
+                    : process.ExitTime - process.StartTime;
 
             if (uptime.TotalMilliseconds <= 0)
             {
@@ -213,8 +210,10 @@ public class ServerStatsController(
             }
 
             return Math.Round(
-                (cpuTime.TotalMilliseconds / (uptime.TotalMilliseconds * Environment.ProcessorCount))
-                    * 100,
+                (
+                    cpuTime.TotalMilliseconds
+                    / (uptime.TotalMilliseconds * Environment.ProcessorCount)
+                ) * 100,
                 2
             );
         }

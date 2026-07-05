@@ -57,6 +57,7 @@ public class HelloVideoWorker(
 
         if (result.IsInvalid)
         {
+            await client.SendMessageToMainTwitchAsync($"@{args.ChatMessage.Username}, " + result.FirstError);
             return;
         }
 

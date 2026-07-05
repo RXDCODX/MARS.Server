@@ -7,6 +7,8 @@ public sealed class ValidationResult
     private readonly List<string> _errors = [];
 
     public IReadOnlyList<string> Errors => _errors;
+
+    public string? FirstError => _errors.Count > 0 ? _errors[0] : null;
     public bool IsValid => _errors.Count == 0;
     public bool IsInvalid => !IsValid;
 

@@ -63,6 +63,7 @@ public class TwitchMessagesHubAwaker(
 
         if (vr.IsInvalid)
         {
+            await client.SendMessageToMainTwitchAsync($"@{e.ChatMessage.Username}, " + vr.FirstError);
             return;
         }
 
@@ -234,6 +235,7 @@ public class TwitchMessagesHubAwaker(
 
         if (vr.IsInvalid)
         {
+            await client.SendMessageToMainTwitchAsync($"@{args.ChatMessage.Username}, " + vr.FirstError);
             return;
         }
 

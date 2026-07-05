@@ -75,6 +75,7 @@ public class AllRefund_TwitchReward(
 
         if (vr.IsInvalid)
         {
+            await client.SendMessageToMainTwitchAsync($"@{e.Payload.Event.UserName}, " + vr.FirstError);
             return;
         }
 
@@ -135,6 +136,7 @@ public class AllRefund_TwitchReward(
 
         if (vr.IsInvalid)
         {
+            await client.SendMessageToMainTwitchAsync($"@{args.Payload.Event.UserName}, " + vr.FirstError);
             return;
         }
 

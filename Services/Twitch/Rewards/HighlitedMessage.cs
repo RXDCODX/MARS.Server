@@ -40,6 +40,7 @@ public class HighlitedMessage(
 
         if (vr.IsInvalid)
         {
+            await client.SendMessageToMainTwitchAsync($"@{args.ChatMessage.Username}, " + vr.FirstError);
             return;
         }
 

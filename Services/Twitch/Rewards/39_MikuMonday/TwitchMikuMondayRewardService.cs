@@ -87,6 +87,7 @@ public class TwitchMikuMondayRewardService(
 
         if (vr.IsInvalid)
         {
+            await twitchClient.SendMessageToMainTwitchAsync($"@{args.Payload.Event.UserName}, " + vr.FirstError);
             return;
         }
 

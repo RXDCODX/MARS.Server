@@ -93,6 +93,7 @@ public class FumoFriday_TwitchReward(
 
         if (vr.IsInvalid)
         {
+            await twitchClient.SendMessageToMainTwitchAsync($"@{e.ChatMessage.Username}, " + vr.FirstError);
             return;
         }
 

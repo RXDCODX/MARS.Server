@@ -66,6 +66,7 @@ public class WaifuRollCooldownNotificationService(
 
         if (result.IsInvalid)
         {
+            await twitchClient.SendMessageToMainTwitchAsync($"@{e.Payload.Event.UserName}, " + result.FirstError);
             return;
         }
 

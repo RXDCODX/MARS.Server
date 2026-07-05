@@ -64,6 +64,7 @@ public class TwitchUserSyncService(
 
         if (result.IsInvalid)
         {
+            await twitchClient.SendMessageToMainTwitchAsync($"@{e.ChatMessage.Username}, " + result.FirstError);
             return;
         }
 

@@ -29,7 +29,7 @@ public sealed class RedemptionValidationBuilder(
                 )
             )
             {
-                throw new ValidationException("Redemption is not from the correct broadcaster");
+                throw new ValidationException("Награда не относится к этому каналу");
             }
 
             return Task.CompletedTask;
@@ -49,7 +49,7 @@ public sealed class RedemptionValidationBuilder(
                 )
             )
             {
-                throw new ValidationException("Redemption broadcaster login does not match");
+                throw new ValidationException("Награда не относится к этому каналу");
             }
 
             return Task.CompletedTask;
@@ -64,9 +64,7 @@ public sealed class RedemptionValidationBuilder(
         {
             if (Event.Reward.Cost != cost)
             {
-                throw new ValidationException(
-                    $"Redemption cost {Event.Reward.Cost} does not match expected {cost}"
-                );
+                throw new ValidationException("Неверная стоимость награды");
             }
 
             return Task.CompletedTask;
@@ -81,7 +79,7 @@ public sealed class RedemptionValidationBuilder(
         {
             if (!isActive)
             {
-                throw new ValidationException("Service is not active");
+                throw new ValidationException("Сервис временно неактивен");
             }
 
             return Task.CompletedTask;
@@ -96,7 +94,7 @@ public sealed class RedemptionValidationBuilder(
         {
             if (!isEnabled())
             {
-                throw new ValidationException("Reward is not enabled");
+                throw new ValidationException("Награда временно отключена");
             }
 
             return Task.CompletedTask;
@@ -111,7 +109,7 @@ public sealed class RedemptionValidationBuilder(
         {
             if (!expected.HasValue)
             {
-                throw new ValidationException("Reward GUID is not configured");
+                throw new ValidationException("Награда не настроена");
             }
 
             return Task.CompletedTask;
@@ -128,13 +126,13 @@ public sealed class RedemptionValidationBuilder(
 
             if (string.IsNullOrWhiteSpace(userId))
             {
-                throw new ValidationException("Cannot check follower status: User ID is empty");
+                throw new ValidationException("Не удалось проверить подписку");
             }
 
             var follower = await followerDb.GetFollowerFromDbAsync(userId);
             if (follower == null)
             {
-                throw new ValidationException("User is not a follower");
+                throw new ValidationException("Подпишись на канал, чтобы использовать эту награду");
             }
         });
 
