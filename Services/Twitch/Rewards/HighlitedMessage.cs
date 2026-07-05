@@ -36,11 +36,14 @@ public class HighlitedMessage(
             .ForMessageReceived(args)
             .RequireChannel()
             .SkipBlacklisted()
+            .RequireFollower()
             .ValidateAsync();
 
         if (vr.IsInvalid)
         {
-            await client.SendMessageToMainTwitchAsync($"@{args.ChatMessage.Username}, " + vr.FirstError);
+            await client.SendMessageToMainTwitchAsync(
+                $"@{args.ChatMessage.Username}, " + vr.FirstError
+            );
             return;
         }
 
@@ -49,8 +52,7 @@ public class HighlitedMessage(
                 args.ChatMessage.UserDetail.IsVip
                 || args.ChatMessage.UserDetail.IsModerator
                 || args.ChatMessage.IsBroadcaster
-            )
-            && args.ChatMessage.IsHighlighted
+            ) && args.ChatMessage.IsHighlighted
         )
         {
             await Task.Factory.StartNew(async () =>

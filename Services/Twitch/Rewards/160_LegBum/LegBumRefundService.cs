@@ -4,8 +4,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using MARS.Server.Exstensions;
 using MARS.Server.Services.Twitch.Management;
-using MARS.Server.Services.Twitch.Validation;
 using MARS.Server.Services.Twitch.Management.Entitys;
+using MARS.Server.Services.Twitch.Validation;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using TwitchLib.Api.Core.Enums;
@@ -62,11 +62,14 @@ public class LegBumRefundService(
             .RequireBroadcasterUserId()
             .RequireServiceActive(IsServiceActive)
             .RequireCost(Cost)
+            .RequireFollower()
             .ValidateAsync();
 
         if (vr.IsInvalid)
         {
-            await client.SendMessageToMainTwitchAsync($"@{args.Payload.Event.UserName}, " + vr.FirstError);
+            await client.SendMessageToMainTwitchAsync(
+                $"@{args.Payload.Event.UserName}, " + vr.FirstError
+            );
             return;
         }
 

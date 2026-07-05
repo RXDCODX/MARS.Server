@@ -14,6 +14,7 @@ using TwitchLib.Client.Events;
 using TwitchLib.Client.Interfaces;
 using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Websockets;
+using WTelegram;
 
 namespace MARS.Server.Services.Twitch.Rewards;
 
@@ -24,7 +25,8 @@ public class WaifuRollCooldownNotificationService(
     WaifuRollService waifuRollService,
     IDbContextFactory<AppDbContext> dbContextFactory,
     ILogger<WaifuRollCooldownNotificationService> logger,
-    ITwitchEventValidationService validator
+    ITwitchEventValidationService validator,
+    ITwitchClient client
 ) : BackgroundService
 {
     private const int WaifuRollCost = 4;
@@ -62,11 +64,14 @@ public class WaifuRollCooldownNotificationService(
             .ForRedemption(e)
             .RequireBroadcasterUserId()
             .RequireCost(WaifuRollCost)
+            .RequireFollower()
             .ValidateAsync();
 
         if (result.IsInvalid)
         {
-            await twitchClient.SendMessageToMainTwitchAsync($"@{e.Payload.Event.UserName}, " + result.FirstError);
+            await twitchClient.SendMessageToMainTwitchAsync(
+                $"@{e.Payload.Event.UserName}, " + result.FirstError
+            );
             return;
         }
 
@@ -139,10 +144,14 @@ public class WaifuRollCooldownNotificationService(
             .RequireChannel()
             .SkipBlacklisted()
             .RequireUserId()
+            .RequireFollower()
             .ValidateAsync();
 
         if (result.IsInvalid)
         {
+            await client.SendMessageToMainTwitchAsync(
+                $"@{e.ChatMessage.Username}, " + result.FirstError
+            );
             return;
         }
 

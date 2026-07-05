@@ -59,11 +59,14 @@ public class TwitchMessagesHubAwaker(
             .ForMessageReceived(e)
             .RequireChannel()
             .SkipBlacklisted()
+            .RequireFollower()
             .ValidateAsync();
 
         if (vr.IsInvalid)
         {
-            await client.SendMessageToMainTwitchAsync($"@{e.ChatMessage.Username}, " + vr.FirstError);
+            await client.SendMessageToMainTwitchAsync(
+                $"@{e.ChatMessage.Username}, " + vr.FirstError
+            );
             return;
         }
 
@@ -231,11 +234,14 @@ public class TwitchMessagesHubAwaker(
             .ForMessageReceived(args)
             .RequireChannel()
             .SkipBlacklisted()
+            .RequireFollower()
             .ValidateAsync();
 
         if (vr.IsInvalid)
         {
-            await client.SendMessageToMainTwitchAsync($"@{args.ChatMessage.Username}, " + vr.FirstError);
+            await client.SendMessageToMainTwitchAsync(
+                $"@{args.ChatMessage.Username}, " + vr.FirstError
+            );
             return;
         }
 

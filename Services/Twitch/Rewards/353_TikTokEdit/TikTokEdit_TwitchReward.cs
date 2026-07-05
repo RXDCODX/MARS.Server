@@ -67,12 +67,15 @@ public class TikTokEdit_TwitchReward(
         var vr = await validator
             .ForRedemption(args)
             .RequireBroadcasterUserId()
+            .RequireFollower()
             .RequireCost(Cost)
             .ValidateAsync();
 
         if (vr.IsInvalid)
         {
-            await client.SendMessageToMainTwitchAsync($"@{args.Payload.Event.UserName}, " + vr.FirstError);
+            await client.SendMessageToMainTwitchAsync(
+                $"@{args.Payload.Event.UserName}, " + vr.FirstError
+            );
             return;
         }
 

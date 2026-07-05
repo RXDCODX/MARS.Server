@@ -105,11 +105,14 @@ public class MergeWaifu(
             .RequireBroadcasterUserId()
             .RequireServiceActive(IsServiceActive)
             .RequireCost(Cost)
+            .RequireFollower()
             .ValidateAsync();
 
         if (vr.IsInvalid)
         {
-            await client.SendMessageToMainTwitchAsync($"@{args.Payload.Event.UserName}, " + vr.FirstError);
+            await client.SendMessageToMainTwitchAsync(
+                $"@{args.Payload.Event.UserName}, " + vr.FirstError
+            );
             return;
         }
 
@@ -161,9 +164,7 @@ public class MergeWaifu(
                             }
 
                             // Убеждаемся, что поля аниме и манги заполнены
-                            waifu = await waifuDbHelper.EnsureMangaAndAnimeTitleExists(
-                                waifu
-                            );
+                            waifu = await waifuDbHelper.EnsureMangaAndAnimeTitleExists(waifu);
 
                             dbContext.Waifus.Update(waifu);
                             await dbContext.SaveChangesAsync(_cancellationToken);
@@ -235,8 +236,7 @@ public class MergeWaifu(
                     if (waifu is { IsPrivated: true })
                     {
                         var spanaa =
-                            DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3))
-                            - host.WhenPrivated;
+                            DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3)) - host.WhenPrivated;
 
                         if (spanaa.HasValue)
                         {

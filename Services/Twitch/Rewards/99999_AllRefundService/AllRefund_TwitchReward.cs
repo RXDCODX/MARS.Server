@@ -71,11 +71,14 @@ public class AllRefund_TwitchReward(
             .RequireBroadcasterUserId()
             .RequireRewardEnabled(IsRewardEnabled)
             .RequireCost(Cost)
+            .RequireFollower()
             .ValidateAsync();
 
         if (vr.IsInvalid)
         {
-            await client.SendMessageToMainTwitchAsync($"@{e.Payload.Event.UserName}, " + vr.FirstError);
+            await client.SendMessageToMainTwitchAsync(
+                $"@{e.Payload.Event.UserName}, " + vr.FirstError
+            );
             return;
         }
 
@@ -136,7 +139,9 @@ public class AllRefund_TwitchReward(
 
         if (vr.IsInvalid)
         {
-            await client.SendMessageToMainTwitchAsync($"@{args.Payload.Event.UserName}, " + vr.FirstError);
+            await client.SendMessageToMainTwitchAsync(
+                $"@{args.Payload.Event.UserName}, " + vr.FirstError
+            );
             return;
         }
 

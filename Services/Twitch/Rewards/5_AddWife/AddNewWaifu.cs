@@ -58,11 +58,14 @@ public class AddNewWaifu(
             .RequireBroadcasterId()
             .RequireRewardGuid(RewardGuid)
             .SkipBlacklisted()
+            .RequireFollower()
             .ValidateAsync();
 
         if (result.IsInvalid)
         {
-            await client.SendMessageToMainTwitchAsync($"@{onMessageReceivedArgs.ChatMessage.Username}, " + result.FirstError);
+            await client.SendMessageToMainTwitchAsync(
+                $"@{onMessageReceivedArgs.ChatMessage.Username}, " + result.FirstError
+            );
             return;
         }
         {

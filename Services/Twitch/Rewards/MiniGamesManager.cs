@@ -61,11 +61,14 @@ public class MiniGamesManager(
         var vr = await validator
             .ForRedemption(args)
             .RequireServiceActive(IsServiceActive)
+            .RequireFollower()
             .ValidateAsync();
 
         if (vr.IsInvalid)
         {
-            await client.SendMessageToMainTwitchAsync($"@{args.Payload.Event.UserName}, " + vr.FirstError);
+            await client.SendMessageToMainTwitchAsync(
+                $"@{args.Payload.Event.UserName}, " + vr.FirstError
+            );
             return;
         }
 
@@ -153,11 +156,14 @@ public class MiniGamesManager(
             .ForMessageReceived(e)
             .RequireServiceActive(IsServiceActive)
             .SkipBlacklisted()
+            .RequireFollower()
             .ValidateAsync();
 
         if (vr.IsInvalid)
         {
-            await client.SendMessageToMainTwitchAsync($"@{e.ChatMessage.Username}, " + vr.FirstError);
+            await client.SendMessageToMainTwitchAsync(
+                $"@{e.ChatMessage.Username}, " + vr.FirstError
+            );
             return;
         }
 

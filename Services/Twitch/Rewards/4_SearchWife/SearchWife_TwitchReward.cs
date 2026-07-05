@@ -73,11 +73,14 @@ public class SearchWife_TwitchReward(
             .RequireBroadcasterUserId()
             .RequireRewardEnabled(IsRewardEnabled)
             .RequireCost(Cost)
+            .RequireFollower()
             .ValidateAsync();
 
         if (vr.IsInvalid)
         {
-            await client.SendMessageToMainTwitchAsync($"@{args.Payload.Event.UserName}, " + vr.FirstError);
+            await client.SendMessageToMainTwitchAsync(
+                $"@{args.Payload.Event.UserName}, " + vr.FirstError
+            );
             return;
         }
 
@@ -98,11 +101,8 @@ public class SearchWife_TwitchReward(
                     {
                         waifu = await waifuDbHelper.EnsureMangaAndAnimeTitleExists(waifu);
 
-                        var color = await api.Helix.Chat.GetUserChatColorAsync([
-                            twEvent.UserId,
-                        ]);
-                        await using AppDbContext dbContext2 =
-                            await factory.CreateDbContextAsync();
+                        var color = await api.Helix.Chat.GetUserChatColorAsync([twEvent.UserId]);
+                        await using AppDbContext dbContext2 = await factory.CreateDbContextAsync();
 
                         var husband =
                             await dbContext2
@@ -127,15 +127,12 @@ public class SearchWife_TwitchReward(
                         return;
                     }
 
-                    await using AppDbContext dbContext =
-                        await factory.CreateDbContextAsync();
+                    await using AppDbContext dbContext = await factory.CreateDbContextAsync();
                     var hostRoolWaifu = await dbContext
                         .Husbands.Include(host1 => host1.HusbandCoolDown)
                         .AsNoTracking()
                         .FirstOrDefaultAsync(e => e.TwitchId == twEvent.UserId);
-                    var time = hostRoolWaifu?.HusbandCoolDown?.Time.ToOffset(
-                        TimeSpan.FromHours(3)
-                    );
+                    var time = hostRoolWaifu?.HusbandCoolDown?.Time.ToOffset(TimeSpan.FromHours(3));
 
                     if (time != null)
                     {
