@@ -55,13 +55,12 @@ public class SoundRequestCommandsService(
 
         if (!string.IsNullOrWhiteSpace(query))
         {
-            // Проверяем состояние плеера - если остановлен и очередь не пуста, не принимаем новые реквесты
+            // Проверяем состояние плеера - если остановлен, не принимаем новые реквесты
             var playerState = await stateManager.GetStateAsync();
-            var queueCount = await queue.GetQueueCountAsync();
 
-            if (playerState.State == PlaybackState.Stopped && queueCount > 0)
+            if (playerState.State == PlaybackState.Stopped)
             {
-                result = "Прием реквестов приостановлен";
+                result = "Прием реквестов приостановлен - плеер остановлен";
                 return result;
             }
 
@@ -159,6 +158,13 @@ public class SoundRequestCommandsService(
                     var durationMinutes = Math.Round(info.Duration.TotalMinutes, 1);
                     result =
                         $"❌ Трек слишком длинный ({durationMinutes} мин). Максимальная длительность: 12 минут";
+                    return result;
+                }
+
+                // Проверяем, не играл ли уже этот трек сегодня (для обычных пользователей)
+                if (user.IsSimpleUser && info.LastTimePlays >= DateTime.UtcNow.Date)
+                {
+                    result = $"@{user.DisplayName}, этот трек уже сегодня играл";
                     return result;
                 }
 
@@ -421,11 +427,10 @@ public class SoundRequestCommandsService(
             return result;
         }
 
-        // Проверяем состояние плеера - если остановлен и очередь не пуста, не принимаем новые реквесты
+        // Проверяем состояние плеера - если остановлен, не принимаем новые реквесты
         var playerState = await stateManager.GetStateAsync();
-        var queueCount = await queue.GetQueueCountAsync();
 
-        if (playerState.State == PlaybackState.Stopped && queueCount > 0)
+        if (playerState.State == PlaybackState.Stopped)
         {
             result = "Прием реквестов приостановлен - плеер остановлен";
             return result;
@@ -471,6 +476,13 @@ public class SoundRequestCommandsService(
                     continue; // Пропускаем слишком длинные треки
                 }
 
+                // Пропускаем треки, которые уже играли сегодня (для обычных пользователей)
+                if (user.IsSimpleUser && info.LastTimePlays >= DateTime.UtcNow.Date)
+                {
+                    skippedTracksCount++;
+                    continue;
+                }
+
                 // Добавляем трек в очередь
                 var queueItem = await queue.AddToQueueAsync(info, user.TwitchId, user, requestedAt);
 
@@ -510,7 +522,7 @@ public class SoundRequestCommandsService(
 
             if (skippedTracksCount > 0)
             {
-                result += $" (пропущено {skippedTracksCount} треков длиннее 12 мин)";
+                result += $" (пропущено {skippedTracksCount} треков)";
             }
 
             // Если в плейлисте было больше подходящих треков, чем разрешено — указываем ограничение
