@@ -48,11 +48,10 @@ public class TwitchTitleChangeCommand(
             .ForMessageReceived(args)
             .RequireServiceActive(IsServiceActive)
             .SkipBlacklisted()
-            .ValidateAsync();
+            .ValidateWithResponseAsync(args.ChatMessage.Username);
 
         if (result.IsInvalid)
         {
-            await client.SendMessageToMainTwitchAsync($"@{args.ChatMessage.Username}, " + result.FirstError);
             return;
         }
 

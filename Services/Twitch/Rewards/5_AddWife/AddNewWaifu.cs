@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -59,13 +59,10 @@ public class AddNewWaifu(
             .RequireRewardGuid(RewardGuid)
             .SkipBlacklisted()
             .RequireFollower()
-            .ValidateAsync();
+            .ValidateWithResponseAsync(onMessageReceivedArgs.ChatMessage.Username);
 
         if (result.IsInvalid)
         {
-            await client.SendMessageToMainTwitchAsync(
-                $"@{onMessageReceivedArgs.ChatMessage.Username}, " + result.FirstError
-            );
             return;
         }
         {

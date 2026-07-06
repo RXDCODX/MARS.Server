@@ -90,13 +90,10 @@ public class FumoFriday_TwitchReward(
             .RequireServiceActive(IsServiceActive)
             .SkipBlacklisted()
             .RequireFollower()
-            .ValidateAsync();
+            .ValidateWithResponseAsync(e.ChatMessage.Username);
 
         if (vr.IsInvalid)
         {
-            await twitchClient.SendMessageToMainTwitchAsync(
-                $"@{e.ChatMessage.Username}, " + vr.FirstError
-            );
             return;
         }
 
@@ -146,7 +143,7 @@ public class FumoFriday_TwitchReward(
             .ForRedemption(args)
             .RequireServiceActive(IsServiceActive)
             .RequireBroadcasterUserLogin()
-            .ValidateAsync();
+            .ValidateWithResponseAsync(args.Payload.Event.UserName);
 
         if (vr.IsInvalid)
         {

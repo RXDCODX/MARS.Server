@@ -65,13 +65,10 @@ public class WaifuRollCooldownNotificationService(
             .RequireBroadcasterUserId()
             .RequireCost(WaifuRollCost)
             .RequireFollower()
-            .ValidateAsync();
+            .ValidateWithResponseAsync(e.Payload.Event.UserName);
 
         if (result.IsInvalid)
         {
-            await twitchClient.SendMessageToMainTwitchAsync(
-                $"@{e.Payload.Event.UserName}, " + result.FirstError
-            );
             return;
         }
 
@@ -145,13 +142,10 @@ public class WaifuRollCooldownNotificationService(
             .SkipBlacklisted()
             .RequireUserId()
             .RequireFollower()
-            .ValidateAsync();
+            .ValidateWithResponseAsync(e.ChatMessage.Username);
 
         if (result.IsInvalid)
         {
-            await client.SendMessageToMainTwitchAsync(
-                $"@{e.ChatMessage.Username}, " + result.FirstError
-            );
             return;
         }
 

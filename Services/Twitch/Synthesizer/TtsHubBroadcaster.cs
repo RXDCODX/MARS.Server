@@ -194,11 +194,10 @@ public class TtsHubBroadcaster(
             .ForMessageReceived(args)
             .RequireChannel()
             .SkipBlacklisted()
-            .ValidateAsync();
+            .ValidateWithResponseAsync(args.ChatMessage.Username);
 
         if (vr.IsInvalid)
         {
-            await client.SendMessageToMainTwitchAsync($"@{args.ChatMessage.Username}, " + vr.FirstError);
             return;
         }
 

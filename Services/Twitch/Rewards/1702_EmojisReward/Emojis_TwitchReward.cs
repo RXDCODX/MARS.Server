@@ -73,13 +73,10 @@ public class Emojis_TwitchReward(
             .RequireChannel()
             .RequireRewardGuid(TwitchRewardId)
             .RequireFollower()
-            .ValidateAsync();
+            .ValidateWithResponseAsync(e.ChatMessage.Username);
 
         if (vr.IsInvalid)
         {
-            await client.SendMessageToMainTwitchAsync(
-                $"@{e.ChatMessage.Username}, " + vr.FirstError
-            );
             return;
         }
 

@@ -147,11 +147,10 @@ public class PuntoSwitcherService : BackgroundService, IPuntoSwitcherService
                 .ForMessageReceived(args)
                 .RequireChannel()
                 .SkipBlacklisted()
-                .ValidateAsync();
+                .ValidateWithResponseAsync(args.ChatMessage.Username);
 
             if (result.IsInvalid)
             {
-                await _twitchClient!.SendMessageToMainTwitchAsync($"@{args.ChatMessage.Username}, " + result.FirstError);
                 return;
             }
 

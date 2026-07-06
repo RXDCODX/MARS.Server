@@ -52,13 +52,13 @@ public class TwitchCinemaQueueService(
     {
         try
         {
-            var vr = await validator.ForRedemption(e).RequireCost(1602).ValidateAsync();
+            var vr = await validator
+                .ForRedemption(e)
+                .RequireCost(1602)
+                .ValidateWithResponseAsync(e.Payload.Event.UserName);
 
             if (vr.IsInvalid)
             {
-                await twitchClient.SendMessageToMainTwitchAsync(
-                    $"@{e.Payload.Event.UserName}, " + vr.FirstError
-                );
                 return;
             }
 

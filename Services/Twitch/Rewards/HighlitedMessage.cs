@@ -37,13 +37,10 @@ public class HighlitedMessage(
             .RequireChannel()
             .SkipBlacklisted()
             .RequireFollower()
-            .ValidateAsync();
+            .ValidateWithResponseAsync(args.ChatMessage.Username);
 
         if (vr.IsInvalid)
         {
-            await client.SendMessageToMainTwitchAsync(
-                $"@{args.ChatMessage.Username}, " + vr.FirstError
-            );
             return;
         }
 

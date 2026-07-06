@@ -4,20 +4,25 @@ using System.Linq;
 using System.Threading.Tasks;
 using MARS.Server.Exstensions;
 using MARS.Server.Services.Twitch.TwitchFollowers;
+using Microsoft.Extensions.Logging;
 using TwitchLib.Client.Events;
+using TwitchLib.Client.Interfaces;
 
 namespace MARS.Server.Services.Twitch.Validation;
 
 public sealed class MessageValidationBuilder(
     OnMessageReceivedArgs args,
-    FollowerDbService followerDb
+    FollowerDbService followerDb,
+    ITwitchClient client,
+    ILogger logger,
+    TwitchUserEnsureService userEnsureService
 ) : IMessageValidationBuilder
 {
-    private readonly List<Func<Task>> _checks = [];
+    private readonly List<(Func<Task> check, bool loud)> _checks = [];
 
-    public IMessageValidationBuilder RequireChannel()
+    public IMessageValidationBuilder RequireChannel(bool loud = false)
     {
-        _checks.Add(() =>
+        _checks.Add((() =>
         {
             if (
                 !args.ChatMessage.Channel.Equals(
@@ -30,14 +35,14 @@ public sealed class MessageValidationBuilder(
             }
 
             return Task.CompletedTask;
-        });
+        }, loud));
 
         return this;
     }
 
-    public IMessageValidationBuilder RequireBroadcasterId()
+    public IMessageValidationBuilder RequireBroadcasterId(bool loud = false)
     {
-        _checks.Add(() =>
+        _checks.Add((() =>
         {
             if (
                 !args.ChatMessage.RoomId.Equals(
@@ -50,14 +55,14 @@ public sealed class MessageValidationBuilder(
             }
 
             return Task.CompletedTask;
-        });
+        }, loud));
 
         return this;
     }
 
-    public IMessageValidationBuilder SkipBlacklisted()
+    public IMessageValidationBuilder SkipBlacklisted(bool loud = true)
     {
-        _checks.Add(() =>
+        _checks.Add((() =>
         {
             if (
                 TwitchExstension.BlackList.Logins.Any(t =>
@@ -69,14 +74,14 @@ public sealed class MessageValidationBuilder(
             }
 
             return Task.CompletedTask;
-        });
+        }, loud));
 
         return this;
     }
 
-    public IMessageValidationBuilder RequireRewardId()
+    public IMessageValidationBuilder RequireRewardId(bool loud = false)
     {
-        _checks.Add(() =>
+        _checks.Add((() =>
         {
             if (string.IsNullOrWhiteSpace(args.ChatMessage.CustomRewardId))
             {
@@ -84,14 +89,14 @@ public sealed class MessageValidationBuilder(
             }
 
             return Task.CompletedTask;
-        });
+        }, loud));
 
         return this;
     }
 
-    public IMessageValidationBuilder RequireRewardGuid(Guid? expected)
+    public IMessageValidationBuilder RequireRewardGuid(Guid? expected, bool loud = false)
     {
-        _checks.Add(() =>
+        _checks.Add((() =>
         {
             if (!expected.HasValue)
             {
@@ -105,14 +110,14 @@ public sealed class MessageValidationBuilder(
             }
 
             return Task.CompletedTask;
-        });
+        }, loud));
 
         return this;
     }
 
-    public IMessageValidationBuilder RequireServiceActive(bool isActive)
+    public IMessageValidationBuilder RequireServiceActive(bool isActive, bool loud = false)
     {
-        _checks.Add(() =>
+        _checks.Add((() =>
         {
             if (!isActive)
             {
@@ -120,14 +125,14 @@ public sealed class MessageValidationBuilder(
             }
 
             return Task.CompletedTask;
-        });
+        }, loud));
 
         return this;
     }
 
-    public IMessageValidationBuilder RequireUserId()
+    public IMessageValidationBuilder RequireUserId(bool loud = false)
     {
-        _checks.Add(() =>
+        _checks.Add((() =>
         {
             if (string.IsNullOrWhiteSpace(args.ChatMessage.UserId))
             {
@@ -135,14 +140,14 @@ public sealed class MessageValidationBuilder(
             }
 
             return Task.CompletedTask;
-        });
+        }, loud));
 
         return this;
     }
 
-    public IMessageValidationBuilder RequireFollower()
+    public IMessageValidationBuilder RequireFollower(bool loud = true)
     {
-        _checks.Add(async () =>
+        _checks.Add((async () =>
         {
             var userId = args.ChatMessage.UserId;
 
@@ -151,12 +156,30 @@ public sealed class MessageValidationBuilder(
                 throw new ValidationException("Не удалось проверить подписку");
             }
 
+            if (userId == TwitchExstension.ChannelId)
+            {
+                return;
+            }
+
+            try
+            {
+                var user = await userEnsureService.EnsureUserExistsAsync(userId);
+                if (user is { IsModerator: true } or { IsVip: true })
+                {
+                    return;
+                }
+            }
+            catch (ArgumentException)
+            {
+                // User not found in DB — treat as regular user
+            }
+
             var follower = await followerDb.GetFollowerFromDbAsync(userId);
             if (follower == null)
             {
                 throw new ValidationException("Подпишись на канал, чтобы использовать эту команду");
             }
-        });
+        }, loud));
 
         return this;
     }
@@ -164,16 +187,52 @@ public sealed class MessageValidationBuilder(
     public async Task<ValidationResult> ValidateAsync()
     {
         var result = new ValidationResult();
+        var silentFailed = false;
 
-        foreach (var check in _checks)
+        foreach (var (check, loud) in _checks)
         {
+            if (loud && silentFailed)
+            {
+                continue;
+            }
+
             try
             {
                 await check();
             }
             catch (ValidationException ex)
             {
-                result.AddError(ex.Message);
+                if (loud)
+                {
+                    result.AddError(ex.Message);
+                }
+                else
+                {
+                    silentFailed = true;
+                    result.HasSilentFailure = true;
+                }
+            }
+        }
+
+        return result;
+    }
+
+    public async Task<ValidationResult> ValidateWithResponseAsync(string userName)
+    {
+        var result = await ValidateAsync();
+
+        if (result.IsInvalid && result.FirstError != null)
+        {
+            try
+            {
+                await client.SendMessageToMainTwitchAsync(
+                    $"@{userName}, {result.FirstError}",
+                    logger
+                );
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to send validation error message");
             }
         }
 

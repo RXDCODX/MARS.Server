@@ -84,13 +84,10 @@ public class TwitchMikuMondayRewardService(
             .RequireBroadcasterUserId()
             .RequireCost(Cost)
             .RequireFollower()
-            .ValidateAsync();
+            .ValidateWithResponseAsync(args.Payload.Event.UserName);
 
         if (vr.IsInvalid)
         {
-            await twitchClient.SendMessageToMainTwitchAsync(
-                $"@{args.Payload.Event.UserName}, " + vr.FirstError
-            );
             return;
         }
 

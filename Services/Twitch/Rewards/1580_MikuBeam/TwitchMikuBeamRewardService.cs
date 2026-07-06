@@ -75,13 +75,10 @@ public class TwitchMikuBeamRewardService(
             .SkipBlacklisted()
             .RequireUserId()
             .RequireFollower()
-            .ValidateAsync();
+            .ValidateWithResponseAsync(e.ChatMessage.Username);
 
         if (vr.IsInvalid)
         {
-            await client.SendMessageToMainTwitchAsync(
-                $"@{e.ChatMessage.Username}, " + vr.FirstError
-            );
             return;
         }
 
@@ -113,13 +110,10 @@ public class TwitchMikuBeamRewardService(
             .RequireBroadcasterUserLogin()
             .RequireCost(reward.Cost)
             .RequireFollower()
-            .ValidateAsync();
+            .ValidateWithResponseAsync(args.Payload.Event.UserName);
 
         if (vr.IsInvalid)
         {
-            await client.SendMessageToMainTwitchAsync(
-                $"@{args.Payload.Event.UserName}, " + vr.FirstError
-            );
             return;
         }
 

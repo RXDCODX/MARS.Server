@@ -9,8 +9,9 @@ public sealed class ValidationResult
     public IReadOnlyList<string> Errors => _errors;
 
     public string? FirstError => _errors.Count > 0 ? _errors[0] : null;
-    public bool IsValid => _errors.Count == 0;
+    public bool IsValid => _errors.Count == 0 && !HasSilentFailure;
     public bool IsInvalid => !IsValid;
+    public bool HasSilentFailure { get; set; }
 
     public void AddError(string error)
     {

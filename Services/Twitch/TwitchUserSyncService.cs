@@ -60,11 +60,10 @@ public class TwitchUserSyncService(
             .ForMessageReceived(e)
             .RequireChannel()
             .SkipBlacklisted()
-            .ValidateAsync();
+            .ValidateWithResponseAsync(e.ChatMessage.Username);
 
         if (result.IsInvalid)
         {
-            await twitchClient.SendMessageToMainTwitchAsync($"@{e.ChatMessage.Username}, " + result.FirstError);
             return;
         }
 

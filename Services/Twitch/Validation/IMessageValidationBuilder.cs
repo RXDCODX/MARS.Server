@@ -5,13 +5,14 @@ namespace MARS.Server.Services.Twitch.Validation;
 
 public interface IMessageValidationBuilder
 {
-    IMessageValidationBuilder RequireChannel();
-    IMessageValidationBuilder RequireBroadcasterId();
-    IMessageValidationBuilder SkipBlacklisted();
-    IMessageValidationBuilder RequireRewardId();
-    IMessageValidationBuilder RequireRewardGuid(Guid? expected);
-    IMessageValidationBuilder RequireServiceActive(bool isActive);
-    IMessageValidationBuilder RequireUserId();
-    IMessageValidationBuilder RequireFollower();
+    IMessageValidationBuilder RequireChannel(bool loud = false);
+    IMessageValidationBuilder RequireBroadcasterId(bool loud = false);
+    IMessageValidationBuilder SkipBlacklisted(bool loud = true);
+    IMessageValidationBuilder RequireRewardId(bool loud = false);
+    IMessageValidationBuilder RequireRewardGuid(Guid? expected, bool loud = false);
+    IMessageValidationBuilder RequireServiceActive(bool isActive, bool loud = false);
+    IMessageValidationBuilder RequireUserId(bool loud = false);
+    IMessageValidationBuilder RequireFollower(bool loud = true);
     Task<ValidationResult> ValidateAsync();
+    Task<ValidationResult> ValidateWithResponseAsync(string userName);
 }

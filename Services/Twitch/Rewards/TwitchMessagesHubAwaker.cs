@@ -60,13 +60,10 @@ public class TwitchMessagesHubAwaker(
             .RequireChannel()
             .SkipBlacklisted()
             .RequireFollower()
-            .ValidateAsync();
+            .ValidateWithResponseAsync(e.ChatMessage.Username);
 
         if (vr.IsInvalid)
         {
-            await client.SendMessageToMainTwitchAsync(
-                $"@{e.ChatMessage.Username}, " + vr.FirstError
-            );
             return;
         }
 
@@ -235,13 +232,10 @@ public class TwitchMessagesHubAwaker(
             .RequireChannel()
             .SkipBlacklisted()
             .RequireFollower()
-            .ValidateAsync();
+            .ValidateWithResponseAsync(args.ChatMessage.Username);
 
         if (vr.IsInvalid)
         {
-            await client.SendMessageToMainTwitchAsync(
-                $"@{args.ChatMessage.Username}, " + vr.FirstError
-            );
             return;
         }
 

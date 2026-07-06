@@ -45,11 +45,10 @@ public class AutoHello : BackgroundService
             .ForMessageReceived(args)
             .RequireChannel()
             .SkipBlacklisted()
-            .ValidateAsync();
+            .ValidateWithResponseAsync(args.ChatMessage.Username);
 
         if (result.IsInvalid)
         {
-            await _client.SendMessageToMainTwitchAsync($"@{args.ChatMessage.Username}, " + result.FirstError);
             return;
         }
 

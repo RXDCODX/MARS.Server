@@ -20,38 +20,6 @@ public class RickRollerService(
 
     private readonly Random _rnd = new();
 
-    private readonly MediaInfo _baseMediaDto = new()
-    {
-        FileInfo = new MediaFileInfo()
-        {
-            Extension = ".mp4",
-            FileName = "rickroll.mp4",
-            FilePath = "Alerts\\rickroll.mp4",
-            Type = MediaType.Video,
-            IsLocalFile = true,
-        },
-        MetaInfo = new MediaMetaInfo()
-        {
-            DisplayName = string.Empty,
-            Duration = 7,
-            IsLooped = false,
-            Priority = MediaAlertPriority.Normal,
-        },
-        PositionInfo = new MediaPositionInfo()
-        {
-            IsRotated = true,
-            IsUseOriginalWidthAndHeight = true,
-            RandomCoordinates = true,
-        },
-        StylesInfo = new MediaStylesInfo(),
-        TextInfo = new MediaTextInfo()
-        {
-            Text = "#{user.name}# был рикрольнут на баллы канала!",
-            KeyWordSybmolDelimiter = '#',
-        },
-        Id = Guid.NewGuid(),
-    };
-
     public double RickRollChance
     {
         get
@@ -105,7 +73,38 @@ public class RickRollerService(
         {
             user = await userEnsureService.EnsureUserExistsAsync(user);
 
-            var newDto = _baseMediaDto.CloneTo();
+            MediaInfo newDto = new()
+            {
+                FileInfo = new MediaFileInfo()
+                {
+                    Extension = ".mp4",
+                    FileName = "rickroll.mp4",
+                    FilePath = "Alerts\\rickroll.mp4",
+                    Type = MediaType.Video,
+                    IsLocalFile = true,
+                },
+                MetaInfo = new MediaMetaInfo()
+                {
+                    DisplayName = string.Empty,
+                    Duration = 7,
+                    IsLooped = false,
+                    Priority = MediaAlertPriority.Normal,
+                },
+                PositionInfo = new MediaPositionInfo()
+                {
+                    IsRotated = true,
+                    IsUseOriginalWidthAndHeight = true,
+                    RandomCoordinates = true,
+                },
+                StylesInfo = new MediaStylesInfo(),
+                TextInfo = new MediaTextInfo()
+                {
+                    Text = "#{user.name}# был рикрольнут на баллы канала!",
+                    KeyWordSybmolDelimiter = '#',
+                },
+                Id = Guid.NewGuid(),
+            };
+
             newDto.FixAlertText(user.DisplayName, string.Empty);
             newDto.TextInfo.KeyWordsColor = user.ChatColor;
 

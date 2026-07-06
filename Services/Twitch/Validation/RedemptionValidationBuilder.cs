@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using MARS.Server.Exstensions;
 using MARS.Server.Services.Twitch.TwitchFollowers;
+using Microsoft.Extensions.Logging;
+using TwitchLib.Client.Interfaces;
 using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Core.SubscriptionTypes.Channel;
 
@@ -10,131 +12,191 @@ namespace MARS.Server.Services.Twitch.Validation;
 
 public sealed class RedemptionValidationBuilder(
     ChannelPointsCustomRewardRedemptionArgs args,
-    FollowerDbService followerDb
+    FollowerDbService followerDb,
+    ITwitchClient client,
+    ILogger logger,
+    TwitchUserEnsureService userEnsureService
 ) : IRedemptionValidationBuilder
 {
-    private readonly List<Func<Task>> _checks = [];
-    private readonly ValidationResult _result = new();
+    private readonly List<(Func<Task> check, bool loud)> _checks = [];
 
     private ChannelPointsCustomRewardRedemption Event => args.Payload.Event;
 
-    public IRedemptionValidationBuilder RequireBroadcasterUserId()
+    public IRedemptionValidationBuilder RequireBroadcasterUserId(bool loud = false)
     {
-        _checks.Add(() =>
-        {
-            if (
-                !Event.BroadcasterUserId.Equals(
-                    TwitchExstension.ChannelId,
-                    StringComparison.OrdinalIgnoreCase
-                )
+        _checks.Add(
+            (
+                () =>
+                {
+                    if (
+                        !Event.BroadcasterUserId.Equals(
+                            TwitchExstension.ChannelId,
+                            StringComparison.OrdinalIgnoreCase
+                        )
+                    )
+                    {
+                        throw new ValidationException("Награда не относится к этому каналу");
+                    }
+
+                    return Task.CompletedTask;
+                },
+                loud
             )
-            {
-                throw new ValidationException("Награда не относится к этому каналу");
-            }
-
-            return Task.CompletedTask;
-        });
+        );
 
         return this;
     }
 
-    public IRedemptionValidationBuilder RequireBroadcasterUserLogin()
+    public IRedemptionValidationBuilder RequireBroadcasterUserLogin(bool loud = false)
     {
-        _checks.Add(() =>
-        {
-            if (
-                !Event.BroadcasterUserLogin.Equals(
-                    TwitchExstension.Channel,
-                    StringComparison.OrdinalIgnoreCase
-                )
+        _checks.Add(
+            (
+                () =>
+                {
+                    if (
+                        !Event.BroadcasterUserLogin.Equals(
+                            TwitchExstension.Channel,
+                            StringComparison.OrdinalIgnoreCase
+                        )
+                    )
+                    {
+                        throw new ValidationException("Награда не относится к этому каналу");
+                    }
+
+                    return Task.CompletedTask;
+                },
+                loud
             )
-            {
-                throw new ValidationException("Награда не относится к этому каналу");
-            }
-
-            return Task.CompletedTask;
-        });
+        );
 
         return this;
     }
 
-    public IRedemptionValidationBuilder RequireCost(int cost)
+    public IRedemptionValidationBuilder RequireCost(int cost, bool loud = false)
     {
-        _checks.Add(() =>
-        {
-            if (Event.Reward.Cost != cost)
-            {
-                throw new ValidationException("Неверная стоимость награды");
-            }
+        _checks.Add(
+            (
+                () =>
+                {
+                    if (Event.Reward.Cost != cost)
+                    {
+                        throw new ValidationException("Неверная стоимость награды");
+                    }
 
-            return Task.CompletedTask;
-        });
+                    return Task.CompletedTask;
+                },
+                loud
+            )
+        );
 
         return this;
     }
 
-    public IRedemptionValidationBuilder RequireServiceActive(bool isActive)
+    public IRedemptionValidationBuilder RequireServiceActive(bool isActive, bool loud = false)
     {
-        _checks.Add(() =>
-        {
-            if (!isActive)
-            {
-                throw new ValidationException("Сервис временно неактивен");
-            }
+        _checks.Add(
+            (
+                () =>
+                {
+                    if (!isActive)
+                    {
+                        throw new ValidationException("Сервис временно неактивен");
+                    }
 
-            return Task.CompletedTask;
-        });
+                    return Task.CompletedTask;
+                },
+                loud
+            )
+        );
 
         return this;
     }
 
-    public IRedemptionValidationBuilder RequireRewardEnabled(Func<bool> isEnabled)
+    public IRedemptionValidationBuilder RequireRewardEnabled(
+        Func<bool> isEnabled,
+        bool loud = false
+    )
     {
-        _checks.Add(() =>
-        {
-            if (!isEnabled())
-            {
-                throw new ValidationException("Награда временно отключена");
-            }
+        _checks.Add(
+            (
+                () =>
+                {
+                    if (!isEnabled())
+                    {
+                        throw new ValidationException("Награда временно отключена");
+                    }
 
-            return Task.CompletedTask;
-        });
+                    return Task.CompletedTask;
+                },
+                loud
+            )
+        );
 
         return this;
     }
 
-    public IRedemptionValidationBuilder RequireRewardGuid(Guid? expected)
+    public IRedemptionValidationBuilder RequireRewardGuid(Guid? expected, bool loud = false)
     {
-        _checks.Add(() =>
-        {
-            if (!expected.HasValue)
-            {
-                throw new ValidationException("Награда не настроена");
-            }
+        _checks.Add(
+            (
+                () =>
+                {
+                    if (!expected.HasValue)
+                    {
+                        throw new ValidationException("Награда не настроена");
+                    }
 
-            return Task.CompletedTask;
-        });
+                    return Task.CompletedTask;
+                },
+                loud
+            )
+        );
 
         return this;
     }
 
-    public IRedemptionValidationBuilder RequireFollower()
+    public IRedemptionValidationBuilder RequireFollower(bool loud = true)
     {
-        _checks.Add(async () =>
-        {
-            var userId = Event.UserId;
+        _checks.Add(
+            (
+                async () =>
+                {
+                    var userId = Event.UserId;
 
-            if (string.IsNullOrWhiteSpace(userId))
-            {
-                throw new ValidationException("Не удалось проверить подписку");
-            }
+                    if (string.IsNullOrWhiteSpace(userId))
+                    {
+                        throw new ValidationException("Не удалось проверить подписку");
+                    }
 
-            var follower = await followerDb.GetFollowerFromDbAsync(userId);
-            if (follower == null)
-            {
-                throw new ValidationException("Подпишись на канал, чтобы использовать эту награду");
-            }
-        });
+                    if (userId == TwitchExstension.ChannelId)
+                    {
+                        return;
+                    }
+
+                    try
+                    {
+                        var user = await userEnsureService.EnsureUserExistsAsync(userId);
+                        if (user is { IsModerator: true } or { IsVip: true })
+                        {
+                            return;
+                        }
+                    }
+                    catch (ArgumentException)
+                    {
+                        // User not found in DB — treat as regular user
+                    }
+
+                    var follower = await followerDb.GetFollowerFromDbAsync(userId);
+                    if (follower == null)
+                    {
+                        throw new ValidationException(
+                            "Подпишись на канал, чтобы использовать эту награду"
+                        );
+                    }
+                },
+                loud
+            )
+        );
 
         return this;
     }
@@ -142,16 +204,52 @@ public sealed class RedemptionValidationBuilder(
     public async Task<ValidationResult> ValidateAsync()
     {
         var result = new ValidationResult();
+        var silentFailed = false;
 
-        foreach (var check in _checks)
+        foreach (var (check, loud) in _checks)
         {
+            if (loud && silentFailed)
+            {
+                continue;
+            }
+
             try
             {
                 await check();
             }
             catch (ValidationException ex)
             {
-                result.AddError(ex.Message);
+                if (loud)
+                {
+                    result.AddError(ex.Message);
+                }
+                else
+                {
+                    silentFailed = true;
+                    result.HasSilentFailure = true;
+                }
+            }
+        }
+
+        return result;
+    }
+
+    public async Task<ValidationResult> ValidateWithResponseAsync(string userName)
+    {
+        var result = await ValidateAsync();
+
+        if (result is { IsInvalid: true, FirstError: not null })
+        {
+            try
+            {
+                await client.SendMessageToMainTwitchAsync(
+                    $"@{userName}, {result.FirstError}",
+                    logger
+                );
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to send validation error message");
             }
         }
 

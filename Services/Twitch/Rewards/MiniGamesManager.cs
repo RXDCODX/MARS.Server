@@ -58,21 +58,24 @@ public class MiniGamesManager(
         ChannelPointsCustomRewardRedemptionArgs args
     )
     {
+        var cost = args.Payload.Event.Reward.Cost;
+
+        if (cost is not (9 or 7 or 6))
+        {
+            return;
+        }
+
         var vr = await validator
             .ForRedemption(args)
             .RequireServiceActive(IsServiceActive)
             .RequireFollower()
-            .ValidateAsync();
+            .ValidateWithResponseAsync(args.Payload.Event.UserName);
 
         if (vr.IsInvalid)
         {
-            await client.SendMessageToMainTwitchAsync(
-                $"@{args.Payload.Event.UserName}, " + vr.FirstError
-            );
             return;
         }
 
-        var cost = args.Payload.Event.Reward.Cost;
         var name = args.Payload.Event.UserName;
         var userId = args.Payload.Event.UserId;
 
@@ -157,13 +160,10 @@ public class MiniGamesManager(
             .RequireServiceActive(IsServiceActive)
             .SkipBlacklisted()
             .RequireFollower()
-            .ValidateAsync();
+            .ValidateWithResponseAsync(e.ChatMessage.Username);
 
         if (vr.IsInvalid)
         {
-            await client.SendMessageToMainTwitchAsync(
-                $"@{e.ChatMessage.Username}, " + vr.FirstError
-            );
             return;
         }
 

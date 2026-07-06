@@ -72,13 +72,10 @@ public class GaoAlert_TwitchReward(
             .RequireBroadcasterUserId()
             .RequireCost(Cost)
             .RequireFollower()
-            .ValidateAsync();
+            .ValidateWithResponseAsync(args.Payload.Event.UserName);
 
         if (vr.IsInvalid)
         {
-            await client.SendMessageToMainTwitchAsync(
-                $"@{args.Payload.Event.UserName}, " + vr.FirstError
-            );
             return;
         }
 
