@@ -48,7 +48,9 @@ public class SearchWife_TwitchReward(
     protected override bool IsRewardActive => IsRewardEnabled();
 
     public override Func<bool> IsRewardEnabled { get; set; } =
-        () => DateTime.Now.DayOfWeek != DayOfWeek.Friday;
+        () =>
+            DateTime.Now.DayOfWeek != DayOfWeek.Friday
+            && DateTime.Now.DayOfWeek != DayOfWeek.Wednesday;
 
     public override async Task StartAsync(CancellationToken cancellationToken)
     {

@@ -56,12 +56,17 @@ public class FumoRollService(IDbContextFactory<AppDbContext> factory)
 
             foreach (var fumo in fumos)
             {
+                if (string.IsNullOrWhiteSpace(fumo.CharacterTranslit))
+                {
+                    fumo.CharacterTranslit = fumo.Character.ToRussianCyrillic();
+                }
+
                 prizes.Add(
                     new FumoPrizeType
                     {
                         Id = fumo.MfcId,
                         Image = fumo.ThumbnailUrl,
-                        Text = fumo.Character,
+                        Text = fumo.CharacterTranslit ?? fumo.Name,
                     }
                 );
             }

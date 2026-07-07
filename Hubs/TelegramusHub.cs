@@ -8,6 +8,7 @@ using MARS.Server.Services.SoundBarService;
 using MARS.Server.Services.Twitch.Rewards._13_FumoFriday;
 using MARS.Server.Services.Twitch.Rewards._1580_MikuBeam;
 using MARS.Server.Services.Twitch.Rewards._39_MikuMonday;
+using MARS.Server.Services.Twitch.Rewards._4_FrogRoll;
 using MARS.Server.Services.Twitch.Rewards._4_FumoRoll;
 using MARS.Server.Services.WaifuRoll;
 using Microsoft.AspNetCore.SignalR;
@@ -37,6 +38,7 @@ public class TelegramusHub(
     ITwitchClient twitchClient,
     WaifuPrizesService waifuPrizesService,
     FumoRollService fumoRollService,
+    FrogRollService frogRollService,
     IServiceProvider serviceProvider,
     MikuMondayTracksService mikuMondayTracksService,
     SoundMuteCoordinator coordinator,
@@ -58,6 +60,8 @@ public class TelegramusHub(
         await Clients.Caller.UpdateWaifuPrizes(result.Data);
         var fumoResult = await fumoRollService.GetFumoPrizesAsync();
         await Clients.Caller.UpdateFumoPrizes(fumoResult.Data);
+        var frogResult = await frogRollService.GetFrogPrizesAsync();
+        await Clients.Caller.UpdateFrogPrizes(frogResult.Data);
     }
 
     public Task LogError(string errorMessage)

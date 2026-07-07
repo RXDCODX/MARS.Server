@@ -48,6 +48,7 @@ using MARS.Server.Services.Twitch.Rewards._160_LegBum;
 using MARS.Server.Services.Twitch.Rewards._2_WaifuMarriage;
 using MARS.Server.Services.Twitch.Rewards._27_RandomArt;
 using MARS.Server.Services.Twitch.Rewards._39_MikuMonday;
+using MARS.Server.Services.Twitch.Rewards._4_FrogRoll;
 using MARS.Server.Services.Twitch.Rewards._4_FumoRoll;
 using MARS.Server.Services.Twitch.Rewards._5_AddWife;
 using MARS.Server.Services.Twitch.Rewards._6_RussianRoulette;
@@ -553,6 +554,11 @@ public static class StartupEstensions
             services.AddSingleton<FumoRollService>();
             services.AddSingleton<FumoFridayRoll_TwitchReward>();
             services.AddHostedService(sp => sp.GetRequiredService<FumoFridayRoll_TwitchReward>());
+
+            // Frog services
+            services.AddSingleton<FrogRollService>();
+            services.AddSingleton<FrogRoll_TwitchReward>();
+            services.AddHostedService(sp => sp.GetRequiredService<FrogRoll_TwitchReward>());
 
             // Фоновый запуск WaifuRollService
             services.AddHostedService(sp => sp.GetRequiredService<WaifuRollService>());

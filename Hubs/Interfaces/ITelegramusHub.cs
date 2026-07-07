@@ -103,4 +103,10 @@ public interface ITelegramusHub
 
     [SignalRMethod]
     public Task UpdateFumoPrizes(ICollection<FumoPrizeType> prizes);
+
+    [SignalRMethod]
+    public Task FrogRoll(Frog frog, TwitchUser twitchUser, string? color = null);
+
+    [SignalRMethod]
+    public Task UpdateFrogPrizes(ICollection<FrogPrizeType> prizes);
 }
