@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using FuzzySharp;
 using MARS.Server.Exstensions;
 using MARS.Server.Services.SoundRequest.Entities;
 using Microsoft.Extensions.Logging;
@@ -52,13 +53,76 @@ public class YouTubeResolver(ILogger<YouTubeResolver> logger)
 
         if (!string.IsNullOrWhiteSpace(query))
         {
-            var tracks = await SearchTracksAsync(query, 1, ct);
-            if (tracks.Length > 0)
+            result = await SearchBestMatchAsync(query, maxCandidates: 10, ct);
+        }
+
+        return result;
+    }
+
+    public async Task<BaseTrackInfo?> SearchBestMatchAsync(
+        string query,
+        int maxCandidates,
+        CancellationToken ct
+    )
+    {
+        BaseTrackInfo? result = null;
+
+        if (!string.IsNullOrWhiteSpace(query) && maxCandidates > 0)
+        {
+            var tracks = await SearchTracksAsync(query, maxCandidates, ct);
+
+            if (tracks.Length == 1)
             {
                 result = tracks[0];
             }
+            else if (tracks.Length > 1)
+            {
+                var normalizedQuery = NormalizeForComparison(query);
+
+                result = tracks
+                    .Select(
+                        (track, index) =>
+                            new
+                            {
+                                Track = track,
+                                Score = CalculateMatchScore(normalizedQuery, track),
+                                OriginalIndex = index,
+                            }
+                    )
+                    .OrderByDescending(x => x.Score)
+                    .ThenBy(x => x.OriginalIndex)
+                    .First()
+                    .Track;
+
+                logger.LogDebug(
+                    "[YouTubeResolver] fuzzy match: query={Query}, best={BestTitle}, score={Score:F2}",
+                    query,
+                    result.Title,
+                    CalculateMatchScore(normalizedQuery, result)
+                );
+            }
         }
 
+        return result;
+    }
+
+    private static double CalculateMatchScore(string normalizedQuery, BaseTrackInfo track)
+    {
+        var trackText = track.TrackName;
+        var normalizedTitle = NormalizeForComparison(trackText);
+
+        var ratioScore = Fuzz.Ratio(normalizedQuery, normalizedTitle) / 100.0;
+        var partialScore = Fuzz.PartialRatio(normalizedQuery, normalizedTitle) / 100.0;
+        var tokenSortScore = Fuzz.TokenSortRatio(normalizedQuery, normalizedTitle) / 100.0;
+
+        return (ratioScore * 0.3) + (partialScore * 0.4) + (tokenSortScore * 0.3);
+    }
+
+    private static string NormalizeForComparison(string input)
+    {
+        var result = input.ToLowerInvariant();
+        result = Regex.Replace(result, @"[^\w\s]", " ");
+        result = Regex.Replace(result, @"\s+", " ").Trim();
         return result;
     }
 
@@ -368,7 +432,7 @@ public class YouTubeResolver(ILogger<YouTubeResolver> logger)
 
             try
             {
-                using var process = new Process();
+                using var process = new System.Diagnostics.Process();
 
                 process.StartInfo = new ProcessStartInfo
                 {

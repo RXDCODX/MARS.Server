@@ -65,6 +65,7 @@
     <PackageReference Include="Cyrillic.Convert" />
     <PackageReference Include="DSharpPlus.VoiceNext" />
     <PackageReference Include="FFMpegCore" />
+    <PackageReference Include="FuzzySharp" />
     <PackageReference Include="FlexLabs.EntityFrameworkCore.Upsert" />
     <PackageReference Include="H.Hooks" />
     <PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" />

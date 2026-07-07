@@ -73,8 +73,6 @@ public class StateManager(
 
             if (dbState != null)
             {
-                dbState.State = PlaybackState.Stopped;
-
                 if (dbState.State == PlaybackState.Stopped)
                 {
                     dbState.CurrentTrackProgress = TimeSpan.Zero;

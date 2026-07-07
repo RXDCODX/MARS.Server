@@ -139,14 +139,20 @@ public interface ICommandService
             ? Array.Empty<string>()
             : BaseCommand.ParseParametersWithQuotes(input);
 
-        // Заполняем именованные параметры по порядку, если они есть
         if (commandInfo is not null && commandInfo.Length > 0)
         {
+            var lastParam = commandInfo[^1];
             for (var i = 0; i < commandInfo.Length; i++)
             {
                 var p = commandInfo[i];
                 if (i < inputParts.Length)
                 {
+                    if (p == lastParam && p.Type == "string" && i < inputParts.Length - 1)
+                    {
+                        parameters[p.Name] = string.Join(" ", inputParts.Skip(i));
+                        break;
+                    }
+
                     parameters[p.Name] = inputParts[i];
                 }
             }
