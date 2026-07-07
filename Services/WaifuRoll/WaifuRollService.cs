@@ -186,8 +186,7 @@ public class WaifuRollService(
                 if (pass)
                 {
                     var waifu = await dbContext
-                        .Waifus
-                        .OrderBy(e => e.LastOrder)
+                        .Waifus.OrderBy(e => e.LastOrder)
                         .Take(10)
                         .OrderBy(x => Random.Shared.Next())
                         .FirstOrDefaultAsync();
@@ -611,7 +610,9 @@ public class WaifuRollService(
         var count = await dbContext.AutoHelloMessages.CountAsync();
         var index = Random.Shared.Next(count);
 
-        return (await dbContext.AutoHelloMessages.OrderBy(e => e.Order).Skip(index).FirstAsync()).Text;
+        return (
+            await dbContext.AutoHelloMessages.OrderBy(e => e.Order).Skip(index).FirstAsync()
+        ).Text;
     }
 
     public async Task<TimeSpan> GetWaifuRollCoolDownAsync()

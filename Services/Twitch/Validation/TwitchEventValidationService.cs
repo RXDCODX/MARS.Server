@@ -18,9 +18,7 @@ public sealed class TwitchEventValidationService(
         return new MessageValidationBuilder(args, followerDb, client, logger, userEnsureService);
     }
 
-    public IRedemptionValidationBuilder ForRedemption(
-        ChannelPointsCustomRewardRedemptionArgs args
-    )
+    public IRedemptionValidationBuilder ForRedemption(ChannelPointsCustomRewardRedemptionArgs args)
     {
         return new RedemptionValidationBuilder(args, followerDb, client, logger, userEnsureService);
     }

@@ -21,9 +21,9 @@ public class TwitchUsersController(
 ) : ControllerBase
 {
     [HttpGet]
-    public async Task<
-        ActionResult<OperationResult<List<TwitchUserDto>>>
-    > GetAllUsers(CancellationToken cancellationToken = default)
+    public async Task<ActionResult<OperationResult<List<TwitchUserDto>>>> GetAllUsers(
+        CancellationToken cancellationToken = default
+    )
     {
         ActionResult<OperationResult<List<TwitchUserDto>>> result;
         try
@@ -51,10 +51,7 @@ public class TwitchUsersController(
                 .ToListAsync(cancellationToken);
 
             result = Ok(
-                OperationResult<List<TwitchUserDto>>.Ok(
-                    "Получены все пользователи Twitch",
-                    users
-                )
+                OperationResult<List<TwitchUserDto>>.Ok("Получены все пользователи Twitch", users)
             );
         }
         catch (Exception ex)
@@ -72,9 +69,10 @@ public class TwitchUsersController(
     }
 
     [HttpGet("{id}")]
-    public async Task<
-        ActionResult<OperationResult<TwitchUserDto?>>
-    > GetUser(string id, CancellationToken cancellationToken = default)
+    public async Task<ActionResult<OperationResult<TwitchUserDto?>>> GetUser(
+        string id,
+        CancellationToken cancellationToken = default
+    )
     {
         ActionResult<OperationResult<TwitchUserDto?>> result;
         try
@@ -108,10 +106,7 @@ public class TwitchUsersController(
             else
             {
                 result = Ok(
-                    OperationResult<TwitchUserDto?>.Bad(
-                        $"Пользователь с ID {id} не найден",
-                        null
-                    )
+                    OperationResult<TwitchUserDto?>.Bad($"Пользователь с ID {id} не найден", null)
                 );
             }
         }
@@ -127,9 +122,7 @@ public class TwitchUsersController(
     }
 
     [HttpPost]
-    public async Task<
-        ActionResult<OperationResult<TwitchUserDto?>>
-    > CreateUser(
+    public async Task<ActionResult<OperationResult<TwitchUserDto?>>> CreateUser(
         CreateTwitchUserRequest? request,
         CancellationToken cancellationToken = default
     )
@@ -204,9 +197,7 @@ public class TwitchUsersController(
                 CreatedAt = user.CreatedAt,
             };
 
-            result = Ok(
-                OperationResult<TwitchUserDto?>.Ok("Пользователь успешно создан", dto)
-            );
+            result = Ok(OperationResult<TwitchUserDto?>.Ok("Пользователь успешно создан", dto));
         }
         catch (Exception ex)
         {
@@ -220,9 +211,7 @@ public class TwitchUsersController(
     }
 
     [HttpPut("{id}")]
-    public async Task<
-        ActionResult<OperationResult<TwitchUserDto?>>
-    > UpdateUser(
+    public async Task<ActionResult<OperationResult<TwitchUserDto?>>> UpdateUser(
         string id,
         UpdateTwitchUserRequest? request,
         CancellationToken cancellationToken = default
@@ -234,26 +223,21 @@ public class TwitchUsersController(
             if (request == null)
             {
                 result = Ok(
-                    OperationResult<TwitchUserDto?>.Bad(
-                        "Тело запроса не может быть пустым",
-                        null
-                    )
+                    OperationResult<TwitchUserDto?>.Bad("Тело запроса не может быть пустым", null)
                 );
                 return result;
             }
 
             await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
-            var user = await db
-                .TwitchUsers
-                .FirstOrDefaultAsync(u => u.TwitchId == id, cancellationToken);
+            var user = await db.TwitchUsers.FirstOrDefaultAsync(
+                u => u.TwitchId == id,
+                cancellationToken
+            );
 
             if (user == null)
             {
                 result = Ok(
-                    OperationResult<TwitchUserDto?>.Bad(
-                        $"Пользователь с ID {id} не найден",
-                        null
-                    )
+                    OperationResult<TwitchUserDto?>.Bad($"Пользователь с ID {id} не найден", null)
                 );
                 return result;
             }
@@ -295,9 +279,7 @@ public class TwitchUsersController(
                 CreatedAt = user.CreatedAt,
             };
 
-            result = Ok(
-                OperationResult<TwitchUserDto?>.Ok("Пользователь успешно обновлен", dto)
-            );
+            result = Ok(OperationResult<TwitchUserDto?>.Ok("Пользователь успешно обновлен", dto));
         }
         catch (Exception ex)
         {
@@ -320,15 +302,14 @@ public class TwitchUsersController(
         try
         {
             await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
-            var user = await db
-                .TwitchUsers
-                .FirstOrDefaultAsync(u => u.TwitchId == id, cancellationToken);
+            var user = await db.TwitchUsers.FirstOrDefaultAsync(
+                u => u.TwitchId == id,
+                cancellationToken
+            );
 
             if (user == null)
             {
-                result = Ok(
-                    OperationResult.Bad($"Пользователь с ID {id} не найден")
-                );
+                result = Ok(OperationResult.Bad($"Пользователь с ID {id} не найден"));
                 return result;
             }
 

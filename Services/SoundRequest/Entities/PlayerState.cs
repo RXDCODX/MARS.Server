@@ -63,5 +63,4 @@ public class PlayerState
     /// </summary>
     [ForeignKey(nameof(CurrentQueueItemId))]
     public QueueItem? CurrentQueueItem { get; set; }
-
 }

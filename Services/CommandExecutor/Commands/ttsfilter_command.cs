@@ -46,9 +46,7 @@ public class TtsFilterCommand(
 
             await db.SaveChangesAsync(cancellationToken);
 
-            result = nextState
-                ? "Фильтр дубликатов TTS включён"
-                : "Фильтр дубликатов TTS выключен";
+            result = nextState ? "Фильтр дубликатов TTS включён" : "Фильтр дубликатов TTS выключен";
         }
         else
         {

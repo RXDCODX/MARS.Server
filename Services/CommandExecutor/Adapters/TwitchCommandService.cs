@@ -77,14 +77,13 @@ public class TwitchCommandService : PlatformCommandServiceBase<string>, IHostedS
 
     private async Task ClientOnOnMessageReceived(object? sender, OnMessageReceivedArgs e)
     {
-        var result = await _validator
-            .ForMessageReceived(e)
-            .SkipBlacklisted()
-            .ValidateAsync();
+        var result = await _validator.ForMessageReceived(e).SkipBlacklisted().ValidateAsync();
 
         if (result.IsInvalid)
         {
-            await _client.SendMessageToMainTwitchAsync($"@{e.ChatMessage.Username}, " + result.FirstError);
+            await _client.SendMessageToMainTwitchAsync(
+                $"@{e.ChatMessage.Username}, " + result.FirstError
+            );
             return;
         }
 
@@ -165,9 +164,7 @@ public class TwitchCommandService : PlatformCommandServiceBase<string>, IHostedS
                 // Проверяем права доступа для админских команд (если параметр показывает admin)
                 if (_commandService.IsAdminCommand(commandName) && !IsUserAdmin(userId))
                 {
-                    await SendMessage(
-                        $"Команда '{commandName}' доступна только администраторам."
-                    );
+                    await SendMessage($"Команда '{commandName}' доступна только администраторам.");
                     return;
                 }
 
@@ -181,9 +178,7 @@ public class TwitchCommandService : PlatformCommandServiceBase<string>, IHostedS
                     var userEnsureService = _serviceProvider
                         .CreateAsyncScope()
                         .ServiceProvider.GetRequiredService<TwitchUserEnsureService>();
-                    var twitchUser = await userEnsureService.EnsureUserExistsAsync(
-                        e.ChatMessage
-                    );
+                    var twitchUser = await userEnsureService.EnsureUserExistsAsync(e.ChatMessage);
                     parameters["user"] = twitchUser;
 
                     // Дополнительные контекстные параметры для адаптера

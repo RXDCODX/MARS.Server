@@ -16,7 +16,6 @@ namespace MARS.Server.Hubs;
 ///
 /// The route is preserved for compatibility while the semantics now belong to TTS.
 /// </summary>
-
 [AllowAnonymous]
 [SignalRHub("/hubs/tts", AutoDiscover.MethodsAndParams)]
 public class VoiceRecognitionHub(ILogger<VoiceRecognitionHub> logger) : Hub<IVoiceRecognitionHub>

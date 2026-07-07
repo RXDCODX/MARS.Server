@@ -259,11 +259,12 @@ public class DiscordPlayAudioCacheService(
                 .OutputToFile(
                     outputFilePath,
                     true,
-                    options => options
-                        .WithAudioCodec("libmp3lame")
-                        .WithAudioBitrate(bitrateKbps)
-                        .WithCustomArgument("-vn")
-                        .WithCustomArgument("-map_metadata -1")
+                    options =>
+                        options
+                            .WithAudioCodec("libmp3lame")
+                            .WithAudioBitrate(bitrateKbps)
+                            .WithCustomArgument("-vn")
+                            .WithCustomArgument("-map_metadata -1")
                 )
                 .CancellableThrough(cancellationToken)
                 .ProcessAsynchronously();

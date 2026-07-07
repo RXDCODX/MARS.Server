@@ -45,9 +45,7 @@ public class CommandExecutorService(CommandFactory commandFactory)
                         !c.IsAdminCommand && c.IsVisibleIn(CommandVisibility.FullList)
                     )
                     .Select(c =>
-                        isAddDescription
-                            ? $"{c.CommandName} - {c.Description}"
-                            : c.CommandName
+                        isAddDescription ? $"{c.CommandName} - {c.Description}" : c.CommandName
                     ),
             ];
         }
@@ -71,9 +69,7 @@ public class CommandExecutorService(CommandFactory commandFactory)
                         c.IsAdminCommand && c.IsVisibleIn(CommandVisibility.FullList)
                     )
                     .Select(c =>
-                        isAddDescription
-                            ? $"{c.CommandName} - {c.Description}"
-                            : c.CommandName
+                        isAddDescription ? $"{c.CommandName} - {c.Description}" : c.CommandName
                     ),
             ];
         }
@@ -100,9 +96,7 @@ public class CommandExecutorService(CommandFactory commandFactory)
                         && c.IsVisibleIn(CommandVisibility.FullList)
                     )
                     .Select(c =>
-                        isAddDescription
-                            ? $"{c.CommandName} - {c.Description}"
-                            : c.CommandName
+                        isAddDescription ? $"{c.CommandName} - {c.Description}" : c.CommandName
                     ),
             ];
         }
@@ -129,9 +123,7 @@ public class CommandExecutorService(CommandFactory commandFactory)
                         && c.IsVisibleIn(CommandVisibility.FullList)
                     )
                     .Select(c =>
-                        isAddDescription
-                            ? $"{c.CommandName} - {c.Description}"
-                            : c.CommandName
+                        isAddDescription ? $"{c.CommandName} - {c.Description}" : c.CommandName
                     ),
             ];
         }

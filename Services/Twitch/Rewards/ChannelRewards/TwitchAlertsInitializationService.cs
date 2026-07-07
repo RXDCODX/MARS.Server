@@ -7,10 +7,9 @@ namespace MARS.Server.Services.Twitch.Rewards.ChannelRewards;
 
 public static class TwitchAlertsInitializationService
 {
-    extension (IServiceCollection serviceCollection)
+    extension(IServiceCollection serviceCollection)
     {
-        public IServiceCollection InitializeTwitchRewards(
-        )
+        public IServiceCollection InitializeTwitchRewards()
         {
             var temporaryRewardTypes = typeof(TemporaryReward)
                 .Assembly.GetTypes()
@@ -23,8 +22,9 @@ public static class TwitchAlertsInitializationService
             foreach (var rewardType in temporaryRewardTypes)
             {
                 serviceCollection.AddSingleton(rewardType);
-                serviceCollection.AddSingleton(typeof(IHostedService), sp =>
-                    (IHostedService)sp.GetRequiredService(rewardType)
+                serviceCollection.AddSingleton(
+                    typeof(IHostedService),
+                    sp => (IHostedService)sp.GetRequiredService(rewardType)
                 );
             }
 

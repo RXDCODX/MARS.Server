@@ -26,7 +26,8 @@ public class MediaMetaInfo : IValidatableObject
         {
             yield return new ValidationResult(
                 "IsFreezeRequired может быть true только когда Priority = High.",
-                [nameof(IsFreezeRequired), nameof(Priority)]);
+                [nameof(IsFreezeRequired), nameof(Priority)]
+            );
         }
     }
 }

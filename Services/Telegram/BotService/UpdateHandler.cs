@@ -162,10 +162,13 @@ public class UpdateHandler : IUpdateHandler
                             {
                                 await _botClient.ForwardMessage(id, chatId, messageId);
                             }
-                            catch (ApiRequestException ex) when (
-                                ex.ErrorCode == 400
-                                && ex.Message.Contains("message to forward not found", StringComparison.OrdinalIgnoreCase)
-                            )
+                            catch (ApiRequestException ex)
+                                when (ex.ErrorCode == 400
+                                    && ex.Message.Contains(
+                                        "message to forward not found",
+                                        StringComparison.OrdinalIgnoreCase
+                                    )
+                                )
                             {
                                 _logger.LogWarning(
                                     ex,
@@ -187,10 +190,13 @@ public class UpdateHandler : IUpdateHandler
                             {
                                 await _botClient.ForwardMessage(id, chatId, messageId);
                             }
-                            catch (ApiRequestException ex) when (
-                                ex.ErrorCode == 400
-                                && ex.Message.Contains("message to forward not found", StringComparison.OrdinalIgnoreCase)
-                            )
+                            catch (ApiRequestException ex)
+                                when (ex.ErrorCode == 400
+                                    && ex.Message.Contains(
+                                        "message to forward not found",
+                                        StringComparison.OrdinalIgnoreCase
+                                    )
+                                )
                             {
                                 _logger.LogWarning(
                                     ex,

@@ -26,7 +26,6 @@ public class DbLogger([NotNull] DbLoggerProvider dbLoggerProvider) : ILogger
 #pragma warning restore CS8633 // Nullability in constraints for type parameter doesn't match the constraints for type parameter in implicitly implemented interface method'.
 #pragma warning restore CS8603  // Possible null reference return.
 
-
     /// <summary>
     /// Whether to log the entry.
     /// </summary>

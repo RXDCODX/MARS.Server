@@ -21,7 +21,9 @@ public static class WebApplicatoinExstension
                 cleanPath = subpath.Substring("/static".Length);
             }
 
-            return string.IsNullOrEmpty(cleanPath) ? new NotFoundFileInfo(subpath) : base.GetFileInfo(cleanPath);
+            return string.IsNullOrEmpty(cleanPath)
+                ? new NotFoundFileInfo(subpath)
+                : base.GetFileInfo(cleanPath);
         }
 
         public new IDirectoryContents GetDirectoryContents(string subpath)
@@ -32,7 +34,9 @@ public static class WebApplicatoinExstension
                 cleanPath = subpath.Substring("/static".Length);
             }
 
-            return base.GetDirectoryContents(string.IsNullOrEmpty(cleanPath) ? string.Empty : cleanPath);
+            return base.GetDirectoryContents(
+                string.IsNullOrEmpty(cleanPath) ? string.Empty : cleanPath
+            );
         }
 
         public new IChangeToken Watch(string filter)

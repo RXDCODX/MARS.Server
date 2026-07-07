@@ -106,9 +106,10 @@ public class TwitchRussianRoulete(
 
             await WaitForPlayers();
 
-            listPlayers.AddRange(
-                [.. _listOfPlayers, new RouletePlayer { Name = name, TwitchId = userId }]
-            );
+            listPlayers.AddRange([
+                .. _listOfPlayers,
+                new RouletePlayer { Name = name, TwitchId = userId },
+            ]);
             _listOfPlayers.Clear();
 
             if (listPlayers.Count > MaxPlayers)
@@ -183,12 +184,11 @@ public class TwitchRussianRoulete(
             _listOfPlayers.Add(new RouletePlayer { Name = userName, TwitchId = userId });
 
             // Уведомление о добавлении игрока в рулетку
-            await Task.Factory.StartNew(
-                async () =>
-                    await client.SendMessageToMainTwitchAsync(
-                        $"@{userName} присоединился к русской рулетке! Игроков в игре: {_listOfPlayers.Count + 1}",
-                        logger
-                    )
+            await Task.Factory.StartNew(async () =>
+                await client.SendMessageToMainTwitchAsync(
+                    $"@{userName} присоединился к русской рулетке! Игроков в игре: {_listOfPlayers.Count + 1}",
+                    logger
+                )
             );
 
             return true;

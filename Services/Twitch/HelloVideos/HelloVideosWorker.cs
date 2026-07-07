@@ -66,9 +66,7 @@ public class HelloVideoWorker(
                 try
                 {
                     var now = DateTimeOffset.Now;
-                    await using var dbContext = await dbContextFactory.CreateDbContextAsync(
-                        _token
-                    );
+                    await using var dbContext = await dbContextFactory.CreateDbContextAsync(_token);
                     var user = await dbContext.FumoUsers.FindAsync(
                         [args.ChatMessage.UserId],
                         _token
@@ -86,10 +84,7 @@ public class HelloVideoWorker(
 
                     var notifUser = await dbContext
                         .HelloVideosUsers.Include(e => e.MediaInfo)
-                        .FirstOrDefaultAsync(
-                            e => e.TwitchId == args.ChatMessage.UserId,
-                            _token
-                        );
+                        .FirstOrDefaultAsync(e => e.TwitchId == args.ChatMessage.UserId, _token);
 
                     if (notifUser != null)
                     {

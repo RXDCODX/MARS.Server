@@ -22,164 +22,208 @@ public sealed class MessageValidationBuilder(
 
     public IMessageValidationBuilder RequireChannel(bool loud = false)
     {
-        _checks.Add((() =>
-        {
-            if (
-                !args.ChatMessage.Channel.Equals(
-                    TwitchExstension.Channel,
-                    StringComparison.OrdinalIgnoreCase
-                )
-            )
-            {
-                throw new ValidationException("Эта команда работает только в основном канале");
-            }
+        _checks.Add(
+            (
+                () =>
+                {
+                    if (
+                        !args.ChatMessage.Channel.Equals(
+                            TwitchExstension.Channel,
+                            StringComparison.OrdinalIgnoreCase
+                        )
+                    )
+                    {
+                        throw new ValidationException(
+                            "Эта команда работает только в основном канале"
+                        );
+                    }
 
-            return Task.CompletedTask;
-        }, loud));
+                    return Task.CompletedTask;
+                },
+                loud
+            )
+        );
 
         return this;
     }
 
     public IMessageValidationBuilder RequireBroadcasterId(bool loud = false)
     {
-        _checks.Add((() =>
-        {
-            if (
-                !args.ChatMessage.RoomId.Equals(
-                    TwitchExstension.ChannelId,
-                    StringComparison.OrdinalIgnoreCase
-                )
-            )
-            {
-                throw new ValidationException("Эта команда доступна только стримеру");
-            }
+        _checks.Add(
+            (
+                () =>
+                {
+                    if (
+                        !args.ChatMessage.RoomId.Equals(
+                            TwitchExstension.ChannelId,
+                            StringComparison.OrdinalIgnoreCase
+                        )
+                    )
+                    {
+                        throw new ValidationException("Эта команда доступна только стримеру");
+                    }
 
-            return Task.CompletedTask;
-        }, loud));
+                    return Task.CompletedTask;
+                },
+                loud
+            )
+        );
 
         return this;
     }
 
     public IMessageValidationBuilder SkipBlacklisted(bool loud = true)
     {
-        _checks.Add((() =>
-        {
-            if (
-                TwitchExstension.BlackList.Logins.Any(t =>
-                    t.Equals(args.ChatMessage.Username, StringComparison.OrdinalIgnoreCase)
-                )
-            )
-            {
-                throw new ValidationException("У вас нет доступа к этой команде");
-            }
+        _checks.Add(
+            (
+                () =>
+                {
+                    if (
+                        TwitchExstension.BlackList.Logins.Any(t =>
+                            t.Equals(args.ChatMessage.Username, StringComparison.OrdinalIgnoreCase)
+                        )
+                    )
+                    {
+                        throw new ValidationException("У вас нет доступа к этой команде");
+                    }
 
-            return Task.CompletedTask;
-        }, loud));
+                    return Task.CompletedTask;
+                },
+                loud
+            )
+        );
 
         return this;
     }
 
     public IMessageValidationBuilder RequireRewardId(bool loud = false)
     {
-        _checks.Add((() =>
-        {
-            if (string.IsNullOrWhiteSpace(args.ChatMessage.CustomRewardId))
-            {
-                throw new ValidationException("Не удалось определить награду");
-            }
+        _checks.Add(
+            (
+                () =>
+                {
+                    if (string.IsNullOrWhiteSpace(args.ChatMessage.CustomRewardId))
+                    {
+                        throw new ValidationException("Не удалось определить награду");
+                    }
 
-            return Task.CompletedTask;
-        }, loud));
+                    return Task.CompletedTask;
+                },
+                loud
+            )
+        );
 
         return this;
     }
 
     public IMessageValidationBuilder RequireRewardGuid(Guid? expected, bool loud = false)
     {
-        _checks.Add((() =>
-        {
-            if (!expected.HasValue)
-            {
-                throw new ValidationException("Награда не настроена");
-            }
+        _checks.Add(
+            (
+                () =>
+                {
+                    if (!expected.HasValue)
+                    {
+                        throw new ValidationException("Награда не настроена");
+                    }
 
-            var rewardId = args.ChatMessage.CustomRewardId;
-            if (string.IsNullOrWhiteSpace(rewardId) || Guid.Parse(rewardId) != expected)
-            {
-                throw new ValidationException("Награда не найдена");
-            }
+                    var rewardId = args.ChatMessage.CustomRewardId;
+                    if (string.IsNullOrWhiteSpace(rewardId) || Guid.Parse(rewardId) != expected)
+                    {
+                        throw new ValidationException("Награда не найдена");
+                    }
 
-            return Task.CompletedTask;
-        }, loud));
+                    return Task.CompletedTask;
+                },
+                loud
+            )
+        );
 
         return this;
     }
 
     public IMessageValidationBuilder RequireServiceActive(bool isActive, bool loud = false)
     {
-        _checks.Add((() =>
-        {
-            if (!isActive)
-            {
-                throw new ValidationException("Сервис временно неактивен");
-            }
+        _checks.Add(
+            (
+                () =>
+                {
+                    if (!isActive)
+                    {
+                        throw new ValidationException("Сервис временно неактивен");
+                    }
 
-            return Task.CompletedTask;
-        }, loud));
+                    return Task.CompletedTask;
+                },
+                loud
+            )
+        );
 
         return this;
     }
 
     public IMessageValidationBuilder RequireUserId(bool loud = false)
     {
-        _checks.Add((() =>
-        {
-            if (string.IsNullOrWhiteSpace(args.ChatMessage.UserId))
-            {
-                throw new ValidationException("Не удалось определить пользователя");
-            }
+        _checks.Add(
+            (
+                () =>
+                {
+                    if (string.IsNullOrWhiteSpace(args.ChatMessage.UserId))
+                    {
+                        throw new ValidationException("Не удалось определить пользователя");
+                    }
 
-            return Task.CompletedTask;
-        }, loud));
+                    return Task.CompletedTask;
+                },
+                loud
+            )
+        );
 
         return this;
     }
 
     public IMessageValidationBuilder RequireFollower(bool loud = true)
     {
-        _checks.Add((async () =>
-        {
-            var userId = args.ChatMessage.UserId;
-
-            if (string.IsNullOrWhiteSpace(userId))
-            {
-                throw new ValidationException("Не удалось проверить подписку");
-            }
-
-            if (userId == TwitchExstension.ChannelId)
-            {
-                return;
-            }
-
-            try
-            {
-                var user = await userEnsureService.EnsureUserExistsAsync(userId);
-                if (user is { IsModerator: true } or { IsVip: true })
+        _checks.Add(
+            (
+                async () =>
                 {
-                    return;
-                }
-            }
-            catch (ArgumentException)
-            {
-                // User not found in DB — treat as regular user
-            }
+                    var userId = args.ChatMessage.UserId;
 
-            var follower = await followerDb.GetFollowerFromDbAsync(userId);
-            if (follower == null)
-            {
-                throw new ValidationException("Подпишись на канал, чтобы использовать эту команду");
-            }
-        }, loud));
+                    if (string.IsNullOrWhiteSpace(userId))
+                    {
+                        throw new ValidationException("Не удалось проверить подписку");
+                    }
+
+                    if (userId == TwitchExstension.ChannelId)
+                    {
+                        return;
+                    }
+
+                    try
+                    {
+                        var user = await userEnsureService.EnsureUserExistsAsync(userId);
+                        if (user is { IsModerator: true } or { IsVip: true })
+                        {
+                            return;
+                        }
+                    }
+                    catch (ArgumentException)
+                    {
+                        // User not found in DB — treat as regular user
+                    }
+
+                    var follower = await followerDb.GetFollowerFromDbAsync(userId);
+                    if (follower == null)
+                    {
+                        throw new ValidationException(
+                            "Подпишись на канал, чтобы использовать эту команду"
+                        );
+                    }
+                },
+                loud
+            )
+        );
 
         return this;
     }

@@ -31,7 +31,10 @@ public class TestAlertsController(
     [HttpPost("alert")]
     public async Task<ActionResult<OperationResult>> SendAlert([FromBody] MediaDto dto)
     {
-        if (dto.MediaInfo.MetaInfo.IsFreezeRequired && dto.MediaInfo.MetaInfo.Priority != MediaAlertPriority.High)
+        if (
+            dto.MediaInfo.MetaInfo.IsFreezeRequired
+            && dto.MediaInfo.MetaInfo.Priority != MediaAlertPriority.High
+        )
         {
             ActionResult<OperationResult> badResult = Ok(
                 OperationResult.Bad("IsFreezeRequired может быть true только когда Priority = High")
@@ -50,10 +53,15 @@ public class TestAlertsController(
     {
         foreach (var dto in dtos)
         {
-            if (dto.MediaInfo.MetaInfo.IsFreezeRequired && dto.MediaInfo.MetaInfo.Priority != MediaAlertPriority.High)
+            if (
+                dto.MediaInfo.MetaInfo.IsFreezeRequired
+                && dto.MediaInfo.MetaInfo.Priority != MediaAlertPriority.High
+            )
             {
                 ActionResult<OperationResult> badResult = Ok(
-                    OperationResult.Bad("IsFreezeRequired может быть true только когда Priority = High")
+                    OperationResult.Bad(
+                        "IsFreezeRequired может быть true только когда Priority = High"
+                    )
                 );
                 return badResult;
             }

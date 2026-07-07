@@ -117,8 +117,7 @@ public class WeddingAnniversaryService(
                             nearest = new NearestAnniversaryDto
                             {
                                 TwitchId = user.TwitchId,
-                                DisplayName =
-                                    user.TwitchUser?.DisplayName ?? user.TwitchId,
+                                DisplayName = user.TwitchUser?.DisplayName ?? user.TwitchId,
                                 AnniversaryName = anniversary.Name,
                                 AnniversaryDate = anniversaryDate,
                                 Months = anniversary.Months,
@@ -144,10 +143,7 @@ public class WeddingAnniversaryService(
         }
         catch (Exception ex)
         {
-            logger.LogWarning(
-                ex,
-                "Ошибка при поиске ближайшей годовщины среди всех пользователей"
-            );
+            logger.LogWarning(ex, "Ошибка при поиске ближайшей годовщины среди всех пользователей");
         }
 
         return result;

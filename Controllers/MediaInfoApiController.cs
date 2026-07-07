@@ -33,10 +33,7 @@ public class MediaInfoApiController(
 {
     private static readonly JsonSerializerOptions FormJsonOptions = new(JsonSerializerDefaults.Web)
     {
-        Converters =
-        {
-            new System.Text.Json.Serialization.JsonStringEnumConverter(),
-        },
+        Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() },
     };
 
     /// <summary>
@@ -212,20 +209,36 @@ public class MediaInfoApiController(
             }
             else
             {
-                var alert = JsonSerializer.Deserialize<ApiMediaInfo>(request.AlertJson, FormJsonOptions);
+                var alert = JsonSerializer.Deserialize<ApiMediaInfo>(
+                    request.AlertJson,
+                    FormJsonOptions
+                );
                 if (alert is null)
                 {
-                    result = Ok(OperationResult<ApiMediaInfo?>.Bad("Не удалось разобрать алерт", null));
+                    result = Ok(
+                        OperationResult<ApiMediaInfo?>.Bad("Не удалось разобрать алерт", null)
+                    );
                 }
                 else if (!IsFreezeRuleValid(alert.MetaInfo))
                 {
-                    result = Ok(OperationResult<ApiMediaInfo?>.Bad("IsFreezeRequired может быть true только когда Priority = High", null));
+                    result = Ok(
+                        OperationResult<ApiMediaInfo?>.Bad(
+                            "IsFreezeRequired может быть true только когда Priority = High",
+                            null
+                        )
+                    );
                 }
                 else if (request.File is null)
                 {
                     result = Ok(OperationResult<ApiMediaInfo?>.Bad("Файл не передан", null));
                 }
-                else if (!TryResolveUploadedMemsFilePath(alert.FileInfo.FilePath, out var targetFilePath, out var pathError))
+                else if (
+                    !TryResolveUploadedMemsFilePath(
+                        alert.FileInfo.FilePath,
+                        out var targetFilePath,
+                        out var pathError
+                    )
+                )
                 {
                     result = Ok(OperationResult<ApiMediaInfo?>.Bad(pathError, null));
                 }
@@ -237,15 +250,29 @@ public class MediaInfoApiController(
                     {
                         var fullPath = Path.Combine(
                             webHostEnvironment.WebRootPath,
-                            fileInfo.FilePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar)
+                            fileInfo
+                                .FilePath.TrimStart('/')
+                                .Replace('/', Path.DirectorySeparatorChar)
                         );
 
                         // Ensure playable: transcode if needed
                         var playablePath = await transcoder.EnsurePlayableAsync(fullPath);
 
-                        if (!string.Equals(playablePath, fullPath, StringComparison.OrdinalIgnoreCase))
+                        if (
+                            !string.Equals(
+                                playablePath,
+                                fullPath,
+                                StringComparison.OrdinalIgnoreCase
+                            )
+                        )
                         {
-                            var rel = "/" + Path.GetRelativePath(webHostEnvironment.WebRootPath, Path.GetFullPath(playablePath)).Replace('\\', '/');
+                            var rel =
+                                "/"
+                                + Path.GetRelativePath(
+                                        webHostEnvironment.WebRootPath,
+                                        Path.GetFullPath(playablePath)
+                                    )
+                                    .Replace('\\', '/');
                             fileInfo.FilePath = rel;
                             fileInfo.Extension = Path.GetExtension(playablePath);
                             fileInfo.FileName = Path.GetFileName(playablePath);
@@ -261,15 +288,32 @@ public class MediaInfoApiController(
                         else
                         {
                             var probe = await inspector.ProbeAsync(fullPath);
-                            if ((fileInfo.Type == MediaType.Audio && (probe.BitrateKbps is null || probe.BitrateKbps < 128)) || (fileInfo.Type == MediaType.Video && (probe.BitrateKbps is null || probe.BitrateKbps < 128)))
+                            if (
+                                (
+                                    fileInfo.Type == MediaType.Audio
+                                    && (probe.BitrateKbps is null || probe.BitrateKbps < 128)
+                                )
+                                || (
+                                    fileInfo.Type == MediaType.Video
+                                    && (probe.BitrateKbps is null || probe.BitrateKbps < 128)
+                                )
+                            )
                             {
-                                logger.LogInformation("Загружен файл с низким битрейтом: {File} ({Bitrate} kbps)", fullPath, probe.BitrateKbps);
+                                logger.LogInformation(
+                                    "Загружен файл с низким битрейтом: {File} ({Bitrate} kbps)",
+                                    fullPath,
+                                    probe.BitrateKbps
+                                );
                             }
                         }
                     }
                     catch (Exception ex)
                     {
-                        logger.LogDebug(ex, "Не удалось выполнить пробинг/транскодирование файла {File}", fileInfo.FilePath);
+                        logger.LogDebug(
+                            ex,
+                            "Не удалось выполнить пробинг/транскодирование файла {File}",
+                            fileInfo.FilePath
+                        );
                     }
 
                     if (fileInfo.IsLocalFile)
@@ -280,7 +324,11 @@ public class MediaInfoApiController(
                         }
                         catch (Exception copyEx)
                         {
-                            logger.LogDebug(copyEx, "Не удалось синхронизировать dev-копию файла {File}", fileInfo.FilePath);
+                            logger.LogDebug(
+                                copyEx,
+                                "Не удалось синхронизировать dev-копию файла {File}",
+                                fileInfo.FilePath
+                            );
                         }
                     }
                     var createdAlert = CreateStoredAlert(alert, fileInfo);
@@ -330,14 +378,24 @@ public class MediaInfoApiController(
             }
             else
             {
-                var alert = JsonSerializer.Deserialize<ApiMediaInfo>(request.AlertJson, FormJsonOptions);
+                var alert = JsonSerializer.Deserialize<ApiMediaInfo>(
+                    request.AlertJson,
+                    FormJsonOptions
+                );
                 if (alert is null)
                 {
-                    result = Ok(OperationResult<ApiMediaInfo?>.Bad("Не удалось разобрать алерт", null));
+                    result = Ok(
+                        OperationResult<ApiMediaInfo?>.Bad("Не удалось разобрать алерт", null)
+                    );
                 }
                 else if (!IsFreezeRuleValid(alert.MetaInfo))
                 {
-                    result = Ok(OperationResult<ApiMediaInfo?>.Bad("IsFreezeRequired может быть true только когда Priority = High", null));
+                    result = Ok(
+                        OperationResult<ApiMediaInfo?>.Bad(
+                            "IsFreezeRequired может быть true только когда Priority = High",
+                            null
+                        )
+                    );
                 }
                 else if (id != alert.Id)
                 {
@@ -356,10 +414,7 @@ public class MediaInfoApiController(
                     if (existingAlert == null)
                     {
                         result = Ok(
-                            OperationResult<ApiMediaInfo?>.Bad(
-                                $"Алерт с ID '{id}' не найден",
-                                null
-                            )
+                            OperationResult<ApiMediaInfo?>.Bad($"Алерт с ID '{id}' не найден", null)
                         );
                     }
                     else
@@ -368,44 +423,95 @@ public class MediaInfoApiController(
 
                         if (request.File is not null)
                         {
-                            if (!TryResolveUploadedMemsFilePath(alert.FileInfo.FilePath, out var targetFilePath, out var pathError))
+                            if (
+                                !TryResolveUploadedMemsFilePath(
+                                    alert.FileInfo.FilePath,
+                                    out var targetFilePath,
+                                    out var pathError
+                                )
+                            )
                             {
                                 result = Ok(OperationResult<ApiMediaInfo?>.Bad(pathError, null));
                                 return result;
                             }
 
-                            resolvedFileInfo = await storage.SaveFileAsync(request.File, targetFilePath);
+                            resolvedFileInfo = await storage.SaveFileAsync(
+                                request.File,
+                                targetFilePath
+                            );
 
                             try
                             {
                                 var fullPath = Path.Combine(
                                     webHostEnvironment.WebRootPath,
-                                    resolvedFileInfo.FilePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar)
+                                    resolvedFileInfo
+                                        .FilePath.TrimStart('/')
+                                        .Replace('/', Path.DirectorySeparatorChar)
                                 );
 
                                 var playable = await transcoder.EnsurePlayableAsync(fullPath);
-                                if (!string.Equals(playable, fullPath, StringComparison.OrdinalIgnoreCase))
+                                if (
+                                    !string.Equals(
+                                        playable,
+                                        fullPath,
+                                        StringComparison.OrdinalIgnoreCase
+                                    )
+                                )
                                 {
-                                    var rel = "/" + Path.GetRelativePath(webHostEnvironment.WebRootPath, Path.GetFullPath(playable)).Replace('\\', '/');
+                                    var rel =
+                                        "/"
+                                        + Path.GetRelativePath(
+                                                webHostEnvironment.WebRootPath,
+                                                Path.GetFullPath(playable)
+                                            )
+                                            .Replace('\\', '/');
                                     resolvedFileInfo.FilePath = rel;
                                     resolvedFileInfo.Extension = Path.GetExtension(playable);
                                     resolvedFileInfo.FileName = Path.GetFileName(playable);
-                                    resolvedFileInfo.Type = await resolvedFileInfo.Extension.GetFileMediaTypeAsync();
+                                    resolvedFileInfo.Type =
+                                        await resolvedFileInfo.Extension.GetFileMediaTypeAsync();
 
-                                    try { await storage.CopyToDevCopiesAsync(resolvedFileInfo.FilePath); } catch { }
+                                    try
+                                    {
+                                        await storage.CopyToDevCopiesAsync(
+                                            resolvedFileInfo.FilePath
+                                        );
+                                    }
+                                    catch { }
                                 }
                                 else
                                 {
                                     var probe = await inspector.ProbeAsync(fullPath);
-                                    if ((resolvedFileInfo.Type == MediaType.Audio && (probe.BitrateKbps is null || probe.BitrateKbps < 128)) || (resolvedFileInfo.Type == MediaType.Video && (probe.BitrateKbps is null || probe.BitrateKbps < 128)))
+                                    if (
+                                        (
+                                            resolvedFileInfo.Type == MediaType.Audio
+                                            && (
+                                                probe.BitrateKbps is null || probe.BitrateKbps < 128
+                                            )
+                                        )
+                                        || (
+                                            resolvedFileInfo.Type == MediaType.Video
+                                            && (
+                                                probe.BitrateKbps is null || probe.BitrateKbps < 128
+                                            )
+                                        )
+                                    )
                                     {
-                                        logger.LogInformation("Загружен файл с низким битрейтом: {File} ({Bitrate} kbps)", fullPath, probe.BitrateKbps);
+                                        logger.LogInformation(
+                                            "Загружен файл с низким битрейтом: {File} ({Bitrate} kbps)",
+                                            fullPath,
+                                            probe.BitrateKbps
+                                        );
                                     }
                                 }
                             }
                             catch (Exception ex)
                             {
-                                logger.LogDebug(ex, "Не удалось выполнить пробинг/транскодирование файла {File}", resolvedFileInfo.FilePath);
+                                logger.LogDebug(
+                                    ex,
+                                    "Не удалось выполнить пробинг/транскодирование файла {File}",
+                                    resolvedFileInfo.FilePath
+                                );
                             }
 
                             try
@@ -414,13 +520,20 @@ public class MediaInfoApiController(
                             }
                             catch (Exception copyEx)
                             {
-                                logger.LogDebug(copyEx, "Не удалось синхронизировать dev-копию файла {File}", resolvedFileInfo.FilePath);
+                                logger.LogDebug(
+                                    copyEx,
+                                    "Не удалось синхронизировать dev-копию файла {File}",
+                                    resolvedFileInfo.FilePath
+                                );
                             }
 
                             var oldPath = existingAlert.FileInfo.FilePath ?? string.Empty;
                             if (
                                 !string.IsNullOrWhiteSpace(oldPath)
-                                && !oldPath.StartsWith("memory/", StringComparison.OrdinalIgnoreCase)
+                                && !oldPath.StartsWith(
+                                    "memory/",
+                                    StringComparison.OrdinalIgnoreCase
+                                )
                                 && oldPath.StartsWith("/", StringComparison.Ordinal)
                             )
                             {
@@ -444,9 +557,19 @@ public class MediaInfoApiController(
                             if (
                                 !string.IsNullOrWhiteSpace(oldPath)
                                 && !string.IsNullOrWhiteSpace(newPath)
-                                && !string.Equals(oldPath, newPath, StringComparison.OrdinalIgnoreCase)
-                                && !oldPath.StartsWith("memory/", StringComparison.OrdinalIgnoreCase)
-                                && !newPath.StartsWith("memory/", StringComparison.OrdinalIgnoreCase)
+                                && !string.Equals(
+                                    oldPath,
+                                    newPath,
+                                    StringComparison.OrdinalIgnoreCase
+                                )
+                                && !oldPath.StartsWith(
+                                    "memory/",
+                                    StringComparison.OrdinalIgnoreCase
+                                )
+                                && !newPath.StartsWith(
+                                    "memory/",
+                                    StringComparison.OrdinalIgnoreCase
+                                )
                             )
                             {
                                 var sourceRelativePath = oldPath
@@ -478,8 +601,16 @@ public class MediaInfoApiController(
                                     return result;
                                 }
 
-                                var oldFullPath = Path.Combine(sourceRoot, "wwwroot", sourceRelativePath);
-                                var newFullPath = Path.Combine(sourceRoot, "wwwroot", targetRelativePath);
+                                var oldFullPath = Path.Combine(
+                                    sourceRoot,
+                                    "wwwroot",
+                                    sourceRelativePath
+                                );
+                                var newFullPath = Path.Combine(
+                                    sourceRoot,
+                                    "wwwroot",
+                                    targetRelativePath
+                                );
 
                                 var newDirectory = Path.GetDirectoryName(newFullPath);
                                 if (!string.IsNullOrWhiteSpace(newDirectory))
@@ -516,7 +647,11 @@ public class MediaInfoApiController(
         return result;
     }
 
-    private static bool TryResolveUploadedMemsFilePath(string? filePath, out string resolvedPath, out string errorMessage)
+    private static bool TryResolveUploadedMemsFilePath(
+        string? filePath,
+        out string resolvedPath,
+        out string errorMessage
+    )
     {
         resolvedPath = string.Empty;
         errorMessage = string.Empty;
@@ -532,7 +667,8 @@ public class MediaInfoApiController(
 
         if (Path.IsPathRooted(relative) || relative.Contains("..", StringComparison.Ordinal))
         {
-            errorMessage = "Путь к файлу должен быть относительным и находиться внутри Alerts/uploaded_mems";
+            errorMessage =
+                "Путь к файлу должен быть относительным и находиться внутри Alerts/uploaded_mems";
             return false;
         }
 
@@ -581,8 +717,6 @@ public class MediaInfoApiController(
             StylesInfo = source.StylesInfo,
         };
     }
-
-
 
     /// <summary>
     /// Удалить алерт
