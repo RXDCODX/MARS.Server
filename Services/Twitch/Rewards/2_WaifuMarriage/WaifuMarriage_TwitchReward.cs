@@ -23,5 +23,7 @@ public class WaifuMarriage_TwitchReward(
     public override int Cost { get; init; } = 2;
 
     public override Func<bool> IsRewardEnabled { get; set; } =
-        () => DateTime.Now.DayOfWeek != DayOfWeek.Friday;
+        () =>
+            DateTime.Now.DayOfWeek != DayOfWeek.Friday
+            && DateTime.Now.DayOfWeek != DayOfWeek.Wednesday;
 }

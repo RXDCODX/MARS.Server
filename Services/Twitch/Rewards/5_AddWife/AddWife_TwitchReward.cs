@@ -24,7 +24,9 @@ public class AddWife_TwitchReward(
     public override Color Color { get; set; } = Color.FromArgb(0, 30, 255);
     public override int Cost { get; init; } = 5;
     public override Func<bool> IsRewardEnabled { get; set; } =
-        () => DateTime.Now.DayOfWeek != DayOfWeek.Friday;
+        () =>
+            DateTime.Now.DayOfWeek != DayOfWeek.Friday
+            && DateTime.Now.DayOfWeek != DayOfWeek.Wednesday;
 
     private protected override CreateCustomRewardsRequest CreateCustomRewardsRequest
     {
