@@ -7,7 +7,7 @@ public interface IMessageValidationBuilder
 {
     IMessageValidationBuilder RequireChannel(bool loud = false);
     IMessageValidationBuilder RequireBroadcasterId(bool loud = false);
-    IMessageValidationBuilder SkipBlacklisted(bool loud = true);
+    IMessageValidationBuilder SkipBlacklisted(bool loud = false);
     IMessageValidationBuilder RequireRewardId(bool loud = false);
     IMessageValidationBuilder RequireRewardGuid(Guid? expected, bool loud = false);
     IMessageValidationBuilder RequireServiceActive(bool isActive, bool loud = false);
