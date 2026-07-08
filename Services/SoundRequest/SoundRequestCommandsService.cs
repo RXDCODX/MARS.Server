@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -171,6 +171,7 @@ public class SoundRequestCommandsService(
                 // Проверяем состояние плеера ДО добавления в очередь
                 var currentState = await stateManager.GetStateAsync();
                 var wasPlayerStopped = currentState.State == PlaybackState.Stopped;
+                var wasPlayerWaiting = currentState.State == PlaybackState.WaitingForTrack;
 
                 // Проверяем размер очереди ДО добавления
                 var queueCountBefore = await queue.GetQueueCountAsync();
@@ -182,6 +183,7 @@ public class SoundRequestCommandsService(
                 // Пытаемся запустить воспроизведение если нужно
                 await TryAutoPlayQueueItemAsync(
                     wasPlayerStopped,
+                    wasPlayerWaiting,
                     queueCountBefore,
                     queueItem,
                     cancellationToken
@@ -452,6 +454,7 @@ public class SoundRequestCommandsService(
             // Проверяем состояние плеера ДО добавления плейлиста
             var currentState = await stateManager.GetStateAsync();
             var wasPlayerStopped = currentState.State == PlaybackState.Stopped;
+            var wasPlayerWaiting = currentState.State == PlaybackState.WaitingForTrack;
             var queueCountBefore = await queue.GetQueueCountAsync();
 
             QueueItem? firstQueueItem = null;
@@ -492,9 +495,9 @@ public class SoundRequestCommandsService(
                 addedTracks++;
             }
 
-            // Если плеер был остановлен И очередь была пуста - запускаем первый трек
+            // Если плеер был остановлен/ожидал И очередь была пуста - запускаем первый трек
             if (
-                wasPlayerStopped
+                (wasPlayerStopped || wasPlayerWaiting)
                 && queueCountBefore == 0
                 && firstQueueItem != null
                 && playerController is MainPlayer mainPlayer
@@ -552,16 +555,21 @@ public class SoundRequestCommandsService(
     }
 
     /// <summary>
-    /// Попытаться автоматически запустить воспроизведение элемента очереди, если плеер остановлен и очередь была пуста
+    /// Попытаться автоматически запустить воспроизведение элемента очереди, если плеер остановлен/ожидает и очередь была пуста
     /// </summary>
     private async Task TryAutoPlayQueueItemAsync(
         bool wasPlayerStopped,
+        bool wasPlayerWaiting,
         int queueCountBefore,
         QueueItem queueItem,
         CancellationToken cancellationToken
     )
     {
-        if (wasPlayerStopped && queueCountBefore == 0 && playerController is MainPlayer mainPlayer)
+        if (
+            (wasPlayerStopped || wasPlayerWaiting)
+            && queueCountBefore == 0
+            && playerController is MainPlayer mainPlayer
+        )
         {
             await mainPlayer.PlayAsync(queueItem, cancellationToken);
             await NotifyQueueChangedAsync();

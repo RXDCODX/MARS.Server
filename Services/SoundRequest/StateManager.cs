@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -284,8 +284,7 @@ public class StateManager(
             {
                 state.CurrentQueueItemId = queueItem?.Id;
                 state.CurrentQueueItem = queueItem;
-                state.State =
-                    queueItem == null ? PlaybackState.Stopped : PlaybackState.WaitingForTrack;
+                state.State = PlaybackState.WaitingForTrack;
             },
             notify,
             excludeConnectionId

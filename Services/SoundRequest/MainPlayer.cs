@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Dynamic.Core;
@@ -422,9 +422,11 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
         }
         else
         {
-            _logger.LogInformation("Очередь пуста - останавливаем плеер");
-            // Очередь пуста - останавливаем воспроизведение
-            await StopAsync(_cancellationToken);
+            _logger.LogInformation(
+                "Очередь пуста - переводим плеер в состояние ожидания нового трека"
+            );
+            // Очередь пуста - переводим в состояние ожидания
+            await _stateManager.SetCurrentQueueItemAsync(null, notify: true);
         }
     }
 
@@ -660,8 +662,8 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
                 // Очищаем старую историю
                 await CleanupOldHistoryAsync();
 
-                // Останавливаем плеер и обнуляем ссылки
-                await _stateManager.StopPlaybackAsync(notify: true);
+                // Переводим плеер в состояние ожидания нового трека
+                await _stateManager.SetCurrentQueueItemAsync(null, notify: true);
 
                 // Уведомляем об изменении очереди (она теперь пуста)
                 await NotifyQueueChangedAsync();
@@ -727,10 +729,10 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
         if (!hasNextTracks)
         {
             _logger.LogInformation(
-                "Это был последний трек в очереди, останавливаем плеер и обнуляем ссылки"
+                "Это был последний трек в очереди, переводим плеер в состояние ожидания нового трека"
             );
 
-            await _stateManager.StopPlaybackAsync(notify: true);
+            await _stateManager.SetCurrentQueueItemAsync(null, notify: true);
         }
         else
         {
