@@ -1,6 +1,6 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using MARS.Server.Exstensions;
 using MARS.Server.Services.Twitch.TwitchFollowers;
@@ -15,7 +15,8 @@ public sealed class MessageValidationBuilder(
     FollowerDbService followerDb,
     ITwitchClient client,
     ILogger logger,
-    TwitchUserEnsureService userEnsureService
+    TwitchUserEnsureService userEnsureService,
+    ConcurrentDictionary<string, DateTime> sentEventErrors
 ) : IMessageValidationBuilder
 {
     private readonly List<(Func<Task> check, bool loud)> _checks = [];
@@ -265,18 +266,34 @@ public sealed class MessageValidationBuilder(
     {
         var result = await ValidateAsync();
 
-        if (result.IsInvalid && result.FirstError != null)
+        if (result is { IsInvalid: true, FirstError: not null })
         {
-            try
+            var key = args.ChatMessage.Id;
+
+            if (sentEventErrors.TryAdd(key, DateTime.UtcNow))
             {
-                await client.SendMessageToMainTwitchAsync(
-                    $"@{userName}, {result.FirstError}",
-                    logger
+                try
+                {
+                    await client.SendMessageToMainTwitchAsync(
+                        $"@{userName}, {result.FirstError}",
+                        logger
+                    );
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Failed to send validation error message");
+                }
+
+                await Task.Factory.StartNew(
+                    async () =>
+                    {
+                        await Task.Delay(TimeSpan.FromSeconds(30));
+                        sentEventErrors.TryRemove(key, out _);
+                    },
+                    CancellationToken.None,
+                    TaskCreationOptions.DenyChildAttach,
+                    TaskScheduler.Default
                 );
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Failed to send validation error message");
             }
         }
 

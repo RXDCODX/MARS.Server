@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using MARS.Server.Exstensions;
@@ -15,7 +16,8 @@ public sealed class RedemptionValidationBuilder(
     FollowerDbService followerDb,
     ITwitchClient client,
     ILogger logger,
-    TwitchUserEnsureService userEnsureService
+    TwitchUserEnsureService userEnsureService,
+    ConcurrentDictionary<string, DateTime> sentEventErrors
 ) : IRedemptionValidationBuilder
 {
     private readonly List<(Func<Task> check, bool loud)> _checks = [];
@@ -240,16 +242,32 @@ public sealed class RedemptionValidationBuilder(
 
         if (result is { IsInvalid: true, FirstError: not null })
         {
-            try
+            var key = Event.Id;
+
+            if (sentEventErrors.TryAdd(key, DateTime.UtcNow))
             {
-                await client.SendMessageToMainTwitchAsync(
-                    $"@{userName}, {result.FirstError}",
-                    logger
+                try
+                {
+                    await client.SendMessageToMainTwitchAsync(
+                        $"@{userName}, {result.FirstError}",
+                        logger
+                    );
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Failed to send validation error message");
+                }
+
+                await Task.Factory.StartNew(
+                    async () =>
+                    {
+                        await Task.Delay(TimeSpan.FromSeconds(30));
+                        sentEventErrors.TryRemove(key, out _);
+                    },
+                    CancellationToken.None,
+                    TaskCreationOptions.DenyChildAttach,
+                    TaskScheduler.Default
                 );
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Failed to send validation error message");
             }
         }
 

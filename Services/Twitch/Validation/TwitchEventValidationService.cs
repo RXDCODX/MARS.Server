@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using MARS.Server.Services.Twitch.TwitchFollowers;
 using Microsoft.Extensions.Logging;
 using TwitchLib.Client.Events;
@@ -13,13 +14,29 @@ public sealed class TwitchEventValidationService(
     TwitchUserEnsureService userEnsureService
 ) : ITwitchEventValidationService
 {
+    internal readonly ConcurrentDictionary<string, DateTime> SentEventErrors = new();
+
     public IMessageValidationBuilder ForMessageReceived(OnMessageReceivedArgs args)
     {
-        return new MessageValidationBuilder(args, followerDb, client, logger, userEnsureService);
+        return new MessageValidationBuilder(
+            args,
+            followerDb,
+            client,
+            logger,
+            userEnsureService,
+            SentEventErrors
+        );
     }
 
     public IRedemptionValidationBuilder ForRedemption(ChannelPointsCustomRewardRedemptionArgs args)
     {
-        return new RedemptionValidationBuilder(args, followerDb, client, logger, userEnsureService);
+        return new RedemptionValidationBuilder(
+            args,
+            followerDb,
+            client,
+            logger,
+            userEnsureService,
+            SentEventErrors
+        );
     }
 }
