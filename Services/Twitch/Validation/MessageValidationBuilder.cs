@@ -270,7 +270,7 @@ public sealed class MessageValidationBuilder(
         {
             var key = args.ChatMessage.Id;
 
-            if (sentEventErrors.TryAdd(key, DateTime.UtcNow))
+            if (key is null || sentEventErrors.TryAdd(key, DateTime.UtcNow))
             {
                 try
                 {
@@ -284,16 +284,19 @@ public sealed class MessageValidationBuilder(
                     logger.LogError(ex, "Failed to send validation error message");
                 }
 
-                await Task.Factory.StartNew(
-                    async () =>
-                    {
-                        await Task.Delay(TimeSpan.FromSeconds(30));
-                        sentEventErrors.TryRemove(key, out _);
-                    },
-                    CancellationToken.None,
-                    TaskCreationOptions.DenyChildAttach,
-                    TaskScheduler.Default
-                );
+                if (key is not null)
+                {
+                    await Task.Factory.StartNew(
+                        async () =>
+                        {
+                            await Task.Delay(TimeSpan.FromSeconds(30));
+                            sentEventErrors.TryRemove(key, out _);
+                        },
+                        CancellationToken.None,
+                        TaskCreationOptions.DenyChildAttach,
+                        TaskScheduler.Default
+                    );
+                }
             }
         }
 
