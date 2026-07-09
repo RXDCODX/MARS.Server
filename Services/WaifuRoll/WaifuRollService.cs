@@ -29,7 +29,8 @@ public class WaifuRollService(
     IDbContextFactory<AppDbContext> factory,
     WaifuRollEnsurenceService waifuDbHelper,
     TwitchUserEnsureService twitchUserEnsureService,
-    WeddingAnniversaryService anniversaryService
+    WeddingAnniversaryService anniversaryService,
+    ILogger<WaifuRollService> logger
 ) : BackgroundService, IWaifuRollService
 {
     /// <summary>
@@ -185,11 +186,12 @@ public class WaifuRollService(
 
                 if (pass)
                 {
-                    var waifu = await dbContext
+                    var waifu = dbContext
                         .Waifus.OrderBy(e => e.LastOrder)
                         .Take(10)
+                        .ToList()
                         .OrderBy(x => Random.Shared.Next())
-                        .FirstOrDefaultAsync();
+                        .FirstOrDefault();
 
                     if (waifu != null)
                     {
@@ -243,6 +245,10 @@ public class WaifuRollService(
                         result = waifu;
                     }
                 }
+            }
+            catch (Exception ex)
+            {
+                logger.LogException(ex);
             }
             finally
             {

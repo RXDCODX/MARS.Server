@@ -47,8 +47,7 @@ public class WaifuPrizesService(
             while (!cancellationToken.IsCancellationRequested)
             {
                 var waifusBatch = await dbContext
-                    .Waifus.Where(e => !e.IsPrivated)
-                    .AsNoTracking()
+                    .Waifus.AsNoTracking()
                     .OrderBy(e => e.ShikiId)
                     .Skip(offset)
                     .Take(batchSize)
