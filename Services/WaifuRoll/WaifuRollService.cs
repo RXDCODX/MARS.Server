@@ -185,15 +185,11 @@ public class WaifuRollService(
 
                 if (pass)
                 {
-                    //var waifu = await dbContext
-                    //    .Waifus.OrderBy(e => e.LastOrder)
-                    //    .Take(10)
-                    //    .OrderBy(x => Random.Shared.Next())
-                    //    .FirstOrDefaultAsync();
-
                     var waifu = await dbContext
-                        .Waifus.AsNoTracking()
-                        .FirstAsync(e => e.ShikiId == "172813");
+                        .Waifus.OrderBy(e => e.LastOrder)
+                        .Take(10)
+                        .OrderBy(x => Random.Shared.Next())
+                        .FirstOrDefaultAsync();
 
                     if (waifu != null)
                     {
