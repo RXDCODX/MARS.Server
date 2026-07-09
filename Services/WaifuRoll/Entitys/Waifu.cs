@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -26,6 +26,11 @@ public class Waifu
     [Required]
     [MaxLength(200)]
     public required string ImageUrl { get; set; }
+
+    public Guid? AudioId { get; set; }
+
+    [ForeignKey(nameof(AudioId))]
+    public WaifuRollAudio? Audio { get; set; }
 
     [NotMapped]
     public bool IsMerged { get; set; } = false;

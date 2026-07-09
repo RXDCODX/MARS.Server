@@ -52,6 +52,7 @@ public sealed partial class AppDbContext : DbContext
     // Таблицы Twitch Users вынесены в TwitchUsersDbContext.cs
 
     public DbSet<Waifu> Waifus { get; set; } = null!;
+    public DbSet<WaifuRollAudio> WaifuRollAudios { get; set; } = null!;
     public DbSet<TelegramUser> TelegramUsers { get; set; } = null!;
     public DbSet<MediaInfo> Alerts { get; set; } = null!;
     public DbSet<AutoMessage> AutoMessages { get; set; } = null!;

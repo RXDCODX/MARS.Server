@@ -110,7 +110,7 @@ public class RxdcodxViewersService(
                     .Select(f => f.UserId)
                     .ToHashSet();
                 var userIdsToDelete = followersFromDb
-                    .Where(f => !currentUserIdsFromApi.Contains(f.UserId))
+                    .Where(f => !currentUserIdsFromApi.Any(e => e.Equals(f.UserId)))
                     .Select(f => f.UserId)
                     .ToList();
 
