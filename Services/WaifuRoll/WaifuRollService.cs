@@ -149,7 +149,7 @@ public class WaifuRollService(
                         cd = new HusbandCoolDown { HusbandId = id };
                         host.HusbandCoolDown = cd;
 
-                        dbContext.Husbands.Update(host);
+                        dbContext.HusbandCoolDowns.Add(cd);
 
                         pass = true;
                     }
@@ -185,11 +185,15 @@ public class WaifuRollService(
 
                 if (pass)
                 {
+                    //var waifu = await dbContext
+                    //    .Waifus.OrderBy(e => e.LastOrder)
+                    //    .Take(10)
+                    //    .OrderBy(x => Random.Shared.Next())
+                    //    .FirstOrDefaultAsync();
+
                     var waifu = await dbContext
-                        .Waifus.OrderBy(e => e.LastOrder)
-                        .Take(10)
-                        .OrderBy(x => Random.Shared.Next())
-                        .FirstOrDefaultAsync();
+                        .Waifus.AsNoTracking()
+                        .FirstAsync(e => e.ShikiId == "172813");
 
                     if (waifu != null)
                     {
