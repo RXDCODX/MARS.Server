@@ -6,6 +6,7 @@ using MARS.Server.Hubs;
 using MARS.Server.Hubs.Interfaces;
 using MARS.Server.Services.CommandExecutor.Entitys;
 using MARS.Server.Services.CommandExecutor.Entitys.Commands;
+using MARS.Server.Services.Twitch;
 using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Rewards._4_FrogRoll;
 using Microsoft.AspNetCore.SignalR;
@@ -14,6 +15,7 @@ namespace MARS.Server.Services.CommandExecutor.Commands;
 
 public class RollFrogCommand(
     FrogRollService frogRollService,
+    TwitchUserEnsureService ensureService,
     IHubContext<TelegramusHub, ITelegramusHub> alertsHub
 ) : BaseCommand
 {
@@ -60,25 +62,36 @@ public class RollFrogCommand(
 
         try
         {
+            // Пользователь уже гарантирован адаптером (TwitchCommandService)
+            TwitchUser? twitchUser = parameters.TryGetValue("user", out var userObj)
+                ? userObj as TwitchUser
+                : null;
+
+            // Fallback для платформ без адаптера (Telegram, API)
+            twitchUser ??= await ensureService.EnsureUserExistsByLoginAsync(
+                displayName,
+                cancellationToken
+            );
+
+            if (twitchUser is null)
+            {
+                return $"Пользователь {displayName} не найден";
+            }
+
+            if (!string.IsNullOrWhiteSpace(color))
+            {
+                twitchUser.ChatColor = color;
+            }
+
             var frog = await frogRollService.RollTheFrog();
 
             if (frog is not null)
             {
-                var twitchUser = new TwitchUser
-                {
-                    TwitchId = "",
-                    UserLogin = displayName.ToLowerInvariant(),
-                    DisplayName = displayName,
-                    ProfileImageUrl = "",
-                    ChatColor = color,
-                };
-
                 await alertsHub.Clients.All.FrogRoll(frog, twitchUser, color);
-
-                return $"Фрог-ролл: {frog.RussianName ?? frog.CommonName} для {displayName}";
+                return string.Empty;
             }
 
-            return "Не удалось выполнить фрог-ролл";
+            return string.Empty;
         }
         catch (Exception e)
         {

@@ -265,6 +265,60 @@ public class TwitchUserEnsureService : ITwitchUserEnsureService
         return null!;
     }
 
+    /// <inheritdoc />
+    public virtual async Task<TwitchUser?> EnsureUserExistsByLoginAsync(
+        string login,
+        CancellationToken cancellationToken = default
+    )
+    {
+        if (string.IsNullOrWhiteSpace(login))
+        {
+            return null;
+        }
+
+        var normalizedLogin = login.Trim().ToLowerInvariant();
+
+        // 1. Try DB lookup by UserLogin
+        if (_dbFactory != null)
+        {
+            await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+            var existing = await db
+                .TwitchUsers.AsNoTracking()
+                .FirstOrDefaultAsync(u => u.UserLogin == normalizedLogin, cancellationToken);
+            if (existing != null)
+            {
+                return existing;
+            }
+        }
+
+        // 2. Try Twitch API lookup by login
+        if (_api != null && _tokenService?.Token?.AccessToken != null)
+        {
+            try
+            {
+                var response = await _api.Helix.Users.GetUsersAsync(
+                    null,
+                    [normalizedLogin],
+                    _tokenService.Token.AccessToken
+                );
+                if (response?.Users?.Length > 0)
+                {
+                    var twitchUser = TwitchUser.FromUser(response.Users.First());
+                    if (twitchUser != null)
+                    {
+                        return await EnsureUserExistsAsync(twitchUser, cancellationToken);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogException(ex);
+            }
+        }
+
+        return null;
+    }
+
     // ----- Private helpers -------------------------------------------------
     private async Task<TwitchUser> EnrichUserDataFromApiAsync(TwitchUser twitchUser)
     {

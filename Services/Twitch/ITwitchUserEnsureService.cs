@@ -68,4 +68,13 @@ public interface ITwitchUserEnsureService
         TwitchUser? twitchUser,
         CancellationToken cancellationToken = default
     );
+
+    /// <summary>
+    /// Гарантирует наличие пользователя в БД по логину (UserLogin).
+    /// Ищет сначала в БД, затем через Twitch API.
+    /// </summary>
+    Task<TwitchUser?> EnsureUserExistsByLoginAsync(
+        string login,
+        CancellationToken cancellationToken = default
+    );
 }
