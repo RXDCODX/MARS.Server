@@ -403,7 +403,7 @@ public sealed partial class AppDbContext : DbContext
 
     public sealed class DateTimeToDateTimeUtc()
         : ValueConverter<DateTime, DateTime>(
-            c => DateTime.SpecifyKind(c, DateTimeKind.Utc),
-            c => c.ToLocalTime().AddHours(-4)
+            c => c == DateTime.MinValue ? c : DateTime.SpecifyKind(c, DateTimeKind.Utc),
+            c => c == DateTime.MinValue ? DateTime.MinValue : c.ToLocalTime().AddHours(-4)
         );
 }
