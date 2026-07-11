@@ -111,8 +111,8 @@ public interface ITelegramusHub
     public Task UpdateFrogPrizes(ICollection<FrogPrizeType> prizes);
 
     [SignalRMethod]
-    public Task MikuModuleRoll(MikuModule mikuModule, TwitchUser twitchUser, string? color = null);
+    public Task MikuRoll(MikuModule mikuModule, TwitchUser twitchUser, string? color = null);
 
     [SignalRMethod]
-    public Task UpdateMikuModulePrizes(ICollection<MikuModulePrizeType> prizes);
+    public Task UpdateMikuPrizes(ICollection<MikuModulePrizeType> prizes);
 }

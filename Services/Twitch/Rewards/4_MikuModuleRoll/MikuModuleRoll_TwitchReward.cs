@@ -79,7 +79,7 @@ public class MikuModuleRoll_TwitchReward(
             {
                 var user = await ensureService.EnsureUserExistsAsync(args.Payload.Event.UserId);
 
-                await hubContext.Clients.All.MikuModuleRoll(module, user);
+                await hubContext.Clients.All.MikuRoll(module, user);
             }
             else
             {

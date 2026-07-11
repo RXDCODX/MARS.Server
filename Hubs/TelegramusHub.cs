@@ -65,7 +65,7 @@ public class TelegramusHub(
         var frogResult = await frogRollService.GetFrogPrizesAsync();
         await Clients.Caller.UpdateFrogPrizes(frogResult.Data);
         var mikuModuleResult = await mikuModuleRollService.GetMikuModulePrizesAsync();
-        await Clients.Caller.UpdateMikuModulePrizes(mikuModuleResult.Data);
+        await Clients.Caller.UpdateMikuPrizes(mikuModuleResult.Data);
     }
 
     public Task LogError(string errorMessage)
