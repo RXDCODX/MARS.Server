@@ -88,10 +88,9 @@ public class RollFrogCommand(
             if (frog is not null)
             {
                 await alertsHub.Clients.All.FrogRoll(frog, twitchUser, color);
-                return string.Empty;
             }
 
-            return string.Empty;
+            return twitchUser.DisplayName;
         }
         catch (Exception e)
         {

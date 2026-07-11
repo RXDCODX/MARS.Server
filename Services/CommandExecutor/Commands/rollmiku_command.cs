@@ -88,10 +88,9 @@ public class RollMikuCommand(
             if (module is not null)
             {
                 await alertsHub.Clients.All.MikuRoll(module, twitchUser, color);
-                return string.Empty;
             }
 
-            return string.Empty;
+            return twitchUser.DisplayName;
         }
         catch (Exception e)
         {

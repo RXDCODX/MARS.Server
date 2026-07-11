@@ -88,10 +88,9 @@ public class RollFumoCommand(
             if (fumo is not null)
             {
                 await alertsHub.Clients.All.FumoRoll(fumo, twitchUser, color);
-                return string.Empty;
             }
 
-            return string.Empty;
+            return twitchUser.DisplayName;
         }
         catch (Exception e)
         {
