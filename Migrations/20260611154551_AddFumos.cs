@@ -26,8 +26,8 @@ public partial class AddFumos : Migration
                 ThumbnailUrl = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
                 Rating = table.Column<double>(type: "double precision", nullable: false),
                 RatingCount = table.Column<int>(type: "integer", nullable: false),
-                WhenAdded = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-                LastOrder = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                WhenAdded = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                LastOrder = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                 OrderCount = table.Column<int>(type: "integer", nullable: false)
             },
             constraints: table =>

@@ -20,7 +20,7 @@ public class Video365
     public required string Description { get; set; }
     public required string DownloadUrl { get; set; }
     public bool IsUploaded { get; set; }
-    public DateTimeOffset DateUpload { get; set; }
+    public DateTime DateUpload { get; set; }
     public TimeSpan Duration { get; set; }
     public long TelegramMessageId { get; set; }
     public required int VideoWidth { get; set; }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -393,12 +394,11 @@ public class StreamArchiveService(
         var extension = Path.GetExtension(originalFileName);
 
         return format
-                .Replace("{date}", now.ToString("yyyy-MM-dd"))
-                .Replace("{time}", now.ToString("HH-mm-ss"))
-                .Replace("{datetime}", now.ToString("yyyy-MM-dd_HH-mm-ss"))
-                .Replace("{original}", fileNameWithoutExtension)
-                .Replace("{timestamp}", DateTimeOffset.Now.ToUnixTimeSeconds().ToString())
-            + extension;
+            .Replace("{date}", now.ToString("yyyy-MM-dd"))
+            .Replace("{time}", now.ToString("HH-mm-ss"))
+            .Replace("{datetime}", now.ToString("yyyy-MM-dd_HH-mm-ss"))
+            .Replace("{original}", fileNameWithoutExtension)
+            .Replace("{timestamp}", DateTime.Now + extension);
     }
 
     private static bool IsVideoFile(string filePath)

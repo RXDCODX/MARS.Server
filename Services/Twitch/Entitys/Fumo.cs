@@ -30,7 +30,7 @@ public class Fumo
 
     public double Rating { get; set; }
     public int RatingCount { get; set; }
-    public DateTimeOffset WhenAdded { get; set; }
-    public DateTimeOffset LastOrder { get; set; }
+    public DateTime WhenAdded { get; set; }
+    public DateTime LastOrder { get; set; }
     public int OrderCount { get; set; }
 }

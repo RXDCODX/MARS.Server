@@ -36,7 +36,7 @@ public class AutoMessagesHandler(
     private readonly Queue<AutoMessage> _queue = new(Capacity);
 
     private int MessagesCounter { get; set; }
-    private DateTimeOffset LastPostDateTime { get; set; } = DateTimeOffset.MinValue;
+    private DateTime LastPostDateTime { get; set; } = DateTime.MinValue;
 
     public async Task OnMessageReceived(object? sender, OnMessageReceivedArgs args)
     {
@@ -53,10 +53,7 @@ public class AutoMessagesHandler(
 
         MessagesCounter++;
 
-        if (
-            MessagesCounter >= 70
-            && LastPostDateTime.Add(TimeSpan.FromMinutes(45)) < DateTimeOffset.Now
-        )
+        if (MessagesCounter >= 70 && LastPostDateTime.Add(TimeSpan.FromMinutes(45)) < DateTime.Now)
         {
             await ExecuteAutoMessage();
         }
@@ -92,7 +89,7 @@ public class AutoMessagesHandler(
 
                     _queue.Enqueue(message);
 
-                    LastPostDateTime = DateTimeOffset.Now;
+                    LastPostDateTime = DateTime.Now;
                     MessagesCounter = 0;
                 }
                 else

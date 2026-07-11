@@ -180,8 +180,8 @@ public class WaifuRollController(
                 Manga = request.Manga,
                 ImageUrl = NormalizeImageUrl(request.ImageUrl, _shikimoriSite),
                 AudioId = request.AudioId,
-                WhenAdded = DateTimeOffset.UtcNow,
-                LastOrder = DateTimeOffset.MinValue,
+                WhenAdded = DateTime.Now,
+                LastOrder = DateTime.MinValue,
             };
 
             db.Waifus.Add(waifu);

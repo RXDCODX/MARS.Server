@@ -21,9 +21,17 @@ public class TanyaTanyaCommand : BaseCommand
         CancellationToken cancellationToken = default
     )
     {
-        var lastWorkDay1 = new DateTimeOffset(2024, 1, 22, 0, 0, 0, TimeSpan.Zero);
+        var lastWorkDay1 = new DateTimeOffset(
+            2024,
+            1,
+            22,
+            0,
+            0,
+            0,
+            TimeSpan.Zero
+        ).DateTime.ToLocalTime();
 
-        var today = DateTimeOffset.Now;
+        var today = DateTime.Now;
 
         var nearestWorkDay = await FindNearestWorkDay(lastWorkDay1, today);
 
@@ -33,8 +41,8 @@ public class TanyaTanyaCommand : BaseCommand
     }
 
     private static ValueTask<DateTimeOffset[]> FindNearestWorkDay(
-        DateTimeOffset lastWorkDay,
-        DateTimeOffset today
+        DateTime lastWorkDay,
+        DateTime today
     )
     {
         var timeSinceLastWorkDay = today - lastWorkDay;

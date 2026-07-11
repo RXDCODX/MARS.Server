@@ -25,7 +25,7 @@ public partial class AddWaifuRollAudio : Migration
                 Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
                 AudioData = table.Column<byte[]>(type: "bytea", nullable: false),
                 FileExtension = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
-                CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
+                CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
             },
             constraints: table =>
             {

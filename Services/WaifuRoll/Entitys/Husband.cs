@@ -17,12 +17,12 @@ public class Husband
     /// </summary>
     [ForeignKey(nameof(TwitchId))]
     public TwitchUser? TwitchUser { get; set; }
-    public DateTimeOffset WhenOrdered { get; set; }
+    public DateTime WhenOrdered { get; set; }
     public string? WaifuBrideId { get; set; }
     public bool IsPrivated { get; set; }
     public long OrderCount { get; set; }
     public string? WaifuRollId { get; set; }
-    public DateTimeOffset? WhenPrivated { get; set; }
+    public DateTime? WhenPrivated { get; set; }
     public required HusbandAutoHello? HusbandGreetings { get; set; }
     public required HusbandCoolDown? HusbandCoolDown { get; set; }
     public int? LastWeddingCongratulatedMonths { get; set; }

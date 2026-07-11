@@ -15,5 +15,5 @@ public class HusbandCoolDown
 
     [ForeignKey(nameof(HusbandId))]
     public Husband? Husband { get; set; }
-    public DateTimeOffset Time { get; set; }
+    public DateTime Time { get; set; }
 }

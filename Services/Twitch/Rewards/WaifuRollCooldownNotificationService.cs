@@ -30,7 +30,7 @@ public class WaifuRollCooldownNotificationService(
 ) : BackgroundService
 {
     private const int WaifuRollCost = 4;
-    private readonly Dictionary<string, DateTimeOffset> _pendingNotifications = new();
+    private readonly Dictionary<string, DateTime> _pendingNotifications = new();
     private readonly HashSet<string> _notifiedUsers = [];
     private readonly SemaphoreSlim _semaphore = new(1, 1);
 
@@ -94,8 +94,8 @@ public class WaifuRollCooldownNotificationService(
                 return;
             }
 
-            var cooldownTime = host.HusbandCoolDown.Time.ToOffset(TimeSpan.FromHours(3));
-            var now = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
+            var cooldownTime = host.HusbandCoolDown.Time;
+            var now = DateTime.Now;
             var timeSinceCooldownUpdate = now - cooldownTime;
 
             if (timeSinceCooldownUpdate > TimeSpan.FromMinutes(1))
@@ -156,7 +156,7 @@ public class WaifuRollCooldownNotificationService(
             if (
                 !_pendingNotifications.TryGetValue(
                     e.ChatMessage.UserId,
-                    out DateTimeOffset cooldownEndTime
+                    out DateTime cooldownEndTime
                 )
             )
             {
@@ -164,7 +164,7 @@ public class WaifuRollCooldownNotificationService(
                 return;
             }
 
-            var now = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
+            var now = DateTime.Now;
 
             if (now < cooldownEndTime)
             {
@@ -186,7 +186,7 @@ public class WaifuRollCooldownNotificationService(
                 return;
             }
 
-            var cooldownTime = host.HusbandCoolDown.Time.ToOffset(TimeSpan.FromHours(3));
+            var cooldownTime = host.HusbandCoolDown.Time;
             var cooldown = await waifuRollService.GetWaifuRollCoolDownAsync();
             var cooldownEnd = cooldownTime.Add(cooldown);
 

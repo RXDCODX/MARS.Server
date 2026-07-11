@@ -24,9 +24,9 @@ public class CinemaMediaItem
 
     public int Priority { get; set; } = 0;
 
-    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.Now;
+    public DateTime CreatedAt { get; set; } = DateTime.Now;
 
-    public DateTimeOffset? ScheduledFor { get; set; }
+    public DateTime? ScheduledFor { get; set; }
 
     [MaxLength(50)]
     public string? TwitchUserId { get; set; }
@@ -41,5 +41,5 @@ public class CinemaMediaItem
 
     public bool IsNext { get; set; } = false;
 
-    public DateTimeOffset? LastModified { get; set; } = DateTimeOffset.Now;
+    public DateTime? LastModified { get; set; } = DateTime.Now;
 }

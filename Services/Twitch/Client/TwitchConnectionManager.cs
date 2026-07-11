@@ -32,8 +32,8 @@ public class TwitchConnectionManager : IHostedService, IAsyncDisposable
     private bool _initialized;
 
     public bool IsConnected => _client.IsConnected;
-    private DateTimeOffset? _lastConnectedAt;
-    private DateTimeOffset? _lastDisconnectedAt;
+    private DateTime? _lastConnectedAt;
+    private DateTime? _lastDisconnectedAt;
     private string? _lastDisconnectReason;
 
     private CancellationTokenSource? _reconnectCts;
@@ -109,7 +109,7 @@ public class TwitchConnectionManager : IHostedService, IAsyncDisposable
     {
         _client.OnConnected += (_, _) =>
         {
-            _lastConnectedAt = DateTimeOffset.Now;
+            _lastConnectedAt = DateTime.Now;
             _reconnectAttempts = 0;
             _isReconnecting = false;
             _logger.LogInformation("Twitch chat connected as {Bot}", TwitchExstension.BotName);
@@ -118,7 +118,7 @@ public class TwitchConnectionManager : IHostedService, IAsyncDisposable
 
         _client.OnDisconnected += (_, _) =>
         {
-            _lastDisconnectedAt = DateTimeOffset.Now;
+            _lastDisconnectedAt = DateTime.Now;
             _logger.LogWarning("Twitch chat disconnected");
 
             if (!_manualDisconnect && !_isReconnecting)
@@ -131,7 +131,7 @@ public class TwitchConnectionManager : IHostedService, IAsyncDisposable
 
         _client.OnConnectionError += (_, args) =>
         {
-            _lastDisconnectedAt = DateTimeOffset.Now;
+            _lastDisconnectedAt = DateTime.Now;
             _lastDisconnectReason = args.Error?.Message ?? "Unknown";
             _logger.LogError("Twitch connection error: {Message}", args.Error?.Message);
 

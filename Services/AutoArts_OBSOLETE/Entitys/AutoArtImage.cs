@@ -27,7 +27,7 @@ public class AutoArtImage
     public object? Artist { get; set; }
 
     [JsonProperty("uploaded_at")]
-    public DateTimeOffset UploadedAt { get; set; }
+    public DateTime UploadedAt { get; set; }
 
     [JsonProperty("liked_at")]
     public object? LikedAt { get; set; }

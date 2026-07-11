@@ -2,8 +2,8 @@ using System;
 
 namespace MARS.Server.Services.Telegram.ClipboardCopy;
 
-internal sealed class ClipboardRequestFiles(string[] memoryFileNames, DateTimeOffset createdAt)
+internal sealed class ClipboardRequestFiles(string[] memoryFileNames, DateTime createdAt)
 {
     public string[] MemoryFileNames { get; } = memoryFileNames;
-    public DateTimeOffset CreatedAt { get; } = createdAt;
+    public DateTime CreatedAt { get; } = createdAt;
 }

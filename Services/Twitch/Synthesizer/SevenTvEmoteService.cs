@@ -115,7 +115,7 @@ public sealed class SevenTvEmoteService(
 
             if (fetchedEmotes.Count > 0)
             {
-                var now = DateTimeOffset.UtcNow;
+                var now = DateTime.Now;
                 var emoteEntities = fetchedEmotes
                     .Select(name => new Entitys.SevenTvEmote { Name = name, LoadedAt = now })
                     .ToList();

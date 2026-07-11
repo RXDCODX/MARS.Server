@@ -25,7 +25,7 @@ public class PyroAlerts : Controller
             var result = new FileStreamResult(stream, contentType)
             {
                 EnableRangeProcessing = true,
-                LastModified = DateTimeOffset.Now,
+                LastModified = DateTime.Now,
             };
 
             await result.ExecuteResultAsync(context);

@@ -65,7 +65,7 @@ public class HelloVideoWorker(
             {
                 try
                 {
-                    var now = DateTimeOffset.Now;
+                    var now = DateTime.Now;
                     await using var dbContext = await dbContextFactory.CreateDbContextAsync(_token);
                     var user = await dbContext.FumoUsers.FindAsync(
                         [args.ChatMessage.UserId],

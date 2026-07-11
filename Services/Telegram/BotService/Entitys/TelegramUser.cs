@@ -16,7 +16,7 @@ public class TelegramUser
     public long UserId { get; set; }
 
     [JsonProperty("LastTime")]
-    public DateTimeOffset LastTimeMessage { get; set; }
+    public DateTime LastTimeMessage { get; set; }
 
     public bool RaidHelper { get; set; } = false;
     public bool PyroAlertsAccess { get; set; } = false;
@@ -25,6 +25,6 @@ public class TelegramUser
     public bool StreamUpNotifications { get; set; } = false;
     public bool ZenlessZoneZeroDailyNotif { get; set; } = false;
     public bool GenshinImpactDailyNotif { get; set; } = false;
-    public DateTimeOffset ByeByeLastMessageTime { get; set; } = DateTimeOffset.Now;
+    public DateTime ByeByeLastMessageTime { get; set; } = DateTime.Now;
     public bool ByeByeServiceNotification { get; set; } = false;
 }

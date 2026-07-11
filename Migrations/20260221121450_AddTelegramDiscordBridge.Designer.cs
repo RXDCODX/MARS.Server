@@ -79,7 +79,7 @@ namespace MARS.Server.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
+                    b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Description")
@@ -312,7 +312,7 @@ namespace MARS.Server.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
-                    b.Property<DateTimeOffset>("LastUpdateTime")
+                    b.Property<DateTime>("LastUpdateTime")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("LinkToImage")
@@ -364,7 +364,7 @@ namespace MARS.Server.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
-                    b.Property<DateTimeOffset>("LastUpdateTime")
+                    b.Property<DateTime>("LastUpdateTime")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("LinkToImage")
@@ -953,7 +953,7 @@ namespace MARS.Server.Migrations
                     b.Property<long>("UserId")
                         .HasColumnType("bigint");
 
-                    b.Property<DateTimeOffset>("ByeByeLastMessageTime")
+                    b.Property<DateTime>("ByeByeLastMessageTime")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<bool>("ByeByeServiceNotification")
@@ -968,7 +968,7 @@ namespace MARS.Server.Migrations
                     b.Property<bool>("IsRandomMemeSendler")
                         .HasColumnType("boolean");
 
-                    b.Property<DateTimeOffset>("LastTimeMessage")
+                    b.Property<DateTime>("LastTimeMessage")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Name")
@@ -1128,7 +1128,7 @@ namespace MARS.Server.Migrations
                     b.Property<string>("TwitchId")
                         .HasColumnType("character varying(50)");
 
-                    b.Property<DateTimeOffset>("LastTime")
+                    b.Property<DateTime>("LastTime")
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("TwitchId");
@@ -1142,7 +1142,7 @@ namespace MARS.Server.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<DateTimeOffset>("LastTimeNotif")
+                    b.Property<DateTime>("LastTimeNotif")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("MediaInfoId")
@@ -1387,7 +1387,7 @@ namespace MARS.Server.Migrations
                     b.Property<string>("WaifuRollId")
                         .HasColumnType("text");
 
-                    b.Property<DateTimeOffset>("WhenOrdered")
+                    b.Property<DateTime>("WhenOrdered")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTimeOffset?>("WhenPrivated")
@@ -1410,7 +1410,7 @@ namespace MARS.Server.Migrations
                         .IsRequired()
                         .HasColumnType("character varying(50)");
 
-                    b.Property<DateTimeOffset>("Time")
+                    b.Property<DateTime>("Time")
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Guid");
@@ -1431,7 +1431,7 @@ namespace MARS.Server.Migrations
                         .IsRequired()
                         .HasColumnType("character varying(50)");
 
-                    b.Property<DateTimeOffset>("Time")
+                    b.Property<DateTime>("Time")
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Guid");
@@ -1462,7 +1462,7 @@ namespace MARS.Server.Migrations
                     b.Property<bool>("IsPrivated")
                         .HasColumnType("boolean");
 
-                    b.Property<DateTimeOffset>("LastOrder")
+                    b.Property<DateTime>("LastOrder")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Manga")
@@ -1476,7 +1476,7 @@ namespace MARS.Server.Migrations
                     b.Property<int>("OrderCount")
                         .HasColumnType("integer");
 
-                    b.Property<DateTimeOffset>("WhenAdded")
+                    b.Property<DateTime>("WhenAdded")
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("ShikiId");
@@ -1489,16 +1489,16 @@ namespace MARS.Server.Migrations
                     b.Property<string>("TwitchId")
                         .HasColumnType("character varying(50)");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
+                    b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<DateTimeOffset>("LastRoll")
+                    b.Property<DateTime>("LastRoll")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("RollCount")
                         .HasColumnType("integer");
 
-                    b.Property<DateTimeOffset>("UpdatedAt")
+                    b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("TwitchId");
@@ -1512,7 +1512,7 @@ namespace MARS.Server.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<DateTimeOffset>("DateUpload")
+                    b.Property<DateTime>("DateUpload")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Description")

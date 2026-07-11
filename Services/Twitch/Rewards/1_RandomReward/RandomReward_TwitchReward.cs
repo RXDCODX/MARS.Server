@@ -238,7 +238,7 @@ public class RandomReward_TwitchReward(
                         Cost = chosenCost,
                         Title = "Random Reward",
                     },
-                    RedeemedAt = DateTimeOffset.UtcNow,
+                    RedeemedAt = DateTime.Now,
                 },
             },
         };

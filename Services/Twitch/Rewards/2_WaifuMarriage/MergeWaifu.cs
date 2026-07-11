@@ -232,8 +232,7 @@ public class MergeWaifu(
 
                     if (waifu is { IsPrivated: true })
                     {
-                        var spanaa =
-                            DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3)) - host.WhenPrivated;
+                        var spanaa = DateTime.Now - host.WhenPrivated;
 
                         if (spanaa.HasValue)
                         {

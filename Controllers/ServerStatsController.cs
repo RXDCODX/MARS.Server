@@ -332,7 +332,7 @@ public class ServerStatsResponse
     /// <summary>
     /// Дата ближайшей годовщины свадьбы
     /// </summary>
-    public DateTimeOffset? NearestWeddingAnniversaryDate { get; set; }
+    public DateTime? NearestWeddingAnniversaryDate { get; set; }
 
     /// <summary>
     /// Пользователь ближайшей годовщины свадьбы

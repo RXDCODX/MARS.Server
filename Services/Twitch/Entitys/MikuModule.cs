@@ -30,9 +30,9 @@ public class MikuModule
     [MaxLength(500)]
     public string? Songs { get; set; }
 
-    public DateTimeOffset WhenAdded { get; set; }
+    public DateTime WhenAdded { get; set; }
 
-    public DateTimeOffset LastOrder { get; set; }
+    public DateTime LastOrder { get; set; }
 
     public int OrderCount { get; set; }
 }

@@ -142,9 +142,9 @@ public class WaifuRollGuaranteeService(
                     {
                         TwitchId = twitchId,
                         RollCount = 1,
-                        LastRoll = DateTimeOffset.Now,
-                        CreatedAt = DateTimeOffset.Now,
-                        UpdatedAt = DateTimeOffset.Now,
+                        LastRoll = DateTime.Now,
+                        CreatedAt = DateTime.Now,
+                        UpdatedAt = DateTime.Now,
                     };
 
                     await dbContext.WaifuRollGuarantees.AddAsync(guarantee);
@@ -153,8 +153,8 @@ public class WaifuRollGuaranteeService(
                 {
                     // Увеличиваем счетчик роллов
                     guarantee.RollCount++;
-                    guarantee.LastRoll = DateTimeOffset.Now;
-                    guarantee.UpdatedAt = DateTimeOffset.Now;
+                    guarantee.LastRoll = DateTime.Now;
+                    guarantee.UpdatedAt = DateTime.Now;
                 }
 
                 await dbContext.SaveChangesAsync();
@@ -247,7 +247,7 @@ public class WaifuRollGuaranteeService(
                 if (guarantee != null)
                 {
                     guarantee.RollCount = 0;
-                    guarantee.UpdatedAt = DateTimeOffset.Now;
+                    guarantee.UpdatedAt = DateTime.Now;
 
                     await dbContext.SaveChangesAsync();
 

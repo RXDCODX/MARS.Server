@@ -44,7 +44,7 @@ public class TwitchMikuBeamRewardService(
     private readonly HashSet<string> _allUserIds = []; // Все ID пользователей для отображения (включая модераторов)
     private readonly HashSet<string> _moderatorIds = []; // ID модераторов
     private readonly SemaphoreSlim _semaphoreSlim = new(1);
-    private DateTimeOffset _lastActivation = DateTimeOffset.MinValue;
+    private DateTime _lastActivation = DateTime.MinValue;
     private const int MaxStoredMessages = 100;
     private const int CooldownSeconds = 60;
 
@@ -124,7 +124,7 @@ public class TwitchMikuBeamRewardService(
             async () =>
             {
                 // Проверка кулдауна
-                var now = DateTimeOffset.Now;
+                var now = DateTime.Now;
                 var timeSinceLastActivation = now - _lastActivation;
                 if (timeSinceLastActivation.TotalSeconds < CooldownSeconds)
                 {
@@ -283,7 +283,7 @@ public class TwitchMikuBeamRewardService(
             );
 
             // Обновляем время последней активации
-            _lastActivation = DateTimeOffset.Now;
+            _lastActivation = DateTime.Now;
 
             // Получаем информацию о пользователях из базы данных по их ID
             List<TwitchUser> twitchUsers = [];

@@ -125,8 +125,8 @@ public class WaifuRollService(
                     {
                         if (cd.HusbandId == host.TwitchId)
                         {
-                            var now = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
-                            var cdTime = cd.Time.ToOffset(TimeSpan.FromHours(3));
+                            var now = DateTime.Now;
+                            var cdTime = cd.Time;
 
                             var cdFromEnv = await GetWaifuRollCoolDownAsync();
 
@@ -139,7 +139,7 @@ public class WaifuRollService(
                         else
                         {
                             cd.HusbandId = host.TwitchId;
-                            cd.Time = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
+                            cd.Time = DateTime.Now;
 
                             dbContext.HusbandCoolDowns.Update(cd);
                             pass = true;
@@ -196,7 +196,7 @@ public class WaifuRollService(
                     if (waifu != null)
                     {
                         host.WaifuRollId = waifu.ShikiId;
-                        host.WhenOrdered = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
+                        host.WhenOrdered = DateTime.Now;
 
                         var shouldIncrementGuarantee =
                             !forcePass
@@ -222,11 +222,9 @@ public class WaifuRollService(
                             HusbandId = host.TwitchId,
                         };
 
-                        host.HusbandCoolDown.Time = DateTimeOffset.Now.ToOffset(
-                            TimeSpan.FromHours(3)
-                        );
+                        host.HusbandCoolDown.Time = DateTime.Now;
 
-                        waifu.LastOrder = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
+                        waifu.LastOrder = DateTime.Now;
 
                         if (string.IsNullOrWhiteSpace(waifu.ImageUrl))
                         {
@@ -237,7 +235,7 @@ public class WaifuRollService(
                         waifu = await waifuDbHelper.EnsureMangaAndAnimeTitleExists(waifu);
                         dbContext.Waifus.Update(waifu);
 
-                        cd.Time = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
+                        cd.Time = DateTime.Now;
                         await dbContext.SaveChangesAsync();
 
                         waifu.ImageUrl = options.Value.ShikimoriSite + waifu.ImageUrl;
@@ -364,8 +362,8 @@ public class WaifuRollService(
                         ShikiId = character.Id.ToString(),
                         Name = character.Name ?? character.Russian ?? "Unknown",
                         ImageUrl = character.Image?.Original ?? string.Empty,
-                        WhenAdded = DateTimeOffset.Now,
-                        LastOrder = DateTimeOffset.Now,
+                        WhenAdded = DateTime.Now,
+                        LastOrder = DateTime.Now,
                         OrderCount = 0,
                         IsPrivated = false,
                         Manga = character.Mangas.MinBy(e => e.Russian.Length)?.Russian,
@@ -417,7 +415,7 @@ public class WaifuRollService(
                 waifu.IsPrivated = true;
                 host.IsPrivated = true;
                 host.WaifuBrideId = waifu.ShikiId;
-                host.WhenPrivated = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
+                host.WhenPrivated = DateTime.Now;
             }
             else
             {
@@ -464,11 +462,11 @@ public class WaifuRollService(
                         greet = new HusbandAutoHello()
                         {
                             HusbandId = host.TwitchId,
-                            Time = DateTimeOffset.Now,
+                            Time = DateTime.Now,
                         };
                         isChecked = true;
                     }
-                    else if (greet.Time <= DateTimeOffset.Now.AddHours(-20))
+                    else if (greet.Time <= DateTime.Now.AddHours(-20))
                     {
                         isChecked = true;
                     }
@@ -494,7 +492,7 @@ public class WaifuRollService(
                                 );
 
                             // Обновляем время последнего приветствия
-                            greet!.Time = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
+                            greet!.Time = DateTime.Now;
 
                             if (isNewGreeting)
                             {
@@ -519,7 +517,7 @@ public class WaifuRollService(
                             var helloMsg = await GetHelloText();
                             var fixedmsg = await ConvertFixLinksInHelloMessages(helloMsg);
 
-                            greet!.Time = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
+                            greet!.Time = DateTime.Now;
 
                             if (isNewGreeting)
                             {

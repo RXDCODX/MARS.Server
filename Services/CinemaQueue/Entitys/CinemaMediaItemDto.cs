@@ -10,12 +10,12 @@ public class CinemaMediaItemDto
     public required string MediaUrl { get; set; }
     public MediaStatus Status { get; set; }
     public int Priority { get; set; }
-    public DateTimeOffset CreatedAt { get; set; }
-    public DateTimeOffset? ScheduledFor { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime? ScheduledFor { get; set; }
     public string? AddedBy { get; set; }
     public string? TwitchUserId { get; set; }
     public string? TwitchUsername { get; set; }
     public string? Notes { get; set; }
     public bool IsNext { get; set; }
-    public DateTimeOffset? LastModified { get; set; }
+    public DateTime? LastModified { get; set; }
 }

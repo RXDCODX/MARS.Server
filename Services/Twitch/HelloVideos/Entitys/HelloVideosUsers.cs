@@ -23,7 +23,7 @@ public class HelloVideosUsers
     [ForeignKey(nameof(TwitchId))]
     public TwitchUser? TwitchUser { get; set; }
 
-    public DateTimeOffset LastTimeNotif { get; set; }
+    public DateTime LastTimeNotif { get; set; }
 
     [Required]
     public Guid MediaInfoId { get; set; }

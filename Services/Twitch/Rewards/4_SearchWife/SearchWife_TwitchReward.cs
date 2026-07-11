@@ -131,15 +131,13 @@ public class SearchWife_TwitchReward(
                         .Husbands.Include(host1 => host1.HusbandCoolDown)
                         .AsNoTracking()
                         .FirstOrDefaultAsync(e => e.TwitchId == twEvent.UserId);
-                    var time = hostRoolWaifu?.HusbandCoolDown?.Time.ToOffset(TimeSpan.FromHours(3));
+                    var time = hostRoolWaifu?.HusbandCoolDown?.Time;
 
                     if (time != null)
                     {
-                        DateTimeOffset notNullTime = time.Value;
+                        DateTime notNullTime = time.Value;
                         var cooldown = await waifuRollService.GetWaifuRollCoolDownAsync();
-                        TimeSpan wasteTime =
-                            notNullTime.Add(cooldown)
-                            - DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3));
+                        TimeSpan wasteTime = notNullTime.Add(cooldown) - DateTime.Now;
 
                         var culture = CultureInfo.GetCultureInfo("ru-RU");
                         var message =

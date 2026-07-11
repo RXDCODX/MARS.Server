@@ -9,7 +9,7 @@ public class UpdateMediaItemRequest
     public string? MediaUrl { get; set; }
     public MediaStatus? Status { get; set; }
     public int? Priority { get; set; }
-    public DateTimeOffset? ScheduledFor { get; set; }
+    public DateTime? ScheduledFor { get; set; }
     public string? Notes { get; set; }
     public bool? IsNext { get; set; }
 }

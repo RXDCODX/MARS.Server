@@ -100,7 +100,7 @@ public class FumoFriday_TwitchReward(
         var name = e.ChatMessage.DisplayName;
         var id = e.ChatMessage.UserId;
         var colorHex = e.ChatMessage.HexColor;
-        var now = DateTimeOffset.Now;
+        var now = DateTime.Now;
 
         if (!_users.Contains(id) && e.ChatMessage.Channel == TwitchExstension.Channel)
         {
@@ -172,7 +172,7 @@ public class FumoFriday_TwitchReward(
                         await using var dbContext = await dbContextFactory.CreateDbContextAsync(
                             _cancellationToken
                         );
-                        var now = DateTimeOffset.Now;
+                        var now = DateTime.Now;
 
                         var isExists = await dbContext.FumoUsers.AnyAsync(
                             e => e.TwitchId == id,

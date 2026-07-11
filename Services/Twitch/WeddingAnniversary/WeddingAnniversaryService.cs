@@ -87,9 +87,9 @@ public class WeddingAnniversaryService(
                 .Where(h => h.IsPrivated && h.WhenPrivated != null)
                 .ToListAsync(cancellationToken);
 
-            var today = DateTimeOffset.Now.ToLocalTime().Date;
+            var today = DateTime.Now.ToLocalTime().Date;
             NearestAnniversaryDto? nearest = null;
-            DateTimeOffset? nearestDate = null;
+            DateTime? nearestDate = null;
 
             foreach (var user in marriedUsers)
             {
@@ -174,7 +174,7 @@ public class WeddingAnniversaryService(
 
                 if (host is { IsPrivated: true, WhenPrivated: { } weddingDate })
                 {
-                    var now = DateTimeOffset.Now.ToLocalTime();
+                    var now = DateTime.Now.ToLocalTime();
                     var today = now.Date;
 
                     var lastMonths = host.LastWeddingCongratulatedMonths ?? -1;
@@ -361,6 +361,6 @@ public class NearestAnniversaryDto
     public required string TwitchId { get; set; }
     public required string DisplayName { get; set; }
     public required string AnniversaryName { get; set; }
-    public DateTimeOffset AnniversaryDate { get; set; }
+    public DateTime AnniversaryDate { get; set; }
     public int Months { get; set; }
 }

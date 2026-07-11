@@ -20,7 +20,7 @@ public class FumoRollService(IDbContextFactory<AppDbContext> factory)
             if (fumo != null)
             {
                 fumo.OrderCount++;
-                fumo.LastOrder = DateTimeOffset.Now;
+                fumo.LastOrder = DateTime.Now;
 
                 if (string.IsNullOrWhiteSpace(fumo.CharacterTranslit))
                 {

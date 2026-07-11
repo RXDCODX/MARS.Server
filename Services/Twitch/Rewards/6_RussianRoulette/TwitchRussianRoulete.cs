@@ -34,7 +34,7 @@ public class TwitchRussianRoulete(
     private const double AwaitingTimeForNewPlayersInMilliseconds = 1000 * 60;
 
     private CancellationTokenSource _cancellationTokenSource = new();
-    private DateTimeOffset _gameStartDateTime;
+    private DateTime _gameStartDateTime;
     private bool _gameStillActive;
 
     private bool _isAwaitingNewPlayers;
@@ -48,7 +48,7 @@ public class TwitchRussianRoulete(
         while (_isAwaitingNewPlayers && !_cancellationTokenSource.IsCancellationRequested)
         {
             if (
-                DateTimeOffset.Now - _gameStartDateTime
+                DateTime.Now - _gameStartDateTime
                 >= TimeSpan.FromMilliseconds(AwaitingTimeForNewPlayersInMilliseconds)
             )
             {
@@ -57,7 +57,7 @@ public class TwitchRussianRoulete(
 
             if (
                 TimeSpan.FromMilliseconds(AwaitingTimeForNewPlayersInMilliseconds)
-                    - (DateTimeOffset.Now - _gameStartDateTime)
+                    - (DateTime.Now - _gameStartDateTime)
                     < TimeSpan.FromSeconds(10)
                 && !tenSecAuth
             )
@@ -101,7 +101,7 @@ public class TwitchRussianRoulete(
                 AnnouncementColors.Primary,
                 logger
             );
-            _gameStartDateTime = DateTimeOffset.Now;
+            _gameStartDateTime = DateTime.Now;
             _isAwaitingNewPlayers = true;
 
             await WaitForPlayers();

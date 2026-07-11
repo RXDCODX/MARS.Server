@@ -18,8 +18,8 @@ public class Waifu
     public long Age { get; set; }
     public string? Anime { get; set; }
     public string? Manga { get; set; }
-    public DateTimeOffset WhenAdded { get; set; }
-    public DateTimeOffset LastOrder { get; set; }
+    public DateTime WhenAdded { get; set; }
+    public DateTime LastOrder { get; set; }
     public int OrderCount { get; set; }
     public bool IsPrivated { get; set; }
 

@@ -322,7 +322,7 @@ public class TelegramClipboardCopyService(
                     logger.LogWarning(
                         "GetFileUrls: REQUEST_EXPIRED - requestId={RequestId}, age={AgeSec}s",
                         requestId,
-                        (DateTimeOffset.UtcNow - files.CreatedAt).TotalSeconds
+                        (DateTime.Now - files.CreatedAt).TotalSeconds
                     );
                 }
             }
@@ -374,10 +374,7 @@ public class TelegramClipboardCopyService(
 
         if (memoryFileNames.Count > 0)
         {
-            var requestFiles = new ClipboardRequestFiles(
-                memoryFileNames.ToArray(),
-                DateTimeOffset.UtcNow
-            );
+            var requestFiles = new ClipboardRequestFiles(memoryFileNames.ToArray(), DateTime.Now);
             _clipboardRequests[requestId] = requestFiles;
 
             logger.LogInformation(
@@ -425,7 +422,7 @@ public class TelegramClipboardCopyService(
                         "Cleanup: removing requestId={RequestId}, fileCount={FileCount}, age={AgeSec}s",
                         item.Key,
                         removedFiles.MemoryFileNames.Length,
-                        (DateTimeOffset.UtcNow - removedFiles.CreatedAt).TotalSeconds
+                        (DateTime.Now - removedFiles.CreatedAt).TotalSeconds
                     );
                     await CleanupMemoryFilesAsync(removedFiles.MemoryFileNames);
                 }
@@ -473,7 +470,7 @@ public class TelegramClipboardCopyService(
 
     private bool IsExpired(DateTimeOffset createdAt)
     {
-        var result = DateTimeOffset.UtcNow - createdAt > _requestTtl;
+        var result = DateTime.Now - createdAt > _requestTtl;
         return result;
     }
 

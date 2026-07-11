@@ -16,7 +16,7 @@ public partial class AddSevenTvEmotesTable : Migration
             columns: table => new
             {
                 Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
-                LoadedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
+                LoadedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
             },
             constraints: table =>
             {

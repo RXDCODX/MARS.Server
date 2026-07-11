@@ -21,7 +21,7 @@ public class PlayerState
     /// Используется для синхронизации между клиентами и предотвращения применения устаревших состояний
     /// </summary>
     [NotMapped]
-    public Guid StateVersion { get; set; } = Guid.CreateVersion7(DateTimeOffset.Now);
+    public Guid StateVersion { get; set; } = Guid.CreateVersion7(DateTime.Now);
 
     /// <summary>
     /// ID текущего элемента очереди (foreign key)

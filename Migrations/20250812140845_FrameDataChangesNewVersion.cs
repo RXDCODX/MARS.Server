@@ -44,7 +44,7 @@ public partial class FrameDataChangesNewVersion : Migration
                     maxLength: 20,
                     nullable: true
                 ),
-                LastUpdateTime = table.Column<DateTimeOffset>(
+                LastUpdateTime = table.Column<DateTime>(
                     type: "timestamp with time zone",
                     nullable: false
                 ),

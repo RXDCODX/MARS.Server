@@ -20,9 +20,9 @@ public class WaifuRollGuarantee
 
     public int RollCount { get; set; } = 0;
 
-    public DateTimeOffset LastRoll { get; set; } = DateTimeOffset.Now;
+    public DateTime LastRoll { get; set; } = DateTime.Now;
 
-    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.Now;
+    public DateTime CreatedAt { get; set; } = DateTime.Now;
 
-    public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.Now;
+    public DateTime UpdatedAt { get; set; } = DateTime.Now;
 }

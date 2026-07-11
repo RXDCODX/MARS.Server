@@ -78,7 +78,7 @@ public partial class DanbooruPost
     public int Id { get; set; }
 
     [JsonPropertyName("created_at")]
-    public DateTimeOffset? CreatedAt { get; set; }
+    public DateTime? CreatedAt { get; set; }
 
     [JsonPropertyName("uploader_id")]
     public int? UploaderId { get; set; }
@@ -93,7 +93,7 @@ public partial class DanbooruPost
     public string? Md5 { get; set; }
 
     [JsonPropertyName("last_comment_bumped_at")]
-    public DateTimeOffset? LastCommentBumpedAt { get; set; }
+    public DateTime? LastCommentBumpedAt { get; set; }
 
     [JsonPropertyName("rating")]
     public string? Rating { get; set; }
@@ -114,7 +114,7 @@ public partial class DanbooruPost
     public string? FileExt { get; set; }
 
     [JsonPropertyName("last_noted_at")]
-    public DateTimeOffset? LastNotedAt { get; set; }
+    public DateTime? LastNotedAt { get; set; }
 
     [JsonPropertyName("parent_id")]
     public int? ParentId { get; set; }
@@ -159,7 +159,7 @@ public partial class DanbooruPost
     public int? TagCount { get; set; }
 
     [JsonPropertyName("updated_at")]
-    public DateTimeOffset? UpdatedAt { get; set; }
+    public DateTime? UpdatedAt { get; set; }
 
     [JsonPropertyName("is_banned")]
     public bool? IsBanned { get; set; }
@@ -168,7 +168,7 @@ public partial class DanbooruPost
     public int? PixivId { get; set; } // nullable!
 
     [JsonPropertyName("last_commented_at")]
-    public DateTimeOffset? LastCommentedAt { get; set; }
+    public DateTime? LastCommentedAt { get; set; }
 
     [JsonPropertyName("has_active_children")]
     public bool? HasActiveChildren { get; set; }
@@ -219,10 +219,10 @@ public partial class MediaAsset
     public int? Id { get; set; }
 
     [JsonPropertyName("created_at")]
-    public DateTimeOffset? CreatedAt { get; set; }
+    public DateTime? CreatedAt { get; set; }
 
     [JsonPropertyName("updated_at")]
-    public DateTimeOffset? UpdatedAt { get; set; }
+    public DateTime? UpdatedAt { get; set; }
 
     [JsonPropertyName("md5")]
     public string? Md5 { get; set; }
@@ -389,7 +389,7 @@ public partial class DanbooruPost
         return post;
     }
 
-    private static DateTimeOffset? ParseDateTimeOffset(JObject obj, string propertyName)
+    private static DateTime? ParseDateTimeOffset(JObject obj, string propertyName)
     {
         var token = obj[propertyName];
         if (token == null || token.Type == JTokenType.Null)
@@ -397,7 +397,7 @@ public partial class DanbooruPost
             return null;
         }
 
-        if (DateTimeOffset.TryParse(token.ToString(), out var dto))
+        if (DateTime.TryParse(token.ToString(), out var dto))
         {
             return dto;
         }
@@ -459,7 +459,7 @@ public partial class MediaAsset
         return asset;
     }
 
-    private static DateTimeOffset? ParseDateTimeOffset(JObject obj, string propertyName)
+    private static DateTime? ParseDateTimeOffset(JObject obj, string propertyName)
     {
         var token = obj[propertyName];
         if (token == null || token.Type == JTokenType.Null)
@@ -467,6 +467,6 @@ public partial class MediaAsset
             return null;
         }
 
-        return DateTimeOffset.TryParse(token.ToString(), out var dto) ? dto : null;
+        return DateTime.TryParse(token.ToString(), out var dto) ? dto : null;
     }
 }

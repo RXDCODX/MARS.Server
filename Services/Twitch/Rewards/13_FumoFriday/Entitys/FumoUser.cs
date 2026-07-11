@@ -18,5 +18,5 @@ public class FumoUser
     [ForeignKey(nameof(TwitchId))]
     public TwitchUser? TwitchUser { get; set; }
 
-    public DateTimeOffset LastTime { get; set; }
+    public DateTime LastTime { get; set; }
 }

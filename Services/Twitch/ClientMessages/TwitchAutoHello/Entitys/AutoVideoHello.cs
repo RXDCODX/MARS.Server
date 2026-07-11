@@ -10,7 +10,7 @@ public class AutoVideoHello
     [Required]
     [DatabaseGenerated(DatabaseGeneratedOption.None)]
     public required string TwitchId { get; set; }
-    public DateTimeOffset LastPostDateTime { get; set; }
+    public DateTime LastPostDateTime { get; set; }
     public required byte[] File { get; set; }
     public required string FileExtension { get; set; }
 }

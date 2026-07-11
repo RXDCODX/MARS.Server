@@ -57,7 +57,7 @@ public class ZonezeroCommand(IDbContextFactory<AppDbContext> factory) : BaseComm
                 dbUser = new TelegramUser
                 {
                     HonkaiNotifications = true,
-                    LastTimeMessage = DateTimeOffset.Now,
+                    LastTimeMessage = DateTime.Now,
                     Name = userName,
                     UserId = chatId,
                 };

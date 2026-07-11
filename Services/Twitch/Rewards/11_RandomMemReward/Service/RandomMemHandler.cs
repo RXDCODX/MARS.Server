@@ -149,7 +149,7 @@ public class RandomMemHandler(
                     }
                     else
                     {
-                        File.SetLastAccessTime(downloadPath, DateTimeOffset.Now.LocalDateTime);
+                        File.SetLastAccessTime(downloadPath, DateTime.Now);
                         if (index == 0)
                         {
                             caption = answer;
@@ -168,7 +168,7 @@ public class RandomMemHandler(
                     }
                     else
                     {
-                        File.SetLastAccessTime(downloadPath, DateTimeOffset.Now.LocalDateTime);
+                        File.SetLastAccessTime(downloadPath, DateTime.Now);
                         if (index == 0)
                         {
                             caption = answer;
@@ -197,12 +197,7 @@ public class RandomMemHandler(
             {
                 await client.SendMessage(
                     message.Chat.Id,
-                    string.Format(
-                        caption,
-                        DateTimeOffset.Now.LocalDateTime,
-                        fileInfo.FilePath,
-                        orderInt
-                    ),
+                    string.Format(caption, DateTime.Now, fileInfo.FilePath, orderInt),
                     cancellationToken: CancellationToken
                 );
             }

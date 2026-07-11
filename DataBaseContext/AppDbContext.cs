@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using MARS.Server.ApplicationState;
 using MARS.Server.Services._365Genius.Entitys;
 using MARS.Server.Services.EnvironmentVariable.Entitys;
@@ -371,9 +372,7 @@ public sealed partial class AppDbContext : DbContext
     {
         base.ConfigureConventions(configurationBuilder);
 
-        configurationBuilder
-            .Properties<DateTimeOffset>()
-            .HaveConversion<DateTimeOffsetConversion>();
+        configurationBuilder.Properties<DateTime>().HaveConversion<DateTimeOffsetConversion>();
 
         configurationBuilder.Properties<DateTime>().HaveConversion<DateTimeToDateTimeUtc>();
 
@@ -381,8 +380,11 @@ public sealed partial class AppDbContext : DbContext
     }
 
     public sealed class DateTimeOffsetConversion()
-        : ValueConverter<DateTimeOffset, DateTimeOffset>(
-            offset => offset.Offset != TimeSpan.Zero ? offset.ToOffset(TimeSpan.Zero) : offset,
+        : ValueConverter<DateTimeOffset, DateTime>(
+            offset =>
+                offset.Offset != TimeSpan.Zero
+                    ? offset.ToOffset(TimeSpan.Zero).DateTime
+                    : offset.DateTime,
             v => v.ToLocalTime()
         );
 

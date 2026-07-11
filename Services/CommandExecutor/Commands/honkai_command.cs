@@ -60,7 +60,7 @@ public class HonkaiCommand(IDbContextFactory<AppDbContext> factory) : BaseComman
             dbUser = new TelegramUser
             {
                 HonkaiNotifications = true,
-                LastTimeMessage = DateTimeOffset.Now,
+                LastTimeMessage = DateTime.Now,
                 Name = userName,
                 UserId = chatId,
             };

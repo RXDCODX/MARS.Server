@@ -11,5 +11,5 @@ public class SevenTvEmote
     [MaxLength(100)]
     public required string Name { get; set; }
 
-    public DateTimeOffset LoadedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTime LoadedAt { get; set; } = DateTime.Now;
 }

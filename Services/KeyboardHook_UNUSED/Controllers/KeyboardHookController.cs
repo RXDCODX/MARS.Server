@@ -24,7 +24,7 @@ public class KeyboardHookController(
             {
                 keyboardHookService.IsActive,
                 Platform = OperatingSystem.IsWindows() ? "Windows" : "Non-Windows",
-                Timestamp = DateTimeOffset.UtcNow,
+                Timestamp = DateTime.Now,
                 ServiceName = "Keyboard Hook Service",
                 Description = OperatingSystem.IsWindows()
                     ? "Сервис для перехвата комбинаций клавиш A+Numpad9 или A+P"
@@ -68,7 +68,7 @@ public class KeyboardHookController(
             {
                 Combinations = combinations,
                 TotalCount = combinations.Length,
-                Timestamp = DateTimeOffset.UtcNow,
+                Timestamp = DateTime.Now,
             }
         );
     }
@@ -112,7 +112,7 @@ public class KeyboardHookController(
                     "Библиотека H.Hooks",
                 ]
                 : new[] { "Любая ОС (кроме Windows)", "Совместимость с .NET" },
-            Status = new { keyboardHookService.IsActive, LastUpdate = DateTimeOffset.UtcNow },
+            Status = new { keyboardHookService.IsActive, LastUpdate = DateTime.Now },
         };
 
         return Ok(info);

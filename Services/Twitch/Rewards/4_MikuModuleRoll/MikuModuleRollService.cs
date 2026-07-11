@@ -21,7 +21,7 @@ public class MikuModuleRollService(IDbContextFactory<AppDbContext> factory)
             if (module != null)
             {
                 module.OrderCount++;
-                module.LastOrder = DateTimeOffset.Now;
+                module.LastOrder = DateTime.Now;
 
                 dbContext.MikuModules.Update(module);
                 await dbContext.SaveChangesAsync();

@@ -152,8 +152,8 @@ public class CinemaQueueService(
                     Notes = request.Notes,
                     Status = MediaStatus.Pending,
                     IsNext = false,
-                    CreatedAt = DateTimeOffset.Now,
-                    LastModified = DateTimeOffset.Now,
+                    CreatedAt = DateTime.Now,
+                    LastModified = DateTime.Now,
                 };
 
                 var createdItem = await repository.CreateAsync(mediaItem, cancellationToken);
@@ -235,7 +235,7 @@ public class CinemaQueueService(
                         existingItem.IsNext = request.IsNext.Value;
                     }
 
-                    existingItem.LastModified = DateTimeOffset.Now;
+                    existingItem.LastModified = DateTime.Now;
 
                     var updatedItem = await repository.UpdateAsync(existingItem, cancellationToken);
                     logger.LogInformation("Updated media item: {Id}", id);
@@ -307,7 +307,7 @@ public class CinemaQueueService(
 
                     // Устанавливаем флаг IsNext для выбранного элемента
                     existingItem.IsNext = true;
-                    existingItem.LastModified = DateTimeOffset.Now;
+                    existingItem.LastModified = DateTime.Now;
 
                     var updatedItem = await repository.UpdateAsync(existingItem, cancellationToken);
                     logger.LogInformation(
@@ -349,7 +349,7 @@ public class CinemaQueueService(
                 if (existingItem != null)
                 {
                     existingItem.Status = status;
-                    existingItem.LastModified = DateTimeOffset.Now;
+                    existingItem.LastModified = DateTime.Now;
 
                     var updatedItem = await repository.UpdateAsync(existingItem, cancellationToken);
                     logger.LogInformation(
@@ -391,7 +391,7 @@ public class CinemaQueueService(
                 if (existingItem != null)
                 {
                     existingItem.Priority = priority;
-                    existingItem.LastModified = DateTimeOffset.Now;
+                    existingItem.LastModified = DateTime.Now;
 
                     var updatedItem = await repository.UpdateAsync(existingItem, cancellationToken);
                     logger.LogInformation(

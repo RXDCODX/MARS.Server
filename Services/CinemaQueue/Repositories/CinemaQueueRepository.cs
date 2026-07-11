@@ -88,7 +88,7 @@ public class CinemaQueueRepository(IDbContextFactory<AppDbContext> dbContextFact
             return null;
         }
 
-        cinemaMediaItem.LastModified = DateTimeOffset.Now;
+        cinemaMediaItem.LastModified = DateTime.Now;
         context.Entry(existingItem).CurrentValues.SetValues(cinemaMediaItem);
         await context.SaveChangesAsync(cancellationToken);
 
@@ -118,7 +118,7 @@ public class CinemaQueueRepository(IDbContextFactory<AppDbContext> dbContextFact
         foreach (var item in items)
         {
             item.IsNext = false;
-            item.LastModified = DateTimeOffset.Now;
+            item.LastModified = DateTime.Now;
         }
 
         await context.SaveChangesAsync(cancellationToken);
