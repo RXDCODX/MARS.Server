@@ -109,4 +109,10 @@ public interface ITelegramusHub
 
     [SignalRMethod]
     public Task UpdateFrogPrizes(ICollection<FrogPrizeType> prizes);
+
+    [SignalRMethod]
+    public Task MikuModuleRoll(MikuModule mikuModule, TwitchUser twitchUser, string? color = null);
+
+    [SignalRMethod]
+    public Task UpdateMikuModulePrizes(ICollection<MikuModulePrizeType> prizes);
 }

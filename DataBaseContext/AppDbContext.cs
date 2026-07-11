@@ -80,6 +80,7 @@ public sealed partial class AppDbContext : DbContext
     public DbSet<MikuMondayActivation> MikuMondayActivations { get; set; } = null!;
     public DbSet<Fumo> Fumos { get; set; } = null!;
     public DbSet<Frog> Frogs { get; set; } = null!;
+    public DbSet<MikuModule> MikuModules { get; set; } = null!;
     public DbSet<EnvironmentVariable> EnvironmentVariables { get; set; } = null!;
     public DbSet<ChannelProcessingState> ChannelProcessingStates { get; set; } = null!;
     public DbSet<SevenTvEmote> SevenTvEmotes { get; set; } = null!;
