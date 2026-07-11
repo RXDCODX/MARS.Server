@@ -53,5 +53,5 @@ public class QueueItem
     /// <summary>
     /// Дата и время заказа трека
     /// </summary>
-    public DateTime RequestedAt { get; set; } = DateTime.UtcNow;
+    public DateTime RequestedAt { get; set; } = DateTime.Now;
 }

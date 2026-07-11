@@ -234,8 +234,8 @@ public class StreamArchiveService(
                 ProcessedFileName = fileName,
                 OriginalFilePath = filePath,
                 OriginalFileSize = fileInfo.Length,
-                DiscoveredAt = DateTime.UtcNow,
-                ProcessingStartedAt = DateTime.UtcNow,
+                DiscoveredAt = DateTime.Now,
+                ProcessingStartedAt = DateTime.Now,
                 Status = StreamArchiveFileStatus.Processing,
                 ChunksCount =
                     fileInfo.Length > 2L * 1024 * 1024 * 1024
@@ -264,7 +264,7 @@ public class StreamArchiveService(
             await UpdateFileStatusAsync(
                 archiveFile.Id,
                 StreamArchiveFileStatus.Completed,
-                processingCompletedAt: DateTime.UtcNow
+                processingCompletedAt: DateTime.Now
             );
         }
         catch (Exception ex)
@@ -764,7 +764,7 @@ public class StreamArchiveService(
 
             if (status == StreamArchiveChunkStatus.Uploaded)
             {
-                chunk.UploadedAt = DateTime.UtcNow;
+                chunk.UploadedAt = DateTime.Now;
             }
 
             await dbContext.SaveChangesAsync();
@@ -780,7 +780,7 @@ public class StreamArchiveService(
         {
             chunk.TelegramMessageId = messageId;
             chunk.Status = StreamArchiveChunkStatus.Uploaded;
-            chunk.UploadedAt = DateTime.UtcNow;
+            chunk.UploadedAt = DateTime.Now;
             await dbContext.SaveChangesAsync();
         }
     }

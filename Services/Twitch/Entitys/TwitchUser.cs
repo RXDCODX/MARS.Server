@@ -89,12 +89,12 @@ public class TwitchUser
     /// <summary>
     /// Дата последнего обновления информации
     /// </summary>
-    public DateTime LastUpdated { get; set; } = DateTime.UtcNow;
+    public DateTime LastUpdated { get; set; } = DateTime.Now;
 
     /// <summary>
     /// Дата создания записи
     /// </summary>
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime CreatedAt { get; set; } = DateTime.Now;
 
     /// <summary>
     /// Алиас (прозвище) для TTS вместо оригинального DisplayName
@@ -160,8 +160,8 @@ public class TwitchUser
                     ChatColor = chatMessage.HexColor,
                     IsModerator = chatMessage.UserDetail.IsModerator,
                     IsVip = chatMessage.UserDetail.IsVip,
-                    CreatedAt = DateTime.UtcNow,
-                    LastUpdated = DateTime.UtcNow,
+                    CreatedAt = DateTime.Now,
+                    LastUpdated = DateTime.Now,
                 };
             }
         }
@@ -202,8 +202,8 @@ public class TwitchUser
                     DisplayName = evt.UserName,
                     IsModerator = false,
                     IsVip = false,
-                    CreatedAt = DateTime.UtcNow,
-                    LastUpdated = DateTime.UtcNow,
+                    CreatedAt = DateTime.Now,
+                    LastUpdated = DateTime.Now,
                 };
             }
         }
@@ -226,8 +226,8 @@ public class TwitchUser
             ProfileImageUrl = user.ProfileImageUrl,
             IsModerator = false,
             IsVip = false,
-            CreatedAt = DateTime.UtcNow,
-            LastUpdated = DateTime.UtcNow,
+            CreatedAt = DateTime.Now,
+            LastUpdated = DateTime.Now,
         };
     }
 

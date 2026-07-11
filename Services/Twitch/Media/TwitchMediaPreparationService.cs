@@ -211,7 +211,7 @@ public class TwitchMediaPreparationService(
             if (File.Exists(outputFilePath))
             {
                 result = true;
-                File.SetLastWriteTimeUtc(outputFilePath, DateTime.UtcNow);
+                File.SetLastWriteTimeUtc(outputFilePath, DateTime.Now);
             }
         }
         catch (Exception ex)

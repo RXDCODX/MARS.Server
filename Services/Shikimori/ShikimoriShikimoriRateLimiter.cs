@@ -78,7 +78,7 @@ public class ShikimoriShikimoriRateLimiter(ILogger<ShikimoriShikimoriRateLimiter
 
     public RateLimiterInfo GetInfo()
     {
-        var now = DateTime.UtcNow;
+        var now = DateTime.Now;
         var availablePerSecond = CalculateAvailablePerSecond(now);
         var availablePerMinute = CalculateAvailablePerMinute(now);
         var timeToResetSecond = CalculateTimeToResetSecond(now);
@@ -95,7 +95,7 @@ public class ShikimoriShikimoriRateLimiter(ILogger<ShikimoriShikimoriRateLimiter
 
     private bool CanMakeRequest()
     {
-        var now = DateTime.UtcNow;
+        var now = DateTime.Now;
         CleanupOldRequests(now);
 
         var canMakeSecond = _requestsPerSecond.Count < MaxRequestsPerSecond;
@@ -106,7 +106,7 @@ public class ShikimoriShikimoriRateLimiter(ILogger<ShikimoriShikimoriRateLimiter
 
     private void RecordRequest()
     {
-        var now = DateTime.UtcNow;
+        var now = DateTime.Now;
         _requestsPerSecond.Enqueue(now);
         _requestsPerMinute.Enqueue(now);
     }
@@ -170,7 +170,7 @@ public class ShikimoriShikimoriRateLimiter(ILogger<ShikimoriShikimoriRateLimiter
 
     private TimeSpan CalculateDelay()
     {
-        var now = DateTime.UtcNow;
+        var now = DateTime.Now;
         var timeToResetSecond = CalculateTimeToResetSecond(now);
         var timeToResetMinute = CalculateTimeToResetMinute(now);
 

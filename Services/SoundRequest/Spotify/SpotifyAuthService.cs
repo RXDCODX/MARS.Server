@@ -435,7 +435,7 @@ public class SpotifyAuthService(
         {
             if (
                 !string.IsNullOrWhiteSpace(credentials.AccessToken)
-                && credentials.AccessTokenExpiresAtUtc > DateTime.UtcNow.AddSeconds(30)
+                && credentials.AccessTokenExpiresAtUtc > DateTime.Now.AddSeconds(30)
             )
             {
                 result = new SpotifyAccessTokenResult
@@ -506,7 +506,7 @@ public class SpotifyAuthService(
 
     private async Task PersistTokenStateAsync(SpotifyTokenResponseDto token, CancellationToken ct)
     {
-        var expiresAtUtc = DateTime.UtcNow.AddSeconds(Math.Max(60, token.ExpiresIn - 30));
+        var expiresAtUtc = DateTime.Now.AddSeconds(Math.Max(60, token.ExpiresIn - 30));
 
         await UpsertRootStateAsync(
             RootStateKeys.SoundRequestSpotifyAccessToken,

@@ -128,7 +128,7 @@ public class TelegramDiscordBridgeService(
 
                 if (existing is null)
                 {
-                    var now = DateTime.UtcNow;
+                    var now = DateTime.Now;
                     var entity = new TelegramDiscordChannelBinding
                     {
                         TelegramChannelId = request.TelegramChannelId,
@@ -279,7 +279,7 @@ public class TelegramDiscordBridgeService(
                 if (entity is not null)
                 {
                     entity.IsEnabled = isEnabled;
-                    entity.UpdatedAtUtc = DateTime.UtcNow;
+                    entity.UpdatedAtUtc = DateTime.Now;
                     await dbContext.SaveChangesAsync(cancellationToken);
 
                     result = OperationResult<TelegramDiscordBindingDto>.Ok(
@@ -532,7 +532,7 @@ public class TelegramDiscordBridgeService(
                 {
                     TelegramChannelId = telegramChannelId,
                     LastProcessedMessageId = 0,
-                    LastUpdatedUtc = DateTime.UtcNow,
+                    LastUpdatedUtc = DateTime.Now,
                 };
                 dbContext.TelegramDiscordChannelStates.Add(state);
                 await dbContext.SaveChangesAsync();
@@ -567,7 +567,7 @@ public class TelegramDiscordBridgeService(
             if (isAllDelivered)
             {
                 state.LastProcessedMessageId = message.ID;
-                state.LastUpdatedUtc = DateTime.UtcNow;
+                state.LastUpdatedUtc = DateTime.Now;
                 await dbContext.SaveChangesAsync();
             }
         }

@@ -91,7 +91,7 @@ public class TwitchUserSyncService(
         // Проверяем cooldown
         if (_lastUpdateTime.TryGetValue(userId, out var lastUpdate))
         {
-            if (DateTime.UtcNow - lastUpdate < _updateCooldown)
+            if (DateTime.Now - lastUpdate < _updateCooldown)
             {
                 return;
             }
@@ -118,7 +118,7 @@ public class TwitchUserSyncService(
                 await UpdateUserAsync(db, existingUser, chatMessage);
             }
 
-            _lastUpdateTime[userId] = DateTime.UtcNow;
+            _lastUpdateTime[userId] = DateTime.Now;
         }
         finally
         {
@@ -174,8 +174,8 @@ public class TwitchUserSyncService(
             IsVip = chatMessage.UserDetail.IsVip,
             ChatColor = chatColor ?? chatMessage.HexColor,
             ProfileImageUrl = apiUser?.ProfileImageUrl,
-            CreatedAt = DateTime.UtcNow,
-            LastUpdated = DateTime.UtcNow,
+            CreatedAt = DateTime.Now,
+            LastUpdated = DateTime.Now,
         };
 
         db.TwitchUsers.Add(newUser);
@@ -237,7 +237,7 @@ public class TwitchUserSyncService(
         // Обновляем аватарку если её нет или если прошло много времени
         if (
             string.IsNullOrWhiteSpace(existingUser.ProfileImageUrl)
-            || DateTime.UtcNow - existingUser.LastUpdated > TimeSpan.FromDays(7)
+            || DateTime.Now - existingUser.LastUpdated > TimeSpan.FromDays(7)
         )
         {
             if (tokenService.Token?.AccessToken != null)
@@ -272,7 +272,7 @@ public class TwitchUserSyncService(
 
         if (needsUpdate)
         {
-            existingUser.LastUpdated = DateTime.UtcNow;
+            existingUser.LastUpdated = DateTime.Now;
             db.TwitchUsers.Update(existingUser);
             await db.SaveChangesAsync();
 

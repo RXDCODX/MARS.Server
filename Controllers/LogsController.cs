@@ -253,7 +253,7 @@ public class LogsController(ILogsService logsService, ILogger<LogsController> lo
             logger.LogError("Тестовый лог уровня Error");
             logger.LogCritical("Тестовый лог уровня Critical");
 
-            var data = new { message = "Тестовые логи созданы", timestamp = DateTime.UtcNow };
+            var data = new { message = "Тестовые логи созданы", timestamp = DateTime.Now };
             result = Ok(OperationResult<object>.Ok("Тестовые логи успешно созданы", data));
         }
         catch (Exception ex)

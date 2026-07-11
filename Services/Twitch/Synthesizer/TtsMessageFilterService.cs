@@ -70,7 +70,7 @@ public class TtsMessageFilterService(
         var collapsed = CollapseRepetitions(message);
 
         var normalized = collapsed.Trim().ToLowerInvariant();
-        var now = DateTime.UtcNow;
+        var now = DateTime.Now;
 
         if (_messagesSinceCleanup >= CleanupThreshold)
         {

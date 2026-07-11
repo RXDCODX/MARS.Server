@@ -234,7 +234,7 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
                     );
                 }
 
-                _lastSpotifyTrackPlayIssuedAtUtc = DateTime.UtcNow;
+                _lastSpotifyTrackPlayIssuedAtUtc = DateTime.Now;
             }
 
             _logger.LogDebug("Состояние обновлено, уведомление отправлено");
@@ -769,7 +769,7 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
 
                 if (dbTrack != null)
                 {
-                    dbTrack.LastTimePlays = DateTime.UtcNow;
+                    dbTrack.LastTimePlays = DateTime.Now;
                     db.SoundRequestBaseTrackInfos.Update(dbTrack);
                     await db.SaveChangesAsync(_cancellationToken);
                 }
@@ -997,7 +997,7 @@ public class MainPlayer : IPlayerController, IHostedService, IDisposable
                 var graceMs = Math.Max(0, _spotifyConfiguration.UserPlaybackPriorityGraceMs);
                 var isInsidePriorityGraceWindow =
                     graceMs > 0
-                    && DateTime.UtcNow - _lastSpotifyTrackPlayIssuedAtUtc
+                    && DateTime.Now - _lastSpotifyTrackPlayIssuedAtUtc
                         < TimeSpan.FromMilliseconds(graceMs);
 
                 if (

@@ -88,7 +88,7 @@ public class TelegramGooglePhotosService(
             await client.DownloadFile(fileInfo.FilePath, photoStream, StoppingToken);
             photoStream.Position = 0;
 
-            var fileName = $"telegram_{message.MessageId}_{DateTime.UtcNow:yyyyMMdd_HHmmss}.jpg";
+            var fileName = $"telegram_{message.MessageId}_{DateTime.Now:yyyyMMdd_HHmmss}.jpg";
             var uploadResult = await apiClient.UploadPhotoAsync(
                 photoStream,
                 fileName,
@@ -140,7 +140,7 @@ public class TelegramGooglePhotosService(
             await client.DownloadFile(fileInfo.FilePath, documentStream, StoppingToken);
             documentStream.Position = 0;
 
-            var fileName = document.FileName ?? $"document_{DateTime.UtcNow:yyyyMMdd_HHmmss}";
+            var fileName = document.FileName ?? $"document_{DateTime.Now:yyyyMMdd_HHmmss}";
             var uploadResult = await apiClient.UploadPhotoAsync(
                 documentStream,
                 fileName,

@@ -167,7 +167,7 @@ public class EnvironmentVariableController(
                 {
                     variable.Value = value;
                     variable.Description = request.Description;
-                    variable.UpdatedAt = DateTime.UtcNow;
+                    variable.UpdatedAt = DateTime.Now;
                 }
                 else
                 {
@@ -176,8 +176,8 @@ public class EnvironmentVariableController(
                         Key = key,
                         Value = value,
                         Description = request.Description,
-                        CreatedAt = DateTime.UtcNow,
-                        UpdatedAt = DateTime.UtcNow,
+                        CreatedAt = DateTime.Now,
+                        UpdatedAt = DateTime.Now,
                     };
                     await dbContext.EnvironmentVariables.AddAsync(variable, cancellationToken);
                 }
@@ -238,7 +238,7 @@ public class EnvironmentVariableController(
                 else
                 {
                     variable.Value = null;
-                    variable.UpdatedAt = DateTime.UtcNow;
+                    variable.UpdatedAt = DateTime.Now;
                     dbContext.EnvironmentVariables.Update(variable);
                     await dbContext.SaveChangesAsync(cancellationToken);
 

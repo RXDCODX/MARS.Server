@@ -162,7 +162,7 @@ public class SoundRequestCommandsService(
                 }
 
                 // Проверяем, не играл ли уже этот трек сегодня (для обычных пользователей)
-                if (user.IsSimpleUser && info.LastTimePlays >= DateTime.UtcNow.Date)
+                if (user.IsSimpleUser && info.LastTimePlays >= DateTime.Now.Date)
                 {
                     result = $"@{user.DisplayName}, этот трек уже сегодня играл";
                     return result;
@@ -177,7 +177,7 @@ public class SoundRequestCommandsService(
                 var queueCountBefore = await queue.GetQueueCountAsync();
 
                 // Добавляем трек в очередь
-                var requestedAt = DateTime.UtcNow;
+                var requestedAt = DateTime.Now;
                 var queueItem = await queue.AddToQueueAsync(info, user.TwitchId, user, requestedAt);
 
                 // Пытаемся запустить воспроизведение если нужно
@@ -462,7 +462,7 @@ public class SoundRequestCommandsService(
             var skippedTracksCount = 0;
             var addedTracks = 0;
             var effectiveMaxTracksToAdd = maxTracksToAdd > 0 ? maxTracksToAdd : int.MaxValue;
-            var requestedAt = DateTime.UtcNow;
+            var requestedAt = DateTime.Now;
 
             foreach (var info in items)
             {
@@ -480,7 +480,7 @@ public class SoundRequestCommandsService(
                 }
 
                 // Пропускаем треки, которые уже играли сегодня (для обычных пользователей)
-                if (user.IsSimpleUser && info.LastTimePlays >= DateTime.UtcNow.Date)
+                if (user.IsSimpleUser && info.LastTimePlays >= DateTime.Now.Date)
                 {
                     skippedTracksCount++;
                     continue;

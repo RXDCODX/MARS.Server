@@ -17,7 +17,7 @@ public class ScoreboardState
     public string BorderColor { get; set; } = "#3F00FF";
     public bool IsVisible { get; set; } = true;
     public int AnimationDuration { get; set; } = 800;
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime CreatedAt { get; set; } = DateTime.Now;
     public DateTime? UpdatedAt { get; set; }
     public bool IsActive { get; set; } = true;
 

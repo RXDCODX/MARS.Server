@@ -270,7 +270,7 @@ public sealed class MessageValidationBuilder(
         {
             var key = args.ChatMessage.Id;
 
-            if (key is null || sentEventErrors.TryAdd(key, DateTime.UtcNow))
+            if (key is null || sentEventErrors.TryAdd(key, DateTime.Now))
             {
                 try
                 {

@@ -173,8 +173,8 @@ public class TwitchUsersController(
                 IsVip = request.IsVip,
                 IsInBlockList = request.IsInBlockList,
                 AliasNickname = request.AliasNickname,
-                CreatedAt = DateTime.UtcNow,
-                LastUpdated = DateTime.UtcNow,
+                CreatedAt = DateTime.Now,
+                LastUpdated = DateTime.Now,
             };
 
             db.TwitchUsers.Add(user);
@@ -259,7 +259,7 @@ public class TwitchUsersController(
             if (request.AliasNickname != null)
                 user.AliasNickname = request.AliasNickname;
 
-            user.LastUpdated = DateTime.UtcNow;
+            user.LastUpdated = DateTime.Now;
             await db.SaveChangesAsync(cancellationToken);
 
             var dto = new TwitchUserDto

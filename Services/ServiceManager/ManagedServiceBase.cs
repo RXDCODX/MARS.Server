@@ -97,8 +97,8 @@ public abstract class ManagedServiceBase(ILogger logger) : IHostedService
             if (result)
             {
                 Status = ServiceStatus.Running;
-                StartTime = DateTime.UtcNow;
-                LastActivity = DateTime.UtcNow;
+                StartTime = DateTime.Now;
+                LastActivity = DateTime.Now;
                 Logger.LogInformation("Service {ServiceName} started successfully", ServiceName);
             }
             else
@@ -172,7 +172,7 @@ public abstract class ManagedServiceBase(ILogger logger) : IHostedService
     /// </summary>
     protected void UpdateActivity()
     {
-        LastActivity = DateTime.UtcNow;
+        LastActivity = DateTime.Now;
     }
 
     /// <summary>

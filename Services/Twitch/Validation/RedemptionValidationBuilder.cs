@@ -244,7 +244,7 @@ public sealed class RedemptionValidationBuilder(
         {
             var key = Event.Id;
 
-            if (key is null || sentEventErrors.TryAdd(key, DateTime.UtcNow))
+            if (key is null || sentEventErrors.TryAdd(key, DateTime.Now))
             {
                 try
                 {

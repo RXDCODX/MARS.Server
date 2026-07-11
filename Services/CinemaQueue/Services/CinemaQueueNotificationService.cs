@@ -61,7 +61,7 @@ public class CinemaQueueNotificationService(
     {
         try
         {
-            var now = DateTime.UtcNow;
+            var now = DateTime.Now;
 
             // Проверяем, прошло ли 3 дня с последнего уведомления
             if (now - _lastNotificationTime >= NotificationInterval)

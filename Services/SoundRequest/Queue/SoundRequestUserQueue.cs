@@ -69,7 +69,7 @@ public class SoundRequestUserQueue(
                 existingTrack.Duration = track.Duration;
                 existingTrack.ArtworkUrl = track.ArtworkUrl;
                 existingTrack.VideoId = track.VideoId;
-                existingTrack.UpdatedAt = DateTime.UtcNow;
+                existingTrack.UpdatedAt = DateTime.Now;
                 dbContext.SoundRequestBaseTrackInfos.Update(existingTrack);
             }
             else
@@ -106,7 +106,7 @@ public class SoundRequestUserQueue(
                 Track = existingTrack ?? track,
                 QueueOrder = maxOrder + 1,
                 RequestedByTwitchId = requestedByTwitchId,
-                RequestedAt = requestedAt ?? DateTime.UtcNow,
+                RequestedAt = requestedAt ?? DateTime.Now,
             };
 
             dbContext.SoundRequestQueueItems.Add(queueItem);
@@ -374,7 +374,7 @@ public class SoundRequestUserQueue(
                 existingTrack.Duration = track.Duration;
                 existingTrack.ArtworkUrl = track.ArtworkUrl;
                 existingTrack.VideoId = track.VideoId;
-                existingTrack.UpdatedAt = DateTime.UtcNow;
+                existingTrack.UpdatedAt = DateTime.Now;
                 dbContext.SoundRequestBaseTrackInfos.Update(existingTrack);
             }
             else

@@ -30,7 +30,7 @@ public class TwitchApiRateLimiter(ILogger<TwitchApiRateLimiter> logger) : IRateL
         try
         {
             await WaitForRateLimit();
-            var startTime = DateTime.UtcNow;
+            var startTime = DateTime.Now;
 
             try
             {
@@ -60,7 +60,7 @@ public class TwitchApiRateLimiter(ILogger<TwitchApiRateLimiter> logger) : IRateL
         try
         {
             await WaitForRateLimit();
-            var startTime = DateTime.UtcNow;
+            var startTime = DateTime.Now;
 
             try
             {
@@ -91,7 +91,7 @@ public class TwitchApiRateLimiter(ILogger<TwitchApiRateLimiter> logger) : IRateL
         try
         {
             await WaitForRateLimit();
-            var startTime = DateTime.UtcNow;
+            var startTime = DateTime.Now;
 
             try
             {
@@ -121,7 +121,7 @@ public class TwitchApiRateLimiter(ILogger<TwitchApiRateLimiter> logger) : IRateL
         try
         {
             await WaitForRateLimit();
-            var startTime = DateTime.UtcNow;
+            var startTime = DateTime.Now;
 
             try
             {
@@ -153,7 +153,7 @@ public class TwitchApiRateLimiter(ILogger<TwitchApiRateLimiter> logger) : IRateL
         await _queueSemaphore.WaitAsync();
         try
         {
-            var now = DateTime.UtcNow;
+            var now = DateTime.Now;
 
             // Удаляем старые записи (старше минуты)
             while (_requestTimes.Count > 0 && now - _requestTimes.Peek() > TimeSpan.FromMinutes(1))

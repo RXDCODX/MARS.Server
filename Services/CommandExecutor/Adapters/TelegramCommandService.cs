@@ -623,7 +623,7 @@ public class TelegramCommandService(
     private string CreateInlineResultId(long userId, string query)
     {
         var resultId = Guid.NewGuid().ToString("N");
-        var expiresAtUtc = DateTime.UtcNow.Add(InlineResultPayloadTtl);
+        var expiresAtUtc = DateTime.Now.Add(InlineResultPayloadTtl);
         var payload = new InlineResultPayload(userId, query, expiresAtUtc);
 
         _inlineResultPayloads[resultId] = payload;
@@ -639,7 +639,7 @@ public class TelegramCommandService(
         {
             if (_inlineResultPayloads.TryGetValue(resultId, out var payload))
             {
-                if (payload.UserId == userId && payload.ExpiresAtUtc >= DateTime.UtcNow)
+                if (payload.UserId == userId && payload.ExpiresAtUtc >= DateTime.Now)
                 {
                     result = payload.Query;
                 }
@@ -653,7 +653,7 @@ public class TelegramCommandService(
 
     private void CleanupInlineResultPayloads()
     {
-        var utcNow = DateTime.UtcNow;
+        var utcNow = DateTime.Now;
 
         foreach (var payload in _inlineResultPayloads)
         {

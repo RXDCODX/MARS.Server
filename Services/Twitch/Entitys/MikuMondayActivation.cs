@@ -34,7 +34,7 @@ public class MikuMondayActivation
     /// <summary>
     /// Дата активации
     /// </summary>
-    public DateTime ActivatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime ActivatedAt { get; set; } = DateTime.Now;
 
     /// <summary>
     /// Номер недели года (для группировки по понедельникам)

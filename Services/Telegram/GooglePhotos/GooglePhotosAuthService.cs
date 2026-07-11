@@ -143,7 +143,7 @@ public class GooglePhotosAuthService(
         {
             expiresAt = DateTime.SpecifyKind(expiresAt, DateTimeKind.Utc);
 
-            if (DateTime.UtcNow < expiresAt)
+            if (DateTime.Now < expiresAt)
             {
                 result = accessToken;
             }
@@ -239,7 +239,7 @@ public class GooglePhotosAuthService(
 
     private async Task SaveTokensAsync(GooglePhotosTokens tokens, CancellationToken ct)
     {
-        var expiresAtUtc = DateTime.UtcNow.AddSeconds(tokens.ExpiresIn - 60);
+        var expiresAtUtc = DateTime.Now.AddSeconds(tokens.ExpiresIn - 60);
 
         await SaveStateKeyAsync(RootStateKeys.GooglePhotosAccessToken, tokens.AccessToken, ct);
         await SaveStateKeyAsync(

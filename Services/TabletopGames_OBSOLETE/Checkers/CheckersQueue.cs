@@ -42,7 +42,7 @@ public class CheckersQueue
                 if (!_playerQueue.Contains(playerId))
                 {
                     _playerQueue.Enqueue(playerId);
-                    _playerJoinTimes[playerId] = DateTime.UtcNow;
+                    _playerJoinTimes[playerId] = DateTime.Now;
                     result = true;
                 }
             }
@@ -200,7 +200,7 @@ public class CheckersQueue
             {
                 if (_playerJoinTimes.TryGetValue(playerId, out var joinTime))
                 {
-                    result = DateTime.UtcNow - joinTime;
+                    result = DateTime.Now - joinTime;
                 }
             }
         }

@@ -61,12 +61,12 @@ public class BaseTrackInfo
     /// <summary>
     /// Дата и время создания записи в базе данных
     /// </summary>
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime CreatedAt { get; set; } = DateTime.Now;
 
     /// <summary>
     /// Дата и время последнего обновления записи
     /// </summary>
-    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAt { get; set; } = DateTime.Now;
 
     /// <summary>
     /// Полное название трека в формате "Автор - Название" (вычисляемое поле, не хранится в БД)

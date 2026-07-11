@@ -18,11 +18,11 @@ public class DiscordPlaySelectionSession
 
     public required IReadOnlyList<BaseTrackInfo> Tracks { get; init; }
 
-    public DateTime CreatedAtUtc { get; init; } = DateTime.UtcNow;
+    public DateTime CreatedAtUtc { get; init; } = DateTime.Now;
 
     public bool IsExpired(TimeSpan lifetime)
     {
-        var result = DateTime.UtcNow - CreatedAtUtc > lifetime;
+        var result = DateTime.Now - CreatedAtUtc > lifetime;
 
         return result;
     }

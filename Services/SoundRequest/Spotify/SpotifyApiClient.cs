@@ -371,7 +371,7 @@ public class SpotifyApiClient(
 
         if (
             !string.IsNullOrWhiteSpace(_cachedResolvedDeviceId)
-            && _cachedResolvedDeviceIdAtUtc > DateTime.UtcNow.AddMinutes(-2)
+            && _cachedResolvedDeviceIdAtUtc > DateTime.Now.AddMinutes(-2)
         )
         {
             result = _cachedResolvedDeviceId;
@@ -406,7 +406,7 @@ public class SpotifyApiClient(
                     if (!string.IsNullOrWhiteSpace(resolved))
                     {
                         _cachedResolvedDeviceId = resolved;
-                        _cachedResolvedDeviceIdAtUtc = DateTime.UtcNow;
+                        _cachedResolvedDeviceIdAtUtc = DateTime.Now;
                         await spotifyAuthService.SaveDeviceIdAsync(resolved, ct);
                         result = resolved;
                     }

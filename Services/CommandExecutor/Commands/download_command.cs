@@ -219,7 +219,7 @@ public class DownloadCommand(
 
             // Генерируем имя файла
             var sanitizedTitle = SanitizeFileName(videoTitle);
-            var fileName = $"{sanitizedTitle}_{DateTime.UtcNow:yyyyMMdd_HHmmss}.mp4";
+            var fileName = $"{sanitizedTitle}_{DateTime.Now:yyyyMMdd_HHmmss}.mp4";
 
             try
             {
@@ -443,7 +443,7 @@ public class DownloadCommand(
             await using var fileStream = File.OpenRead(preparedFile);
             var sanitizedTitle = SanitizeFileName(title);
             var fileName =
-                $"{sanitizedTitle}_{DateTime.UtcNow:yyyyMMdd_HHmmss}{Path.GetExtension(preparedFile)}";
+                $"{sanitizedTitle}_{DateTime.Now:yyyyMMdd_HHmmss}{Path.GetExtension(preparedFile)}";
 
             try
             {

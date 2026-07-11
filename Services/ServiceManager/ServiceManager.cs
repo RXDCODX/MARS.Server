@@ -88,8 +88,8 @@ public class ServiceManager : IServiceManager
                         Description = service.Description,
                         IsServiceActive = service.IsServiceActive,
                         Status = service.Status,
-                        CreatedAt = DateTime.UtcNow,
-                        UpdatedAt = DateTime.UtcNow,
+                        CreatedAt = DateTime.Now,
+                        UpdatedAt = DateTime.Now,
                     };
 
                     dbContext.ServiceStates.Add(state);
@@ -105,7 +105,7 @@ public class ServiceManager : IServiceManager
                     state.Description = service.Description;
                     state.IsServiceActive = service.IsServiceActive;
                     state.Status = service.Status;
-                    state.UpdatedAt = DateTime.UtcNow;
+                    state.UpdatedAt = DateTime.Now;
 
                     // Применяем сохраненное состояние к сервису
                     service.IsServiceActive = state.IsServiceActive;
@@ -289,7 +289,7 @@ public class ServiceManager : IServiceManager
                 result.Add(
                     new ServiceLog
                     {
-                        Timestamp = DateTime.UtcNow.AddMinutes(-i),
+                        Timestamp = DateTime.Now.AddMinutes(-i),
                         Level =
                             i % 3 == 0 ? "Error"
                             : i % 2 == 0 ? "Warning"
@@ -378,7 +378,7 @@ public class ServiceManager : IServiceManager
                 state.IsServiceActive = service.IsServiceActive;
                 state.LastStartTime = service.StartTime;
                 state.LastActivity = service.LastActivity;
-                state.UpdatedAt = DateTime.UtcNow;
+                state.UpdatedAt = DateTime.Now;
 
                 await dbContext.SaveChangesAsync();
             }

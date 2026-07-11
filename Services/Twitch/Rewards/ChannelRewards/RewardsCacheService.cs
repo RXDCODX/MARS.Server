@@ -55,7 +55,7 @@ public class RewardsCacheService(
             if (rewards is not null)
             {
                 _cachedRewards = rewards.ToImmutableList();
-                _cacheExpirationTime = DateTime.UtcNow.AddMinutes(CacheTtlMinutes);
+                _cacheExpirationTime = DateTime.Now.AddMinutes(CacheTtlMinutes);
 
                 logger.LogInformation(
                     "Кеш наград обновлён ({Count} шт, TTL: {Minutes} мин)",
@@ -113,7 +113,7 @@ public class RewardsCacheService(
             CachedAt: _cacheExpirationTime?.AddMinutes(-CacheTtlMinutes),
             CachedRewardsCount: _cachedRewards?.Count,
             TimeToExpire: _cacheExpirationTime.HasValue
-                ? _cacheExpirationTime.Value - DateTime.UtcNow
+                ? _cacheExpirationTime.Value - DateTime.Now
                 : null
         );
     }
@@ -122,6 +122,6 @@ public class RewardsCacheService(
     {
         return _cachedRewards != null
             && _cacheExpirationTime.HasValue
-            && DateTime.UtcNow < _cacheExpirationTime.Value;
+            && DateTime.Now < _cacheExpirationTime.Value;
     }
 }

@@ -224,7 +224,7 @@ public class DiscordPlayAudioCacheService(
             .Select(path => new FileInfo(path))
             .Where(fileInfo =>
                 fileInfo.Exists
-                && DateTime.UtcNow - fileInfo.LastWriteTimeUtc <= CacheLifetime
+                && DateTime.Now - fileInfo.LastWriteTimeUtc <= CacheLifetime
                 && fileInfo.Length <= maxAttachmentSizeBytes
             )
             .OrderByDescending(fileInfo => fileInfo.Length)
@@ -297,7 +297,7 @@ public class DiscordPlayAudioCacheService(
                 try
                 {
                     var fileInfo = new FileInfo(cachedFilePath);
-                    if (DateTime.UtcNow - fileInfo.LastWriteTimeUtc > CacheLifetime)
+                    if (DateTime.Now - fileInfo.LastWriteTimeUtc > CacheLifetime)
                     {
                         fileInfo.Delete();
                     }

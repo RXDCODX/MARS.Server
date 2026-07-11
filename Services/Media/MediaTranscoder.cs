@@ -89,7 +89,7 @@ public class MediaTranscoder(
                 }
             }
 
-            File.SetLastWriteTimeUtc(targetFilePath, DateTime.UtcNow);
+            File.SetLastWriteTimeUtc(targetFilePath, DateTime.Now);
 
             await SyncDevelopmentCopyAsync(sourceFullPath, targetFilePath);
 
@@ -254,7 +254,7 @@ public class MediaTranscoder(
 
             if (File.Exists(outputFilePath))
             {
-                File.SetLastWriteTimeUtc(outputFilePath, DateTime.UtcNow);
+                File.SetLastWriteTimeUtc(outputFilePath, DateTime.Now);
                 result = true;
             }
         }

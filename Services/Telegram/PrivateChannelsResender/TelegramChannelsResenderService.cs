@@ -185,7 +185,7 @@ public class TelegramChannelsResenderService(
 
                     // Сохраняем прогресс после каждого батча
                     state.OffsetId = offsetId;
-                    state.LastUpdated = DateTime.UtcNow;
+                    state.LastUpdated = DateTime.Now;
                     await dbContext.SaveChangesAsync(cancellationToken);
 
                     if (maxId == (messagesList.MaxBy(e => e.ID)?.ID ?? 0))
@@ -242,7 +242,7 @@ public class TelegramChannelsResenderService(
                 {
                     ChannelId = channelId,
                     OffsetId = 0,
-                    LastUpdated = DateTime.UtcNow,
+                    LastUpdated = DateTime.Now,
                 };
 
                 dbContext.ChannelProcessingStates.Add(state);
@@ -324,7 +324,7 @@ public class TelegramChannelsResenderService(
 
             // Обновляем offset_id для следующей пагинации
             state.OffsetId = message.ID;
-            state.LastUpdated = DateTime.UtcNow;
+            state.LastUpdated = DateTime.Now;
             await dbContext.SaveChangesAsync();
         }
         catch (Exception ex)

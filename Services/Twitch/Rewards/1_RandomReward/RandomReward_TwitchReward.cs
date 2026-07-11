@@ -111,7 +111,7 @@ public class RandomReward_TwitchReward(
     )
     {
         var userId = originalEvent.UserId;
-        var now = DateTime.UtcNow;
+        var now = DateTime.Now;
         var cooldown = await GetRandomRewardCooldownAsync();
 
         if (UserCooldowns.TryGetValue(userId, out var lastUsed))
@@ -273,7 +273,7 @@ public class RandomReward_TwitchReward(
             }
         }
 
-        UserCooldowns[userId] = DateTime.UtcNow;
+        UserCooldowns[userId] = DateTime.Now;
     }
 
     private async Task<TimeSpan> GetRandomRewardCooldownAsync()

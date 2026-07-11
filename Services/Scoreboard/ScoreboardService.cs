@@ -125,7 +125,7 @@ public class ScoreboardService(
 
             if (state == null)
             {
-                state = new ScoreboardState { CreatedAt = DateTime.UtcNow };
+                state = new ScoreboardState { CreatedAt = DateTime.Now };
                 context.ScoreboardStates.Add(state);
             }
 
@@ -141,7 +141,7 @@ public class ScoreboardService(
             state.BorderColor = dto.Colors.BorderColor;
             state.IsVisible = dto.IsVisible;
             state.AnimationDuration = dto.AnimationDuration;
-            state.UpdatedAt = DateTime.UtcNow;
+            state.UpdatedAt = DateTime.Now;
             state.IsActive = true;
 
             // Игрок 1
@@ -233,7 +233,7 @@ public class ScoreboardService(
         if (currentState != null)
         {
             currentState.IsVisible = isVisible;
-            currentState.UpdatedAt = DateTime.UtcNow;
+            currentState.UpdatedAt = DateTime.Now;
 
             await context.SaveChangesAsync();
 
@@ -245,8 +245,8 @@ public class ScoreboardService(
             var newState = new ScoreboardState
             {
                 IsVisible = isVisible,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow,
+                CreatedAt = DateTime.Now,
+                UpdatedAt = DateTime.Now,
                 IsActive = true,
             };
 
@@ -287,7 +287,7 @@ public class ScoreboardService(
                 if (player != null)
                 {
                     player.Score = newScore;
-                    player.ScoreboardState.UpdatedAt = DateTime.UtcNow;
+                    player.ScoreboardState.UpdatedAt = DateTime.Now;
 
                     await context.SaveChangesAsync();
 
@@ -328,7 +328,7 @@ public class ScoreboardService(
                 if (player != null)
                 {
                     player.Final = final;
-                    player.ScoreboardState.UpdatedAt = DateTime.UtcNow;
+                    player.ScoreboardState.UpdatedAt = DateTime.Now;
 
                     await context.SaveChangesAsync();
 

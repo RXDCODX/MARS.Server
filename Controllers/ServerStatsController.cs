@@ -201,7 +201,7 @@ public class ServerStatsController(
             var cpuTime = process.TotalProcessorTime;
             var uptime =
                 process.ExitTime == DateTime.MaxValue
-                    ? DateTime.UtcNow - process.StartTime.ToUniversalTime()
+                    ? DateTime.Now - process.StartTime.ToUniversalTime()
                     : process.ExitTime - process.StartTime;
 
             if (uptime.TotalMilliseconds <= 0)

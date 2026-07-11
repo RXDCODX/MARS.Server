@@ -213,7 +213,7 @@ public class TwitchUserEnsureService : ITwitchUserEnsureService
                     existing.ChatColor = twitchUser.ChatColor ?? existing.ChatColor;
                     existing.IsModerator = twitchUser.IsModerator;
                     existing.IsVip = twitchUser.IsVip;
-                    existing.LastUpdated = DateTime.UtcNow;
+                    existing.LastUpdated = DateTime.Now;
                     await db.SaveChangesAsync(cancellationToken);
                     _logger?.LogInformation(
                         "Обновлен пользователь Twitch: {UserName} (ID: {UserId})",

@@ -72,7 +72,7 @@ public class SignalRLogger(
         var logMessage = new LogMessageDto
         {
             Id = Guid.NewGuid().ToString(),
-            Timestamp = DateTime.UtcNow,
+            Timestamp = DateTime.Now,
             LogLevel = logLevel.ToString(),
             Category = category,
             Message = message,

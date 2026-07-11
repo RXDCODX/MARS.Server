@@ -13,5 +13,5 @@ public class TelegramDiscordChannelState
 
     public int LastProcessedMessageId { get; set; }
 
-    public DateTime LastUpdatedUtc { get; set; } = DateTime.UtcNow;
+    public DateTime LastUpdatedUtc { get; set; } = DateTime.Now;
 }
