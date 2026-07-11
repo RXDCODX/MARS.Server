@@ -58,9 +58,8 @@ public class ServerStatsController(
             var cpuUsage = GetCpuUsage(process);
 
             var audioControllerConnected = await soundBar.CheckHealthAsync();
-            var nearestAnniversary = await weddingAnniversaryService.GetNearestAnniversaryAsync(
-                cancellationToken
-            );
+            // ReSharper disable once MethodSupportsCancellation
+            var nearestAnniversary = await weddingAnniversaryService.GetNearestAnniversaryAsync();
 
             var stats = new ServerStatsResponse
             {

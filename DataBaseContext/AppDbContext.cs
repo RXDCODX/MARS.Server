@@ -366,6 +366,19 @@ public sealed partial class AppDbContext : DbContext
 
         // Конфигурация для EnvironmentVariable
         modelBuilder.Entity<EnvironmentVariable>().HasIndex(e => e.Key).IsUnique();
+
+        // Конвертация для Fumo.WhenAdded и Fumo.LastOrder — колонки хранятся как character varying
+        var dateTimeToString = new ValueConverter<DateTime, string>(
+            v => v == DateTime.MinValue ? "-infinity" : v.ToString("O"),
+            v =>
+                v == "-infinity" || v == "infinity"
+                    ? DateTime.MinValue
+                    : DateTime.Parse(v, System.Globalization.CultureInfo.InvariantCulture)
+        );
+
+        modelBuilder.Entity<Fumo>().Property(e => e.WhenAdded).HasConversion(dateTimeToString);
+
+        modelBuilder.Entity<Fumo>().Property(e => e.LastOrder).HasConversion(dateTimeToString);
     }
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)

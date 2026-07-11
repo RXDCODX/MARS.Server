@@ -20,6 +20,7 @@ public class RollMikuCommand(
     public override string CommandName => "rollmiku";
     public override string Description => "Выполняет мику-ролл";
     public override bool IsAdminCommand => true;
+    public override string[] Aliases => ["mikuroll"];
 
     public override Platform[] AvailablePlatforms =>
         [Platform.Telegram, Platform.Api, Platform.Twitch];

@@ -20,6 +20,7 @@ public class RollFrogCommand(
     public override string CommandName => "rollfrog";
     public override string Description => "Выполняет фрог-ролл";
     public override bool IsAdminCommand => true;
+    public override string[] Aliases => ["frogroll"];
 
     public override Platform[] AvailablePlatforms =>
         [Platform.Telegram, Platform.Api, Platform.Twitch];

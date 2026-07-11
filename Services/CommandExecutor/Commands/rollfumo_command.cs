@@ -20,6 +20,7 @@ public class RollFumoCommand(
     public override string CommandName => "rollfumo";
     public override string Description => "Выполняет фумо-ролл";
     public override bool IsAdminCommand => true;
+    public override string[] Aliases => ["fumoroll"];
 
     public override Platform[] AvailablePlatforms =>
         [Platform.Telegram, Platform.Api, Platform.Twitch];
