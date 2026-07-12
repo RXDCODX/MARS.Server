@@ -79,6 +79,9 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
+      - name: Enable yarn via corepack
+        run: corepack enable && corepack prepare yarn@4.14.1 --activate
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
