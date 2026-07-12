@@ -5,10 +5,15 @@ on:
     branches: [master, develop, feature/*]
   pull_request:
     branches: [master, develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 env:
   DOTNET_VERSION: "10.0.x"
   DOTNET_CLI_TELEMETRY_OPTOUT: 1
+  HUSKY: 0
 
 jobs:
   unit-tests:
@@ -17,10 +22,32 @@ jobs:
     timeout-minutes: 25
 
     steps:
-      - name: Checkout code
+      # MARS.Server (сабмодуль) — в корне workspace
+      - name: Checkout MARS.Server
+        uses: actions/checkout@v4
+
+      # Монорепо — отдельно, только для тестов и конфигов
+      - name: Checkout monorepo
         uses: actions/checkout@v4
         with:
-          submodules: recursive
+          repository: RXDCODX/MARS
+          path: _monorepo
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      # Собираем структуру MARS.Projects/ для корректных ProjectReference
+      - name: Assemble project structure
+        run: |
+          mkdir -p MARS.Projects
+          cp -r . MARS.Projects/MARS.Server
+          cp -r _monorepo/MARS.Projects/MARS.Tests MARS.Projects/MARS.Tests
+          cp -r _monorepo/MARS.Projects/MARS.AudioController MARS.Projects/MARS.AudioController
+          cp _monorepo/MARS.sln MARS.sln
+          cp _monorepo/Directory.Packages.props Directory.Packages.props
+          cp _monorepo/Directory.Build.props Directory.Build.props 2>/dev/null || true
+          cp _monorepo/.editorconfig .editorconfig 2>/dev/null || true
+          cp _monorepo/appsettings.Production.json appsettings.Production.json
+          cp _monorepo/appsettings.json appsettings.json 2>/dev/null || true
+          cp _monorepo/.github/notify-telegram.py .github/notify-telegram.py
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -31,7 +58,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.nuget/packages
-          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj', 'Directory.Packages.props') }}
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj', '**/Directory.Packages.props') }}
           restore-keys: |
             ${{ runner.os }}-nuget-
 
