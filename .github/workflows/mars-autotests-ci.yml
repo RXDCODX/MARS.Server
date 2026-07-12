@@ -49,7 +49,7 @@ jobs:
         with:
           repository: RXDCODX/MARS
           path: _monorepo
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.MONOREPO_PAT }}
           submodules: true
 
       # Собираем структуру MARS.Projects/
@@ -64,9 +64,7 @@ jobs:
           cp _monorepo/Directory.Packages.props Directory.Packages.props
           cp _monorepo/Directory.Build.props Directory.Build.props 2>/dev/null || true
           cp _monorepo/.editorconfig .editorconfig 2>/dev/null || true
-          cp _monorepo/appsettings.Production.json appsettings.Production.json
           cp _monorepo/appsettings.json appsettings.json 2>/dev/null || true
-          cp _monorepo/.github/notify-telegram.py .github/notify-telegram.py
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
