@@ -22,7 +22,7 @@ jobs:
 
       - name: Fetch Directory.Packages.props
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.MONOREPO_PAT }}
         run: |
           gh api repos/RXDCODX/MARS/contents/Directory.Packages.props \
             --jq '.content' | base64 -d > Directory.Packages.props
