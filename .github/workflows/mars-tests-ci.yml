@@ -1,0 +1,65 @@
+name: MARS.Tests CI
+
+on:
+  push:
+    branches: [main, develop, feature/*]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+env:
+  DOTNET_VERSION: "10.0.x"
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+
+jobs:
+  unit-tests:
+    name: MARS.Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj', 'Directory.Packages.props') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Restore
+        run: dotnet restore MARS.Projects/MARS.Tests/MARS.Tests.csproj
+
+      - name: Run tests
+        run: |
+          dotnet test MARS.Projects/MARS.Tests/MARS.Tests.csproj \
+            --configuration Release \
+            --no-restore \
+            --verbosity normal \
+            -p:UseLocalYoutubeReExplode=false \
+            --logger "trx;LogFileName=mars-tests.trx" \
+            --results-directory TestResults
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mars-tests-results
+          path: TestResults/
+          retention-days: 30
+
+      - name: Notify Telegram on failure
+        if: failure()
+        run: |
+          export BOT_TOKEN=$(jq -r '.AppSettings.Telegram.BotConfiguration.BotToken' appsettings.Production.json)
+          export ADMIN_ID=$(jq -r '.AppSettings.Telegram.AdminIdsArray[0]' appsettings.Production.json)
+          python3 .github/notify-telegram.py "MARS.Tests CI" TestResults/mars-tests.trx

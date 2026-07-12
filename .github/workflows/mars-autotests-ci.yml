@@ -1,0 +1,123 @@
+name: MARS.AutoTests CI
+
+on:
+  push:
+    branches: [main, develop, feature/*]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+env:
+  DOTNET_VERSION: "10.0.x"
+  NODE_VERSION: "22.x"
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+  NODE_OPTIONS: "--max-old-space-size=4096"
+
+jobs:
+  playwright-tests:
+    name: MARS.AutoTests (Playwright)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: dev
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "yarn"
+          cache-dependency-path: MARS.Projects/mars.client/yarn.lock
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj', 'Directory.Packages.props') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Cache yarn dependencies
+        uses: actions/cache@v4
+        with:
+          path: MARS.Projects/mars.client/node_modules
+          key: ${{ runner.os }}-yarn-${{ hashFiles('MARS.Projects/mars.client/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
+
+      # --- Сборка фронтенда для SpaYarp ---
+      - name: Install frontend dependencies
+        run: yarn install --frozen-lockfile
+        working-directory: MARS.Projects/mars.client
+
+      - name: Build frontend
+        run: yarn build
+        working-directory: MARS.Projects/mars.client
+
+      # --- Статический сервер на порту 44478 (SpaYarp target) ---
+      - name: Start frontend static server
+        run: |
+          cd MARS.Projects/mars.client/dist
+          python3 -m http.server 44478 &
+          echo $! > /tmp/frontend-server.pid
+          sleep 2
+          curl -s -o /dev/null -w "%{http_code}" http://localhost:44478/ || echo "Warning: frontend server may not be ready"
+
+      # --- Сборка .NET ---
+      - name: Restore .NET
+        run: dotnet restore MARS.Projects/MARS.AutoTests/MARS.AutoTests.csproj
+
+      - name: Build .NET
+        run: dotnet build MARS.Projects/MARS.AutoTests/MARS.AutoTests.csproj --configuration Debug --no-restore
+
+      # --- Установка Playwright Chromium ---
+      - name: Install Playwright Chromium
+        run: pwsh MARS.Projects/MARS.AutoTests/bin/Debug/net10.0/playwright.ps1 install --with-deps chromium
+
+      # --- Запуск тестов ---
+      - name: Run AutoTests
+        run: |
+          dotnet test MARS.Projects/MARS.AutoTests/MARS.AutoTests.csproj \
+            --configuration Debug \
+            --no-build \
+            --verbosity normal \
+            --logger "trx;LogFileName=mars-autotests.trx" \
+            --results-directory TestResults
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mars-autotests-results
+          path: TestResults/
+          retention-days: 30
+
+      - name: Notify Telegram on failure
+        if: failure()
+        run: |
+          export BOT_TOKEN=$(jq -r '.AppSettings.Telegram.BotConfiguration.BotToken' appsettings.Production.json)
+          export ADMIN_ID=$(jq -r '.AppSettings.Telegram.AdminIdsArray[0]' appsettings.Production.json)
+          python3 .github/notify-telegram.py "MARS.AutoTests CI" TestResults/mars-autotests.trx
