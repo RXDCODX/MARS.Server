@@ -71,7 +71,7 @@ jobs:
             --no-restore \
             --verbosity normal \
             -p:UseLocalYoutubeReExplode=false \
-            -warnaserror- \
+            -p:TreatWarningsAsErrors=false \
             --logger "trx;LogFileName=mars-tests.trx" \
             --results-directory TestResults
 
