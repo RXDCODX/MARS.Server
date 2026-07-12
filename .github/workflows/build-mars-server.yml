@@ -21,9 +21,12 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Fetch Directory.Packages.props
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          curl -sL -o Directory.Packages.props \
-            "https://raw.githubusercontent.com/RXDCODX/MARS/master/Directory.Packages.props"
+          gh api repos/RXDCODX/MARS/contents/Directory.Packages.props \
+            --jq '.content' | base64 -d > Directory.Packages.props
+          head -5 Directory.Packages.props
 
       - name: Setup .NET 10
         uses: actions/setup-dotnet@v4
