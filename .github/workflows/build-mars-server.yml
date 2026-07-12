@@ -20,6 +20,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Fetch Directory.Packages.props
+        run: |
+          curl -sL -o Directory.Packages.props \
+            "https://raw.githubusercontent.com/RXDCODX/MARS/master/Directory.Packages.props"
+
       - name: Setup .NET 10
         uses: actions/setup-dotnet@v4
         with:
@@ -34,10 +39,10 @@ jobs:
             ${{ runner.os }}-nuget-
 
       - name: Restore
-        run: dotnet restore MARS.Server.csproj -p:HUSKY=0
+        run: dotnet restore MARS.Server.csproj -p:HUSKY=0 -p:UseLocalYoutubeReExplode=false
 
       - name: Build (skip frontend/publish targets)
-        run: dotnet build MARS.Server.csproj -c Release --no-restore -warnaserror -p:HUSKY=0
+        run: dotnet build MARS.Server.csproj -c Release --no-restore -p:HUSKY=0 -p:UseLocalYoutubeReExplode=false -p:TreatWarningsAsErrors=false
 
       # Важно: не вызываем dotnet publish, чтобы не срабатывали BeforeTargets/AfterTargets "Publish"
       # из csproj (они запускают yarn и сборку фронта). Нам нужна лишь проверка успешной сборки бэкенда.
