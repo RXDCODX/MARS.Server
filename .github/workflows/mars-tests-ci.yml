@@ -37,8 +37,8 @@ jobs:
       # Собираем структуру MARS.Projects/ для корректных ProjectReference
       - name: Assemble project structure
         run: |
-          mkdir -p MARS.Projects
-          cp -r . MARS.Projects/MARS.Server
+          mkdir -p MARS.Projects/MARS.Server
+          rsync -a --exclude='.git' --exclude='MARS.Projects' --exclude='_monorepo' ./ MARS.Projects/MARS.Server/
           cp -r _monorepo/MARS.Projects/MARS.Tests MARS.Projects/MARS.Tests
           cp -r _monorepo/MARS.Projects/MARS.AudioController MARS.Projects/MARS.AudioController
           cp _monorepo/MARS.sln MARS.sln

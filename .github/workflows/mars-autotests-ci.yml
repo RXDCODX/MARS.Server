@@ -55,8 +55,8 @@ jobs:
       # Собираем структуру MARS.Projects/
       - name: Assemble project structure
         run: |
-          mkdir -p MARS.Projects
-          cp -r . MARS.Projects/MARS.Server
+          mkdir -p MARS.Projects/MARS.Server
+          rsync -a --exclude='.git' --exclude='MARS.Projects' --exclude='_monorepo' ./ MARS.Projects/MARS.Server/
           cp -r _monorepo/MARS.Projects/MARS.AutoTests MARS.Projects/MARS.AutoTests
           cp -r _monorepo/MARS.Projects/mars.client MARS.Projects/mars.client
           cp -r _monorepo/MARS.Projects/MARS.AudioController MARS.Projects/MARS.AudioController 2>/dev/null || true
