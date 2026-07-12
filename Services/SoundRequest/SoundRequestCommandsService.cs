@@ -162,7 +162,7 @@ public class SoundRequestCommandsService(
                 }
 
                 // Проверяем, не играл ли уже этот трек сегодня (для обычных пользователей)
-                if (user.IsSimpleUser && info.LastTimePlays >= DateTime.Now.Date)
+                if (user.IsSimpleUser && info.LastTimePlays >= DateTime.UtcNow.Date)
                 {
                     result = $"@{user.DisplayName}, этот трек уже сегодня играл";
                     return result;
@@ -480,7 +480,7 @@ public class SoundRequestCommandsService(
                 }
 
                 // Пропускаем треки, которые уже играли сегодня (для обычных пользователей)
-                if (user.IsSimpleUser && info.LastTimePlays >= DateTime.Now.Date)
+                if (user.IsSimpleUser && info.LastTimePlays >= DateTime.UtcNow.Date)
                 {
                     skippedTracksCount++;
                     continue;
