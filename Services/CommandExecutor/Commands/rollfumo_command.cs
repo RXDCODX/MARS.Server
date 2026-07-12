@@ -90,7 +90,7 @@ public class RollFumoCommand(
                 await alertsHub.Clients.All.FumoRoll(fumo, twitchUser, color);
             }
 
-            return twitchUser.DisplayName;
+            return $"Фумо ролл для {twitchUser?.DisplayName} выполнен!";
         }
         catch (Exception e)
         {

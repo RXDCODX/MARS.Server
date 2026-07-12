@@ -90,7 +90,7 @@ public class RollFrogCommand(
                 await alertsHub.Clients.All.FrogRoll(frog, twitchUser, color);
             }
 
-            return twitchUser.DisplayName;
+            return $"Фрог ролл для {twitchUser?.DisplayName} выполнен!";
         }
         catch (Exception e)
         {

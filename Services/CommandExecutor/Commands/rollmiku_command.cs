@@ -90,7 +90,7 @@ public class RollMikuCommand(
                 await alertsHub.Clients.All.MikuRoll(module, twitchUser, color);
             }
 
-            return twitchUser.DisplayName;
+            return $"Мику ролл для {twitchUser?.DisplayName} выполнен!";
         }
         catch (Exception e)
         {
