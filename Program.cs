@@ -311,8 +311,11 @@ public static class Program
 
         try
         {
-            var cp = Process.GetCurrentProcess();
-            cp.PriorityClass = ProcessPriorityClass.RealTime;
+            if (OperatingSystem.IsWindows())
+            {
+                var cp = Process.GetCurrentProcess();
+                cp.PriorityClass = ProcessPriorityClass.RealTime;
+            }
 
             var appLifeTime = app.Services.GetRequiredService<IHostApplicationLifetime>();
             appLifeTime.ApplicationStopping.Register(MemoryStorage.ClearStorage);

@@ -1,38 +1,55 @@
-# См. статью по ссылке https://aka.ms/customizecontainer, чтобы узнать как настроить контейнер отладки и как Visual Studio использует этот Dockerfile для создания образов для ускорения отладки.
-
-# Этот этап используется при запуске из VS в быстром режиме (по умолчанию для конфигурации отладки)
-FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
-USER $APP_UID
-WORKDIR /app
-EXPOSE 8080
-EXPOSE 8081
-
-
-# Этот этап используется для сборки проекта службы
-FROM mcr.microsoft.com/dotnet/sdk:9.0 AS with-node
-RUN apt-get update
-RUN apt-get install curl
-RUN curl -sL https://deb.nodesource.com/setup_20.x | bash
-RUN apt-get -y install nodejs
-
-
-FROM with-node AS build
+# ---- Build stage ----
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends curl ffmpeg && \
+    curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+    apt-get install -y --no-install-recommends nodejs && \
+    npm install -g yarn && \
+    rm -rf /var/lib/apt/lists/*
+
 WORKDIR /src
-COPY ["MARS/MARS.Server/MARS.Server.csproj", "MARS/MARS.Server/"]
-COPY ["mars.client/mars.client.esproj", "mars.client/"]
-RUN dotnet restore "./MARS/MARS.Server/MARS.Server.csproj"
+
+# Copy solution-level files for NuGet restore caching
+COPY Directory.Packages.props .
+COPY MARS.Projects/MARS.Server/MARS.Server.csproj MARS.Projects/MARS.Server/
+COPY MARS.Projects/MARS.Server/external/YoutubeExplode/Directory.Build.props MARS.Projects/MARS.Server/external/YoutubeExplode/
+COPY MARS.Projects/MARS.Server/external/YoutubeExplode/Directory.Packages.props MARS.Projects/MARS.Server/external/YoutubeExplode/
+COPY MARS.Projects/MARS.Server/external/YoutubeExplode/YoutubeExplode/YoutubeExplode.csproj MARS.Projects/MARS.Server/external/YoutubeExplode/YoutubeExplode/
+COPY MARS.Projects/MARS.Server/external/YoutubeExplode/YoutubeExplode.Converter/YoutubeExplode.Converter.csproj MARS.Projects/MARS.Server/external/YoutubeExplode/YoutubeExplode.Converter/
+
+RUN dotnet restore MARS.Projects/MARS.Server/MARS.Server.csproj \
+    -p:UseLocalYoutubeReExplode=false \
+    -p:RunTestsOnPublish=false \
+    -p:SkipHusky=true
+
+# Copy full source
 COPY . .
-WORKDIR "/src/MARS/MARS.Server"
-RUN dotnet build "./MARS.Server.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
-# Этот этап используется для публикации проекта службы, который будет скопирован на последний этап
-FROM build AS publish
-ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./MARS.Server.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+# Publish (SPA build is handled by MSBuild target BuildClientApp)
+WORKDIR /src/MARS.Projects/MARS.Server
+RUN dotnet publish MARS.Server.csproj \
+    -c ${BUILD_CONFIGURATION} \
+    -o /app/publish \
+    -p:UseLocalYoutubeReExplode=false \
+    -p:RunTestsOnPublish=false \
+    -p:SkipHusky=true
 
-# Этот этап используется в рабочей среде или при запуске из VS в обычном режиме (по умолчанию, когда конфигурация отладки не используется)
-FROM base AS final
+# ---- Runtime stage ----
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends ffmpeg && \
+    rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
-COPY --from=publish /app/publish .
+COPY --from=build /app/publish .
+
+EXPOSE 9155
+
+ENV ASPNETCORE_ENVIRONMENT=Production
+ENV ASPNETCORE_URLS=http://+:9155
+ENV DOTNET_RUNNING_IN_CONTAINER=true
+
 ENTRYPOINT ["dotnet", "MARS.Server.dll"]
