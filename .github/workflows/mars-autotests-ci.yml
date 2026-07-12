@@ -52,6 +52,12 @@ jobs:
           token: ${{ secrets.MONOREPO_PAT }}
           submodules: true
 
+      # Сохраняем appsettings до сборки структуры
+      - name: Save MARS.Server configs
+        run: |
+          cp appsettings.Production.json /tmp/appsettings.Production.json
+          cp appsettings.json /tmp/appsettings.json 2>/dev/null || true
+
       # Собираем структуру MARS.Projects/
       - name: Assemble project structure
         run: |
@@ -64,7 +70,8 @@ jobs:
           cp _monorepo/Directory.Packages.props Directory.Packages.props
           cp _monorepo/Directory.Build.props Directory.Build.props 2>/dev/null || true
           cp _monorepo/.editorconfig .editorconfig 2>/dev/null || true
-          cp _monorepo/appsettings.json appsettings.json 2>/dev/null || true
+          cp /tmp/appsettings.Production.json appsettings.Production.json
+          cp /tmp/appsettings.json appsettings.json 2>/dev/null || true
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -109,7 +116,7 @@ jobs:
         run: dotnet restore MARS.Projects/MARS.AutoTests/MARS.AutoTests.csproj -p:UseLocalYoutubeReExplode=false
 
       - name: Build .NET
-        run: dotnet build MARS.Projects/MARS.AutoTests/MARS.AutoTests.csproj --configuration Debug --no-restore -p:UseLocalYoutubeReExplode=false
+        run: dotnet build MARS.Projects/MARS.AutoTests/MARS.AutoTests.csproj --configuration Debug --no-restore -p:UseLocalYoutubeReExplode=false -warnaserror-
 
       # --- Установка Playwright Chromium ---
       - name: Install Playwright Chromium
