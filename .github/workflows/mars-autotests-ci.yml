@@ -55,6 +55,7 @@ jobs:
       - name: Init monorepo submodules
         run: |
           cd _monorepo
+          git config submodule.MARS.Projects/MARS.AudioController.url https://github.com/RXDCODX/MARS.AudioController.git
           git submodule update --init MARS.Projects/MARS.AudioController
           git submodule update --init MARS.Projects/mars.client
 
