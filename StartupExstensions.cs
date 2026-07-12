@@ -552,7 +552,11 @@ public static class StartupEstensions
             services.AddHostedService(sp => sp.GetRequiredService<MergeWaifu>());
 
             // Fumo Friday services
+            // Roll cooldown service (shared by Miku/Fumo/Frog)
+            services.AddSingleton<RollCooldownService>();
+
             services.AddSingleton<FumoRollService>();
+            services.AddSingleton<FumoCollectionService>();
             services.AddSingleton<FumoFridayRoll_TwitchReward>();
             services.AddHostedService(sp => sp.GetRequiredService<FumoFridayRoll_TwitchReward>());
 
@@ -563,6 +567,7 @@ public static class StartupEstensions
 
             // Miku Module Roll services
             services.AddSingleton<MikuModuleRollService>();
+            services.AddSingleton<MikuCollectionService>();
             services.AddSingleton<MikuModuleRoll_TwitchReward>();
             services.AddHostedService(sp => sp.GetRequiredService<MikuModuleRoll_TwitchReward>());
 

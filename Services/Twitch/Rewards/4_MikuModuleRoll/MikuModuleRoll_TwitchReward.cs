@@ -20,12 +20,17 @@ public class MikuModuleRoll_TwitchReward(
     IHubContext<TelegramusHub, ITelegramusHub> hubContext,
     EventSubWebsocketClient wsClient,
     MikuModuleRollService mikuModuleRollService,
+    MikuCollectionService collectionService,
+    RollCooldownService cooldownService,
     ITwitchAPI api,
     ITwitchClient client,
     TwitchUserEnsureService ensureService,
     ITwitchEventValidationService validator
 ) : TemporaryReward(channelRewardsService, logger, environment)
 {
+    private const string RollType = "Miku";
+    private static readonly TimeSpan Cooldown = TimeSpan.FromMinutes(20);
+
     public override string AlertDisplayName { get; set; } = "🎀 Miku Module Roulette";
 
     public override string AlertDescription { get; set; } =
@@ -73,13 +78,55 @@ public class MikuModuleRoll_TwitchReward(
 
         await Task.Factory.StartNew(async () =>
         {
+            var (allowed, remaining) = await cooldownService.CheckAndUpdateCooldownAsync(
+                args.Payload.Event.UserId,
+                RollType,
+                Cooldown
+            );
+
+            if (!allowed)
+            {
+                await client.SendMessageToMainTwitchAsync(
+                    $"@{args.Payload.Event.UserName}, кулдаун на MikuRoll! Подожди ещё {(int)remaining.TotalMinutes} мин.",
+                    logger
+                );
+                return;
+            }
+
             var module = await mikuModuleRollService.RollTheMikuModule();
 
             if (module is not null)
             {
                 var user = await ensureService.EnsureUserExistsAsync(args.Payload.Event.UserId);
 
-                await hubContext.Clients.All.MikuRoll(module, user);
+                // Collection tracking (separate DB transaction — Feature 7)
+                var collectedCount = 0;
+                var totalCount = 0;
+                try
+                {
+                    var stats = await collectionService.RecordRollAsync(
+                        args.Payload.Event.UserId,
+                        module.PageId
+                    );
+                    collectedCount = stats.CollectedCount;
+                    totalCount = stats.TotalCount;
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(
+                        ex,
+                        "Failed to record Miku collection for {UserId}",
+                        args.Payload.Event.UserId
+                    );
+                }
+
+                await hubContext.Clients.All.MikuRoll(
+                    module,
+                    user,
+                    null,
+                    collectedCount,
+                    totalCount
+                );
             }
             else
             {

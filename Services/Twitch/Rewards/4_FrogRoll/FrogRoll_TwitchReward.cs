@@ -20,12 +20,16 @@ public class FrogRoll_TwitchReward(
     IHubContext<TelegramusHub, ITelegramusHub> hubContext,
     EventSubWebsocketClient wsClient,
     FrogRollService frogRollService,
+    RollCooldownService cooldownService,
     ITwitchAPI api,
     ITwitchClient client,
     TwitchUserEnsureService ensureService,
     ITwitchEventValidationService validator
 ) : TemporaryReward(channelRewardsService, logger, environment)
 {
+    private const string RollType = "Frog";
+    private static readonly TimeSpan Cooldown = TimeSpan.FromMinutes(20);
+
     public override string AlertDisplayName { get; set; } = "🐸 Frog Roulette";
 
     public override string AlertDescription { get; set; } = "Крути рулетку лягушек! ♪";
@@ -72,6 +76,21 @@ public class FrogRoll_TwitchReward(
 
         await Task.Factory.StartNew(async () =>
         {
+            var (allowed, remaining) = await cooldownService.CheckAndUpdateCooldownAsync(
+                args.Payload.Event.UserId,
+                RollType,
+                Cooldown
+            );
+
+            if (!allowed)
+            {
+                await client.SendMessageToMainTwitchAsync(
+                    $"@{args.Payload.Event.UserName}, кулдаун на FrogRoll! Подожди ещё {(int)remaining.TotalMinutes} мин.",
+                    logger
+                );
+                return;
+            }
+
             var frog = await frogRollService.RollTheFrog();
 
             if (frog is not null)

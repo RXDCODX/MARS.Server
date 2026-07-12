@@ -99,7 +99,13 @@ public interface ITelegramusHub
     public Task AudioQuizStop();
 
     [SignalRMethod]
-    public Task FumoRoll(Fumo fumo, TwitchUser twitchUser, string? color = null);
+    public Task FumoRoll(
+        Fumo fumo,
+        TwitchUser twitchUser,
+        string? color = null,
+        int collectedCount = 0,
+        int totalCount = 0
+    );
 
     [SignalRMethod]
     public Task UpdateFumoPrizes(ICollection<FumoPrizeType> prizes);
@@ -111,7 +117,13 @@ public interface ITelegramusHub
     public Task UpdateFrogPrizes(ICollection<FrogPrizeType> prizes);
 
     [SignalRMethod]
-    public Task MikuRoll(MikuModule mikuModule, TwitchUser twitchUser, string? color = null);
+    public Task MikuRoll(
+        MikuModule mikuModule,
+        TwitchUser twitchUser,
+        string? color = null,
+        int collectedCount = 0,
+        int totalCount = 0
+    );
 
     [SignalRMethod]
     public Task UpdateMikuPrizes(ICollection<MikuModulePrizeType> prizes);

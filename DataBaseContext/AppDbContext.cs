@@ -82,6 +82,9 @@ public sealed partial class AppDbContext : DbContext
     public DbSet<Fumo> Fumos { get; set; } = null!;
     public DbSet<Frog> Frogs { get; set; } = null!;
     public DbSet<MikuModule> MikuModules { get; set; } = null!;
+    public DbSet<RollCooldown> RollCooldowns { get; set; } = null!;
+    public DbSet<UserMikuCollection> UserMikuCollections { get; set; } = null!;
+    public DbSet<UserFumoCollection> UserFumoCollections { get; set; } = null!;
     public DbSet<EnvironmentVariable> EnvironmentVariables { get; set; } = null!;
     public DbSet<ChannelProcessingState> ChannelProcessingStates { get; set; } = null!;
     public DbSet<SevenTvEmote> SevenTvEmotes { get; set; } = null!;
@@ -131,6 +134,24 @@ public sealed partial class AppDbContext : DbContext
                     FolderPath = "Alerts\\random_meme",
                 },
             ]);
+
+        // RollCooldowns: уникальный индекс на (TwitchUserId, RollType)
+        modelBuilder
+            .Entity<RollCooldown>()
+            .HasIndex(r => new { r.TwitchUserId, r.RollType })
+            .IsUnique();
+
+        // UserMikuCollections: уникальный индекс на (TwitchUserId, MikuPageId)
+        modelBuilder
+            .Entity<UserMikuCollection>()
+            .HasIndex(c => new { c.TwitchUserId, c.MikuPageId })
+            .IsUnique();
+
+        // UserFumoCollections: уникальный индекс на (TwitchUserId, FumoMfcId)
+        modelBuilder
+            .Entity<UserFumoCollection>()
+            .HasIndex(c => new { c.TwitchUserId, c.FumoMfcId })
+            .IsUnique();
 
         // Конфигурация для SoundRequest - новая структура
 

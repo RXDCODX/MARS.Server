@@ -10,13 +10,16 @@ using MARS.Server.Services.Twitch;
 using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Rewards._4_FumoRoll;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Logging;
 
 namespace MARS.Server.Services.CommandExecutor.Commands;
 
 public class RollFumoCommand(
     FumoRollService fumoRollService,
+    FumoCollectionService collectionService,
     TwitchUserEnsureService ensureService,
-    IHubContext<TelegramusHub, ITelegramusHub> alertsHub
+    IHubContext<TelegramusHub, ITelegramusHub> alertsHub,
+    ILogger<RollFumoCommand> logger
 ) : BaseCommand
 {
     public override string CommandName => "rollfumo";
@@ -63,15 +66,10 @@ public class RollFumoCommand(
         try
         {
             // Пользователь уже гарантирован адаптером (TwitchCommandService)
-            TwitchUser? twitchUser = parameters.TryGetValue("user", out var userObj)
-                ? userObj as TwitchUser
-                : null;
 
-            // Fallback для платформ без адаптера (Telegram, API)
-            twitchUser ??= await ensureService.EnsureUserExistsByLoginAsync(
-                displayName,
-                cancellationToken
-            );
+            TwitchUser? twitchUser =
+                // Fallback для платформ без адаптера (Telegram, API)
+                await ensureService.EnsureUserExistsByLoginAsync(displayName, cancellationToken);
 
             if (twitchUser is null)
             {
@@ -87,7 +85,33 @@ public class RollFumoCommand(
 
             if (fumo is not null)
             {
-                await alertsHub.Clients.All.FumoRoll(fumo, twitchUser, color);
+                var collectedCount = 0;
+                var totalCount = 0;
+                try
+                {
+                    var stats = await collectionService.RecordRollAsync(
+                        twitchUser.TwitchId,
+                        fumo.MfcId
+                    );
+                    collectedCount = stats.CollectedCount;
+                    totalCount = stats.TotalCount;
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(
+                        ex,
+                        "Failed to record Fumo collection for {UserId}",
+                        twitchUser.TwitchId
+                    );
+                }
+
+                await alertsHub.Clients.All.FumoRoll(
+                    fumo,
+                    twitchUser,
+                    color,
+                    collectedCount,
+                    totalCount
+                );
             }
 
             return $"Фумо ролл для {twitchUser?.DisplayName} выполнен!";
