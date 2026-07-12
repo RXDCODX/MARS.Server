@@ -33,6 +33,7 @@ jobs:
           repository: RXDCODX/MARS
           path: _monorepo
           token: ${{ secrets.MONOREPO_PAT }}
+          submodules: true
 
       # Собираем структуру MARS.Projects/ для корректных ProjectReference
       - name: Assemble project structure
