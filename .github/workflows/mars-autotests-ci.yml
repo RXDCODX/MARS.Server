@@ -50,7 +50,13 @@ jobs:
           repository: RXDCODX/MARS
           path: _monorepo
           token: ${{ secrets.MONOREPO_PAT }}
-          submodules: true
+
+      # Инициализируем только нужные сабмодули
+      - name: Init monorepo submodules
+        run: |
+          cd _monorepo
+          git submodule update --init MARS.Projects/MARS.AudioController
+          git submodule update --init MARS.Projects/mars.client
 
       # Собираем структуру MARS.Projects/
       - name: Assemble project structure
