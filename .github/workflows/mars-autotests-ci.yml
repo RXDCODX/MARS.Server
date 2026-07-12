@@ -106,10 +106,10 @@ jobs:
 
       # --- Сборка .NET ---
       - name: Restore .NET
-        run: dotnet restore MARS.Projects/MARS.AutoTests/MARS.AutoTests.csproj
+        run: dotnet restore MARS.Projects/MARS.AutoTests/MARS.AutoTests.csproj -p:UseLocalYoutubeReExplode=false
 
       - name: Build .NET
-        run: dotnet build MARS.Projects/MARS.AutoTests/MARS.AutoTests.csproj --configuration Debug --no-restore
+        run: dotnet build MARS.Projects/MARS.AutoTests/MARS.AutoTests.csproj --configuration Debug --no-restore -p:UseLocalYoutubeReExplode=false
 
       # --- Установка Playwright Chromium ---
       - name: Install Playwright Chromium

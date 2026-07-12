@@ -61,7 +61,7 @@ jobs:
             ${{ runner.os }}-nuget-
 
       - name: Restore
-        run: dotnet restore MARS.Projects/MARS.Tests/MARS.Tests.csproj
+        run: dotnet restore MARS.Projects/MARS.Tests/MARS.Tests.csproj -p:UseLocalYoutubeReExplode=false
 
       - name: Run tests
         run: |
