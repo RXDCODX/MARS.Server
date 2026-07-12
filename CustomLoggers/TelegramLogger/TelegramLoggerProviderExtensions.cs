@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Microsoft.Extensions.Logging;
 using Telegram.Bot;
 
@@ -14,8 +14,16 @@ public static class TelegramLoggerProviderExtensions
     {
         filter ??= (s, level) => true;
 
-        var botClient = new TelegramBotClient(options.BotToken);
-        loggerFactory.AddProvider(new TelegramLoggerProvider(botClient, options, filter));
+        try
+        {
+            var botClient = new TelegramBotClient(options.BotToken);
+            loggerFactory.AddProvider(new TelegramLoggerProvider(botClient, options, filter));
+        }
+        catch (ArgumentException)
+        {
+            // Invalid bot token — skip Telegram logger
+        }
+
         return loggerFactory;
     }
 
