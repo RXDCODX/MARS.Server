@@ -2,11 +2,11 @@ using MARS.Server.DataBaseContext;
 using MARS.Server.Services.Twitch.Entitys;
 using Microsoft.EntityFrameworkCore;
 
-namespace MARS.Server.Services.Twitch.Rewards._4_MikuModuleRoll;
+namespace MARS.Server.Services.Twitch.Rewards._4_MikuRoll;
 
-public class MikuModuleRollService(IDbContextFactory<AppDbContext> factory)
+public class MikuRollService(IDbContextFactory<AppDbContext> factory)
 {
-    public async Task<MikuModule?> RollTheMikuModule()
+    public async Task<MikuModule?> RollTheMiku()
     {
         MikuModule? result = null;
 
@@ -14,16 +14,14 @@ public class MikuModuleRollService(IDbContextFactory<AppDbContext> factory)
         {
             await using var dbContext = await factory.CreateDbContextAsync();
 
-            var module = await dbContext
-                .MikuModules.OrderBy(e => e.LastOrder)
-                .FirstOrDefaultAsync();
+            var module = await dbContext.Miku.OrderBy(e => e.LastOrder).FirstOrDefaultAsync();
 
             if (module != null)
             {
                 module.OrderCount++;
                 module.LastOrder = DateTime.Now;
 
-                dbContext.MikuModules.Update(module);
+                dbContext.Miku.Update(module);
                 await dbContext.SaveChangesAsync();
 
                 result = module;
@@ -37,26 +35,23 @@ public class MikuModuleRollService(IDbContextFactory<AppDbContext> factory)
         return result;
     }
 
-    public async Task<OperationResult<ICollection<MikuModulePrizeType>>> GetMikuModulePrizesAsync()
+    public async Task<OperationResult<ICollection<MikuPrizeType>>> GetMikuPrizesAsync()
     {
-        var result = OperationResult<ICollection<MikuModulePrizeType>>.Bad(
+        var result = OperationResult<ICollection<MikuPrizeType>>.Bad(
             "Ошибка при получении призов MikuModule"
         );
 
         try
         {
             await using var dbContext = await factory.CreateDbContextAsync();
-            var prizes = new List<MikuModulePrizeType>();
+            var prizes = new List<MikuPrizeType>();
 
-            var modules = await dbContext
-                .MikuModules.AsNoTracking()
-                .OrderBy(e => e.PageId)
-                .ToListAsync();
+            var modules = await dbContext.Miku.AsNoTracking().OrderBy(e => e.PageId).ToListAsync();
 
             foreach (var module in modules)
             {
                 prizes.Add(
-                    new MikuModulePrizeType
+                    new MikuPrizeType
                     {
                         Id = module.PageId,
                         Image = module.ThumbnailUrl,
@@ -65,14 +60,14 @@ public class MikuModuleRollService(IDbContextFactory<AppDbContext> factory)
                 );
             }
 
-            result = OperationResult<ICollection<MikuModulePrizeType>>.Ok(
+            result = OperationResult<ICollection<MikuPrizeType>>.Ok(
                 "Призы MikuModule успешно получены",
                 prizes
             );
         }
         catch (Exception ex)
         {
-            result = OperationResult<ICollection<MikuModulePrizeType>>.Bad(
+            result = OperationResult<ICollection<MikuPrizeType>>.Bad(
                 $"Ошибка при получении призов MikuModule: {ex.Message}"
             );
         }

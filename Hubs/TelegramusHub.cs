@@ -10,7 +10,7 @@ using MARS.Server.Services.Twitch.Rewards._1580_MikuBeam;
 using MARS.Server.Services.Twitch.Rewards._39_MikuMonday;
 using MARS.Server.Services.Twitch.Rewards._4_FrogRoll;
 using MARS.Server.Services.Twitch.Rewards._4_FumoRoll;
-using MARS.Server.Services.Twitch.Rewards._4_MikuModuleRoll;
+using MARS.Server.Services.Twitch.Rewards._4_MikuRoll;
 using MARS.Server.Services.WaifuRoll;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
@@ -40,7 +40,7 @@ public class TelegramusHub(
     WaifuPrizesService waifuPrizesService,
     FumoRollService fumoRollService,
     FrogRollService frogRollService,
-    MikuModuleRollService mikuModuleRollService,
+    MikuRollService mikuRollService,
     IServiceProvider serviceProvider,
     MikuMondayTracksService mikuMondayTracksService,
     SoundMuteCoordinator coordinator,
@@ -64,7 +64,7 @@ public class TelegramusHub(
         await Clients.Caller.UpdateFumoPrizes(fumoResult.Data);
         var frogResult = await frogRollService.GetFrogPrizesAsync();
         await Clients.Caller.UpdateFrogPrizes(frogResult.Data);
-        var mikuModuleResult = await mikuModuleRollService.GetMikuModulePrizesAsync();
+        var mikuModuleResult = await mikuRollService.GetMikuPrizesAsync();
         await Clients.Caller.UpdateMikuPrizes(mikuModuleResult.Data);
     }
 

@@ -126,5 +126,5 @@ public interface ITelegramusHub
     );
 
     [SignalRMethod]
-    public Task UpdateMikuPrizes(ICollection<MikuModulePrizeType> prizes);
+    public Task UpdateMikuPrizes(ICollection<MikuPrizeType> prizes);
 }

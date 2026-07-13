@@ -116,10 +116,32 @@ public class DiscordCommandService(
             }
             else
             {
+                if (!commandService.IsCommandAvailable(commandName, Platform.Discord))
+                {
+                    await args.Channel.SendMessageAsync(
+                        $"Команда '{commandName}' недоступна в Discord."
+                    );
+                    return;
+                }
+
                 var commandInfo = commandService.GetCommandParameters(commandName);
                 if (commandInfo is not null)
                 {
-                    var requiredParams = commandInfo.Where(p => p.Required).ToArray();
+                    // Фильтруем Discord-специфичные параметры из проверки обязательных
+                    var requiredParams = commandInfo
+                        .Where(p =>
+                            p.Required
+                            && !p.Name.Equals(
+                                "discord_channel_id",
+                                StringComparison.OrdinalIgnoreCase
+                            )
+                            && !p.Name.Equals(
+                                "discord_message_id",
+                                StringComparison.OrdinalIgnoreCase
+                            )
+                        )
+                        .ToArray();
+
                     var inputParts = string.IsNullOrWhiteSpace(input)
                         ? []
                         : BaseCommand.ParseParametersWithQuotes(input);
@@ -129,9 +151,14 @@ public class DiscordCommandService(
                         var isAdminCommand = commandService.IsAdminCommand(commandName);
                         if (!isAdminCommand || IsUserAdmin(args.Author.Id))
                         {
+                            // Парсим параметры и инжектим Discord контекст
+                            var parameters = commandService.ParseParameters(input, commandInfo);
+                            parameters["discord_channel_id"] = args.Channel.Id;
+                            parameters["discord_message_id"] = args.Message.Id;
+
                             var commandResult = await commandService.ExecuteCommandAsync(
                                 commandName,
-                                input,
+                                parameters,
                                 Platform.Discord
                             );
                             await args.Channel.SendMessageAsync(ValidateResponse(commandResult));

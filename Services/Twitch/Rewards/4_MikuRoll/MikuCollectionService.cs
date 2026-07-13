@@ -2,7 +2,7 @@ using MARS.Server.DataBaseContext;
 using MARS.Server.Services.Twitch.Entitys;
 using Microsoft.EntityFrameworkCore;
 
-namespace MARS.Server.Services.Twitch.Rewards._4_MikuModuleRoll;
+namespace MARS.Server.Services.Twitch.Rewards._4_MikuRoll;
 
 public class MikuCollectionService(IDbContextFactory<AppDbContext> factory)
 {
@@ -49,7 +49,7 @@ public class MikuCollectionService(IDbContextFactory<AppDbContext> factory)
                 .Distinct()
                 .CountAsync();
 
-            var totalCount = await dbContext.MikuModules.CountAsync();
+            var totalCount = await dbContext.Miku.CountAsync();
 
             var thisModuleCount = existing?.Count + 1 ?? 1;
 
@@ -109,7 +109,7 @@ public class MikuCollectionService(IDbContextFactory<AppDbContext> factory)
                 .Distinct()
                 .CountAsync();
 
-            var total = await dbContext.MikuModules.CountAsync();
+            var total = await dbContext.Miku.CountAsync();
 
             return (collected, total);
         }
@@ -128,7 +128,7 @@ public class MikuCollectionService(IDbContextFactory<AppDbContext> factory)
             .ToListAsync();
 
         var newModule = await dbContext
-            .MikuModules.Where(m => !ownedIds.Contains(m.PageId))
+            .Miku.Where(m => !ownedIds.Contains(m.PageId))
             .OrderBy(m => m.LastOrder)
             .FirstOrDefaultAsync();
 

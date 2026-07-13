@@ -50,7 +50,7 @@ using MARS.Server.Services.Twitch.Rewards._27_RandomArt;
 using MARS.Server.Services.Twitch.Rewards._39_MikuMonday;
 using MARS.Server.Services.Twitch.Rewards._4_FrogRoll;
 using MARS.Server.Services.Twitch.Rewards._4_FumoRoll;
-using MARS.Server.Services.Twitch.Rewards._4_MikuModuleRoll;
+using MARS.Server.Services.Twitch.Rewards._4_MikuRoll;
 using MARS.Server.Services.Twitch.Rewards._5_AddWife;
 using MARS.Server.Services.Twitch.Rewards._6_RussianRoulette;
 using MARS.Server.Services.Twitch.Rewards._7_Quiz;
@@ -329,10 +329,8 @@ public static class StartupEstensions
         services.AddHostedService(sp => sp.GetRequiredService<AddNewWaifu>());
         services.AddSingleton<MergeWaifu>();
         services.AddHostedService(sp => sp.GetRequiredService<MergeWaifu>());
-        services.AddSingleton<WaifuRollCooldownNotificationService>();
-        services.AddHostedService(sp =>
-            sp.GetRequiredService<WaifuRollCooldownNotificationService>()
-        );
+        services.AddSingleton<RollCooldownNotificationService>();
+        services.AddHostedService(sp => sp.GetRequiredService<RollCooldownNotificationService>());
         services.AddScoped<TwitchRussianRoulete>();
         services.AddScoped<TekkenVictorina>();
         services.AddScoped<TwitchTrivia>();
@@ -557,19 +555,13 @@ public static class StartupEstensions
 
             services.AddSingleton<FumoRollService>();
             services.AddSingleton<FumoCollectionService>();
-            services.AddSingleton<FumoFridayRoll_TwitchReward>();
-            services.AddHostedService(sp => sp.GetRequiredService<FumoFridayRoll_TwitchReward>());
 
             // Frog services
             services.AddSingleton<FrogRollService>();
-            services.AddSingleton<FrogRoll_TwitchReward>();
-            services.AddHostedService(sp => sp.GetRequiredService<FrogRoll_TwitchReward>());
 
             // Miku Module Roll services
-            services.AddSingleton<MikuModuleRollService>();
+            services.AddSingleton<MikuRollService>();
             services.AddSingleton<MikuCollectionService>();
-            services.AddSingleton<MikuModuleRoll_TwitchReward>();
-            services.AddHostedService(sp => sp.GetRequiredService<MikuModuleRoll_TwitchReward>());
 
             // Фоновый запуск WaifuRollService
             services.AddHostedService(sp => sp.GetRequiredService<WaifuRollService>());

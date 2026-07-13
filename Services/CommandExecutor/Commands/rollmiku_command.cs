@@ -8,14 +8,14 @@ using MARS.Server.Services.CommandExecutor.Entitys;
 using MARS.Server.Services.CommandExecutor.Entitys.Commands;
 using MARS.Server.Services.Twitch;
 using MARS.Server.Services.Twitch.Entitys;
-using MARS.Server.Services.Twitch.Rewards._4_MikuModuleRoll;
+using MARS.Server.Services.Twitch.Rewards._4_MikuRoll;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 
 namespace MARS.Server.Services.CommandExecutor.Commands;
 
 public class RollMikuCommand(
-    MikuModuleRollService mikuRollService,
+    MikuRollService mikuRollService,
     MikuCollectionService collectionService,
     TwitchUserEnsureService ensureService,
     IHubContext<TelegramusHub, ITelegramusHub> alertsHub,
@@ -81,7 +81,7 @@ public class RollMikuCommand(
                 twitchUser.ChatColor = color;
             }
 
-            var module = await mikuRollService.RollTheMikuModule();
+            var module = await mikuRollService.RollTheMiku();
 
             if (module is not null)
             {

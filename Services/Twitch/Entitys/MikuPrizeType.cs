@@ -2,7 +2,7 @@ using System.Text.Json.Serialization;
 
 namespace MARS.Server.Services.Twitch.Entitys;
 
-public class MikuModulePrizeType
+public class MikuPrizeType
 {
     [JsonPropertyName("id")]
     public int Id { get; set; }

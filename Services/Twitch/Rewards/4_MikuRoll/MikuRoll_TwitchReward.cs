@@ -11,15 +11,15 @@ using TwitchLib.Client.Interfaces;
 using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Websockets;
 
-namespace MARS.Server.Services.Twitch.Rewards._4_MikuModuleRoll;
+namespace MARS.Server.Services.Twitch.Rewards._4_MikuRoll;
 
-public class MikuModuleRoll_TwitchReward(
+public class MikuRoll_TwitchReward(
     ChannelRewardsService channelRewardsService,
-    ILogger<MikuModuleRoll_TwitchReward> logger,
+    ILogger<MikuRoll_TwitchReward> logger,
     IHostEnvironment environment,
     IHubContext<TelegramusHub, ITelegramusHub> hubContext,
     EventSubWebsocketClient wsClient,
-    MikuModuleRollService mikuModuleRollService,
+    MikuRollService mikuRollService,
     MikuCollectionService collectionService,
     RollCooldownService cooldownService,
     ITwitchAPI api,
@@ -31,7 +31,7 @@ public class MikuModuleRoll_TwitchReward(
     private const string RollType = "Miku";
     private static readonly TimeSpan Cooldown = TimeSpan.FromMinutes(20);
 
-    public override string AlertDisplayName { get; set; } = "🎀 Miku Module Roulette";
+    public override string AlertDisplayName { get; set; } = "🎀 Мику Рулетка";
 
     public override string AlertDescription { get; set; } =
         "Крути рулетку костюмов Miku по понедельникам! ♪";
@@ -45,20 +45,22 @@ public class MikuModuleRoll_TwitchReward(
     public override Func<bool> IsRewardEnabled { get; set; } =
         () => DateTime.Now.DayOfWeek == DayOfWeek.Monday;
 
-    public override async Task StartAsync(CancellationToken cancellationToken)
+    public override Task StartAsync(CancellationToken cancellationToken)
     {
-        await base.StartAsync(cancellationToken);
+        wsClient.ChannelPointsCustomRewardRedemptionAdd +=
+            OnChannelPointsCustomRewardRedemptionAruba;
 
-        wsClient.ChannelPointsCustomRewardRedemptionAdd += OnChannelPointsCustomRewardRedemption;
+        return base.StartAsync(cancellationToken);
     }
 
-    public override async Task StopAsync(CancellationToken cancellationToken)
+    public override Task StopAsync(CancellationToken cancellationToken)
     {
-        wsClient.ChannelPointsCustomRewardRedemptionAdd -= OnChannelPointsCustomRewardRedemption;
-        await base.StopAsync(cancellationToken);
+        wsClient.ChannelPointsCustomRewardRedemptionAdd -=
+            OnChannelPointsCustomRewardRedemptionAruba;
+        return base.StopAsync(cancellationToken);
     }
 
-    private async Task OnChannelPointsCustomRewardRedemption(
+    private async Task OnChannelPointsCustomRewardRedemptionAruba(
         object? sender,
         ChannelPointsCustomRewardRedemptionArgs args
     )
@@ -93,7 +95,7 @@ public class MikuModuleRoll_TwitchReward(
                 return;
             }
 
-            var module = await mikuModuleRollService.RollTheMikuModule();
+            var module = await mikuRollService.RollTheMiku();
 
             if (module is not null)
             {
