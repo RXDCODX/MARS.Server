@@ -1,3 +1,4 @@
+global using WTelegramClient = WTelegram.Client;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -11,6 +12,7 @@ using MARS.Server.Configuration;
 using MARS.Server.DataBaseContext;
 using MARS.Server.Exstensions;
 using MARS.Server.Services.Telegram.BotService.Entities;
+using MARS.Server.Services.Telegram.WTelegram.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -21,9 +23,6 @@ using WTelegram;
 
 namespace MARS.Server.Services.Telegram.WTelegram;
 
-public class WTelegramClient(int appId, string appHash, string sessionPath)
-    : Client(appId, appHash, sessionPath);
-
 /// <summary>
 /// Сервис-обертка для WTelegramClient с автоматической переавторизацией
 /// </summary>
@@ -32,7 +31,7 @@ public class WTelegramClientService : IDisposable
     private readonly ILogger<WTelegramClientService> _logger;
     private readonly WTelegramClientConfiguration _configuration;
     private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
-    private readonly string _sessionPath;
+    private readonly string _fallbackSessionPath;
     private WTelegramClient? _client;
     private readonly SemaphoreSlim _loginLock = new(1, 1);
     private bool _isDisposed;
@@ -58,13 +57,11 @@ public class WTelegramClientService : IDisposable
         _configuration = configuration.Value;
         _botClient = botClient;
         _dbContextFactory = dbContextFactory;
-        _sessionPath = Path.Combine(
+        _fallbackSessionPath = Path.Combine(
             Directory.GetCurrentDirectory(),
             "WTelegram",
             "WTelegram.session"
         );
-
-        Directory.CreateDirectory(Path.GetDirectoryName(_sessionPath)!);
 
         Helpers.Log = (level, message) => _logger.Log((LogLevel)level, "{Message}", message);
     }
@@ -165,18 +162,26 @@ public class WTelegramClientService : IDisposable
 
             await NotifyAuthRequiredAsync("Ручная переавторизация");
 
-            // Удаляем старую сессию
-            if (File.Exists(_sessionPath))
+            // Удаляем старую сессию из БД
+            try
             {
-                try
+                await using var dbContext = await _dbContextFactory.CreateDbContextAsync(
+                    cancellationToken
+                );
+                var session = await dbContext.WTelegramSessions.FindAsync(
+                    WTelegramSession.DefaultSessionName
+                );
+                if (session is not null)
                 {
-                    File.Delete(_sessionPath);
-                    _logger.LogInformation("Старая сессия удалена");
+                    dbContext.WTelegramSessions.Remove(session);
+                    await dbContext.SaveChangesAsync(cancellationToken);
                 }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Не удалось удалить старую сессию");
-                }
+
+                _logger.LogInformation("Старая сессия удалена из БД");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Не удалось удалить старую сессию из БД");
             }
 
             // Dispose старого клиента
@@ -216,7 +221,7 @@ public class WTelegramClientService : IDisposable
 
     private async Task InitializeClientAsync(CancellationToken cancellationToken)
     {
-        _client = new WTelegramClient(_configuration.AppId, _configuration.ApiHash, _sessionPath);
+        _client = CreateClient();
 
         var proxyInfo = await ApplyProxyConfigurationAsync(cancellationToken);
 
@@ -243,11 +248,7 @@ public class WTelegramClientService : IDisposable
                     await _client.DisposeAsync();
                 }
 
-                _client = new WTelegramClient(
-                    _configuration.AppId,
-                    _configuration.ApiHash,
-                    _sessionPath
-                );
+                _client = CreateClient();
                 await PerformAuthorizationAsync(cancellationToken);
                 worksWithoutProxy = true;
             }
@@ -266,6 +267,34 @@ public class WTelegramClientService : IDisposable
                 );
             }
         }
+    }
+
+    private WTelegramClient CreateClient()
+    {
+        var sessionStore = new WTelegramDbSessionStore(
+            _dbContextFactory,
+            WTelegramSession.DefaultSessionName,
+            File.Exists(_fallbackSessionPath) ? _fallbackSessionPath : null,
+            _logger
+        );
+
+        return new WTelegramClient(GetConfigValue, sessionStore);
+    }
+
+    private string? GetConfigValue(string key)
+    {
+        return key switch
+        {
+            "api_id" => _configuration.AppId.ToString(),
+            "api_hash" => _configuration.ApiHash,
+            "phone_number" => _configuration.PhoneNumber,
+            "first_name" => _configuration.FirstNameLastName?.Split(' ')[0],
+            "last_name" => _configuration.FirstNameLastName?.Split(' ', 2).Length > 1
+                ? _configuration.FirstNameLastName.Split(' ', 2)[1]
+                : null,
+            "password" => _configuration.Password,
+            _ => null,
+        };
     }
 
     private async Task PerformAuthorizationAsync(CancellationToken cancellationToken)

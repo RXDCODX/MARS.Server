@@ -11,6 +11,7 @@ using MARS.Server.Services.StreamAcrhive_UNUSED.Entitys;
 using MARS.Server.Services.Telegram.BotService.Entitys;
 using MARS.Server.Services.Telegram.DiscordBridge.Entities;
 using MARS.Server.Services.Telegram.PrivateChannelsResender.Entities;
+using MARS.Server.Services.Telegram.WTelegram.Entities;
 using MARS.Server.Services.Twitch.ClientMessages.AutoMessages.Entitys;
 using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.HelloVideos.Entitys;
@@ -63,6 +64,7 @@ public sealed partial class AppDbContext : DbContext
     public DbSet<Video365> Videos365 { get; set; } = null!;
     public DbSet<TelegramUpdateReceiverOffset> TelegramUpdateReceiverOffset { get; set; } = null!;
     public DbSet<WTelegramAlloweedChannel> WTelegramAlloweedChannels { get; set; } = null!;
+    public DbSet<WTelegramSession> WTelegramSessions { get; set; } = null!;
     public DbSet<RootState> RootState { get; set; } = null!;
 
     // SoundRequest - новая структура
