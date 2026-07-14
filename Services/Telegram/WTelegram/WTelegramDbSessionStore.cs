@@ -17,22 +17,18 @@ public sealed class WTelegramDbSessionStore : Stream
     private readonly ILogger? _logger;
     private readonly IDbContextFactory<AppDbContext> _dbFactory;
     private readonly string _sessionName;
-    private readonly string? _fallbackFilePath;
     private readonly byte[] _data;
     private readonly int _dataLen;
-    private readonly object _writeLock = new();
-    private bool _migratedFromFile;
+    private readonly Lock _writeLock = new();
 
     public WTelegramDbSessionStore(
         IDbContextFactory<AppDbContext> dbFactory,
         string sessionName,
-        string? fallbackFilePath,
         ILogger? logger = null
     )
     {
         _dbFactory = dbFactory;
         _sessionName = sessionName;
-        _fallbackFilePath = fallbackFilePath;
         _logger = logger;
 
         byte[]? data = null;
@@ -54,28 +50,6 @@ public sealed class WTelegramDbSessionStore : Stream
             _logger?.LogWarning(ex, "Не удалось загрузить сессию WTelegram из БД");
         }
 
-        if (data is null && _fallbackFilePath is not null && File.Exists(_fallbackFilePath))
-        {
-            try
-            {
-                data = File.ReadAllBytes(_fallbackFilePath);
-                _migratedFromFile = true;
-                _logger?.LogInformation(
-                    "Сессия WTelegram загружена из файла-фоллбэка: {Path} ({Size} байт)",
-                    _fallbackFilePath,
-                    data.Length
-                );
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogWarning(
-                    ex,
-                    "Не удалось прочитать файл сессии WTelegram: {Path}",
-                    _fallbackFilePath
-                );
-            }
-        }
-
         _data = data ?? [];
         _dataLen = _data.Length;
     }
@@ -85,11 +59,6 @@ public sealed class WTelegramDbSessionStore : Stream
         using var context = _dbFactory.CreateDbContext();
         var session = context.WTelegramSessions.Find(_sessionName);
         return session?.Data is { Length: > 0 } data ? data : null;
-    }
-
-    protected override void Dispose(bool disposing)
-    {
-        base.Dispose(disposing);
     }
 
     public override int Read(byte[] buffer, int offset, int count)
@@ -126,28 +95,6 @@ public sealed class WTelegramDbSessionStore : Stream
             _sessionName,
             dataToSave.Length
         );
-
-        if (_migratedFromFile && _fallbackFilePath is not null)
-        {
-            try
-            {
-                File.Delete(_fallbackFilePath);
-                _logger?.LogInformation(
-                    "Файл-фоллбэк сессии WTelegram удалён после миграции в БД: {Path}",
-                    _fallbackFilePath
-                );
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogWarning(
-                    ex,
-                    "Не удалось удалить файл-фоллбэк сессии: {Path}",
-                    _fallbackFilePath
-                );
-            }
-
-            _migratedFromFile = false;
-        }
     }
 
     public override long Length => _dataLen;
