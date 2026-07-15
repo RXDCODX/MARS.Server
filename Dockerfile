@@ -2,6 +2,8 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
 
+ENV HUSKY=0
+
 RUN apt-get update && \
     apt-get install -y --no-install-recommends curl ffmpeg && \
     curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
@@ -14,10 +16,6 @@ WORKDIR /src
 # Copy solution-level files for NuGet restore caching
 COPY Directory.Packages.props .
 COPY MARS.Projects/MARS.Server/MARS.Server.csproj MARS.Projects/MARS.Server/
-COPY MARS.Projects/MARS.Server/external/YoutubeExplode/Directory.Build.props MARS.Projects/MARS.Server/external/YoutubeExplode/
-COPY MARS.Projects/MARS.Server/external/YoutubeExplode/Directory.Packages.props MARS.Projects/MARS.Server/external/YoutubeExplode/
-COPY MARS.Projects/MARS.Server/external/YoutubeExplode/YoutubeExplode/YoutubeExplode.csproj MARS.Projects/MARS.Server/external/YoutubeExplode/YoutubeExplode/
-COPY MARS.Projects/MARS.Server/external/YoutubeExplode/YoutubeExplode.Converter/YoutubeExplode.Converter.csproj MARS.Projects/MARS.Server/external/YoutubeExplode/YoutubeExplode.Converter/
 
 RUN dotnet restore MARS.Projects/MARS.Server/MARS.Server.csproj \
     -p:UseLocalYoutubeReExplode=false \
