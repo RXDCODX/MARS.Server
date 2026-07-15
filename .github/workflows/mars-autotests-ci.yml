@@ -91,7 +91,10 @@ jobs:
         working-directory: MARS.Projects/mars.client
 
       - name: Copy dist to server wwwroot
-        run: cp -r MARS.Projects/mars.client/dist/* MARS.Projects/MARS.Server/wwwroot/
+        run: |
+          cp -r MARS.Projects/mars.client/dist/* MARS.Projects/MARS.Server/wwwroot/
+          rm -rf MARS.Projects/mars.client/node_modules
+          rm -rf MARS.Projects/mars.client/.yarn/cache
 
       # --- Docker Compose: postgres + db-restore + mars-server ---
       - name: Free disk space
