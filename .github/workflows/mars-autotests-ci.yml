@@ -23,21 +23,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: dev
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd="pg_isready -U postgres"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
-
     steps:
       # MARS.Server (сабмодуль) — в корне workspace
       - name: Checkout MARS.Server
@@ -59,11 +44,11 @@ jobs:
           git submodule update --init MARS.Projects/MARS.AudioController
           git submodule update --init MARS.Projects/mars.client
 
-      # Собираем структуру MARS.Projects/
+      # Собираем структуру монорепо (Dockerfile ожидает MARS.Projects/MARS.Server/)
       - name: Assemble project structure
         run: |
           mkdir -p MARS.Projects/MARS.Server
-          rsync -a --exclude='.git' --exclude='MARS.Projects' --exclude='_monorepo' ./ MARS.Projects/MARS.Server/
+          rsync -a --exclude='.git' --exclude='MARS.Projects' ./ MARS.Projects/MARS.Server/
           cp -r _monorepo/MARS.Projects/MARS.AutoTests MARS.Projects/MARS.AutoTests
           cp -r _monorepo/MARS.Projects/mars.client MARS.Projects/mars.client
           cp -r _monorepo/MARS.Projects/MARS.AudioController MARS.Projects/MARS.AudioController 2>/dev/null || true
@@ -89,33 +74,25 @@ jobs:
           cache: "yarn"
           cache-dependency-path: MARS.Projects/mars.client/yarn.lock
 
-      - name: Cache NuGet packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.nuget/packages
-          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj', '**/Directory.Packages.props') }}
-          restore-keys: |
-            ${{ runner.os }}-nuget-
+      # --- Docker Compose: postgres + db-restore + mars-server ---
+      - name: Docker Compose up
+        run: docker compose -f docker-compose.autotests.yml up -d --build
 
-      # --- Сборка фронтенда для SpaYarp ---
-      - name: Install frontend dependencies
-        run: yarn install --frozen-lockfile
-        working-directory: MARS.Projects/mars.client
-
-      - name: Build frontend
-        run: yarn build
-        working-directory: MARS.Projects/mars.client
-
-      # --- Статический сервер на порту 44478 (SpaYarp target) ---
-      - name: Start frontend static server
+      - name: Wait for server ready
         run: |
-          cd MARS.Projects/mars.client/dist
-          python3 -m http.server 44478 &
-          echo $! > /tmp/frontend-server.pid
-          sleep 2
-          curl -s -o /dev/null -w "%{http_code}" http://localhost:44478/ || echo "Warning: frontend server may not be ready"
+          echo "Waiting for MARS.Server on port 9155..."
+          for i in $(seq 1 120); do
+            if curl -sf http://localhost:9155/ > /dev/null 2>&1; then
+              echo "Server is ready!"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Server did not start in time"
+          docker compose -f docker-compose.autotests.yml logs mars-server
+          exit 1
 
-      # --- Сборка .NET ---
+      # --- Сборка тестов ---
       - name: Restore .NET
         run: dotnet restore MARS.Projects/MARS.AutoTests/MARS.AutoTests.csproj -p:UseLocalYoutubeReExplode=false
 
@@ -135,6 +112,8 @@ jobs:
             --verbosity normal \
             --logger "trx;LogFileName=mars-autotests.trx" \
             --results-directory TestResults
+        env:
+          MARS_SERVER_URL: "http://localhost:9155"
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
@@ -144,9 +123,13 @@ jobs:
           path: TestResults/
           retention-days: 30
 
+      - name: Docker Compose down
+        if: always()
+        run: docker compose -f docker-compose.autotests.yml down -v
+
       - name: Notify Telegram on failure
         if: failure()
         run: |
           export BOT_TOKEN=$(jq -r '.AppSettings.Telegram.BotConfiguration.BotToken' appsettings.Production.json)
           export ADMIN_ID=$(jq -r '.AppSettings.Telegram.AdminIdsArray[0]' appsettings.Production.json)
-          python3 .github/notify-telegram.py "MARS.AutoTests CI" TestResults/mars-autotests.trx
+          python3 MARS.Projects/MARS.Server/.github/notify-telegram.py "MARS.AutoTests CI" TestResults/mars-autotests.trx
