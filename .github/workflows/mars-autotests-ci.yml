@@ -58,6 +58,9 @@ jobs:
           cp _monorepo/.editorconfig .editorconfig 2>/dev/null || true
           cp _monorepo/appsettings.Production.json appsettings.Production.json
           cp _monorepo/appsettings.json appsettings.json 2>/dev/null || true
+          # Docker Compose файл и SQL бэкапы для AutoTests
+          cp _monorepo/docker-compose.autotests.yml docker-compose.autotests.yml
+          cp -r _monorepo/Sql_backup Sql_backup
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
