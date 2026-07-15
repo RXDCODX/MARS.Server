@@ -19,6 +19,7 @@ using MARS.Server.Services.Logs.Services;
 using MARS.Server.Services.Media;
 using MARS.Server.Services.MemoryStorageService;
 using MARS.Server.Services.Obs;
+using MARS.Server.Services.Scoreboard;
 using MARS.Server.Services.Twitch;
 using MARS.Server.Services.Twitch.Rewards;
 using Microsoft.AspNetCore.Builder;
@@ -58,6 +59,9 @@ public static class Program
                 Environment.GetEnvironmentVariable("ASPNETCORE_SPA_LAUNCH") ?? string.Empty
             );
 
+        var isStaging = builder.Environment.IsStaging();
+        var useDevConnection = builder.Environment.IsDevelopment() || isStaging;
+
         //Twitch
         var loggerFactory = LoggerFactory.Create(loggingBuilder =>
         {
@@ -79,61 +83,70 @@ public static class Program
                 loggingBuilder.SetMinimumLevel(LogLevel.Information);
             }
 
-            var telegramConfiguration = new TelegramConfiguration();
-            configuration
-                .GetSection(AppBase.Base)
-                .GetSection(TelegramConfiguration.TelegramSection)
-                .Bind(telegramConfiguration);
-            var botConfiguration = new BotConfiguration();
-            configuration
-                .GetSection(AppBase.Base)
-                .GetSection(TelegramConfiguration.TelegramSection)
-                .GetSection(BotConfiguration.Configuration)
-                .Bind(botConfiguration);
-
-            loggingBuilder.AddTelegramLogger(options =>
+            // Telegram логгер — только вне Staging
+            if (!isStaging)
             {
-                options.BotToken = botConfiguration.BotToken;
-                options.ChatId = telegramConfiguration.AdminIdsArray;
-                options.SourceName = "BOT";
-                options.MinimumLevel = LogLevel.Warning;
-            });
-            loggingBuilder.AddDbLogger(() =>
-            {
-                var options = new DbContextOptionsBuilder<LoggerDbContext>();
+                var telegramConfiguration = new TelegramConfiguration();
+                configuration
+                    .GetSection(AppBase.Base)
+                    .GetSection(TelegramConfiguration.TelegramSection)
+                    .Bind(telegramConfiguration);
+                var botConfiguration = new BotConfiguration();
+                configuration
+                    .GetSection(AppBase.Base)
+                    .GetSection(TelegramConfiguration.TelegramSection)
+                    .GetSection(BotConfiguration.Configuration)
+                    .Bind(botConfiguration);
 
-                return new DbLoggerOptions
+                loggingBuilder.AddTelegramLogger(options =>
                 {
-                    Factory = new LoggerDbContextFactory(
-                        (contextOptionsBuilder) =>
-                        {
-                            contextOptionsBuilder.UseQueryTrackingBehavior(
-                                QueryTrackingBehavior.NoTracking
-                            );
-                            contextOptionsBuilder.EnableThreadSafetyChecks();
+                    options.BotToken = botConfiguration.BotToken;
+                    options.ChatId = telegramConfiguration.AdminIdsArray;
+                    options.SourceName = "BOT";
+                    options.MinimumLevel = LogLevel.Warning;
+                });
+            }
 
-                            if (builder.Environment.IsDevelopment())
+            // DbLogger — только вне Staging
+            if (!isStaging)
+            {
+                loggingBuilder.AddDbLogger(() =>
+                {
+                    var options = new DbContextOptionsBuilder<LoggerDbContext>();
+
+                    return new DbLoggerOptions
+                    {
+                        Factory = new LoggerDbContextFactory(
+                            (contextOptionsBuilder) =>
                             {
-                                contextOptionsBuilder.UseNpgsql(
-                                    configuration.GetConnectionString("Dev_Path")
+                                contextOptionsBuilder.UseQueryTrackingBehavior(
+                                    QueryTrackingBehavior.NoTracking
                                 );
-                                contextOptionsBuilder.EnableDetailedErrors();
-                                contextOptionsBuilder.EnableSensitiveDataLogging();
+                                contextOptionsBuilder.EnableThreadSafetyChecks();
+
+                                if (useDevConnection)
+                                {
+                                    contextOptionsBuilder.UseNpgsql(
+                                        configuration.GetConnectionString("Dev_Path")
+                                    );
+                                    contextOptionsBuilder.EnableDetailedErrors();
+                                    contextOptionsBuilder.EnableSensitiveDataLogging();
+                                }
+                                else
+                                {
+                                    contextOptionsBuilder.UseNpgsql(
+                                        configuration.GetConnectionString("Prod_Path")
+                                    );
+                                }
                             }
-                            else
-                            {
-                                contextOptionsBuilder.UseNpgsql(
-                                    configuration.GetConnectionString("Prod_Path")
-                                );
-                            }
-                        }
-                    ),
-                    MinimumLogLevel = builder.Environment.IsProduction()
-                        ? LogLevel.Warning
-                        : LogLevel.Information,
-                    Environment = builder.Environment,
-                };
-            });
+                        ),
+                        MinimumLogLevel = builder.Environment.IsProduction()
+                            ? LogLevel.Warning
+                            : LogLevel.Information,
+                        Environment = builder.Environment,
+                    };
+                });
+            }
 
             // Добавляем SignalR логгер
             loggingBuilder.AddSignalRLogger(options =>
@@ -164,7 +177,7 @@ public static class Program
             options.UseQueryTrackingBehavior(QueryTrackingBehavior.TrackAll);
             options.EnableThreadSafetyChecks();
             options.UseLoggerFactory(loggerFactory);
-            if (builder.Environment.IsDevelopment())
+            if (useDevConnection)
             {
                 options.EnableDetailedErrors();
                 options.EnableSensitiveDataLogging();
@@ -200,7 +213,6 @@ public static class Program
             .AddTwitchServices(configuration)
             .AddHostedService<TwitchUserSyncService>()
             .AddCommandExecutorServices()
-            .AddTelegramThings(loggerFactory)
             .AddConfiguration(configuration)
             .AddBaseAspNetMiddlewares(configuration)
             .AddSwaggerServices()
@@ -210,6 +222,17 @@ public static class Program
             .AddSpecializedServices()
             .AddSoundRequest()
             .AddObsServices();
+
+        // Telegram и Discord — только вне Staging
+        if (!isStaging)
+        {
+            services.AddTelegramThings(loggerFactory);
+        }
+        else
+        {
+            // Регистрируем только независимые сервисы из AddTelegramThings
+            services.AddScoped<ScoreboardService>();
+        }
 
         // Media file storage
         services.AddSingleton<IMediaFileStorageService, WebRootMediaFileStorageService>();
@@ -243,7 +266,7 @@ public static class Program
             options.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
             options.EnableThreadSafetyChecks();
 
-            if (builder.Environment.IsDevelopment())
+            if (useDevConnection)
             {
                 options.UseNpgsql(configuration.GetConnectionString("Dev_Path"));
                 options.EnableDetailedErrors();
