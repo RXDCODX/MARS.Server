@@ -180,8 +180,17 @@ public static class StartupEstensions
         // Для обратной совместимости регистрируем также WTelegram.Client
         services.AddSingleton<WTelegram.Client>(sp =>
         {
-            var clientService = sp.GetRequiredService<WTelegramClientService>();
-            return clientService.GetClientAsync().GetAwaiter().GetResult();
+            try
+            {
+                var clientService = sp.GetRequiredService<WTelegramClientService>();
+                return clientService.GetClientAsync().GetAwaiter().GetResult();
+            }
+            catch (Exception ex)
+            {
+                var logger = sp.GetService<ILogger<WTelegramClientService>>();
+                logger?.LogWarning(ex, "WTelegram клиент не удалось инициализировать");
+                return null!;
+            }
         });
 
         services.AddScoped<UpdateHandler>();

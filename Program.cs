@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using MARS.Server.Configuration;
 using MARS.Server.CustomLoggers.DatabaseLogger;
@@ -19,7 +20,6 @@ using MARS.Server.Services.Logs.Services;
 using MARS.Server.Services.Media;
 using MARS.Server.Services.MemoryStorageService;
 using MARS.Server.Services.Obs;
-using MARS.Server.Services.Scoreboard;
 using MARS.Server.Services.Twitch;
 using MARS.Server.Services.Twitch.Rewards;
 using Microsoft.AspNetCore.Builder;
@@ -31,6 +31,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi;
 using Swashbuckle.AspNetCore.Swagger;
+using TL;
 
 namespace MARS.Server;
 
@@ -85,29 +86,26 @@ public static class Program
                 loggingBuilder.SetMinimumLevel(LogLevel.Information);
             }
 
-            // Telegram логгер — только вне Staging
-            if (!isStaging)
-            {
-                var telegramConfiguration = new TelegramConfiguration();
-                configuration
-                    .GetSection(AppBase.Base)
-                    .GetSection(TelegramConfiguration.TelegramSection)
-                    .Bind(telegramConfiguration);
-                var botConfiguration = new BotConfiguration();
-                configuration
-                    .GetSection(AppBase.Base)
-                    .GetSection(TelegramConfiguration.TelegramSection)
-                    .GetSection(BotConfiguration.Configuration)
-                    .Bind(botConfiguration);
+            // Telegram логгер
+            var telegramConfiguration = new TelegramConfiguration();
+            configuration
+                .GetSection(AppBase.Base)
+                .GetSection(TelegramConfiguration.TelegramSection)
+                .Bind(telegramConfiguration);
+            var botConfiguration = new BotConfiguration();
+            configuration
+                .GetSection(AppBase.Base)
+                .GetSection(TelegramConfiguration.TelegramSection)
+                .GetSection(BotConfiguration.Configuration)
+                .Bind(botConfiguration);
 
-                loggingBuilder.AddTelegramLogger(options =>
-                {
-                    options.BotToken = botConfiguration.BotToken;
-                    options.ChatId = telegramConfiguration.AdminIdsArray;
-                    options.SourceName = "BOT";
-                    options.MinimumLevel = LogLevel.Warning;
-                });
-            }
+            loggingBuilder.AddTelegramLogger(options =>
+            {
+                options.BotToken = botConfiguration.BotToken;
+                options.ChatId = telegramConfiguration.AdminIdsArray;
+                options.SourceName = "BOT";
+                options.MinimumLevel = LogLevel.Warning;
+            });
 
             // DbLogger — только вне Staging
             if (!isStaging)
@@ -215,6 +213,7 @@ public static class Program
             .AddTwitchServices(configuration)
             .AddHostedService<TwitchUserSyncService>()
             .AddCommandExecutorServices()
+            .AddTelegramThings(loggerFactory)
             .AddConfiguration(configuration)
             .AddBaseAspNetMiddlewares(configuration)
             .AddSwaggerServices()
@@ -224,17 +223,6 @@ public static class Program
             .AddSpecializedServices()
             .AddSoundRequest()
             .AddObsServices();
-
-        // Telegram и Discord — только вне Staging
-        if (!isStaging)
-        {
-            services.AddTelegramThings(loggerFactory);
-        }
-        else
-        {
-            // Регистрируем только независимые сервисы из AddTelegramThings
-            services.AddScoped<ScoreboardService>();
-        }
 
         // Media file storage
         services.AddSingleton<IMediaFileStorageService, WebRootMediaFileStorageService>();
@@ -287,6 +275,105 @@ public static class Program
         builder.AddStaticFilesBrowserOptions();
 
         var app = builder.Build();
+
+        app.Map(
+            "/allservices",
+            builder =>
+                builder.Run(async context =>
+                {
+                    var sb = new StringBuilder();
+                    var dependencies = new Dictionary<string, string>();
+                    sb.AppendLine("<pre>");
+                    sb.AppendLine("digraph Services {");
+                    var servicesDi = services.Select(svc => svc.ServiceType.ToString()).ToHashSet();
+
+                    foreach (var svc in services)
+                    {
+                        var implementationName = svc.ImplementationType?.ToString();
+                        if (implementationName != null)
+                        {
+                            var implDependencies = svc
+                                .ImplementationType?.GetConstructors()
+                                .SelectMany(cons => cons.GetParameters())
+                                .Select(p => p.ParameterType.ToString())
+                                .Distinct()
+                                .Where(servicesDi.Contains)
+                                .ToList();
+
+                            if (implDependencies is { Count: > 0 })
+                            {
+                                // Register Constructor dependendencies
+                                foreach (var d in implDependencies)
+                                {
+                                    dependencies.TryAdd(implementationName, d);
+                                }
+                            }
+                        }
+                    }
+
+                    void PrintGroup(
+                        string label,
+                        string cluster,
+                        string color,
+                        IEnumerable<string> group
+                    )
+                    {
+                        if (group.Count() > 0)
+                        {
+                            sb.AppendLine($"  subgraph cluster_{cluster} {{");
+                            sb.AppendLine("      style = filled;");
+                            sb.AppendLine($"     color = {color};");
+                            sb.AppendLine("      node[style = filled, color = white];");
+                            sb.AppendLine($"     label = \"{label}\";");
+                            foreach (var item in group)
+                            {
+                                sb.AppendLine($"     \"{item}\"");
+                            }
+
+                            sb.AppendLine("  }");
+                        }
+                    }
+
+                    var scopedGroup = services
+                        .Where(s => s.Lifetime == ServiceLifetime.Scoped)
+                        .Select(s => s.ServiceType.ToString());
+                    var transientGroup = services
+                        .Where(s => s.Lifetime == ServiceLifetime.Transient)
+                        .Select(s => s.ServiceType.ToString());
+                    PrintGroup("scoped", "0", "blue", scopedGroup);
+                    PrintGroup("transient", "1", "lightgrey", transientGroup);
+                    // Make interfaces different
+                    sb.AppendLine();
+                    sb.AppendLine();
+                    sb.AppendLine("     node [color=green]");
+                    var interfacesGroup = services
+                        .Where(s => s.ServiceType.IsInterface)
+                        .Select(s => s.ServiceType.ToString());
+                    foreach (var @interface in interfacesGroup)
+                    {
+                        sb.AppendLine($"     \"{@interface}\"");
+                    }
+                    sb.AppendLine();
+                    sb.AppendLine("    node [color=black]");
+                    var noninterfacesGroup = services
+                        .Where(s => !s.ServiceType.IsInterface)
+                        .Select(s => s.ServiceType.ToString());
+                    foreach (var nonInterface in noninterfacesGroup)
+                    {
+                        sb.AppendLine($"     \"{nonInterface}\"");
+                    }
+                    //Now print dependencies
+                    foreach (var d in dependencies)
+                    {
+                        sb.AppendLine($"     \"{d.Key}\" -> \"{d.Value}\"");
+                    }
+                    sb.AppendLine("}");
+                    sb.AppendLine("</pre>");
+                    // Ok ready. Now return all the graph
+                    await context.Response.WriteAsync(sb.ToString());
+                })
+        );
+
         var logger = app.Logger;
 
         if (shouldGenerateOpenApi)

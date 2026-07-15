@@ -14,6 +14,11 @@ public static class TelegramLoggerProviderExtensions
     {
         filter ??= (s, level) => true;
 
+        if (string.IsNullOrWhiteSpace(options.BotToken) || options.ChatId is not { Length: > 0 })
+        {
+            return loggerFactory;
+        }
+
         try
         {
             var botClient = new TelegramBotClient(options.BotToken);
