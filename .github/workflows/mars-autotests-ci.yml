@@ -82,6 +82,12 @@ jobs:
           cache-dependency-path: MARS.Projects/mars.client/yarn.lock
 
       # --- Docker Compose: postgres + db-restore + mars-server ---
+      - name: Free disk space
+        run: |
+          docker system prune -af --volumes 2>/dev/null || true
+          sudo rm -rf /usr/local/lib/android /opt/ghc 2>/dev/null || true
+          df -h
+
       - name: Docker Compose up
         run: docker compose -f docker-compose.autotests.yml up -d --build
 
