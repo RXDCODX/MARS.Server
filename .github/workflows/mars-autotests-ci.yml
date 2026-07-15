@@ -105,7 +105,7 @@ jobs:
           df -h
 
       - name: Docker Compose up
-        run: docker compose -f docker-compose.autotests.yml up -d --build
+        run: docker compose -f docker-compose.autotests.yml build --no-cache && docker compose -f docker-compose.autotests.yml up -d
 
       - name: Check db-restore status
         if: always()
