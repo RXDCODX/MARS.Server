@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
@@ -12,13 +12,18 @@ public class AppDbContextFactory
         IDesignTimeDbContextFactory<AppDbContext>
 {
     private readonly DbContextOptions<AppDbContext>? _options;
+    private readonly bool _skipMigrations;
 
     // Конструктор для обычного использования (с DI)
-    public AppDbContextFactory(Action<DbContextOptionsBuilder<AppDbContext>> optionsAction)
+    public AppDbContextFactory(
+        Action<DbContextOptionsBuilder<AppDbContext>> optionsAction,
+        bool skipMigrations = false
+    )
     {
         var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
         optionsAction.Invoke(optionsBuilder);
         _options = optionsBuilder.Options;
+        _skipMigrations = skipMigrations;
     }
 
     // Конструктор для миграций (без DI)
@@ -30,7 +35,7 @@ public class AppDbContextFactory
     // Реализация IDbContextFactory<AppDbContext>
     public AppDbContext CreateDbContext()
     {
-        return GetDbContext(isMigrations: false);
+        return GetDbContext(isMigrations: _skipMigrations);
     }
 
     // Реализация IDesignTimeDbContextFactory<AppDbContext>

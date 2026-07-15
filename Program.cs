@@ -188,7 +188,7 @@ public static class Program
             {
                 options.UseNpgsql(configuration.GetConnectionString("Prod_Path"));
             }
-        });
+        }, skipMigrations: isStaging);
 
         if (builder.Environment.IsProduction() && OperatingSystem.IsWindows())
         {
@@ -275,106 +275,9 @@ public static class Program
         builder.AddStaticFilesBrowserOptions();
 
         var app = builder.Build();
-
-        app.Map(
-            "/allservices",
-            builder =>
-                builder.Run(async context =>
-                {
-                    var sb = new StringBuilder();
-                    var dependencies = new Dictionary<string, string>();
-                    sb.AppendLine("<pre>");
-                    sb.AppendLine("digraph Services {");
-                    var servicesDi = services.Select(svc => svc.ServiceType.ToString()).ToHashSet();
-
-                    foreach (var svc in services)
-                    {
-                        var implementationName = svc.ImplementationType?.ToString();
-                        if (implementationName != null)
-                        {
-                            var implDependencies = svc
-                                .ImplementationType?.GetConstructors()
-                                .SelectMany(cons => cons.GetParameters())
-                                .Select(p => p.ParameterType.ToString())
-                                .Distinct()
-                                .Where(servicesDi.Contains)
-                                .ToList();
-
-                            if (implDependencies is { Count: > 0 })
-                            {
-                                // Register Constructor dependendencies
-                                foreach (var d in implDependencies)
-                                {
-                                    dependencies.TryAdd(implementationName, d);
-                                }
-                            }
-                        }
-                    }
-
-                    void PrintGroup(
-                        string label,
-                        string cluster,
-                        string color,
-                        IEnumerable<string> group
-                    )
-                    {
-                        if (group.Count() > 0)
-                        {
-                            sb.AppendLine($"  subgraph cluster_{cluster} {{");
-                            sb.AppendLine("      style = filled;");
-                            sb.AppendLine($"     color = {color};");
-                            sb.AppendLine("      node[style = filled, color = white];");
-                            sb.AppendLine($"     label = \"{label}\";");
-                            foreach (var item in group)
-                            {
-                                sb.AppendLine($"     \"{item}\"");
-                            }
-
-                            sb.AppendLine("  }");
-                        }
-                    }
-
-                    var scopedGroup = services
-                        .Where(s => s.Lifetime == ServiceLifetime.Scoped)
-                        .Select(s => s.ServiceType.ToString());
-                    var transientGroup = services
-                        .Where(s => s.Lifetime == ServiceLifetime.Transient)
-                        .Select(s => s.ServiceType.ToString());
-                    PrintGroup("scoped", "0", "blue", scopedGroup);
-                    PrintGroup("transient", "1", "lightgrey", transientGroup);
-                    // Make interfaces different
-                    sb.AppendLine();
-                    sb.AppendLine();
-                    sb.AppendLine("     node [color=green]");
-                    var interfacesGroup = services
-                        .Where(s => s.ServiceType.IsInterface)
-                        .Select(s => s.ServiceType.ToString());
-                    foreach (var @interface in interfacesGroup)
-                    {
-                        sb.AppendLine($"     \"{@interface}\"");
-                    }
-                    sb.AppendLine();
-                    sb.AppendLine("    node [color=black]");
-                    var noninterfacesGroup = services
-                        .Where(s => !s.ServiceType.IsInterface)
-                        .Select(s => s.ServiceType.ToString());
-                    foreach (var nonInterface in noninterfacesGroup)
-                    {
-                        sb.AppendLine($"     \"{nonInterface}\"");
-                    }
-                    //Now print dependencies
-                    foreach (var d in dependencies)
-                    {
-                        sb.AppendLine($"     \"{d.Key}\" -> \"{d.Value}\"");
-                    }
-                    sb.AppendLine("}");
-                    sb.AppendLine("</pre>");
-                    // Ok ready. Now return all the graph
-                    await context.Response.WriteAsync(sb.ToString());
-                })
-        );
-
         var logger = app.Logger;
+
+        app.AddDiSchemaRoute(services);
 
         if (shouldGenerateOpenApi)
         {
