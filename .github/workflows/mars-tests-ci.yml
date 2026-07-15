@@ -95,4 +95,4 @@ jobs:
         run: |
           export BOT_TOKEN=$(jq -r '.AppSettings.Telegram.BotConfiguration.BotToken' appsettings.Production.json)
           export ADMIN_ID=$(jq -r '.AppSettings.Telegram.AdminIdsArray[0]' appsettings.Production.json)
-          python3 .github/notify-telegram.py "MARS.Tests CI" TestResults/mars-tests.trx
+          python3 MARS.Projects/MARS.Server/.github/notify-telegram.py "MARS.Tests CI" TestResults/mars-tests.trx
