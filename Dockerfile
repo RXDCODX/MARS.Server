@@ -16,6 +16,7 @@ WORKDIR /src
 # Copy solution-level files for NuGet restore caching
 COPY Directory.Packages.props .
 COPY MARS.Projects/MARS.Server/MARS.Server.csproj MARS.Projects/MARS.Server/
+COPY appsettings*.json MARS.Projects/MARS.Server/
 
 RUN dotnet restore MARS.Projects/MARS.Server/MARS.Server.csproj \
     -p:UseLocalYoutubeReExplode=false \
