@@ -55,9 +55,11 @@ public static class Program
 
         var isSpa =
             !builder.Environment.IsProduction()
-            && Convert.ToBoolean(
-                Environment.GetEnvironmentVariable("ASPNETCORE_SPA_LAUNCH") ?? string.Empty
-            );
+            && bool.TryParse(
+                Environment.GetEnvironmentVariable("ASPNETCORE_SPA_LAUNCH"),
+                out var spaLaunch
+            )
+            && spaLaunch;
 
         var isStaging = builder.Environment.IsStaging();
         var useDevConnection = builder.Environment.IsDevelopment() || isStaging;
