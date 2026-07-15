@@ -107,6 +107,14 @@ jobs:
       - name: Docker Compose up
         run: docker compose -f docker-compose.autotests.yml up -d --build
 
+      - name: Check db-restore status
+        if: always()
+        run: |
+          docker compose -f docker-compose.autotests.yml logs db-restore
+          echo "---"
+          ls -la Sql_backup/ 2>/dev/null || echo "Sql_backup not found"
+          ls -la Sql_backup/*/ 2>/dev/null || echo "No subdirs"
+
       - name: Wait for server ready
         run: |
           echo "Waiting for MARS.Server on port 9155..."
