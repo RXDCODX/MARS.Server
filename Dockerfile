@@ -32,7 +32,8 @@ RUN dotnet publish MARS.Server.csproj \
     -o /app/publish \
     -p:UseLocalYoutubeReExplode=false \
     -p:RunTestsOnPublish=false \
-    -p:SkipHusky=true
+    -p:SkipHusky=true \
+    -p:SkipBuildClient=true
 
 # ---- Runtime stage ----
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime

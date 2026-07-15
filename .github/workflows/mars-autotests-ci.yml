@@ -81,11 +81,24 @@ jobs:
           cache: "yarn"
           cache-dependency-path: MARS.Projects/mars.client/yarn.lock
 
+      # --- Сборка фронтенда до Docker (экономия места) ---
+      - name: Install frontend dependencies
+        run: yarn install --frozen-lockfile
+        working-directory: MARS.Projects/mars.client
+
+      - name: Build frontend
+        run: yarn build
+        working-directory: MARS.Projects/mars.client
+
+      - name: Copy dist to server wwwroot
+        run: cp -r MARS.Projects/mars.client/dist/* MARS.Projects/MARS.Server/wwwroot/
+
       # --- Docker Compose: postgres + db-restore + mars-server ---
       - name: Free disk space
         run: |
           docker system prune -af --volumes 2>/dev/null || true
-          sudo rm -rf /usr/local/lib/android /opt/ghc 2>/dev/null || true
+          sudo rm -rf /usr/local/lib/android /opt/ghc /usr/share/swift 2>/dev/null || true
+          sudo apt-get clean 2>/dev/null || true
           df -h
 
       - name: Docker Compose up
