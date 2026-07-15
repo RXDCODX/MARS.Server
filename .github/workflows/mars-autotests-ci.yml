@@ -28,6 +28,10 @@ jobs:
       - name: Checkout MARS.Server
         uses: actions/checkout@v4
 
+      # Инициализируем сабмодули MARS.Server (external/YoutubeExplode)
+      - name: Init MARS.Server submodules
+        run: git submodule update --init --recursive
+
       # Монорепо — отдельно, для тестов, фронтенда и конфигов
       - name: Checkout monorepo
         uses: actions/checkout@v4
