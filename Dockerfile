@@ -1,15 +1,23 @@
 # ---- Build stage ----
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
+ARG SKIP_BUILD_CLIENT=false
 
 ENV HUSKY=0
 
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends curl ffmpeg && \
-    curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
-    apt-get install -y --no-install-recommends nodejs && \
-    npm install -g yarn && \
+    apt-get install -y --no-install-recommends ffmpeg && \
     rm -rf /var/lib/apt/lists/*
+
+# Install Node.js only if client will be built in Docker
+RUN if [ "$SKIP_BUILD_CLIENT" != "true" ]; then \
+      apt-get update && \
+      apt-get install -y --no-install-recommends curl && \
+      curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+      apt-get install -y --no-install-recommends nodejs && \
+      npm install -g yarn && \
+      rm -rf /var/lib/apt/lists/*; \
+    fi
 
 WORKDIR /src
 
@@ -45,6 +53,7 @@ RUN apt-get update && \
 
 WORKDIR /app
 COPY --from=build /app/publish .
+COPY appsettings.Staging.json /app/
 
 EXPOSE 9155
 

@@ -29,4 +29,9 @@ public class WTelegramClientStatus
     /// Информация об ошибке (если есть)
     /// </summary>
     public string? ErrorMessage { get; set; }
+
+    /// <summary>
+    /// Указывает, что клиент ожидает ввода кода верификации
+    /// </summary>
+    public bool IsAwaitingCode { get; set; }
 }
