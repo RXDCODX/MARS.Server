@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.StaticFiles.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
@@ -58,9 +61,7 @@ public static class WebApplicatoinExstension
             : base(root, filters) { }
     }
 
-    public static WebApplicationBuilder AddStaticFilesBrowserOptions(
-        this WebApplicationBuilder app
-    )
+    public static WebApplicationBuilder AddStaticFilesBrowserOptions(this WebApplicationBuilder app)
     {
         var sharedOptions = new SharedOptions
         {
@@ -114,9 +115,7 @@ public static class WebApplicatoinExstension
                     var dependencies = new Dictionary<string, string>();
                     sb.AppendLine("<pre>");
                     sb.AppendLine("digraph Services {");
-                    var servicesDi = services
-                        .Select(svc => svc.ServiceType.ToString())
-                        .ToHashSet();
+                    var servicesDi = services.Select(svc => svc.ServiceType.ToString()).ToHashSet();
 
                     foreach (var svc in services)
                     {

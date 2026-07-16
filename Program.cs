@@ -31,7 +31,6 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi;
 using Swashbuckle.AspNetCore.Swagger;
-using TL;
 
 namespace MARS.Server;
 
@@ -172,23 +171,26 @@ public static class Program
 
         builder.Services.Replace(new ServiceDescriptor(typeof(ILoggerFactory), loggerFactory));
 
-        var contextFactory = new AppDbContextFactory(options =>
-        {
-            options.UseQueryTrackingBehavior(QueryTrackingBehavior.TrackAll);
-            options.EnableThreadSafetyChecks();
-            options.UseLoggerFactory(loggerFactory);
-            if (useDevConnection)
+        var contextFactory = new AppDbContextFactory(
+            options =>
             {
-                options.EnableDetailedErrors();
-                options.EnableSensitiveDataLogging();
+                options.UseQueryTrackingBehavior(QueryTrackingBehavior.TrackAll);
+                options.EnableThreadSafetyChecks();
+                options.UseLoggerFactory(loggerFactory);
+                if (useDevConnection)
+                {
+                    options.EnableDetailedErrors();
+                    options.EnableSensitiveDataLogging();
 
-                options.UseNpgsql(configuration.GetConnectionString("Dev_Path"));
-            }
-            else
-            {
-                options.UseNpgsql(configuration.GetConnectionString("Prod_Path"));
-            }
-        }, skipMigrations: isStaging);
+                    options.UseNpgsql(configuration.GetConnectionString("Dev_Path"));
+                }
+                else
+                {
+                    options.UseNpgsql(configuration.GetConnectionString("Prod_Path"));
+                }
+            },
+            skipMigrations: isStaging
+        );
 
         if (builder.Environment.IsProduction() && OperatingSystem.IsWindows())
         {

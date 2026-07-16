@@ -46,31 +46,27 @@ public class AppDbContextFactory
 
     private AppDbContext GetDbContext(bool isMigrations)
     {
-        if (_options != null && !isMigrations)
+        if (_options != null)
         {
-            // Используем предварительно настроенные опции (если фабрика создана через DI)
+            // Используем предварительно настроенные опции (фабрика создана через DI)
             return new AppDbContext(_options, isMigrations);
         }
 
-        // Настройка вручную (для миграций)
+        // Настройка вручную (для design-time миграций)
         var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
 
-        // Загружаем конфигурацию из appsettings.json
         var configuration = new ConfigurationBuilder()
             .SetBasePath(Directory.GetCurrentDirectory())
             .AddJsonFile("appsettings.json")
             .AddJsonFile("appsettings.Development.json", optional: true)
             .Build();
 
-        // Получаем строку подключения
-        var connectionString = configuration.GetConnectionString("Dev_Path"); // Или "Prod_Path", если нужно
+        var connectionString = configuration.GetConnectionString("Dev_Path");
 
-        // Настраиваем DbContext
         optionsBuilder.UseNpgsql(connectionString);
         optionsBuilder.UseQueryTrackingBehavior(QueryTrackingBehavior.TrackAll);
         optionsBuilder.EnableThreadSafetyChecks();
 
-        // Включаем детализированные ошибки в Development
         var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
         if (environment == Environments.Development)
         {
