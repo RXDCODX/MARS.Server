@@ -61,6 +61,7 @@ jobs:
           cp _monorepo/Directory.Build.props Directory.Build.props 2>/dev/null || true
           cp _monorepo/.editorconfig .editorconfig 2>/dev/null || true
           cp _monorepo/appsettings.Production.json appsettings.Production.json
+          cp _monorepo/appsettings.Staging.json appsettings.Staging.json 2>/dev/null || true
           cp _monorepo/appsettings.json appsettings.json 2>/dev/null || true
           # Docker Compose файл и SQL бэкапы для AutoTests
           cp _monorepo/docker-compose.autotests.yml docker-compose.autotests.yml
