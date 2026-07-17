@@ -81,9 +81,6 @@ public class TwitchCommandService : PlatformCommandServiceBase<string>, IHostedS
 
         if (result.IsInvalid)
         {
-            await _client.SendMessageToMainTwitchAsync(
-                $"@{e.ChatMessage.Username}, " + result.FirstError
-            );
             return;
         }
 
