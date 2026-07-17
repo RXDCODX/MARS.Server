@@ -163,10 +163,10 @@ public class MergeWaifu(
                             // Убеждаемся, что поля аниме и манги заполнены
                             waifu = await waifuDbHelper.EnsureMangaAndAnimeTitleExists(waifu);
 
+                            waifu.IsMerged = true;
                             dbContext.Waifus.Update(waifu);
                             await dbContext.SaveChangesAsync(_cancellationToken);
 
-                            waifu.IsMerged = true;
                             waifu.ImageUrl = options.Value.ShikimoriSite + waifu.ImageUrl;
 
                             // Проверяем что TwitchUser загружен
@@ -177,9 +177,9 @@ public class MergeWaifu(
                                 );
                             }
 
-                            var color = await api.Helix.Chat.GetUserChatColorAsync(
-                                [twEvent.UserId]
-                            );
+                            var color = await api.Helix.Chat.GetUserChatColorAsync([
+                                twEvent.UserId,
+                            ]);
 
                             // Используем аватарку из TwitchUser вместо отдельного запроса к API
                             await hubContext.Clients.All.MergeWaifu(
