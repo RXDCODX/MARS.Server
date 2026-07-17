@@ -51,6 +51,22 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
+      # --- Находим ID последнего успешного билда ---
+      - name: Find latest build run id
+        id: find-run
+        run: |
+          if [ -n "${{ github.event.workflow_run.id }}" ]; then
+            echo "run_id=${{ github.event.workflow_run.id }}" >> $GITHUB_OUTPUT
+          else
+            # Manual trigger — ищем последний успешный run MARS.Tests CI
+            RUN_ID=$(gh api repos/${{ github.repository }}/actions/workflows/mars-tests-ci.yml/runs \
+              --jq '.workflow_runs[] | select(.conclusion == "success") | .id' \
+              -q '.[0]' 2>/dev/null || echo "")
+            echo "run_id=$RUN_ID" >> $GITHUB_OUTPUT
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       # --- Скачиваем артефакты от билдов ---
       - name: Download backend artifact
         uses: actions/download-artifact@v4
@@ -58,7 +74,7 @@ jobs:
           name: backend-publish
           path: backend-publish/
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: ${{ github.event.workflow_run.id || '' }}
+          run-id: ${{ steps.find-run.outputs.run_id }}
 
       - name: Download frontend artifact
         uses: actions/download-artifact@v4
@@ -66,7 +82,7 @@ jobs:
           name: frontend-dist
           path: frontend-dist/
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: ${{ github.event.workflow_run.id || '' }}
+          run-id: ${{ steps.find-run.outputs.run_id }}
 
       # --- Собираем сервер с фронтендом в wwwroot ---
       - name: Assemble server with frontend
