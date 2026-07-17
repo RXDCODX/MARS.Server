@@ -9,5 +9,5 @@ namespace MARS.Server.DataBaseContext;
 public sealed class MigrationsDbContext : AppDbContext
 {
     public MigrationsDbContext(DbContextOptions<AppDbContext> options)
-        : base(options, isMigrations: true) { }
+        : base(options) { }
 }

@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
+using Npgsql;
 
 namespace MARS.Server.DataBaseContext;
 
@@ -11,6 +12,9 @@ public class AppDbContextFactory
     : IDbContextFactory<AppDbContext>,
         IDesignTimeDbContextFactory<MigrationsDbContext>
 {
+    private static readonly Lock Locker = new();
+    private static bool _isMigrated;
+
     private readonly DbContextOptions<AppDbContext>? _options;
 
     // Конструктор для обычного использования (с DI)
@@ -30,7 +34,9 @@ public class AppDbContextFactory
     // Реализация IDbContextFactory<AppDbContext>
     public AppDbContext CreateDbContext()
     {
-        return GetDbContext(isMigrations: false);
+        var context = GetDbContext();
+        MigrateIfNeeded(context);
+        return context;
     }
 
     // Реализация IDesignTimeDbContextFactory<MigrationsDbContext>
@@ -62,11 +68,11 @@ public class AppDbContextFactory
         return new MigrationsDbContext(optionsBuilder.Options);
     }
 
-    private AppDbContext GetDbContext(bool isMigrations)
+    private AppDbContext GetDbContext()
     {
         if (_options != null)
         {
-            return new AppDbContext(_options, isMigrations);
+            return new AppDbContext(_options);
         }
 
         // Настройка вручную (для design-time миграций)
@@ -91,6 +97,37 @@ public class AppDbContextFactory
             optionsBuilder.EnableSensitiveDataLogging();
         }
 
-        return new AppDbContext(optionsBuilder.Options, isMigrations);
+        return new AppDbContext(optionsBuilder.Options);
+    }
+
+    private static void MigrateIfNeeded(AppDbContext context)
+    {
+        if (_isMigrated)
+        {
+            return;
+        }
+
+        Locker.Enter();
+        try
+        {
+            if (!_isMigrated)
+            {
+                try
+                {
+                    context.Database.Migrate();
+                }
+                catch (Npgsql.PostgresException)
+                {
+                    // Миграция не полностью применилась (БД восстановлена из бэкапа со старой схемой)
+                    // Сервер продолжит работу, недостающие таблицы вызовут ошибки при запросах
+                }
+
+                _isMigrated = true;
+            }
+        }
+        finally
+        {
+            Locker.Exit();
+        }
     }
 }

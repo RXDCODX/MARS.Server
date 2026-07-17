@@ -22,44 +22,13 @@ using MARS.Server.Services.Twitch.Synthesizer.Entitys;
 using MARS.Server.Services.WaifuRoll.Entitys;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using Npgsql;
 
 namespace MARS.Server.DataBaseContext;
 
 public partial class AppDbContext : DbContext
 {
-    private static readonly Lock Locker = new();
-    private static bool _isMigrated;
-
-    public AppDbContext(DbContextOptions<AppDbContext> options, bool isMigrations)
-        : base(options)
-    {
-        if (!_isMigrated && !isMigrations)
-        {
-            Locker.Enter();
-            try
-            {
-                if (!_isMigrated)
-                {
-                    try
-                    {
-                        Database.Migrate();
-                    }
-                    catch (Npgsql.PostgresException)
-                    {
-                        // Миграция не полностью применилась (БД восстановлена из бэкапа со старой схемой)
-                        // Сервер продолжит работу, недостающие таблицы вызовут ошибки при запросах
-                    }
-
-                    _isMigrated = true;
-                }
-            }
-            finally
-            {
-                Locker.Exit();
-            }
-        }
-    }
+    public AppDbContext(DbContextOptions<AppDbContext> options)
+        : base(options) { }
 
     // Таблицы Twitch Users вынесены в TwitchUsersDbContext.cs
 
