@@ -115,6 +115,9 @@ jobs:
 
       - name: Restore SQL backup
         run: |
+          echo "=== Sql_backup contents ==="
+          ls -la Sql_backup/ 2>/dev/null || echo "Sql_backup not found"
+          ls -d Sql_backup/VS-snapshot_* 2>/dev/null || echo "No VS-snapshot dirs"
           if [ -d "Sql_backup" ]; then
             LATEST=$(ls -d Sql_backup/VS-snapshot_* 2>/dev/null | sort -r | head -1)
             if [ -n "$LATEST" ]; then
