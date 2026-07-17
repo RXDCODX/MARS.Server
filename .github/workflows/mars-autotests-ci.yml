@@ -58,10 +58,8 @@ jobs:
           if [ -n "${{ github.event.workflow_run.id }}" ]; then
             echo "run_id=${{ github.event.workflow_run.id }}" >> $GITHUB_OUTPUT
           else
-            # Manual trigger — ищем последний успешный run MARS.Tests CI
             RUN_ID=$(gh api repos/${{ github.repository }}/actions/workflows/mars-tests-ci.yml/runs \
-              --jq '.workflow_runs[] | select(.conclusion == "success") | .id' \
-              -q '.[0]' 2>/dev/null || echo "")
+              --jq '[.workflow_runs[] | select(.conclusion == "success")][0].id // empty' 2>/dev/null)
             echo "run_id=$RUN_ID" >> $GITHUB_OUTPUT
           fi
         env:
