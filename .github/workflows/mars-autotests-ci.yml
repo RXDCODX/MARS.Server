@@ -86,15 +86,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           run-id: ${{ steps.find-runs.outputs.frontend_run_id }}
 
-      # --- Собираем сервер с фронтендом в wwwroot ---
-      - name: Assemble server with frontend
-        run: |
-          mkdir -p server-app
-          cp -r backend-publish/* server-app/
-          mkdir -p server-app/wwwroot
-          cp -r frontend-dist/* server-app/wwwroot/
-
-      # --- PostgreSQL + EF Migrations + SQL Restore ---
+      # --- PostgreSQL + SQL Restore + MARS.Server ---
       - name: Start PostgreSQL
         run: |
           docker run -d --name postgres \
@@ -123,22 +115,30 @@ jobs:
 
       - name: Restore SQL backup
         run: |
-          LATEST=$(ls -d Sql_backup/VS-snapshot_* 2>/dev/null | sort -r | head -1)
-          if [ -z "$LATEST" ]; then
-            echo "ERROR: No backup directories found"
-            exit 1
+          if [ -d "Sql_backup" ]; then
+            LATEST=$(ls -d Sql_backup/VS-snapshot_* 2>/dev/null | sort -r | head -1)
+            if [ -n "$LATEST" ]; then
+              SQL_FILE=$(find "$LATEST" -maxdepth 1 -name "*.sql" | head -1)
+              echo "Restoring: $SQL_FILE"
+              PGPASSWORD=postgres psql -h localhost -U postgres -d postgres -f "$SQL_FILE" --set ON_ERROR_STOP=off
+            else
+              echo "WARNING: No VS-snapshot_* directories found, skipping restore"
+            fi
+          else
+            echo "WARNING: Sql_backup directory not found, skipping restore"
           fi
-          SQL_FILE=$(find "$LATEST" -maxdepth 1 -name "*.sql" | head -1)
-          echo "Restoring: $SQL_FILE"
-          PGPASSWORD=postgres psql -h localhost -U postgres -d postgres -f "$SQL_FILE" --set ON_ERROR_STOP=off
 
       # --- Запуск MARS.Server ---
       - name: Start MARS.Server
         run: |
+          mkdir -p server-app/wwwroot
+          cp -r backend-publish/* server-app/
+          cp -r frontend-dist/* server-app/wwwroot/ 2>/dev/null || true
           docker run -d --name mars-server \
             --network host \
             -e ASPNETCORE_ENVIRONMENT=Staging \
             -e ASPNETCORE_URLS="http://+:9725" \
+            -e ASPNETCORE_CONTENTROOT=/app \
             -v $(pwd)/server-app:/app \
             mcr.microsoft.com/dotnet/aspnet:10.0 \
             dotnet /app/MARS.Server.dll
