@@ -31,7 +31,6 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi;
 using Swashbuckle.AspNetCore.Swagger;
-using TL;
 
 namespace MARS.Server;
 
@@ -188,7 +187,7 @@ public static class Program
             {
                 options.UseNpgsql(configuration.GetConnectionString("Prod_Path"));
             }
-        }, skipMigrations: isStaging);
+        });
 
         if (builder.Environment.IsProduction() && OperatingSystem.IsWindows())
         {

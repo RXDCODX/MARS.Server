@@ -1,10 +1,10 @@
 name: MARS.AutoTests CI
 
 on:
-  push:
+  workflow_run:
+    workflows: ["MARS.Tests CI"]
+    types: [completed]
     branches: [master, develop, feature/*]
-  pull_request:
-    branches: [master, develop]
   workflow_dispatch:
 
 permissions:
@@ -12,27 +12,23 @@ permissions:
 
 env:
   DOTNET_VERSION: "10.0.x"
-  NODE_VERSION: "22.x"
   DOTNET_CLI_TELEMETRY_OPTOUT: 1
-  NODE_OPTIONS: "--max-old-space-size=4096"
   HUSKY: 0
 
 jobs:
-  playwright-tests:
+  autotests:
     name: MARS.AutoTests (Playwright)
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 25
+    # Запускаем только если MARS.Tests CI прошёл успешно (или manual trigger)
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
 
     steps:
-      # MARS.Server (сабмодуль) — в корне workspace
       - name: Checkout MARS.Server
         uses: actions/checkout@v4
 
-      # Инициализируем сабмодули MARS.Server (external/YoutubeExplode)
-      - name: Init MARS.Server submodules
-        run: git submodule update --init --recursive
-
-      # Монорепо — отдельно, для тестов, фронтенда и конфигов
       - name: Checkout monorepo
         uses: actions/checkout@v4
         with:
@@ -40,31 +36,14 @@ jobs:
           path: _monorepo
           token: ${{ secrets.MONOREPO_PAT }}
 
-      # Инициализируем только нужные сабмодули
-      - name: Init monorepo submodules
-        run: |
-          cd _monorepo
-          git config submodule.MARS.Projects/MARS.AudioController.url https://github.com/RXDCODX/MARS.AudioController.git
-          git submodule update --init MARS.Projects/MARS.AudioController
-          git submodule update --init MARS.Projects/mars.client
-
-      # Собираем структуру монорепо (Dockerfile ожидает MARS.Projects/MARS.Server/)
-      - name: Assemble project structure
+      - name: Assemble autotest structure
         run: |
           mkdir -p MARS.Projects/MARS.Server
           rsync -a --exclude='.git' --exclude='MARS.Projects' ./ MARS.Projects/MARS.Server/
           cp -r _monorepo/MARS.Projects/MARS.AutoTests MARS.Projects/MARS.AutoTests
-          cp -r _monorepo/MARS.Projects/mars.client MARS.Projects/mars.client
-          cp -r _monorepo/MARS.Projects/MARS.AudioController MARS.Projects/MARS.AudioController 2>/dev/null || true
           cp _monorepo/MARS.sln MARS.sln
           cp _monorepo/Directory.Packages.props Directory.Packages.props
           cp _monorepo/Directory.Build.props Directory.Build.props 2>/dev/null || true
-          cp _monorepo/.editorconfig .editorconfig 2>/dev/null || true
-          cp _monorepo/appsettings.Production.json appsettings.Production.json
-          cp _monorepo/appsettings.Staging.json appsettings.Staging.json 2>/dev/null || true
-          cp _monorepo/appsettings.json appsettings.json 2>/dev/null || true
-          # Docker Compose файл и SQL бэкапы для AutoTests
-          cp _monorepo/docker-compose.autotests.yml docker-compose.autotests.yml
           cp -r _monorepo/Sql_backup Sql_backup
 
       - name: Setup .NET
@@ -72,76 +51,128 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Enable yarn via corepack
-        run: corepack enable && corepack prepare yarn@4.14.1 --activate
+      # --- Находим ID последнего успешного билда ---
+      - name: Find latest build run ids
+        id: find-runs
+        run: |
+          if [ -n "${{ github.event.workflow_run.id }}" ]; then
+            echo "backend_run_id=${{ github.event.workflow_run.id }}" >> $GITHUB_OUTPUT
+            echo "frontend_run_id=${{ github.event.workflow_run.id }}" >> $GITHUB_OUTPUT
+          else
+            BACKEND_ID=$(gh api repos/${{ github.repository }}/actions/workflows/build-mars-server.yml/runs \
+              --jq '[.workflow_runs[] | select(.conclusion == "success")][0].id // empty' 2>/dev/null)
+            FRONTEND_ID=$(gh api repos/${{ github.repository }}/actions/workflows/build-frontend.yml/runs \
+              --jq '[.workflow_runs[] | select(.conclusion == "success")][0].id // empty' 2>/dev/null)
+            echo "backend_run_id=$BACKEND_ID" >> $GITHUB_OUTPUT
+            echo "frontend_run_id=$FRONTEND_ID" >> $GITHUB_OUTPUT
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      # --- Скачиваем артефакты от билдов ---
+      - name: Download backend artifact
+        uses: actions/download-artifact@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: "yarn"
-          cache-dependency-path: MARS.Projects/mars.client/yarn.lock
+          name: backend-publish
+          path: backend-publish/
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ steps.find-runs.outputs.backend_run_id }}
 
-      # --- Сборка фронтенда до Docker (экономия места) ---
-      - name: Install frontend dependencies
-        run: yarn install --frozen-lockfile
-        working-directory: MARS.Projects/mars.client
+      - name: Download frontend artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend-dist/
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ steps.find-runs.outputs.frontend_run_id }}
 
-      - name: Build frontend
-        run: yarn build
-        working-directory: MARS.Projects/mars.client
-
-      - name: Copy dist to server wwwroot
+      # --- PostgreSQL + SQL Restore + MARS.Server ---
+      - name: Start PostgreSQL
         run: |
-          cp -r MARS.Projects/mars.client/dist/* MARS.Projects/MARS.Server/wwwroot/
-          rm -rf MARS.Projects/mars.client/node_modules
-          rm -rf MARS.Projects/mars.client/.yarn/cache
+          docker run -d --name postgres \
+            -e POSTGRES_USER=postgres \
+            -e POSTGRES_PASSWORD=postgres \
+            -e POSTGRES_DB=prod \
+            -p 5432:5432 \
+            --health-cmd="pg_isready -U postgres" \
+            --health-interval=5s \
+            --health-timeout=3s \
+            --health-retries=10 \
+            postgres:16-alpine
 
-      # --- Docker Compose: postgres + db-restore + mars-server ---
-      - name: Free disk space
+      - name: Wait for PostgreSQL healthy
         run: |
-          docker system prune -af --volumes 2>/dev/null || true
-          sudo rm -rf /usr/local/lib/android /opt/ghc /usr/share/swift 2>/dev/null || true
-          sudo apt-get clean 2>/dev/null || true
-          df -h
+          for i in $(seq 1 30); do
+            if docker inspect --format='{{.State.Health.Status}}' postgres 2>/dev/null | grep -q healthy; then
+              echo "PostgreSQL is healthy"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "PostgreSQL did not become healthy"
+          docker logs postgres
+          exit 1
 
-      - name: Docker Compose up
-        run: docker compose -f docker-compose.autotests.yml build --no-cache && docker compose -f docker-compose.autotests.yml up -d
-
-      - name: Check db-restore status
-        if: always()
+      - name: Restore SQL backup
         run: |
-          docker compose -f docker-compose.autotests.yml logs db-restore
-          echo "---"
+          echo "=== Sql_backup contents ==="
           ls -la Sql_backup/ 2>/dev/null || echo "Sql_backup not found"
-          ls -la Sql_backup/*/ 2>/dev/null || echo "No subdirs"
+          ls -d Sql_backup/VS-snapshot_* 2>/dev/null || echo "No VS-snapshot dirs"
+          if [ -d "Sql_backup" ]; then
+            LATEST=$(ls -d Sql_backup/VS-snapshot_* 2>/dev/null | sort -r | head -1)
+            if [ -n "$LATEST" ]; then
+              SQL_FILE=$(find "$LATEST" -maxdepth 1 -name "*.sql" | head -1)
+              echo "Restoring: $SQL_FILE"
+              PGPASSWORD=postgres psql -h localhost -U postgres -d postgres -f "$SQL_FILE" --set ON_ERROR_STOP=off
+            else
+              echo "WARNING: No VS-snapshot_* directories found, skipping restore"
+            fi
+          else
+            echo "WARNING: Sql_backup directory not found, skipping restore"
+          fi
+
+      # --- Запуск MARS.Server ---
+      - name: Start MARS.Server
+        run: |
+          mkdir -p server-app/wwwroot
+          cp -r backend-publish/* server-app/
+          cp -r frontend-dist/* server-app/wwwroot/ 2>/dev/null || true
+          docker run -d --name mars-server \
+            --network host \
+            -e ASPNETCORE_ENVIRONMENT=Staging \
+            -e ASPNETCORE_URLS="http://+:9725" \
+            -e ASPNETCORE_CONTENTROOT=/app \
+            -e ASPNETCORE_WEBROOT=/app/wwwroot \
+            -e AppSettings__Telegram__BotConfiguration__BotToken="${{ secrets.TELEGRAM_STAGING_TOKEN }}" \
+            -e AppSettings__Telegram__AdminIdsArray__0="402763435" \
+            -v $(pwd)/server-app:/app \
+            mcr.microsoft.com/dotnet/aspnet:10.0 \
+            dotnet /app/MARS.Server.dll
 
       - name: Wait for server ready
         run: |
-          echo "Waiting for MARS.Server on port 9155..."
+          echo "Waiting for MARS.Server on port 9725..."
           for i in $(seq 1 120); do
-            if curl -sf http://localhost:9155/ > /dev/null 2>&1; then
+            if curl -sf http://localhost:9725/ > /dev/null 2>&1; then
               echo "Server is ready!"
               exit 0
             fi
             sleep 2
           done
           echo "Server did not start in time"
-          docker compose -f docker-compose.autotests.yml logs mars-server
+          docker logs mars-server
           exit 1
 
-      # --- Сборка тестов ---
-      - name: Restore .NET
+      # --- Сборка и запуск AutoTests ---
+      - name: Restore .NET (AutoTests)
         run: dotnet restore MARS.Projects/MARS.AutoTests/MARS.AutoTests.csproj -p:UseLocalYoutubeReExplode=false
 
-      - name: Build .NET
+      - name: Build .NET (AutoTests)
         run: dotnet build MARS.Projects/MARS.AutoTests/MARS.AutoTests.csproj --configuration Debug --no-restore -p:UseLocalYoutubeReExplode=false -p:TreatWarningsAsErrors=false
 
-      # --- Установка Playwright Chromium ---
       - name: Install Playwright Chromium
         run: pwsh MARS.Projects/MARS.AutoTests/bin/Debug/net10.0/playwright.ps1 install --with-deps chromium
 
-      # --- Запуск тестов ---
       - name: Run AutoTests
         run: |
           dotnet test MARS.Projects/MARS.AutoTests/MARS.AutoTests.csproj \
@@ -151,7 +182,7 @@ jobs:
             --logger "trx;LogFileName=mars-autotests.trx" \
             --results-directory TestResults
         env:
-          MARS_SERVER_URL: "http://localhost:9155"
+          MARS_SERVER_URL: "http://localhost:9725"
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
@@ -161,13 +192,7 @@ jobs:
           path: TestResults/
           retention-days: 30
 
-      - name: Docker Compose down
+      - name: Cleanup
         if: always()
-        run: docker compose -f docker-compose.autotests.yml down -v
-
-      - name: Notify Telegram on failure
-        if: failure()
         run: |
-          export BOT_TOKEN=$(jq -r '.AppSettings.Telegram.BotConfiguration.BotToken' appsettings.Production.json)
-          export ADMIN_ID=$(jq -r '.AppSettings.Telegram.AdminIdsArray[0]' appsettings.Production.json)
-          python3 MARS.Projects/MARS.Server/.github/notify-telegram.py "MARS.AutoTests CI" TestResults/mars-autotests.trx
+          docker rm -f mars-server postgres 2>/dev/null || true

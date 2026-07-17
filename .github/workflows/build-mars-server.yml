@@ -2,7 +2,7 @@ name: Build MARS.Server (server-only)
 
 on:
   push:
-    branches: [main, master, develop]
+    branches: [main, master, develop, feature/*]
   pull_request:
     branches: [main, master, develop]
 
@@ -47,5 +47,19 @@ jobs:
       - name: Build (skip frontend/publish targets)
         run: dotnet build MARS.Server.csproj -c Release --no-restore -p:HUSKY=0 -p:UseLocalYoutubeReExplode=false -p:TreatWarningsAsErrors=false
 
-      # Важно: не вызываем dotnet publish, чтобы не срабатывали BeforeTargets/AfterTargets "Publish"
-      # из csproj (они запускают yarn и сборку фронта). Нам нужна лишь проверка успешной сборки бэкенда.
+      - name: Publish (for autotests artifact)
+        run: |
+          dotnet publish MARS.Server.csproj \
+            -c Release \
+            -o publish-output \
+            -p:UseLocalYoutubeReExplode=false \
+            -p:RunTestsOnPublish=false \
+            -p:SkipHusky=true \
+            -p:SkipBuildClient=true
+
+      - name: Upload publish artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-publish
+          path: publish-output/
+          retention-days: 7

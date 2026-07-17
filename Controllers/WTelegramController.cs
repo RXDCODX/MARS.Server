@@ -71,4 +71,50 @@ public class WTelegramController(
             );
         }
     }
+
+    /// <summary>
+    /// Отправляет код верификации для авторизации WTelegram клиента
+    /// </summary>
+    /// <returns>Результат операции</returns>
+    [HttpPost("verification-code")]
+    public IActionResult SubmitVerificationCode(
+        [FromBody] VerificationCodeRequest request,
+        CancellationToken cancellationToken
+    )
+    {
+        try
+        {
+            logger.LogInformation("Получен запрос на отправку кода верификации");
+
+            var accepted = clientService.SubmitVerificationCode(request.Code);
+
+            if (!accepted)
+            {
+                return BadRequest(
+                    WTelegramOperationResult.CreateFailure(
+                        "Код верификации не ожидается в данный момент"
+                    )
+                );
+            }
+
+            var status = clientService
+                .GetClientStatusAsync(cancellationToken)
+                .GetAwaiter()
+                .GetResult();
+
+            return Ok(WTelegramOperationResult.CreateSuccess("Код верификации принят", status));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при отправке кода верификации");
+
+            return StatusCode(
+                500,
+                WTelegramOperationResult.CreateFailure(
+                    "Ошибка при отправке кода верификации",
+                    ex.Message
+                )
+            );
+        }
+    }
 }

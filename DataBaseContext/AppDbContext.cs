@@ -25,31 +25,10 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace MARS.Server.DataBaseContext;
 
-public sealed partial class AppDbContext : DbContext
+public partial class AppDbContext : DbContext
 {
-    private static readonly Lock Locker = new();
-    private static bool _isMigrated;
-
-    public AppDbContext(DbContextOptions<AppDbContext> options, bool isMigrations)
-        : base(options)
-    {
-        if (!_isMigrated && !isMigrations)
-        {
-            Locker.Enter();
-            try
-            {
-                if (!_isMigrated)
-                {
-                    Database.Migrate();
-                    _isMigrated = true;
-                }
-            }
-            finally
-            {
-                Locker.Exit();
-            }
-        }
-    }
+    public AppDbContext(DbContextOptions<AppDbContext> options)
+        : base(options) { }
 
     // Таблицы Twitch Users вынесены в TwitchUsersDbContext.cs
 

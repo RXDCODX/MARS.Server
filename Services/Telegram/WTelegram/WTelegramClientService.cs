@@ -41,6 +41,7 @@ public class WTelegramClientService : IDisposable
     private string? _pendingVerificationCode;
     private volatile bool _awaitingCode;
     private int _proxyConnectivityNotificationSent;
+    private readonly string _serverBaseUrl;
 
     private sealed class ProxyConfigurationInfo
     {
@@ -52,15 +53,31 @@ public class WTelegramClientService : IDisposable
         ILogger<WTelegramClientService> logger,
         IOptions<WTelegramClientConfiguration> configuration,
         ITelegramBotClient botClient,
-        IDbContextFactory<AppDbContext> dbContextFactory
+        IDbContextFactory<AppDbContext> dbContextFactory,
+        IConfiguration appConfiguration
     )
     {
         _logger = logger;
         _configuration = configuration.Value;
         _botClient = botClient;
         _dbContextFactory = dbContextFactory;
+        _serverBaseUrl = BuildServerBaseUrl(appConfiguration);
 
         Helpers.Log = (level, message) => _logger.Log((LogLevel)level, "{Message}", message);
+    }
+
+    private static string BuildServerBaseUrl(IConfiguration configuration)
+    {
+        var urls = configuration["urls"];
+        if (
+            !string.IsNullOrWhiteSpace(urls)
+            && Uri.TryCreate(urls.Replace("*", "localhost"), UriKind.Absolute, out var uri)
+        )
+        {
+            return $"{uri.Scheme}://{uri.Host}:{uri.Port}";
+        }
+
+        return "http://localhost:9255";
     }
 
     /// <summary>
@@ -68,53 +85,76 @@ public class WTelegramClientService : IDisposable
     /// </summary>
     public Task HandleUpdate(ITelegramBotClient _, Update? update)
     {
-        _logger.LogInformation("WTelegramClientService получил экземпляр ITelegramBotClient");
-
-        if (_awaitingCode && update?.Message?.Text is { } text)
-        {
-            _pendingVerificationCode = text;
-            _codeWaitHandle.Set();
-            _logger.LogInformation("Получен код верификации через бота");
-        }
-
         return Task.CompletedTask;
     }
 
     /// <summary>
     /// Получает статус авторизации WTelegram клиента
     /// </summary>
-    public async Task<WTelegramClientStatus> GetClientStatusAsync(
+    public Task<WTelegramClientStatus> GetClientStatusAsync(
         CancellationToken cancellationToken = default
     )
     {
         try
         {
-            if (_client?.User != null)
+            try
             {
-                return new WTelegramClientStatus
+                if (_client?.User != null)
                 {
-                    IsAuthenticated = true,
-                    UserId = _client.User.id,
-                    Username = _client.User.username,
-                    Phone = _client.User.phone,
-                };
+                    return Task.FromResult(
+                        new WTelegramClientStatus
+                        {
+                            IsAuthenticated = true,
+                            UserId = _client.User.id,
+                            Username = _client.User.username,
+                            Phone = _client.User.phone,
+                            IsAwaitingCode = _awaitingCode,
+                        }
+                    );
+                }
+
+                return Task.FromResult(
+                    new WTelegramClientStatus
+                    {
+                        IsAuthenticated = false,
+                        IsAwaitingCode = _awaitingCode,
+                    }
+                );
             }
-
-            var client = await GetClientAsync(cancellationToken);
-
-            return new WTelegramClientStatus
+            catch (Exception ex)
             {
-                IsAuthenticated = client.User != null,
-                UserId = client.User?.id,
-                Username = client.User?.username,
-                Phone = client.User?.phone,
-            };
+                _logger.LogError(ex, "Ошибка при получении статуса WTelegram");
+                return Task.FromResult(
+                    new WTelegramClientStatus
+                    {
+                        IsAuthenticated = false,
+                        ErrorMessage = ex.Message,
+                        IsAwaitingCode = _awaitingCode,
+                    }
+                );
+            }
         }
-        catch (Exception ex)
+        catch (Exception exception)
         {
-            _logger.LogError(ex, "Ошибка при получении статуса WTelegram");
-            return new WTelegramClientStatus { IsAuthenticated = false, ErrorMessage = ex.Message };
+            return Task.FromException<WTelegramClientStatus>(exception);
         }
+    }
+
+    /// <summary>
+    /// Подтверждает код верификации, полученный через веб-интерфейс
+    /// </summary>
+    public bool SubmitVerificationCode(string code)
+    {
+        if (!_awaitingCode)
+        {
+            _logger.LogWarning("Попытка отправить код верификации, когда он не ожидается");
+            return false;
+        }
+
+        _pendingVerificationCode = code;
+        _codeWaitHandle.Set();
+        _logger.LogInformation("Код верификации принят через веб-интерфейс");
+        return true;
     }
 
     /// <summary>
@@ -298,14 +338,9 @@ public class WTelegramClientService : IDisposable
         _pendingVerificationCode = null;
         _awaitingCode = true;
 
-        _logger.LogWarning("Требуется код верификации. Ожидание ввода через бота...");
+        _logger.LogWarning("Требуется код верификации. Ожидание ввода через веб-интерфейс...");
 
         NotifyVerificationCodeRequiredAsync().GetAwaiter().GetResult();
-
-        _botClient
-            ?.SendMessage(TelegramExstension.Rxdcodx, "Введите код верификации:")
-            .GetAwaiter()
-            .GetResult();
 
         _codeWaitHandle.Wait();
         _awaitingCode = false;
@@ -997,15 +1032,16 @@ public class WTelegramClientService : IDisposable
     {
         try
         {
+            var wtelegramUrl = $"{_serverBaseUrl}/wtelegram";
             var message = $"""
                 ⚠️ <b>WTelegram требует переавторизацию!</b>
 
                 <b>Причина:</b> {reason}
 
                 📝 <b>Что нужно сделать:</b>
-                1. Зайдите в консоль приложения
-                2. Введите код верификации, который придет в Telegram
-                3. Или используйте API: <code>POST /api/wtelegram/relogin</code>
+                1. Открыть <a href="{wtelegramUrl}">веб-панель WTelegram</a>
+                2. Ввести код верификации, который придет в Telegram
+                3. Нажать "Отправить"
 
                 <b>Статус можно проверить:</b>
                 <code>GET /api/wtelegram/status</code>
@@ -1072,13 +1108,14 @@ public class WTelegramClientService : IDisposable
     {
         try
         {
-            var message = """
+            var wtelegramUrl = $"{_serverBaseUrl}/wtelegram";
+            var message = $"""
                 🔐 <b>WTelegram ожидает код верификации!</b>
 
                 📱 <b>Действия:</b>
                 1. Проверить Telegram на предмет сообщения с кодом
-                2. Открыть консоль приложения
-                3. Ввести полученный код
+                2. Открыть <a href="{wtelegramUrl}">веб-панель WTelegram</a>
+                3. Ввести полученный код и нажать "Отправить"
 
                 ⏰ <b>Важно:</b> Процесс авторизации приостановлен до ввода кода.
                 """;
@@ -1110,6 +1147,7 @@ public class WTelegramClientService : IDisposable
     {
         try
         {
+            var wtelegramUrl = $"{_serverBaseUrl}/wtelegram";
             var message = $"""
                 ❌ <b>Ошибка авторизации WTelegram!</b>
 
@@ -1119,9 +1157,7 @@ public class WTelegramClientService : IDisposable
                 🔧 <b>Рекомендуется:</b>
                 1. Проверить настройки конфигурации
                 2. Убедиться в правильности AppId и ApiHash
-                3. Попробовать переавторизацию через API
-
-                <code>POST /api/wtelegram/relogin</code>
+                3. Попробовать <a href="{wtelegramUrl}">переавторизацию через веб-панель</a>
                 """;
 
             await _botClient.SendMessage(

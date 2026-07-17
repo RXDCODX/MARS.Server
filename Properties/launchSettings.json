@@ -54,6 +54,17 @@
       },
       "dotnetRunMessages": true,
       "applicationUrl": "http://*:9155"
+    },
+    "Staging": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "launchUrl": "",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Staging",
+        "ASPNETCORE_SPA_LAUNCH": "TRUE"
+      },
+      "dotnetRunMessages": true,
+      "applicationUrl": "http://*:9255;http://127.0.0.1:9255"
     }
   },
   "$schema": "https://json.schemastore.org/launchsettings.json"
