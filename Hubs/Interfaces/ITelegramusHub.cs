@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 using MARS.Server.Hubs.Models.AudioQuiz;
 using MARS.Server.Services.AutoArts_OBSOLETE.Entitys;
 using MARS.Server.Services.PyroAlerts.Entitys;
@@ -32,6 +29,14 @@ public interface ITelegramusHub
     [SignalRMethod]
     public Task AddNewWaifu(Waifu content, string displayName, string? color = null);
     public Task MergeWaifu(
+        Waifu content,
+        Husband husband,
+        string? avatar = null,
+        string? color = null
+    );
+
+    [SignalRMethod]
+    public Task ShowCurrentWife(
         Waifu content,
         Husband husband,
         string? avatar = null,

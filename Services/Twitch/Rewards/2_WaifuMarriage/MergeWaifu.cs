@@ -177,9 +177,9 @@ public class MergeWaifu(
                                 );
                             }
 
-                            var color = await api.Helix.Chat.GetUserChatColorAsync([
-                                twEvent.UserId,
-                            ]);
+                            var color = await api.Helix.Chat.GetUserChatColorAsync(
+                                [twEvent.UserId]
+                            );
 
                             // Используем аватарку из TwitchUser вместо отдельного запроса к API
                             await hubContext.Clients.All.MergeWaifu(
@@ -253,9 +253,7 @@ public class MergeWaifu(
                             );
                         }
 
-                        var color = await api.Helix.Chat.GetUserChatColorAsync([
-                            twEvent.UserId,
-                        ]);
+                        var color = await api.Helix.Chat.GetUserChatColorAsync([twEvent.UserId]);
 
                         // Отправляем событие на фронт — длительность брака считается на фронте
                         await hubContext.Clients.All.ShowCurrentWife(
