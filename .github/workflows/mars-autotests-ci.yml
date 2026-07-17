@@ -142,6 +142,7 @@ jobs:
             -e ASPNETCORE_ENVIRONMENT=Staging \
             -e ASPNETCORE_URLS="http://+:9725" \
             -e ASPNETCORE_CONTENTROOT=/app \
+            -e ASPNETCORE_WEBROOT=/app/wwwroot \
             -e AppSettings__Telegram__BotConfiguration__BotToken="${{ secrets.TELEGRAM_STAGING_TOKEN }}" \
             -e AppSettings__Telegram__AdminIdsArray__0="402763435" \
             -v $(pwd)/server-app:/app \
