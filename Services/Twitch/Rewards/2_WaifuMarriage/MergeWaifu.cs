@@ -232,104 +232,46 @@ public class MergeWaifu(
 
                     if (waifu is { IsPrivated: true })
                     {
-                        var spanaa = DateTime.Now - host.WhenPrivated;
-
-                        if (spanaa.HasValue)
+                        // Убеждаемся, что изображение и поля заполнены
+                        if (string.IsNullOrWhiteSpace(waifu.ImageUrl))
                         {
-                            var span = spanaa.Value;
-                            var template9 = GetTimeSpanText(span, waifu);
-                            var message9 = AnswersForTwitchRewards.ReplaceKeywordsInAnswer(
-                                twEvent.UserName,
-                                template9
-                            );
-                            await client.SendMessageToMainTwitchAsync(message9, logger);
-                            return;
-
-                            static string GetTimeSpanText(TimeSpan span, Waifu waifu)
-                            {
-                                var totalDays = span.Days;
-
-                                // Рассчитываем годы, месяцы, недели и оставшиеся дни
-                                var years = totalDays / 365;
-                                var remainingDays = totalDays % 365;
-
-                                var months = remainingDays / 30;
-                                remainingDays %= 30;
-
-                                var weeks = remainingDays / 7;
-                                remainingDays %= 7;
-
-                                // Формируем строки только для ненулевых значений
-                                var yearsText =
-                                    years > 0
-                                        ? $"{years} {GetCorrectForm(years, "год", "года", "лет")}"
-                                        : null;
-                                var monthsText =
-                                    months > 0
-                                        ? $"{months} {GetCorrectForm(months, "месяц", "месяца", "месяцев")}"
-                                        : null;
-                                var weeksText =
-                                    weeks > 0
-                                        ? $"{weeks} {GetCorrectForm(weeks, "неделя", "недели", "недель")}"
-                                        : null;
-                                var daysText =
-                                    remainingDays > 0
-                                        ? $"{remainingDays} {GetCorrectForm(remainingDays, "день", "дня", "дней")}"
-                                        : null;
-
-                                var hours =
-                                    span.Hours > 0
-                                        ? $"{span.Hours} {GetCorrectForm(span.Hours, "час", "часа", "часов")}"
-                                        : null;
-                                var minutes =
-                                    span.Minutes > 0
-                                        ? $"{span.Minutes} {GetCorrectForm(span.Minutes, "минута", "минуты", "минут")}"
-                                        : null;
-                                var seconds =
-                                    span.Seconds > 0
-                                        ? $"{span.Seconds} {GetCorrectForm(span.Seconds, "секунда", "секунды", "секунд")}"
-                                        : null;
-
-                                // Собираем все части в одну строку, пропуская null
-                                var parts = new[]
-                                {
-                                    yearsText,
-                                    monthsText,
-                                    weeksText,
-                                    daysText,
-                                    hours,
-                                    minutes,
-                                    seconds,
-                                }
-                                    .Where(part => !string.IsNullOrEmpty(part))
-                                    .ToArray();
-
-                                var charName = waifu.Name;
-                                var title = !string.IsNullOrWhiteSpace(waifu.Anime)
-                                    ? " из аниме " + waifu.Anime
-                                    : " из манги " + waifu.Manga;
-                                var charText = charName + title;
-
-                                return $@"{{user}}, ты в браке с {charText} уже {string.Join(", ", parts)}!";
-                            }
-
-                            // Вспомогательная функция для склонения слов
-                            static string GetCorrectForm(
-                                int number,
-                                string form1,
-                                string form2,
-                                string form5
-                            )
-                            {
-                                number = Math.Abs(number) % 100;
-                                var remainder = number % 10;
-
-                                return number is > 10 and < 20 ? form5
-                                    : remainder is > 1 and < 5 ? form2
-                                    : remainder == 1 ? form1
-                                    : form5;
-                            }
+                            waifu = await waifuDbHelper.EnsureWaifuHaveImageIrl(waifu);
                         }
+
+                        waifu = await waifuDbHelper.EnsureMangaAndAnimeTitleExists(waifu);
+
+                        dbContext.Waifus.Update(waifu);
+                        await dbContext.SaveChangesAsync(_cancellationToken);
+
+                        waifu.ImageUrl = options.Value.ShikimoriSite + waifu.ImageUrl;
+
+                        // Проверяем что TwitchUser загружен
+                        if (host.TwitchUser == null)
+                        {
+                            throw new InvalidOperationException(
+                                $"TwitchUser не найден для Husband {twEvent.UserId}"
+                            );
+                        }
+
+                        var color = await api.Helix.Chat.GetUserChatColorAsync([
+                            twEvent.UserId,
+                        ]);
+
+                        // Отправляем событие на фронт — длительность брака считается на фронте
+                        await hubContext.Clients.All.ShowCurrentWife(
+                            waifu,
+                            host,
+                            host.TwitchUser.ProfileImageUrl,
+                            color.Data[0]?.Color
+                        );
+
+                        var tempLate = "@{user}, ты уже в браке!";
+                        var message9 = AnswersForTwitchRewards.ReplaceKeywordsInAnswer(
+                            twEvent.UserName,
+                            tempLate
+                        );
+                        await client.SendMessageToMainTwitchAsync(message9, logger);
+                        return;
                     }
 
                     var tempLate2 = "@{user}, ты уже помолвен(-а), сорян!";
