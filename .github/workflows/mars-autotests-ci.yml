@@ -52,15 +52,19 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       # --- Находим ID последнего успешного билда ---
-      - name: Find latest build run id
-        id: find-run
+      - name: Find latest build run ids
+        id: find-runs
         run: |
           if [ -n "${{ github.event.workflow_run.id }}" ]; then
-            echo "run_id=${{ github.event.workflow_run.id }}" >> $GITHUB_OUTPUT
+            echo "backend_run_id=${{ github.event.workflow_run.id }}" >> $GITHUB_OUTPUT
+            echo "frontend_run_id=${{ github.event.workflow_run.id }}" >> $GITHUB_OUTPUT
           else
-            RUN_ID=$(gh api repos/${{ github.repository }}/actions/workflows/mars-tests-ci.yml/runs \
+            BACKEND_ID=$(gh api repos/${{ github.repository }}/actions/workflows/build-mars-server.yml/runs \
               --jq '[.workflow_runs[] | select(.conclusion == "success")][0].id // empty' 2>/dev/null)
-            echo "run_id=$RUN_ID" >> $GITHUB_OUTPUT
+            FRONTEND_ID=$(gh api repos/${{ github.repository }}/actions/workflows/build-frontend.yml/runs \
+              --jq '[.workflow_runs[] | select(.conclusion == "success")][0].id // empty' 2>/dev/null)
+            echo "backend_run_id=$BACKEND_ID" >> $GITHUB_OUTPUT
+            echo "frontend_run_id=$FRONTEND_ID" >> $GITHUB_OUTPUT
           fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -72,7 +76,7 @@ jobs:
           name: backend-publish
           path: backend-publish/
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: ${{ steps.find-run.outputs.run_id }}
+          run-id: ${{ steps.find-runs.outputs.backend_run_id }}
 
       - name: Download frontend artifact
         uses: actions/download-artifact@v4
@@ -80,7 +84,7 @@ jobs:
           name: frontend-dist
           path: frontend-dist/
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: ${{ steps.find-run.outputs.run_id }}
+          run-id: ${{ steps.find-runs.outputs.frontend_run_id }}
 
       # --- Собираем сервер с фронтендом в wwwroot ---
       - name: Assemble server with frontend
