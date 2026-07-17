@@ -26,39 +26,10 @@ using Npgsql;
 
 namespace MARS.Server.DataBaseContext;
 
-public sealed partial class AppDbContext : DbContext
+public partial class AppDbContext : DbContext
 {
-    private static readonly Lock Locker = new();
-    private static bool _isMigrated;
-
-    public AppDbContext(DbContextOptions<AppDbContext> options, bool isMigrations)
-        : base(options)
-    {
-        if (!_isMigrated && !isMigrations)
-        {
-            Locker.Enter();
-            try
-            {
-                if (!_isMigrated)
-                {
-                    try
-                    {
-                        Database.Migrate();
-                    }
-                    catch (Npgsql.PostgresException ex) when (ex.SqlState == "42P07")
-                    {
-                        // Таблица уже существует — миграция не нужна (БД восстановлена из бэкапа)
-                    }
-
-                    _isMigrated = true;
-                }
-            }
-            finally
-            {
-                Locker.Exit();
-            }
-        }
-    }
+    public AppDbContext(DbContextOptions<AppDbContext> options)
+        : base(options) { }
 
     // Таблицы Twitch Users вынесены в TwitchUsersDbContext.cs
 
