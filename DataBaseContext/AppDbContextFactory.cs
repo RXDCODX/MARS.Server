@@ -9,7 +9,7 @@ namespace MARS.Server.DataBaseContext;
 
 public class AppDbContextFactory
     : IDbContextFactory<AppDbContext>,
-        IDesignTimeDbContextFactory<AppDbContext>
+        IDesignTimeDbContextFactory<MigrationsDbContext>
 {
     private readonly DbContextOptions<AppDbContext>? _options;
 
@@ -33,10 +33,33 @@ public class AppDbContextFactory
         return GetDbContext(isMigrations: false);
     }
 
-    // Реализация IDesignTimeDbContextFactory<AppDbContext>
-    public AppDbContext CreateDbContext(string[] args)
+    // Реализация IDesignTimeDbContextFactory<MigrationsDbContext>
+    MigrationsDbContext IDesignTimeDbContextFactory<MigrationsDbContext>.CreateDbContext(
+        string[] args
+    )
     {
-        return GetDbContext(isMigrations: true);
+        var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
+
+        var configuration = new ConfigurationBuilder()
+            .SetBasePath(Directory.GetCurrentDirectory())
+            .AddJsonFile("appsettings.json")
+            .AddJsonFile("appsettings.Development.json", optional: true)
+            .Build();
+
+        var connectionString = configuration.GetConnectionString("Dev_Path");
+
+        optionsBuilder.UseNpgsql(connectionString);
+        optionsBuilder.UseQueryTrackingBehavior(QueryTrackingBehavior.TrackAll);
+        optionsBuilder.EnableThreadSafetyChecks();
+
+        var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+        if (environment == Environments.Development)
+        {
+            optionsBuilder.EnableDetailedErrors();
+            optionsBuilder.EnableSensitiveDataLogging();
+        }
+
+        return new MigrationsDbContext(optionsBuilder.Options);
     }
 
     private AppDbContext GetDbContext(bool isMigrations)

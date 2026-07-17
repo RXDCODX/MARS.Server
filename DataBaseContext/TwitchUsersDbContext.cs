@@ -1,4 +1,4 @@
-﻿using MARS.Server.Services.CinemaQueue.Entitys;
+using MARS.Server.Services.CinemaQueue.Entitys;
 using MARS.Server.Services.SoundRequest.Entities;
 using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.HelloVideos.Entitys;
@@ -13,7 +13,7 @@ namespace MARS.Server.DataBaseContext;
 /// <summary>
 /// Контекст базы данных для таблиц, связанных с пользователями Twitch
 /// </summary>
-public sealed partial class AppDbContext
+public partial class AppDbContext
 {
     // Основная таблица пользователей Twitch
     public DbSet<TwitchUser> TwitchUsers { get; set; } = null!;
