@@ -1,10 +1,5 @@
-using System;
-using System.IO;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Hosting;
-using Npgsql;
 
 namespace MARS.Server.DataBaseContext;
 
@@ -44,17 +39,6 @@ public class AppDbContextFactory
         string[] args
     )
     {
-        return GetDbContext(isMigrations: true);
-    }
-
-    private AppDbContext GetDbContext(bool isMigrations)
-    {
-        if (_options != null)
-        {
-            // Используем предварительно настроенные опции (фабрика создана через DI)
-            return new AppDbContext(_options, isMigrations);
-        }
-
         // Настройка вручную (для design-time миграций)
         var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
 
