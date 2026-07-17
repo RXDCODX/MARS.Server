@@ -45,9 +45,10 @@ public sealed partial class AppDbContext : DbContext
                     {
                         Database.Migrate();
                     }
-                    catch (Npgsql.PostgresException ex) when (ex.SqlState == "42P07")
+                    catch (Npgsql.PostgresException)
                     {
-                        // Таблица уже существует — миграция не нужна (БД восстановлена из бэкапа)
+                        // Миграция не полностью применилась (БД восстановлена из бэкапа со старой схемой)
+                        // Сервер продолжит работу, недостающие таблицы вызовут ошибки при запросах
                     }
 
                     _isMigrated = true;

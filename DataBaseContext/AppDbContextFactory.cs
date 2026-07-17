@@ -12,18 +12,13 @@ public class AppDbContextFactory
         IDesignTimeDbContextFactory<AppDbContext>
 {
     private readonly DbContextOptions<AppDbContext>? _options;
-    private readonly bool _skipMigrations;
 
     // Конструктор для обычного использования (с DI)
-    public AppDbContextFactory(
-        Action<DbContextOptionsBuilder<AppDbContext>> optionsAction,
-        bool skipMigrations = false
-    )
+    public AppDbContextFactory(Action<DbContextOptionsBuilder<AppDbContext>> optionsAction)
     {
         var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
         optionsAction.Invoke(optionsBuilder);
         _options = optionsBuilder.Options;
-        _skipMigrations = skipMigrations;
     }
 
     // Конструктор для миграций (без DI)
@@ -35,7 +30,7 @@ public class AppDbContextFactory
     // Реализация IDbContextFactory<AppDbContext>
     public AppDbContext CreateDbContext()
     {
-        return GetDbContext(isMigrations: _skipMigrations);
+        return GetDbContext(isMigrations: false);
     }
 
     // Реализация IDesignTimeDbContextFactory<AppDbContext>
@@ -48,7 +43,6 @@ public class AppDbContextFactory
     {
         if (_options != null)
         {
-            // Используем предварительно настроенные опции (фабрика создана через DI)
             return new AppDbContext(_options, isMigrations);
         }
 
