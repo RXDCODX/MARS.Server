@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using MARS.Server.DataBaseContext;
@@ -172,7 +172,7 @@ public class TokenService(
         catch (Exception e)
         {
             logger.LogException(e);
-            result = Token;
+            result = _tokenInfo;
         }
 
         return result;
