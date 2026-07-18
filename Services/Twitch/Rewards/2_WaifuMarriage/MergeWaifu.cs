@@ -13,6 +13,7 @@ using MARS.Server.Services.Twitch.Management.Entitys;
 using MARS.Server.Services.Twitch.Validation;
 using MARS.Server.Services.WaifuRoll;
 using MARS.Server.Services.WaifuRoll.Entitys;
+using MARS.Server.Services.WaifuRoll.Exceptions;
 using MARS.Server.Services.WaifuRoll.helpers;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
@@ -163,10 +164,10 @@ public class MergeWaifu(
                             // Убеждаемся, что поля аниме и манги заполнены
                             waifu = await waifuDbHelper.EnsureMangaAndAnimeTitleExists(waifu);
 
+                            waifu.IsMerged = true;
                             dbContext.Waifus.Update(waifu);
                             await dbContext.SaveChangesAsync(_cancellationToken);
 
-                            waifu.IsMerged = true;
                             waifu.ImageUrl = options.Value.ShikimoriSite + waifu.ImageUrl;
 
                             // Проверяем что TwitchUser загружен
@@ -177,16 +178,14 @@ public class MergeWaifu(
                                 );
                             }
 
-                            var color = await api.Helix.Chat.GetUserChatColorAsync(
-                                [twEvent.UserId]
-                            );
+                            var color = host.TwitchUser.ChatColor;
 
                             // Используем аватарку из TwitchUser вместо отдельного запроса к API
                             await hubContext.Clients.All.MergeWaifu(
                                 waifu,
                                 host,
                                 host.TwitchUser.ProfileImageUrl,
-                                color.Data[0]?.Color
+                                color
                             );
 
                             if (tokenService.Token != null)
@@ -203,7 +202,7 @@ public class MergeWaifu(
                             return;
                         }
                     }
-                    else if (waifu is { IsPrivated: false })
+                    else if (waifu is { IsPrivated: true })
                     {
                         var tempLate3 = "@{user}, твоя любовь уже занята :-(";
                         var message = AnswersForTwitchRewards.ReplaceKeywordsInAnswer(
@@ -228,7 +227,10 @@ public class MergeWaifu(
                 }
                 else
                 {
-                    var waifu = await dbContext.Waifus.FindAsync(host.WaifuBrideId);
+                    var waifu = await dbContext.Waifus.FindAsync(
+                        [host.WaifuBrideId],
+                        _cancellationToken
+                    );
 
                     if (waifu is { IsPrivated: true })
                     {
@@ -253,32 +255,21 @@ public class MergeWaifu(
                             );
                         }
 
-                        var color = await api.Helix.Chat.GetUserChatColorAsync([twEvent.UserId]);
+                        var color = host.TwitchUser.ChatColor;
 
                         // Отправляем событие на фронт — длительность брака считается на фронте
                         await hubContext.Clients.All.ShowCurrentWife(
                             waifu,
                             host,
                             host.TwitchUser.ProfileImageUrl,
-                            color.Data[0]?.Color
+                            color
                         );
-
-                        var tempLate = "@{user}, ты уже в браке!";
-                        var message9 = AnswersForTwitchRewards.ReplaceKeywordsInAnswer(
-                            twEvent.UserName,
-                            tempLate
-                        );
-                        await client.SendMessageToMainTwitchAsync(message9, logger);
                         return;
                     }
 
-                    var tempLate2 = "@{user}, ты уже помолвен(-а), сорян!";
-                    var message = AnswersForTwitchRewards.ReplaceKeywordsInAnswer(
-                        twEvent.UserName,
-                        tempLate2
+                    throw new WaifuMergeException(
+                        "Неправильный айдишник у женатого мужика: " + host.TwitchId
                     );
-                    await client.SendMessageToMainTwitchAsync(message, logger);
-                    return;
                 }
             }
 
@@ -302,7 +293,6 @@ public class MergeWaifu(
                 tempLate4
             );
             await client.SendMessageToMainTwitchAsync(message3, logger);
-            return;
         }
         finally
         {

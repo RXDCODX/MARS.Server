@@ -177,7 +177,7 @@ public class WaifuRollGuaranteeService(
                     rollCountResponse
                 );
             }
-            catch (Exception ex)
+            catch (System.Exception ex)
             {
                 logger.LogError(
                     ex,
@@ -327,7 +327,7 @@ public class WaifuRollGuaranteeService(
                     result = OperationResult<bool>.Bad("Пользователь не найден в системе гарантов");
                 }
             }
-            catch (Exception ex)
+            catch (System.Exception ex)
             {
                 logger.LogError(
                     ex,
