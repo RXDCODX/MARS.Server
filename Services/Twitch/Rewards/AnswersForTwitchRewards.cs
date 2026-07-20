@@ -80,4 +80,12 @@ public class AnswersForTwitchRewards
 
         return message;
     }
+
+    public static string FormatCooldownTime(TimeSpan remaining)
+    {
+        var clamped = remaining > TimeSpan.Zero ? remaining : TimeSpan.Zero;
+        var totalMinutes = (int)clamped.TotalMinutes;
+
+        return totalMinutes.ToString();
+    }
 }

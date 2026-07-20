@@ -1,6 +1,5 @@
 using System;
 using System.Drawing;
-using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
 using MARS.Server.DataBaseContext;
@@ -47,11 +46,11 @@ public class SearchWife_TwitchReward(
 
     protected override bool IsRewardActive => IsRewardEnabled();
 
-    public override Func<bool> IsRewardEnabled { get; set; } =
-        () =>
-            DateTime.Now.DayOfWeek != DayOfWeek.Friday
-            && DateTime.Now.DayOfWeek != DayOfWeek.Wednesday
-            && DateTime.Now.DayOfWeek != DayOfWeek.Monday;
+    public override Func<bool> IsRewardEnabled { get; set; } = () => true;
+
+    //DateTime.Now.DayOfWeek != DayOfWeek.Friday
+    //&& DateTime.Now.DayOfWeek != DayOfWeek.Wednesday
+    //&& DateTime.Now.DayOfWeek != DayOfWeek.Monday;
 
     public override async Task StartAsync(CancellationToken cancellationToken)
     {
@@ -139,10 +138,9 @@ public class SearchWife_TwitchReward(
                         DateTime notNullTime = time.Value;
                         var cooldown = await waifuRollService.GetWaifuRollCoolDownAsync();
                         TimeSpan wasteTime = notNullTime.Add(cooldown) - DateTime.Now;
+                        var cooldownText = AnswersForTwitchRewards.FormatCooldownTime(wasteTime);
 
-                        var culture = CultureInfo.GetCultureInfo("ru-RU");
-                        var message =
-                            $"@{{user}}, Кулдаун ({(wasteTime.Hours != 0 ? wasteTime.Hours.ToString(culture) + ":" : null)}{wasteTime.Minutes.ToString(culture)}:{wasteTime.Seconds.ToString(culture)})!";
+                        var message = $"@{{user}}, кулдаун! Подожди ещё {cooldownText} мин.";
                         message = AnswersForTwitchRewards.ReplaceKeywordsInAnswer(
                             twEvent.UserName,
                             message,
