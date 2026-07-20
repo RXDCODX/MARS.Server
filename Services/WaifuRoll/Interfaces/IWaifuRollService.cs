@@ -10,11 +10,15 @@ public interface IWaifuRollService
     /// <summary>
     /// Ролл вайфу для пользователя
     /// </summary>
-    /// <param name="id">Twitch ID пользователя</param>
+    /// <param name="twitchUserId">Twitch ID пользователя</param>
     /// <param name="displayName">Отображаемое имя</param>
     /// <param name="forcePass">Принудительный пропуск кулдауна</param>
     /// <returns>Выпавшая вайфу или null</returns>
-    Task<Waifu?> RollTheWaifu(string id, string? displayName = null, bool forcePass = false);
+    Task<Waifu?> RollTheWaifu(
+        string twitchUserId,
+        string? displayName = null,
+        bool forcePass = false
+    );
 
     /// <summary>
     /// Ролл вайфу через Telegram

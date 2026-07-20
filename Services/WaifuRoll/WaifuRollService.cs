@@ -30,7 +30,8 @@ public class WaifuRollService(
     WaifuRollEnsurenceService waifuDbHelper,
     TwitchUserEnsureService twitchUserEnsureService,
     WeddingAnniversaryService anniversaryService,
-    ILogger<WaifuRollService> logger
+    ILogger<WaifuRollService> logger,
+    IHostEnvironment environment
 ) : BackgroundService, IWaifuRollService
 {
     /// <summary>
@@ -98,16 +99,16 @@ public class WaifuRollService(
     }
 
     public async Task<Waifu?> RollTheWaifu(
-        string id,
+        string twitchUserId,
         string? displayName = null,
         bool forcePass = false
     )
     {
         Waifu? result = null;
 
-        if (!string.IsNullOrWhiteSpace(id))
+        if (!string.IsNullOrWhiteSpace(twitchUserId))
         {
-            var semaphore = GetOrCreateSemaphore(id);
+            var semaphore = GetOrCreateSemaphore(twitchUserId);
             await semaphore.WaitAsync();
 
             try
@@ -117,7 +118,7 @@ public class WaifuRollService(
                 await using AppDbContext dbContext = await factory.CreateDbContextAsync();
                 var host = dbContext
                     .Husbands.Include(e => e.HusbandCoolDown)
-                    .FirstOrDefault(e => e.TwitchId == id);
+                    .FirstOrDefault(e => e.TwitchId == twitchUserId);
                 var cd = host?.HusbandCoolDown;
                 if (host != null)
                 {
@@ -125,7 +126,7 @@ public class WaifuRollService(
                     {
                         if (cd.HusbandId == host.TwitchId)
                         {
-                            var now = DateTime.UtcNow;
+                            var now = DateTime.Now;
                             var cdTime = cd.Time;
 
                             var cdFromEnv = await GetWaifuRollCoolDownAsync();
@@ -139,7 +140,7 @@ public class WaifuRollService(
                         else
                         {
                             cd.HusbandId = host.TwitchId;
-                            cd.Time = DateTime.UtcNow;
+                            cd.Time = DateTime.Now;
 
                             dbContext.HusbandCoolDowns.Update(cd);
                             pass = true;
@@ -147,7 +148,7 @@ public class WaifuRollService(
                     }
                     else
                     {
-                        cd = new HusbandCoolDown { HusbandId = id };
+                        cd = new HusbandCoolDown { HusbandId = twitchUserId };
                         host.HusbandCoolDown = cd;
 
                         dbContext.HusbandCoolDowns.Add(cd);
@@ -158,17 +159,14 @@ public class WaifuRollService(
                 else
                 {
                     // Гарантируем наличие пользователя в TwitchUsers перед созданием Husband
-                    if (twitchUserEnsureService is not null)
-                    {
-                        await twitchUserEnsureService.EnsureUserExistsAsync(id);
-                    }
+                    await twitchUserEnsureService.EnsureUserExistsAsync(twitchUserId);
 
-                    cd = new HusbandCoolDown { HusbandId = id };
+                    cd = new HusbandCoolDown { HusbandId = twitchUserId };
 
                     host = new Husband
                     {
-                        TwitchId = id,
-                        HusbandGreetings = new HusbandAutoHello { HusbandId = id },
+                        TwitchId = twitchUserId,
+                        HusbandGreetings = new HusbandAutoHello { HusbandId = twitchUserId },
                         HusbandCoolDown = cd,
                     };
 
@@ -179,7 +177,7 @@ public class WaifuRollService(
 
                 await dbContext.SaveChangesAsync();
 
-                if (id == TwitchExstension.ChannelId || forcePass)
+                if (twitchUserId == TwitchExstension.ChannelId || forcePass)
                 {
                     pass = true;
                 }
@@ -196,12 +194,12 @@ public class WaifuRollService(
                     if (waifu != null)
                     {
                         host.WaifuRollId = waifu.ShikiId;
-                        host.WhenOrdered = DateTime.UtcNow;
+                        host.WhenOrdered = DateTime.Now;
 
                         var shouldIncrementGuarantee =
                             !forcePass
                             && !string.Equals(
-                                id,
+                                twitchUserId,
                                 TwitchExstension.ChannelId,
                                 StringComparison.OrdinalIgnoreCase
                             );
@@ -222,9 +220,9 @@ public class WaifuRollService(
                             HusbandId = host.TwitchId,
                         };
 
-                        host.HusbandCoolDown.Time = DateTime.UtcNow;
+                        host.HusbandCoolDown.Time = DateTime.Now;
 
-                        waifu.LastOrder = DateTime.UtcNow;
+                        waifu.LastOrder = DateTime.Now;
 
                         if (string.IsNullOrWhiteSpace(waifu.ImageUrl))
                         {
@@ -235,7 +233,7 @@ public class WaifuRollService(
                         waifu = await waifuDbHelper.EnsureMangaAndAnimeTitleExists(waifu);
                         dbContext.Waifus.Update(waifu);
 
-                        cd.Time = DateTime.UtcNow;
+                        cd.Time = DateTime.Now;
                         await dbContext.SaveChangesAsync();
 
                         waifu.ImageUrl = options.Value.ShikimoriSite + waifu.ImageUrl;
@@ -250,7 +248,7 @@ public class WaifuRollService(
             }
             finally
             {
-                ReleaseSemaphore(id, semaphore);
+                ReleaseSemaphore(twitchUserId, semaphore);
             }
         }
 
@@ -362,8 +360,8 @@ public class WaifuRollService(
                         ShikiId = character.Id.ToString(),
                         Name = character.Name ?? character.Russian ?? "Unknown",
                         ImageUrl = character.Image?.Original ?? string.Empty,
-                        WhenAdded = DateTime.UtcNow,
-                        LastOrder = DateTime.UtcNow,
+                        WhenAdded = DateTime.Now,
+                        LastOrder = DateTime.Now,
                         OrderCount = 0,
                         IsPrivated = false,
                         Manga = character.Mangas.MinBy(e => e.Russian.Length)?.Russian,
@@ -415,7 +413,7 @@ public class WaifuRollService(
                 waifu.IsPrivated = true;
                 host.IsPrivated = true;
                 host.WaifuBrideId = waifu.ShikiId;
-                host.WhenPrivated = DateTime.UtcNow;
+                host.WhenPrivated = DateTime.Now;
             }
             else
             {
@@ -462,11 +460,11 @@ public class WaifuRollService(
                         greet = new HusbandAutoHello()
                         {
                             HusbandId = host.TwitchId,
-                            Time = DateTime.UtcNow,
+                            Time = DateTime.Now,
                         };
                         isChecked = true;
                     }
-                    else if (greet.Time <= DateTime.UtcNow.AddHours(-20))
+                    else if (greet.Time <= DateTime.Now.AddHours(-20))
                     {
                         isChecked = true;
                     }
@@ -492,7 +490,7 @@ public class WaifuRollService(
                                 );
 
                             // Обновляем время последнего приветствия
-                            greet!.Time = DateTime.UtcNow;
+                            greet!.Time = DateTime.Now;
 
                             if (isNewGreeting)
                             {
@@ -517,7 +515,7 @@ public class WaifuRollService(
                             var helloMsg = await GetHelloText();
                             var fixedmsg = await ConvertFixLinksInHelloMessages(helloMsg);
 
-                            greet!.Time = DateTime.UtcNow;
+                            greet!.Time = DateTime.Now;
 
                             if (isNewGreeting)
                             {
