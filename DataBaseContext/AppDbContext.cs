@@ -2,6 +2,7 @@ using System;
 using System.Globalization;
 using MARS.Server.ApplicationState;
 using MARS.Server.Services._365Genius.Entitys;
+using MARS.Server.Services.DanbooruAutoPost.Entities;
 using MARS.Server.Services.EnvironmentVariable.Entitys;
 using MARS.Server.Services.PyroAlerts.Entitys;
 using MARS.Server.Services.Scoreboard.Entitys;
@@ -73,6 +74,7 @@ public partial class AppDbContext : DbContext
     public DbSet<TelegramDiscordChannelBinding> TelegramDiscordChannelBindings { get; set; } =
         null!;
     public DbSet<TelegramDiscordChannelState> TelegramDiscordChannelStates { get; set; } = null!;
+    public DbSet<DanbooruAutoPostConfig> DanbooruAutoPostConfigs { get; set; } = null!;
 
     /// <summary>
     /// Partial метод для конфигурации таблиц, связанных с TwitchUser (реализован в TwitchUsersDbContext.cs)
@@ -366,6 +368,11 @@ public partial class AppDbContext : DbContext
             .HasConversion(new NumberToStringConverter<ulong>());
 
         modelBuilder.Entity<TelegramDiscordChannelState>().HasKey(e => e.TelegramChannelId);
+
+        modelBuilder
+            .Entity<DanbooruAutoPostConfig>()
+            .Property(e => e.DiscordChannelId)
+            .HasConversion(new NumberToStringConverter<ulong>());
 
         // Конфигурация для EnvironmentVariable
         modelBuilder.Entity<EnvironmentVariable>().HasIndex(e => e.Key).IsUnique();

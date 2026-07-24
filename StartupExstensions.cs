@@ -7,6 +7,7 @@ using MARS.Server.Hubs.Filters;
 using MARS.Server.Hubs.Interfaces;
 using MARS.Server.Migrations;
 using MARS.Server.Services._365Genius;
+using MARS.Server.Services.DanbooruAutoPost;
 using MARS.Server.Services.Discord.Gateway;
 using MARS.Server.Services.Discord.PlayRequest;
 using MARS.Server.Services.Obs;
@@ -620,6 +621,11 @@ public static class StartupEstensions
         internal IServiceCollection AddBooruServices()
         {
             services.AddSingleton<DanbooruRandomPostService>();
+            services.AddSingleton<DanbooruAutoPostService>();
+            services.AddSingleton<IDanbooruAutoPostService>(sp =>
+                sp.GetRequiredService<DanbooruAutoPostService>()
+            );
+            services.AddHostedService(sp => sp.GetRequiredService<DanbooruAutoPostService>());
 
             return services;
         }

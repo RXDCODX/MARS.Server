@@ -1,0 +1,24 @@
+using System;
+using System.ComponentModel.DataAnnotations;
+
+namespace MARS.Server.Services.DanbooruAutoPost.Entities;
+
+public class DanbooruAutoPostConfig
+{
+    [Key]
+    public Guid Id { get; set; } = Guid.NewGuid();
+
+    public ulong DiscordChannelId { get; set; }
+
+    public string Tags { get; set; } = "";
+
+    public string CronExpression { get; set; } = "";
+
+    public bool IsEnabled { get; set; } = true;
+
+    public DateTime? LastExecutedAtUtc { get; set; }
+
+    public DateTime CreatedAtUtc { get; set; } = DateTime.Now;
+
+    public DateTime UpdatedAtUtc { get; set; } = DateTime.Now;
+}

@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using DSharpPlus;
+using DSharpPlus.Entities;
 using DSharpPlus.EventArgs;
 using DSharpPlus.VoiceNext;
 using Microsoft.Extensions.Hosting;
@@ -138,6 +140,15 @@ public class DiscordGatewayService(
                     result = OperationResult.Bad("Не удалось инициализировать Discord клиент");
                 }
             }
+            catch (DSharpPlus.Exceptions.NotFoundException ex)
+            {
+                logger.LogError(
+                    ex,
+                    "Discord канал {ChannelId} не найден (удалён или нет доступа)",
+                    channelId
+                );
+                result = OperationResult.Bad($"Discord канал {channelId} не найден");
+            }
             catch (Exception ex)
             {
                 logger.LogError(
@@ -151,6 +162,59 @@ public class DiscordGatewayService(
         else
         {
             result = OperationResult.Bad("Неверные параметры для отправки в Discord");
+        }
+
+        return result;
+    }
+
+    public async Task<OperationResult> SendFileAsync(
+        ulong channelId,
+        Stream fileStream,
+        string fileName,
+        string? message = null,
+        CancellationToken cancellationToken = default
+    )
+    {
+        var result = OperationResult.Bad("Discord клиент недоступен");
+
+        if (channelId != 0 && fileStream is { Length: > 0 })
+        {
+            try
+            {
+                var client = await EnsureConnectedAsync(cancellationToken);
+                if (client is not null)
+                {
+                    var channel = await client.GetChannelAsync(channelId);
+                    if (channel is not null)
+                    {
+                        var builder = new DiscordMessageBuilder();
+                        if (!string.IsNullOrWhiteSpace(message))
+                        {
+                            builder.WithContent(message);
+                        }
+                        builder.AddFile(fileName, fileStream, true);
+                        await channel.SendMessageAsync(builder);
+                        result = OperationResult.Ok("Файл отправлен в Discord");
+                    }
+                    else
+                    {
+                        result = OperationResult.Bad("Discord канал не найден");
+                    }
+                }
+                else
+                {
+                    result = OperationResult.Bad("Не удалось инициализировать Discord клиент");
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Ошибка отправки файла в Discord канал {ChannelId}", channelId);
+                result = OperationResult.Bad($"Ошибка Discord отправки файла: {ex.Message}");
+            }
+        }
+        else
+        {
+            result = OperationResult.Bad("Неверные параметры для отправки файла в Discord");
         }
 
         return result;

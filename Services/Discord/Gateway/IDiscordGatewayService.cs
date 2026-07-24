@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using DSharpPlus;
@@ -31,6 +32,14 @@ public interface IDiscordGatewayService
     Task<OperationResult> SendMessageAsync(
         ulong channelId,
         string message,
+        CancellationToken cancellationToken = default
+    );
+
+    Task<OperationResult> SendFileAsync(
+        ulong channelId,
+        Stream fileStream,
+        string fileName,
+        string? message = null,
         CancellationToken cancellationToken = default
     );
 }
