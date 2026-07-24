@@ -17,6 +17,9 @@ public class TelegramDiscordChannelBinding
 
     public bool IsEnabled { get; set; } = true;
 
+    [MaxLength(500)]
+    public string? LastError { get; set; }
+
     public DateTime CreatedAtUtc { get; set; } = DateTime.Now;
 
     public DateTime UpdatedAtUtc { get; set; } = DateTime.Now;
