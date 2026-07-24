@@ -258,7 +258,7 @@ public partial class MediaAsset
     public List<MediaVariant>? Variants { get; set; }
 }
 
-public partial class MediaVariant
+public class MediaVariant
 {
     [JsonPropertyName("type")]
     public string? Type { get; set; }

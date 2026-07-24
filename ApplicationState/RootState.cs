@@ -2,7 +2,7 @@
 
 namespace MARS.Server.ApplicationState;
 
-public partial class RootState
+public class RootState
 {
     [Key]
     public required string Name { get; set; }
