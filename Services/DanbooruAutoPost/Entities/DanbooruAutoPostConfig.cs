@@ -1,24 +1,22 @@
 using System;
 using System.ComponentModel.DataAnnotations;
 
-namespace MARS.Server.Services.Telegram.DiscordBridge.Entities;
+namespace MARS.Server.Services.DanbooruAutoPost.Entities;
 
-/// <summary>
-/// Связь Telegram канала и Discord канала (many-to-many)
-/// </summary>
-public class TelegramDiscordChannelBinding
+public class DanbooruAutoPostConfig
 {
     [Key]
     public Guid Id { get; set; } = Guid.NewGuid();
 
-    public long TelegramChannelId { get; set; }
-
     public ulong DiscordChannelId { get; set; }
+
+    public string Tags { get; set; } = "";
+
+    public string CronExpression { get; set; } = "";
 
     public bool IsEnabled { get; set; } = true;
 
-    [MaxLength(500)]
-    public string? LastError { get; set; }
+    public DateTime? LastExecutedAtUtc { get; set; }
 
     public DateTime CreatedAtUtc { get; set; } = DateTime.Now;
 

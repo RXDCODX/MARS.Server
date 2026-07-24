@@ -75,6 +75,7 @@ public class TelegramDiscordBridgeService(
                     TelegramChannelId = e.TelegramChannelId,
                     DiscordChannelId = e.DiscordChannelId,
                     IsEnabled = e.IsEnabled,
+                    LastError = e.LastError,
                     CreatedAtUtc = e.CreatedAtUtc,
                     UpdatedAtUtc = e.UpdatedAtUtc,
                 })
@@ -115,6 +116,34 @@ public class TelegramDiscordBridgeService(
         {
             try
             {
+                var client = discordGatewayService.Client;
+                if (client is null)
+                {
+                    client = await discordGatewayService.EnsureConnectedAsync(cancellationToken);
+                }
+
+                if (client is null)
+                {
+                    result = OperationResult<TelegramDiscordBindingDto>.Bad(
+                        "Discord клиент недоступен",
+                        new TelegramDiscordBindingDto()
+                    );
+                    return result;
+                }
+
+                try
+                {
+                    await client.GetChannelAsync(request.DiscordChannelId);
+                }
+                catch (DSharpPlus.Exceptions.NotFoundException)
+                {
+                    result = OperationResult<TelegramDiscordBindingDto>.Bad(
+                        $"Discord канал {request.DiscordChannelId} не найден или нет доступа",
+                        new TelegramDiscordBindingDto()
+                    );
+                    return result;
+                }
+
                 await using var dbContext = await dbContextFactory.CreateDbContextAsync(
                     cancellationToken
                 );
@@ -167,6 +196,7 @@ public class TelegramDiscordBridgeService(
                             TelegramChannelId = entity.TelegramChannelId,
                             DiscordChannelId = entity.DiscordChannelId,
                             IsEnabled = entity.IsEnabled,
+                            LastError = entity.LastError,
                             CreatedAtUtc = entity.CreatedAtUtc,
                             UpdatedAtUtc = entity.UpdatedAtUtc,
                         }
@@ -182,6 +212,7 @@ public class TelegramDiscordBridgeService(
                             TelegramChannelId = existing.TelegramChannelId,
                             DiscordChannelId = existing.DiscordChannelId,
                             IsEnabled = existing.IsEnabled,
+                            LastError = existing.LastError,
                             CreatedAtUtc = existing.CreatedAtUtc,
                             UpdatedAtUtc = existing.UpdatedAtUtc,
                         }
@@ -280,6 +311,11 @@ public class TelegramDiscordBridgeService(
                 {
                     entity.IsEnabled = isEnabled;
                     entity.UpdatedAtUtc = DateTime.Now;
+                    if (isEnabled)
+                    {
+                        entity.LastError = null;
+                    }
+
                     await dbContext.SaveChangesAsync(cancellationToken);
 
                     result = OperationResult<TelegramDiscordBindingDto>.Ok(
@@ -290,6 +326,7 @@ public class TelegramDiscordBridgeService(
                             TelegramChannelId = entity.TelegramChannelId,
                             DiscordChannelId = entity.DiscordChannelId,
                             IsEnabled = entity.IsEnabled,
+                            LastError = entity.LastError,
                             CreatedAtUtc = entity.CreatedAtUtc,
                             UpdatedAtUtc = entity.UpdatedAtUtc,
                         }
@@ -561,6 +598,32 @@ public class TelegramDiscordBridgeService(
                         discordChannelId,
                         sendResult.Message
                     );
+
+                    if (
+                        sendResult.Message?.Contains(
+                            "не найден",
+                            StringComparison.OrdinalIgnoreCase
+                        ) == true
+                    )
+                    {
+                        var binding =
+                            await dbContext.TelegramDiscordChannelBindings.FirstOrDefaultAsync(e =>
+                                e.TelegramChannelId == telegramChannelId
+                                && e.DiscordChannelId == discordChannelId
+                            );
+                        if (binding is not null)
+                        {
+                            binding.IsEnabled = false;
+                            binding.LastError = sendResult.Message;
+                            binding.UpdatedAtUtc = DateTime.Now;
+                            logger.LogWarning(
+                                "Привязка TG:{TelegramChannelId} -> Discord:{DiscordChannelId} автоматически отключена: {Error}",
+                                telegramChannelId,
+                                discordChannelId,
+                                sendResult.Message
+                            );
+                        }
+                    }
                 }
             }
 

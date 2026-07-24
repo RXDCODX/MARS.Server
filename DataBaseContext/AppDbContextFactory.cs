@@ -30,14 +30,12 @@ public class AppDbContextFactory
     public AppDbContext CreateDbContext()
     {
         var context = GetDbContext();
-        MigrateIfNeeded(context);
+        MigrateIfNeeded();
         return context;
     }
 
     // Реализация IDesignTimeDbContextFactory<MigrationsDbContext>
-    MigrationsDbContext IDesignTimeDbContextFactory<MigrationsDbContext>.CreateDbContext(
-        string[] args
-    )
+    public MigrationsDbContext CreateDbContext(string[] args)
     {
         // Настройка вручную (для design-time миграций)
         var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
@@ -96,7 +94,7 @@ public class AppDbContextFactory
         return new AppDbContext(optionsBuilder.Options);
     }
 
-    private static void MigrateIfNeeded(AppDbContext context)
+    private void MigrateIfNeeded()
     {
         if (_isMigrated)
         {
@@ -106,6 +104,8 @@ public class AppDbContextFactory
         Locker.Enter();
         try
         {
+            var context = CreateDbContext([]);
+
             if (!_isMigrated)
             {
                 try
