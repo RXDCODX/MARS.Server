@@ -97,9 +97,7 @@ public class FumoFriday_TwitchReward(
             return;
         }
 
-        var name = e.ChatMessage.DisplayName;
         var id = e.ChatMessage.UserId;
-        var colorHex = e.ChatMessage.HexColor;
         var now = DateTime.Now;
 
         if (!_users.Contains(id) && e.ChatMessage.Channel == TwitchExstension.Channel)
@@ -119,10 +117,16 @@ public class FumoFriday_TwitchReward(
                         && now.DayOfWeek == DayOfWeek.Friday
                     )
                     {
-                        var color = string.IsNullOrWhiteSpace(colorHex)
-                            ? (await GetColor(id))
-                            : colorHex;
-                        await alertsHub.Clients.All.FumoFriday(name, color);
+                        var twitchUser =
+                            TwitchUser.FromChatMessage(e.ChatMessage)
+                            ?? throw new InvalidOperationException(
+                                "Не удалось создать TwitchUser из ChatMessage"
+                            );
+                        if (string.IsNullOrWhiteSpace(twitchUser.ChatColor))
+                        {
+                            twitchUser.ChatColor = await GetColor(id);
+                        }
+                        await alertsHub.Clients.All.FumoFriday(twitchUser);
                         _users.Add(id);
 
                         fumoUser.LastTime = now;
@@ -194,8 +198,13 @@ public class FumoFriday_TwitchReward(
 
                             if (now.DayOfWeek == DayOfWeek.Friday)
                             {
-                                var color = await GetColor(id);
-                                await alertsHub.Clients.All.FumoFriday(name, color);
+                                var twitchUser =
+                                    TwitchUser.FromChannelPointsCustomRewardRedemptionArgs(args)
+                                    ?? throw new InvalidOperationException(
+                                        "Не удалось создать TwitchUser из RedemptionArgs"
+                                    );
+                                twitchUser.ChatColor = await GetColor(id);
+                                await alertsHub.Clients.All.FumoFriday(twitchUser);
                                 _users.Add(id);
                             }
                         }

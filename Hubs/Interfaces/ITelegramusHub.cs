@@ -22,12 +22,12 @@ public interface ITelegramusHub
     public Task WaifuRoll(Waifu content, Husband? waifuHusband);
 
     [SignalRMethod]
-    public Task AddNewWaifu(Waifu content, string displayName, string? color = null);
+    public Task AddNewWaifu(Waifu content, TwitchUser twitchUser);
     public Task MergeWaifu(Waifu content, Husband husband);
 
     [SignalRMethod]
     public Task ShowCurrentWife(Waifu content, Husband husband);
-    public Task FumoFriday(string displayName, string? color = null);
+    public Task FumoFriday(TwitchUser twitchUser);
     public Task NewMessage(string id, ChatMessage message);
     public Task DeleteMessage(string id);
 
