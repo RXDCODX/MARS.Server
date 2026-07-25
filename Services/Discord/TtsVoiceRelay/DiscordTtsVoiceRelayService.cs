@@ -10,10 +10,14 @@ using System.Threading.Tasks;
 using DSharpPlus;
 using DSharpPlus.Entities;
 using DSharpPlus.EventArgs;
-using DSharpPlus.VoiceNext;
 using MARS.Server.Services.Discord.Gateway;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+#if !USE_LOCAL_DSHARPPLUS_VOICE
+using DSharpPlus.VoiceNext;
+#else
+using DSharpPlus.Voice;
+#endif
 
 namespace MARS.Server.Services.Discord.TtsVoiceRelay;
 
@@ -30,7 +34,11 @@ public class DiscordTtsVoiceRelayService(
     private readonly SemaphoreSlim _playbackLock = new(1, 1);
     private readonly SemaphoreSlim _stateLock = new(1, 1);
 
+#if USE_LOCAL_DSHARPPLUS_VOICE
+    private VoiceConnection? _voiceConnection;
+#else
     private VoiceNextConnection? _voiceConnection;
+#endif
     private CancellationTokenSource? _monitorCancellationSource;
     private Task? _monitorTask;
 
@@ -67,7 +75,11 @@ public class DiscordTtsVoiceRelayService(
         try
         {
             IsVoiceRoutingEnabled = false;
+#if USE_LOCAL_DSHARPPLUS_VOICE
+            await DisconnectVoiceIfConnectedAsync();
+#else
             DisconnectVoiceIfConnected();
+#endif
         }
         finally
         {
@@ -101,12 +113,19 @@ public class DiscordTtsVoiceRelayService(
                 var pcm = SynthesizeToPcm(voiceName, text, additionalText);
                 if (pcm.Length > 0)
                 {
+#if USE_LOCAL_DSHARPPLUS_VOICE
+                    var writer = connection.CreateAudioWriter(AudioFormat.S16LE48KHzStereoPCM);
+                    await writer.WriteAsync(pcm, cancellationToken);
+                    await writer.FlushAsync(cancellationToken);
+                    writer.SignalSilence();
+#else
                     var transmitSink = connection.GetTransmitSink(20);
                     await connection.SendSpeakingAsync(true);
                     await transmitSink.WriteAsync(pcm, 0, pcm.Length, cancellationToken);
                     await transmitSink.FlushAsync(cancellationToken);
                     await connection.WaitForPlaybackFinishAsync();
                     await connection.SendSpeakingAsync(false);
+#endif
                 }
             }
         }
@@ -156,14 +175,22 @@ public class DiscordTtsVoiceRelayService(
             else
             {
                 IsVoiceRoutingEnabled = false;
+#if USE_LOCAL_DSHARPPLUS_VOICE
+                await DisconnectVoiceIfConnectedAsync();
+#else
                 DisconnectVoiceIfConnected();
+#endif
             }
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка обновления состояния Discord TTS routing");
             IsVoiceRoutingEnabled = false;
+#if USE_LOCAL_DSHARPPLUS_VOICE
+            await DisconnectVoiceIfConnectedAsync();
+#else
             DisconnectVoiceIfConnected();
+#endif
         }
         finally
         {
@@ -214,11 +241,19 @@ public class DiscordTtsVoiceRelayService(
         return result;
     }
 
+#if USE_LOCAL_DSHARPPLUS_VOICE
+    private async Task<VoiceConnection?> EnsureVoiceConnectionAsync(
+#else
     private async Task<VoiceNextConnection?> EnsureVoiceConnectionAsync(
+#endif
         CancellationToken cancellationToken = default
     )
     {
+#if USE_LOCAL_DSHARPPLUS_VOICE
+        VoiceConnection? result = _voiceConnection;
+#else
         VoiceNextConnection? result = _voiceConnection;
+#endif
 
         if (result is null)
         {
@@ -241,6 +276,26 @@ public class DiscordTtsVoiceRelayService(
         return result;
     }
 
+#if USE_LOCAL_DSHARPPLUS_VOICE
+    private async Task DisconnectVoiceIfConnectedAsync()
+    {
+        if (_voiceConnection is not null)
+        {
+            try
+            {
+                await _voiceConnection.DisposeAsync();
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Ошибка отключения от Discord voice канала");
+            }
+            finally
+            {
+                _voiceConnection = null;
+            }
+        }
+    }
+#else
     private void DisconnectVoiceIfConnected()
     {
         if (_voiceConnection is not null)
@@ -260,6 +315,7 @@ public class DiscordTtsVoiceRelayService(
             }
         }
     }
+#endif
 
     [SupportedOSPlatform("windows")]
     private static byte[] SynthesizeToPcm(string voiceName, string text, string? additionalText)

@@ -6,11 +6,15 @@ using System.Threading.Tasks;
 using DSharpPlus;
 using DSharpPlus.Entities;
 using DSharpPlus.EventArgs;
-using DSharpPlus.VoiceNext;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using ServerDiscordConfiguration = MARS.Server.Configuration.DiscordConfiguration;
+#if USE_LOCAL_DSHARPPLUS_VOICE
+using DSharpPlus.Voice;
+#else
+using DSharpPlus.VoiceNext;
+#endif
 
 namespace MARS.Server.Services.Discord.Gateway;
 
@@ -251,7 +255,11 @@ public class DiscordGatewayService(
                                 HandleComponentInteractionCreatedAsync
                             );
                         })
+#if USE_LOCAL_DSHARPPLUS_VOICE
+                        .UseVoice()
+#else
                         .UseVoiceNext(new VoiceNextConfiguration())
+#endif
                         .SetLogLevel(LogLevel.Information);
 
                     result = builder.Build();

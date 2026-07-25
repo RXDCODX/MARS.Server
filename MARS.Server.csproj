@@ -38,6 +38,11 @@
       >false</UseLocalYoutubeReExplode>
     <UseLocalYoutubeReExplode Condition="'$(UseLocalYoutubeReExplode)' == ''"
       >true</UseLocalYoutubeReExplode>
+    <UseNugetDSharpPlus Condition="'$(UseNugetDSharpPlus)' == '' and '$(IsCiBuild)' == 'true'"
+      >true</UseNugetDSharpPlus>
+    <UseNugetDSharpPlus Condition="'$(UseNugetDSharpPlus)' == ''">false</UseNugetDSharpPlus>
+    <DefineConstants Condition="'$(UseNugetDSharpPlus)' != 'true'"
+      >$(DefineConstants);USE_LOCAL_DSHARPPLUS_VOICE</DefineConstants>
     <RunTestsOnPublish Condition="'$(RunTestsOnPublish)' == ''">true</RunTestsOnPublish>
   </PropertyGroup>
   <ItemGroup>
@@ -68,7 +73,6 @@
     <PackageReference Include="Ben.Demystifier" />
     <PackageReference Include="Cronos" />
     <PackageReference Include="Cyrillic.Convert" />
-    <PackageReference Include="DSharpPlus.VoiceNext" />
     <PackageReference Include="FFMpegCore" />
     <PackageReference Include="FuzzySharp" />
     <PackageReference Include="FlexLabs.EntityFrameworkCore.Upsert" />
@@ -77,7 +81,7 @@
     <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
     <PackageReference Include="Microsoft.AspNetCore.SpaProxy"></PackageReference>
-    <PackageReference Include="DSharpPlus" />
+
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" />
     <PackageReference Include="Microsoft.CognitiveServices.Speech" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" />
@@ -135,6 +139,20 @@
   </ItemGroup>
   <ItemGroup Condition="'$(UseLocalYoutubeReExplode)' != 'true'">
     <PackageReference Include="YoutubeExplode" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(UseNugetDSharpPlus)' != 'true'">
+    <ProjectReference
+      Include="external\DSharpPlus\DSharpPlus\DSharpPlus.csproj"
+      AdditionalProperties="ManagePackageVersionsCentrally=false;ImportDirectoryPackagesProps=false"
+    />
+    <ProjectReference
+      Include="external\DSharpPlus\DSharpPlus.Voice\DSharpPlus.Voice.csproj"
+      AdditionalProperties="ManagePackageVersionsCentrally=false;ImportDirectoryPackagesProps=false"
+    />
+  </ItemGroup>
+  <ItemGroup Condition="'$(UseNugetDSharpPlus)' == 'true'">
+    <PackageReference Include="DSharpPlus" />
+    <PackageReference Include="DSharpPlus.VoiceNext" />
   </ItemGroup>
   <ItemGroup>
     <Content Update="appsettings.Development.json">
