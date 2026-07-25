@@ -2,28 +2,27 @@
 
 #nullable disable
 
-namespace MARS.Server.Migrations.MigrationsDb
+namespace MARS.Server.Migrations;
+
+/// <inheritdoc />
+public partial class AddLastErrorToBinding : Migration
 {
     /// <inheritdoc />
-    public partial class AddLastErrorToBinding : Migration
+    protected override void Up(MigrationBuilder migrationBuilder)
     {
-        /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.AddColumn<string>(
-                name: "LastError",
-                table: "TelegramDiscordChannelBindings",
-                type: "character varying(500)",
-                maxLength: 500,
-                nullable: true);
-        }
+        migrationBuilder.AddColumn<string>(
+            name: "LastError",
+            table: "TelegramDiscordChannelBindings",
+            type: "character varying(500)",
+            maxLength: 500,
+            nullable: true);
+    }
 
-        /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.DropColumn(
-                name: "LastError",
-                table: "TelegramDiscordChannelBindings");
-        }
+    /// <inheritdoc />
+    protected override void Down(MigrationBuilder migrationBuilder)
+    {
+        migrationBuilder.DropColumn(
+            name: "LastError",
+            table: "TelegramDiscordChannelBindings");
     }
 }
