@@ -105,13 +105,7 @@ public class RollFumoCommand(
                     );
                 }
 
-                await alertsHub.Clients.All.FumoRoll(
-                    fumo,
-                    twitchUser,
-                    color,
-                    collectedCount,
-                    totalCount
-                );
+                await alertsHub.Clients.All.FumoRoll(fumo, twitchUser, collectedCount, totalCount);
             }
 
             return $"Фумо ролл для {twitchUser?.DisplayName} выполнен!";

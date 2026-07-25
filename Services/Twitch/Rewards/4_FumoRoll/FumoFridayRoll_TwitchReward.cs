@@ -124,7 +124,7 @@ public class FumoFridayRoll_TwitchReward(
                     );
                 }
 
-                await hubContext.Clients.All.FumoRoll(fumo, user, null, collectedCount, totalCount);
+                await hubContext.Clients.All.FumoRoll(fumo, user, collectedCount, totalCount);
             }
             else
             {

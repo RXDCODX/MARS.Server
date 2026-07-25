@@ -8,6 +8,7 @@ using MARS.Server.Exstensions;
 using MARS.Server.Hubs;
 using MARS.Server.Hubs.Interfaces;
 using MARS.Server.Services.Shikimori;
+using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.Twitch.Validation;
 using MARS.Server.Services.WaifuRoll;
@@ -130,9 +131,12 @@ public class AddNewWaifu(
                     // Убеждаемся, что поля аниме и манги заполнены
                     waifu = await waifuDbHelper.EnsureMangaAndAnimeTitleExists(waifu);
 
-                    var color = await api.Helix.Chat.GetUserChatColorAsync([userId]);
-
-                    await hubContext.Clients.All.AddNewWaifu(waifu, userName, color.Data[0]?.Color);
+                    var twitchUser =
+                        TwitchUser.FromChatMessage(onMessageReceivedArgs.ChatMessage)
+                        ?? throw new InvalidOperationException(
+                            "Не удалось создать TwitchUser из ChatMessage"
+                        );
+                    await hubContext.Clients.All.AddNewWaifu(waifu, twitchUser);
 
                     if (!isVip)
                     {

@@ -100,7 +100,6 @@ public class SearchWife_TwitchReward(
                     {
                         waifu = await waifuDbHelper.EnsureMangaAndAnimeTitleExists(waifu);
 
-                        var color = await api.Helix.Chat.GetUserChatColorAsync([twEvent.UserId]);
                         await using AppDbContext dbContext2 = await factory.CreateDbContextAsync();
 
                         var husband =
@@ -117,12 +116,7 @@ public class SearchWife_TwitchReward(
                             );
                         }
 
-                        await hubContext.Clients.All.WaifuRoll(
-                            waifu,
-                            twEvent.UserName,
-                            husband,
-                            color.Data[0]?.Color
-                        );
+                        await hubContext.Clients.All.WaifuRoll(waifu, husband);
                         return;
                     }
 

@@ -5,11 +5,15 @@ using MARS.Server.Hubs;
 using MARS.Server.Hubs.Interfaces;
 using MARS.Server.Services.CommandExecutor.Entitys;
 using MARS.Server.Services.CommandExecutor.Entitys.Commands;
+using MARS.Server.Services.Twitch;
 using Microsoft.AspNetCore.SignalR;
 
 namespace MARS.Server.Services.CommandExecutor.Commands;
 
-public class FumoCommand(IHubContext<TelegramusHub, ITelegramusHub> alertsHub) : BaseCommand
+public class FumoCommand(
+    IHubContext<TelegramusHub, ITelegramusHub> alertsHub,
+    TwitchUserEnsureService ensureService
+) : BaseCommand
 {
     public override string CommandName => "fumo";
     public override string Description => "Отправляет фумо в чат";
@@ -51,13 +55,22 @@ public class FumoCommand(IHubContext<TelegramusHub, ITelegramusHub> alertsHub) :
         displayName = displayName.StartsWith('@') ? displayName.Substring(1) : displayName;
         var color = parameters.TryGetValue("color", out var colorObj) ? colorObj?.ToString() : null;
 
-        if (!string.IsNullOrWhiteSpace(color))
+        var twitchUser = await ensureService.EnsureUserExistsByLoginAsync(
+            displayName,
+            cancellationToken
+        );
+
+        if (twitchUser is null)
         {
-            await alertsHub.Clients.All.FumoFriday(displayName, color);
-            return $"Фумо фрайдей с {displayName} с цветом {color} объявлен!";
+            return $"Пользователь {displayName} не найден";
         }
 
-        await alertsHub.Clients.All.FumoFriday(displayName);
+        if (!string.IsNullOrWhiteSpace(color))
+        {
+            twitchUser.ChatColor = color;
+        }
+
+        await alertsHub.Clients.All.FumoFriday(twitchUser);
         return $"Фумо фрайдей с {displayName} объявлен!";
     }
 }
