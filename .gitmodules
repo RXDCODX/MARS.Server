@@ -1,3 +1,7 @@
 [submodule "external/YoutubeExplode"]
 	path = external/YoutubeExplode
 	url = https://github.com/RXDCODX/YoutubeExplode.git
+[submodule "external/DSharpPlus"]
+	path = external/DSharpPlus
+	url = https://github.com/DSharpPlus/DSharpPlus.git
+	branch = voice-rewrite
