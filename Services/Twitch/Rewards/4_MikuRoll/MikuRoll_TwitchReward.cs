@@ -122,13 +122,7 @@ public class MikuRoll_TwitchReward(
                     );
                 }
 
-                await hubContext.Clients.All.MikuRoll(
-                    module,
-                    user,
-                    null,
-                    collectedCount,
-                    totalCount
-                );
+                await hubContext.Clients.All.MikuRoll(module, user, collectedCount, totalCount);
             }
             else
             {

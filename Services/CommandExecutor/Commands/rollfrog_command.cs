@@ -87,7 +87,7 @@ public class RollFrogCommand(
 
             if (frog is not null)
             {
-                await alertsHub.Clients.All.FrogRoll(frog, twitchUser, color);
+                await alertsHub.Clients.All.FrogRoll(frog, twitchUser);
             }
 
             return $"Фрог ролл для {twitchUser?.DisplayName} выполнен!";

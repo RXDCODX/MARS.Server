@@ -64,13 +64,7 @@ public class RollWaifuCommand(
                 var result =
                     $"Вайфу ролл для {resultRoll.Data.Host.TwitchUser?.DisplayName} выполнен!";
 
-                await alertsHub.Clients.All.WaifuRoll(
-                    waifu,
-                    resultRoll.Data.Host.TwitchUser?.DisplayName
-                        ?? throw new NullReferenceException(),
-                    resultRoll.Data.Husband,
-                    resultRoll.Data.Husband?.TwitchUser?.ChatColor
-                );
+                await alertsHub.Clients.All.WaifuRoll(waifu, resultRoll.Data.Husband);
 
                 return result;
             }

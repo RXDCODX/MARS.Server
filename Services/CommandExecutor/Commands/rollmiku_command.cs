@@ -108,7 +108,6 @@ public class RollMikuCommand(
                 await alertsHub.Clients.All.MikuRoll(
                     module,
                     twitchUser,
-                    color,
                     collectedCount,
                     totalCount
                 );

@@ -178,15 +178,7 @@ public class MergeWaifu(
                                 );
                             }
 
-                            var color = host.TwitchUser.ChatColor;
-
-                            // Используем аватарку из TwitchUser вместо отдельного запроса к API
-                            await hubContext.Clients.All.MergeWaifu(
-                                waifu,
-                                host,
-                                host.TwitchUser.ProfileImageUrl,
-                                color
-                            );
+                            await hubContext.Clients.All.MergeWaifu(waifu, host);
 
                             if (tokenService.Token != null)
                             {
@@ -255,15 +247,8 @@ public class MergeWaifu(
                             );
                         }
 
-                        var color = host.TwitchUser.ChatColor;
-
                         // Отправляем событие на фронт — длительность брака считается на фронте
-                        await hubContext.Clients.All.ShowCurrentWife(
-                            waifu,
-                            host,
-                            host.TwitchUser.ProfileImageUrl,
-                            color
-                        );
+                        await hubContext.Clients.All.ShowCurrentWife(waifu, host);
                         return;
                     }
 

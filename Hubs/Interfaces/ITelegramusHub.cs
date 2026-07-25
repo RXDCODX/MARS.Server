@@ -19,29 +19,14 @@ public interface ITelegramusHub
     public Task UpdateWaifuPrizes(ICollection<PrizeType> prizes);
 
     [SignalRMethod]
-    public Task WaifuRoll(
-        Waifu content,
-        string displayName,
-        Husband? waifuHusband,
-        string? color = null
-    );
+    public Task WaifuRoll(Waifu content, Husband? waifuHusband);
 
     [SignalRMethod]
     public Task AddNewWaifu(Waifu content, string displayName, string? color = null);
-    public Task MergeWaifu(
-        Waifu content,
-        Husband husband,
-        string? avatar = null,
-        string? color = null
-    );
+    public Task MergeWaifu(Waifu content, Husband husband);
 
     [SignalRMethod]
-    public Task ShowCurrentWife(
-        Waifu content,
-        Husband husband,
-        string? avatar = null,
-        string? color = null
-    );
+    public Task ShowCurrentWife(Waifu content, Husband husband);
     public Task FumoFriday(string displayName, string? color = null);
     public Task NewMessage(string id, ChatMessage message);
     public Task DeleteMessage(string id);
@@ -107,7 +92,6 @@ public interface ITelegramusHub
     public Task FumoRoll(
         Fumo fumo,
         TwitchUser twitchUser,
-        string? color = null,
         int collectedCount = 0,
         int totalCount = 0
     );
@@ -116,7 +100,7 @@ public interface ITelegramusHub
     public Task UpdateFumoPrizes(ICollection<FumoPrizeType> prizes);
 
     [SignalRMethod]
-    public Task FrogRoll(Frog frog, TwitchUser twitchUser, string? color = null);
+    public Task FrogRoll(Frog frog, TwitchUser twitchUser);
 
     [SignalRMethod]
     public Task UpdateFrogPrizes(ICollection<FrogPrizeType> prizes);
@@ -125,7 +109,6 @@ public interface ITelegramusHub
     public Task MikuRoll(
         MikuModule mikuModule,
         TwitchUser twitchUser,
-        string? color = null,
         int collectedCount = 0,
         int totalCount = 0
     );
