@@ -10,6 +10,7 @@ using MARS.Server.Services._365Genius;
 using MARS.Server.Services.DanbooruAutoPost;
 using MARS.Server.Services.Discord.Gateway;
 using MARS.Server.Services.Discord.PlayRequest;
+using MARS.Server.Services.Discord.TtsVoiceRelay;
 using MARS.Server.Services.Obs;
 using MARS.Server.Services.PyroAlerts;
 using MARS.Server.Services.Scoreboard;
@@ -209,11 +210,11 @@ public static class StartupEstensions
             sp.GetRequiredService<DiscordGatewayService>()
         );
 
-        //services.AddSingleton<DiscordTtsVoiceRelayService>();
-        //services.AddSingleton<IDiscordTtsVoiceRelayService>(sp =>
-        //    sp.GetRequiredService<DiscordTtsVoiceRelayService>()
-        //);
-        //services.AddHostedService(sp => sp.GetRequiredService<DiscordTtsVoiceRelayService>());
+        services.AddSingleton<DiscordTtsVoiceRelayService>();
+        services.AddSingleton<IDiscordTtsVoiceRelayService>(sp =>
+            sp.GetRequiredService<DiscordTtsVoiceRelayService>()
+        );
+        services.AddHostedService(sp => sp.GetRequiredService<DiscordTtsVoiceRelayService>());
 
         services.AddSingleton<TelegramDiscordBridgeService>();
         services.AddSingleton<ITelegramDiscordBridgeService>(sp =>

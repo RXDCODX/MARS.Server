@@ -14,4 +14,10 @@ public class TtsState
     /// Playback volume in range 0.0 .. 1.0 (or provider-specific scale).
     /// </summary>
     public double Volume { get; set; }
+
+    /// <summary>
+    /// If true, AudioController should send generated audio to the hub for Discord relay
+    /// instead of playing it locally.
+    /// </summary>
+    public bool RelayToDiscord { get; set; }
 }

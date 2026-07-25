@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using MARS.Server.Hubs.Interfaces;
+using MARS.Server.Services.Discord.TtsVoiceRelay;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
@@ -18,7 +19,10 @@ namespace MARS.Server.Hubs;
 /// </summary>
 [AllowAnonymous]
 [SignalRHub("/hubs/tts", AutoDiscover.MethodsAndParams)]
-public class VoiceRecognitionHub(ILogger<VoiceRecognitionHub> logger) : Hub<IVoiceRecognitionHub>
+public class VoiceRecognitionHub(
+    IDiscordTtsVoiceRelayService discordRelayService,
+    ILogger<VoiceRecognitionHub> logger
+) : Hub<IVoiceRecognitionHub>
 {
     private const string TtsConsumersGroupName = "tts-consumers";
 
@@ -84,6 +88,28 @@ public class VoiceRecognitionHub(ILogger<VoiceRecognitionHub> logger) : Hub<IVoi
         );
 
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Receive generated PCM audio from AudioController and play it in Discord voice channel.
+    /// </summary>
+    public async Task SubmitAudioForRelay(
+        byte[] pcmAudio,
+        int sampleRate,
+        int channels,
+        string text
+    )
+    {
+        logger.LogInformation(
+            "Received audio for relay from {ConnectionId}: {Text}, {SampleRate}Hz, {Channels}ch, {Size} bytes",
+            Context.ConnectionId,
+            text,
+            sampleRate,
+            channels,
+            pcmAudio.Length
+        );
+
+        await discordRelayService.HandleRelayedAudioAsync(pcmAudio, sampleRate, channels, text);
     }
 
     /// <summary>

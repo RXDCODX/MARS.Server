@@ -9,6 +9,8 @@ public interface ITtsHubBroadcaster
 {
     double CurrentVolume { get; }
 
+    bool CurrentRelayToDiscord { get; }
+
     Task BroadcastAsync(
         TwitchUser? user,
         string message,

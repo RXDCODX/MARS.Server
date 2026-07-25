@@ -7,10 +7,11 @@ public interface IDiscordTtsVoiceRelayService
 {
     bool IsVoiceRoutingEnabled { get; }
 
-    Task PlaySpeechAsync(
-        string voiceName,
+    Task HandleRelayedAudioAsync(
+        byte[] pcmAudio,
+        int sampleRate,
+        int channels,
         string text,
-        string? additionalText = null,
         CancellationToken cancellationToken = default
     );
 }

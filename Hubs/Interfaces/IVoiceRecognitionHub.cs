@@ -19,7 +19,7 @@ public interface IVoiceRecognitionHub
     Task PlayTts(TwitchUser user, string message);
 
     /// <summary>
-    /// Send updated TTS state (stop flag / volume) to clients.
+    /// Send updated TTS state (stop flag / volume / relay mode) to clients.
     /// </summary>
     /// <param name="state">TTS state payload.</param>
     Task UpdateTtsState(TtsState state);

@@ -41,7 +41,21 @@ public class TtsHubBroadcaster(
         private set;
     } = 1.0;
 
+    public bool CurrentRelayToDiscord
+    {
+        get
+        {
+            lock (_stateGate)
+            {
+                return field;
+            }
+        }
+        private set;
+    }
+
     double ITtsHubBroadcaster.CurrentVolume => CurrentVolume;
+
+    bool ITtsHubBroadcaster.CurrentRelayToDiscord => CurrentRelayToDiscord;
 
     Task ITtsHubBroadcaster.BroadcastAsync(
         TwitchUser? user,
@@ -136,10 +150,13 @@ public class TtsHubBroadcaster(
                 lock (_stateGate)
                 {
                     CurrentVolume = Math.Clamp(state.Volume, 0.0, 2.0);
+                    CurrentRelayToDiscord = state.RelayToDiscord;
                 }
             }
 
-            var stateToBroadcast = state ?? new TtsState { Volume = CurrentVolume };
+            var stateToBroadcast =
+                state
+                ?? new TtsState { Volume = CurrentVolume, RelayToDiscord = CurrentRelayToDiscord };
 
             await hubContext.Clients.Group(TtsConsumersGroupName).UpdateTtsState(stateToBroadcast);
             logger.LogInformation(
