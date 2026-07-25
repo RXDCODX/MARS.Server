@@ -9,7 +9,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace MARS.Server.Migrations.MigrationsDb
+namespace MARS.Server.Migrations
 {
     [DbContext(typeof(MigrationsDbContext))]
     [Migration("20260724193343_AddLastErrorToBinding")]

@@ -41,9 +41,13 @@
     <RunTestsOnPublish Condition="'$(RunTestsOnPublish)' == ''">true</RunTestsOnPublish>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Remove="external\DSharpPlus\**" />
     <Compile Remove="Services\TabletopGames\**" />
+    <Content Remove="external\DSharpPlus\**" />
     <Content Remove="Services\TabletopGames\**" />
+    <EmbeddedResource Remove="external\DSharpPlus\**" />
     <EmbeddedResource Remove="Services\TabletopGames\**" />
+    <None Remove="external\DSharpPlus\**" />
     <None Remove="Services\TabletopGames\**" />
     <Compile Remove="external\YoutubeExplode\**" />
     <Content Remove="external\YoutubeExplode\**" />
@@ -175,6 +179,7 @@
     <None Include="D:\VS\TestScripts\MARS\MARS.Server\.editorconfig" />
   </ItemGroup>
   <ItemGroup>
+    <Folder Include="external\" />
     <Folder Include="Migrations\LoggerMigrations\" />
     <Folder Include="WTelegram\" />
     <Folder Include="Services\Twitch\TwitchFollowers\Entitys\" />
