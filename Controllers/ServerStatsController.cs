@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using MARS.Server.ApplicationState;
 using MARS.Server.DataBaseContext;
 using MARS.Server.Services;
+using MARS.Server.Services.Discord.TtsVoiceRelay;
 using MARS.Server.Services.ServiceManager;
 using MARS.Server.Services.ServiceManager.Entitys;
 using MARS.Server.Services.SoundBarService.Entitys;
@@ -34,6 +35,7 @@ public class ServerStatsController(
     WeddingAnniversaryService weddingAnniversaryService,
     ITtsMessageFilterService ttsFilterService,
     IPuntoSwitcherService puntoSwitcherService,
+    IDiscordTtsVoiceRelayService discordTtsRelayService,
     IDbContextFactory<AppDbContext> dbContextFactory
 ) : ControllerBase
 {
@@ -82,6 +84,7 @@ public class ServerStatsController(
                 IsTtsConnected = audioControllerConnected,
                 IsPuntoSwitcherEnabled = puntoSwitcherService.IsFilterEnabled,
                 IsTtsFilterEnabled = ttsFilterService.IsFilterEnabled,
+                IsDiscordTtsRelayEnabled = discordTtsRelayService.IsVoiceRoutingEnabled,
                 NearestWeddingAnniversaryName = nearestAnniversary?.AnniversaryName,
                 NearestWeddingAnniversaryDate = nearestAnniversary?.AnniversaryDate,
                 NearestWeddingAnniversaryUser = nearestAnniversary?.DisplayName,
@@ -322,6 +325,11 @@ public class ServerStatsResponse
     /// Включён ли фильтр дубликатов TTS сообщений
     /// </summary>
     public bool IsTtsFilterEnabled { get; set; }
+
+    /// <summary>
+    /// Включён ли Discord TTS relay (автоматическая отправка аудио в Discord voice)
+    /// </summary>
+    public bool IsDiscordTtsRelayEnabled { get; set; }
 
     /// <summary>
     /// Название ближайшей годовщины свадьбы

@@ -117,6 +117,7 @@ public static class StartupEstensions
             .AddSignalR(options =>
             {
                 options.EnableDetailedErrors = true;
+                options.MaximumReceiveMessageSize = 1024 * 1024 * 1024;
                 options.AddFilter<LoggerHubRecursionFilter>();
             })
             .AddJsonProtocol(options =>

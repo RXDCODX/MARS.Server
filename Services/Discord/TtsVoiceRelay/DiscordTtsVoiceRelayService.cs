@@ -115,10 +115,10 @@ public class DiscordTtsVoiceRelayService(
             return;
         }
 
-        var userJoinedTargetChannel = args.After.ChannelId == TargetDiscordVoiceChannelId;
+        var userJoinedTargetChannel = args.After?.ChannelId == TargetDiscordVoiceChannelId;
         var userLeftTargetChannel =
-            args.Before.ChannelId == TargetDiscordVoiceChannelId
-            && args.After.ChannelId != TargetDiscordVoiceChannelId;
+            args.Before?.ChannelId == TargetDiscordVoiceChannelId
+            && args.After?.ChannelId != TargetDiscordVoiceChannelId;
 
         await _stateLock.WaitAsync();
         try
