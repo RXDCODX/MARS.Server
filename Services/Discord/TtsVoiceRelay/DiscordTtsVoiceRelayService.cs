@@ -1,10 +1,14 @@
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using DSharpPlus;
 using DSharpPlus.Entities;
 using DSharpPlus.EventArgs;
+using MARS.Server.ApplicationState;
+using MARS.Server.DataBaseContext;
 using MARS.Server.Services.Discord.Gateway;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 #if !USE_LOCAL_DSHARPPLUS_VOICE
@@ -18,11 +22,12 @@ namespace MARS.Server.Services.Discord.TtsVoiceRelay;
 public class DiscordTtsVoiceRelayService(
     IDiscordGatewayService gatewayService,
     Services.Twitch.Synthesizer.ITtsHubBroadcaster ttsHubBroadcaster,
+    IDbContextFactory<AppDbContext> dbContextFactory,
     ILogger<DiscordTtsVoiceRelayService> logger
 ) : IDiscordTtsVoiceRelayService, IHostedService
 {
-    private const ulong TargetDiscordUserId = 260383142903414785;
-    private const ulong TargetDiscordVoiceChannelId = 1406679380369080481;
+    private ulong _targetDiscordUserId;
+    private ulong _targetDiscordVoiceChannelId;
 
     private readonly SemaphoreSlim _playbackLock = new(1, 1);
     private readonly SemaphoreSlim _stateLock = new(1, 1);
@@ -37,6 +42,7 @@ public class DiscordTtsVoiceRelayService(
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
+        await LoadConfigurationAsync(cancellationToken);
         gatewayService.RegisterVoiceStateUpdatedHandler(HandleVoiceStateUpdatedAsync);
         await RefreshRoutingStateAsync(cancellationToken);
     }
@@ -105,20 +111,50 @@ public class DiscordTtsVoiceRelayService(
         }
     }
 
+    private async Task LoadConfigurationAsync(CancellationToken cancellationToken = default)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+
+        var userIdEntry = await dbContext.RootState.FirstOrDefaultAsync(
+            e => e.Name == RootStateKeys.DiscordTtsRelayTargetUserId,
+            cancellationToken
+        );
+        var channelIdEntry = await dbContext.RootState.FirstOrDefaultAsync(
+            e => e.Name == RootStateKeys.DiscordTtsRelayTargetVoiceChannelId,
+            cancellationToken
+        );
+
+        if (userIdEntry is not null && ulong.TryParse(userIdEntry.Value, out var userId))
+        {
+            _targetDiscordUserId = userId;
+        }
+
+        if (channelIdEntry is not null && ulong.TryParse(channelIdEntry.Value, out var channelId))
+        {
+            _targetDiscordVoiceChannelId = channelId;
+        }
+
+        logger.LogInformation(
+            "Discord TTS Relay config loaded: UserId={UserId}, ChannelId={ChannelId}",
+            _targetDiscordUserId,
+            _targetDiscordVoiceChannelId
+        );
+    }
+
     private async Task HandleVoiceStateUpdatedAsync(
         DiscordClient client,
         VoiceStateUpdatedEventArgs args
     )
     {
-        if (args.UserId != TargetDiscordUserId)
+        if (args.UserId != _targetDiscordUserId)
         {
             return;
         }
 
-        var userJoinedTargetChannel = args.After?.ChannelId == TargetDiscordVoiceChannelId;
+        var userJoinedTargetChannel = args.After?.ChannelId == _targetDiscordVoiceChannelId;
         var userLeftTargetChannel =
-            args.Before?.ChannelId == TargetDiscordVoiceChannelId
-            && args.After?.ChannelId != TargetDiscordVoiceChannelId;
+            args.Before?.ChannelId == _targetDiscordVoiceChannelId
+            && args.After?.ChannelId != _targetDiscordVoiceChannelId;
 
         await _stateLock.WaitAsync();
         try
@@ -127,11 +163,21 @@ public class DiscordTtsVoiceRelayService(
             {
                 logger.LogInformation(
                     "Пользователь зашёл в голосовой канал {ChannelId}, подключаю бота",
-                    TargetDiscordVoiceChannelId
+                    _targetDiscordVoiceChannelId
                 );
-                IsVoiceRoutingEnabled = true;
-                await EnsureVoiceConnectionAsync();
-                await BroadcastRelayStateAsync(true);
+                var connection = await EnsureVoiceConnectionAsync();
+                if (connection is not null)
+                {
+                    IsVoiceRoutingEnabled = true;
+                    await BroadcastRelayStateAsync(true);
+                }
+                else
+                {
+                    logger.LogWarning(
+                        "Не удалось подключиться к голосовому каналу {ChannelId}",
+                        _targetDiscordVoiceChannelId
+                    );
+                }
             }
             else if (userLeftTargetChannel)
             {
@@ -186,9 +232,17 @@ public class DiscordTtsVoiceRelayService(
 
             if (shouldEnable)
             {
-                IsVoiceRoutingEnabled = true;
-                await EnsureVoiceConnectionAsync(cancellationToken);
-                await BroadcastRelayStateAsync(true, cancellationToken);
+                var connection = await EnsureVoiceConnectionAsync(cancellationToken);
+                if (connection is not null)
+                {
+                    IsVoiceRoutingEnabled = true;
+                    await BroadcastRelayStateAsync(true, cancellationToken);
+                }
+                else
+                {
+                    IsVoiceRoutingEnabled = false;
+                    await BroadcastRelayStateAsync(false, cancellationToken);
+                }
             }
             else
             {
@@ -229,13 +283,13 @@ public class DiscordTtsVoiceRelayService(
         {
             var channel = client
                 .Guilds.Values.Select(guild =>
-                    guild.Channels.GetValueOrDefault(TargetDiscordVoiceChannelId)
+                    guild.Channels.GetValueOrDefault(_targetDiscordVoiceChannelId)
                 )
                 .FirstOrDefault(channel => channel is not null);
 
             if (channel is not null)
             {
-                result = channel.Users.Any(x => x.Id == TargetDiscordUserId);
+                result = channel.Users.Any(x => x.Id == _targetDiscordUserId);
             }
         }
 
@@ -263,7 +317,7 @@ public class DiscordTtsVoiceRelayService(
             {
                 var channel = client
                     .Guilds.Values.Select(guild =>
-                        guild.Channels.GetValueOrDefault(TargetDiscordVoiceChannelId)
+                        guild.Channels.GetValueOrDefault(_targetDiscordVoiceChannelId)
                     )
                     .FirstOrDefault(channel => channel is not null);
 
@@ -305,7 +359,7 @@ public class DiscordTtsVoiceRelayService(
 
                         logger.LogInformation(
                             "Discord бот подключился к voice каналу {ChannelId}",
-                            TargetDiscordVoiceChannelId
+                            _targetDiscordVoiceChannelId
                         );
                     }
                     catch (Exception ex)

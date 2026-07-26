@@ -8,7 +8,9 @@ public class TelegramDiscordBindingDto
     public Guid Id { get; set; }
     public long TelegramChannelId { get; set; }
 
-    [JsonNumberHandling(JsonNumberHandling.WriteAsString)]
+    [JsonNumberHandling(
+        JsonNumberHandling.AllowReadingFromString | JsonNumberHandling.WriteAsString
+    )]
     public ulong DiscordChannelId { get; set; }
 
     public bool IsEnabled { get; set; }

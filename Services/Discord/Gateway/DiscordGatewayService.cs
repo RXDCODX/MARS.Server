@@ -224,6 +224,67 @@ public class DiscordGatewayService(
         return result;
     }
 
+    public async Task<OperationResult> SendFilesAsync(
+        ulong channelId,
+        IReadOnlyList<(Stream Stream, string FileName)> files,
+        string? message = null,
+        CancellationToken cancellationToken = default
+    )
+    {
+        var result = OperationResult.Bad("Discord клиент недоступен");
+
+        if (channelId != 0 && files.Count > 0)
+        {
+            try
+            {
+                var client = await EnsureConnectedAsync(cancellationToken);
+                if (client is not null)
+                {
+                    var channel = await client.GetChannelAsync(channelId);
+                    if (channel is not null)
+                    {
+                        var builder = new DiscordMessageBuilder();
+                        if (!string.IsNullOrWhiteSpace(message))
+                        {
+                            builder.WithContent(message);
+                        }
+
+                        foreach (var (stream, fileName) in files)
+                        {
+                            builder.AddFile(fileName, stream, true);
+                        }
+
+                        await channel.SendMessageAsync(builder);
+                        result = OperationResult.Ok("Файлы отправлены в Discord");
+                    }
+                    else
+                    {
+                        result = OperationResult.Bad("Discord канал не найден");
+                    }
+                }
+                else
+                {
+                    result = OperationResult.Bad("Не удалось инициализировать Discord клиент");
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(
+                    ex,
+                    "Ошибка отправки файлов в Discord канал {ChannelId}",
+                    channelId
+                );
+                result = OperationResult.Bad($"Ошибка Discord отправки файлов: {ex.Message}");
+            }
+        }
+        else
+        {
+            result = OperationResult.Bad("Неверные параметры для отправки файлов в Discord");
+        }
+
+        return result;
+    }
+
     public async Task<DiscordClient?> EnsureConnectedAsync(
         CancellationToken cancellationToken = default
     )

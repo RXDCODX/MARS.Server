@@ -178,6 +178,20 @@ public sealed class ConfigurationKeysBootstrapHostedService(
                 Description = "Активный провайдер SoundRequest (YouTube/Spotify)",
                 TypeDescription = "enum: SoundRequestProvider",
             },
+            RootStateKeys.DiscordTtsRelayTargetUserId => new RootState
+            {
+                Name = key,
+                Value = 260383142903414785UL.ToString(),
+                Description = "ID Discord пользователя для TTS voice relay",
+                TypeDescription = "ulong",
+            },
+            RootStateKeys.DiscordTtsRelayTargetVoiceChannelId => new RootState
+            {
+                Name = key,
+                Value = 1406679380369080481UL.ToString(),
+                Description = "ID Discord голосового канала для TTS voice relay",
+                TypeDescription = "ulong",
+            },
             _ => new RootState
             {
                 Name = key,

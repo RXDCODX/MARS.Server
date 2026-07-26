@@ -42,4 +42,11 @@ public interface IDiscordGatewayService
         string? message = null,
         CancellationToken cancellationToken = default
     );
+
+    Task<OperationResult> SendFilesAsync(
+        ulong channelId,
+        IReadOnlyList<(Stream Stream, string FileName)> files,
+        string? message = null,
+        CancellationToken cancellationToken = default
+    );
 }

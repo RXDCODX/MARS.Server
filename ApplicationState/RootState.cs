@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 namespace MARS.Server.ApplicationState;
 
@@ -38,6 +38,10 @@ public static class RootStateKeys
     public const string SoundRequestSpotifyOAuthState = "SoundRequestSpotifyOAuthState";
     public const string SoundRequestSpotifyRedirectUri = "SoundRequestSpotifyRedirectUri";
     public const string WTelegramProxyUrl = "WTelegramProxyUrl";
+
+    // Discord TTS Voice Relay
+    public const string DiscordTtsRelayTargetUserId = "DiscordTtsRelayTargetUserId";
+    public const string DiscordTtsRelayTargetVoiceChannelId = "DiscordTtsRelayTargetVoiceChannelId";
 
     // Google PhotosKeys
     public const string GooglePhotosAccessToken = "GooglePhotosAccessToken";

@@ -6,6 +6,8 @@ public class TelegramDiscordBindingCreateRequest
 {
     public long TelegramChannelId { get; set; }
 
-    [JsonNumberHandling(JsonNumberHandling.WriteAsString)]
+    [JsonNumberHandling(
+        JsonNumberHandling.AllowReadingFromString | JsonNumberHandling.WriteAsString
+    )]
     public ulong DiscordChannelId { get; set; }
 }

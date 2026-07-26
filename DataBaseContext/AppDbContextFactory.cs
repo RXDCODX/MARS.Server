@@ -12,9 +12,16 @@ public class AppDbContextFactory
 
     private readonly DbContextOptions<AppDbContext>? _options;
 
+    private readonly IHostEnvironment? _environment;
+
     // Конструктор для обычного использования (с DI)
-    public AppDbContextFactory(Action<DbContextOptionsBuilder<AppDbContext>> optionsAction)
+    public AppDbContextFactory(
+        IHostEnvironment environment,
+        Action<DbContextOptionsBuilder<AppDbContext>> optionsAction
+    )
     {
+        _environment = environment;
+
         var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
         optionsAction.Invoke(optionsBuilder);
         _options = optionsBuilder.Options;
@@ -40,13 +47,25 @@ public class AppDbContextFactory
         // Настройка вручную (для design-time миграций)
         var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
 
-        var configuration = new ConfigurationBuilder()
+        var configurationBuilder = new ConfigurationBuilder()
             .SetBasePath(Directory.GetCurrentDirectory())
-            .AddJsonFile("appsettings.json")
-            .AddJsonFile("appsettings.Development.json", optional: true)
-            .Build();
+            .AddJsonFile("appsettings.json");
 
-        var connectionString = configuration.GetConnectionString("Dev_Path");
+        if (_environment?.IsProduction() == true)
+        {
+            configurationBuilder.AddJsonFile("appsettings.Production.json", optional: true);
+        }
+        else
+        {
+            configurationBuilder.AddJsonFile("appsettings.Development.json", optional: true);
+        }
+
+        var configuration = configurationBuilder.Build();
+
+        var connectionString =
+            _environment?.IsProduction() == true
+                ? configuration.GetConnectionString("Prod_Path")
+                : configuration.GetConnectionString("Dev_Path");
 
         optionsBuilder.UseNpgsql(connectionString);
         optionsBuilder.UseQueryTrackingBehavior(QueryTrackingBehavior.TrackAll);

@@ -172,23 +172,26 @@ public static class Program
 
         builder.Services.Replace(new ServiceDescriptor(typeof(ILoggerFactory), loggerFactory));
 
-        var contextFactory = new AppDbContextFactory(options =>
-        {
-            options.UseQueryTrackingBehavior(QueryTrackingBehavior.TrackAll);
-            options.EnableThreadSafetyChecks();
-            options.UseLoggerFactory(loggerFactory);
-            if (useDevConnection)
+        var contextFactory = new AppDbContextFactory(
+            builder.Environment,
+            options =>
             {
-                options.EnableDetailedErrors();
-                options.EnableSensitiveDataLogging();
+                options.UseQueryTrackingBehavior(QueryTrackingBehavior.TrackAll);
+                options.EnableThreadSafetyChecks();
+                options.UseLoggerFactory(loggerFactory);
+                if (useDevConnection)
+                {
+                    options.EnableDetailedErrors();
+                    options.EnableSensitiveDataLogging();
 
-                options.UseNpgsql(configuration.GetConnectionString("Dev_Path"));
+                    options.UseNpgsql(configuration.GetConnectionString("Dev_Path"));
+                }
+                else
+                {
+                    options.UseNpgsql(configuration.GetConnectionString("Prod_Path"));
+                }
             }
-            else
-            {
-                options.UseNpgsql(configuration.GetConnectionString("Prod_Path"));
-            }
-        });
+        );
 
         if (builder.Environment.IsProduction() && OperatingSystem.IsWindows())
         {

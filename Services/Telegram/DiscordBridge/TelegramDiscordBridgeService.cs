@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -25,6 +27,10 @@ public class TelegramDiscordBridgeService(
 ) : BackgroundService, ITelegramDiscordBridgeService
 {
     private WTelegramClient? _client;
+    private readonly ConcurrentDictionary<
+        long,
+        (List<TLMessage> Messages, Timer Timer)
+    > _albumBuffers = new();
 
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -515,7 +521,7 @@ public class TelegramDiscordBridgeService(
                 {
                     if (update is UpdateNewChannelMessage channelMessage)
                     {
-                        await ProcessChannelMessageAsync(channelMessage);
+                        await HandleChannelMessageAsync(channelMessage);
                     }
                 }
             }
@@ -526,19 +532,75 @@ public class TelegramDiscordBridgeService(
         }
     }
 
-    private async Task ProcessChannelMessageAsync(UpdateNewChannelMessage update)
+    private async Task HandleChannelMessageAsync(UpdateNewChannelMessage update)
     {
         if (update.message is not TLMessage message)
         {
             return;
         }
 
-        var telegramChannelId = message.Peer switch
+        if (message.grouped_id != 0)
         {
-            PeerChannel peerChannel => -1000000000000 - peerChannel.channel_id,
-            _ => 0L,
-        };
+            BufferAlbumMessage(message);
+        }
+        else
+        {
+            await ProcessSingleMessageAsync(message);
+        }
+    }
 
+    private void BufferAlbumMessage(TLMessage message)
+    {
+        var groupedId = message.grouped_id;
+
+        _albumBuffers.AddOrUpdate(
+            groupedId,
+            _ =>
+            {
+                var messages = new List<TLMessage> { message };
+                var timer = new Timer(
+                    async _ => await FlushAlbumAsync(groupedId),
+                    null,
+                    TimeSpan.FromSeconds(2),
+                    Timeout.InfiniteTimeSpan
+                );
+                return (messages, timer);
+            },
+            (_, existing) =>
+            {
+                lock (existing.Messages)
+                {
+                    existing.Messages.Add(message);
+                }
+
+                existing.Timer.Change(TimeSpan.FromSeconds(2), Timeout.InfiniteTimeSpan);
+                return existing;
+            }
+        );
+    }
+
+    private async Task FlushAlbumAsync(long groupedId)
+    {
+        if (!_albumBuffers.TryRemove(groupedId, out var buffer))
+        {
+            return;
+        }
+
+        await buffer.Timer.DisposeAsync();
+
+        List<TLMessage> messages;
+        lock (buffer.Messages)
+        {
+            messages = [.. buffer.Messages];
+        }
+
+        if (messages.Count == 0)
+        {
+            return;
+        }
+
+        var firstMessage = messages[0];
+        var telegramChannelId = GetTelegramChannelId(firstMessage);
         if (telegramChannelId == 0)
         {
             return;
@@ -548,47 +610,153 @@ public class TelegramDiscordBridgeService(
         {
             await using var dbContext = await dbContextFactory.CreateDbContextAsync();
 
-            var targetDiscordChannels = await dbContext
-                .TelegramDiscordChannelBindings.AsNoTracking()
-                .Where(e => e.TelegramChannelId == telegramChannelId && e.IsEnabled)
-                .Select(e => e.DiscordChannelId)
-                .ToListAsync();
-
+            var targetDiscordChannels = await GetTargetDiscordChannelsAsync(
+                dbContext,
+                telegramChannelId
+            );
             if (targetDiscordChannels.Count == 0)
             {
                 return;
             }
 
-            var state = await dbContext.TelegramDiscordChannelStates.FirstOrDefaultAsync(e =>
-                e.TelegramChannelId == telegramChannelId
-            );
-
-            if (state is null)
-            {
-                state = new TelegramDiscordChannelState
-                {
-                    TelegramChannelId = telegramChannelId,
-                    LastProcessedMessageId = 0,
-                    LastUpdatedUtc = DateTime.Now,
-                };
-                dbContext.TelegramDiscordChannelStates.Add(state);
-                await dbContext.SaveChangesAsync();
-            }
-
-            if (message.ID <= state.LastProcessedMessageId)
+            var maxMessageId = messages.Max(m => m.ID);
+            if (!await CheckAndUpdateStateAsync(dbContext, telegramChannelId, maxMessageId))
             {
                 return;
             }
 
-            var payload = BuildDiscordMessagePayload(message, telegramChannelId);
+            var text = ExtractPostText(firstMessage);
+            var sourceHeader =
+                $"[TG:{telegramChannelId}] time:{firstMessage.Date:yyyy-MM-dd HH:mm:ss} UTC";
+            var caption = string.IsNullOrWhiteSpace(text)
+                ? sourceHeader
+                : $"{sourceHeader}\n{text}";
+
+            var mediaFiles = await DownloadAlbumMediaAsync(messages);
 
             var isAllDelivered = true;
             foreach (var discordChannelId in targetDiscordChannels)
             {
-                var sendResult = await discordGatewayService.SendMessageAsync(
-                    discordChannelId,
-                    payload
+                OperationResult sendResult;
+                if (mediaFiles.Count > 0)
+                {
+                    sendResult = await discordGatewayService.SendFilesAsync(
+                        discordChannelId,
+                        mediaFiles,
+                        caption
+                    );
+                }
+                else
+                {
+                    sendResult = await discordGatewayService.SendMessageAsync(
+                        discordChannelId,
+                        caption
+                    );
+                }
+
+                if (!sendResult.Success)
+                {
+                    isAllDelivered = false;
+                    logger.LogWarning(
+                        "Не удалось отправить Telegram альбом {GroupedId} в Discord канал {DiscordChannelId}: {Error}",
+                        groupedId,
+                        discordChannelId,
+                        sendResult.Message
+                    );
+                    await HandleSendFailureAsync(
+                        dbContext,
+                        telegramChannelId,
+                        discordChannelId,
+                        sendResult.Message
+                    );
+                }
+            }
+
+            if (isAllDelivered)
+            {
+                var state = await dbContext.TelegramDiscordChannelStates.FirstOrDefaultAsync(e =>
+                    e.TelegramChannelId == telegramChannelId
                 );
+                if (state is not null)
+                {
+                    state.LastProcessedMessageId = maxMessageId;
+                    state.LastUpdatedUtc = DateTime.Now;
+                    await dbContext.SaveChangesAsync();
+                }
+            }
+
+            foreach (var (fileStream, _) in mediaFiles)
+            {
+                await fileStream.DisposeAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(
+                ex,
+                "Ошибка пересылки альбома {GroupedId} из Telegram канала {TelegramChannelId}",
+                groupedId,
+                telegramChannelId
+            );
+        }
+    }
+
+    private async Task ProcessSingleMessageAsync(TLMessage message)
+    {
+        var telegramChannelId = GetTelegramChannelId(message);
+        if (telegramChannelId == 0)
+        {
+            return;
+        }
+
+        try
+        {
+            await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+
+            var targetDiscordChannels = await GetTargetDiscordChannelsAsync(
+                dbContext,
+                telegramChannelId
+            );
+            if (targetDiscordChannels.Count == 0)
+            {
+                return;
+            }
+
+            if (!await CheckAndUpdateStateAsync(dbContext, telegramChannelId, message.ID))
+            {
+                return;
+            }
+
+            var text = ExtractPostText(message);
+            var sourceHeader =
+                $"[TG:{telegramChannelId}] msg:{message.ID} time:{message.Date:yyyy-MM-dd HH:mm:ss} UTC";
+            var caption = string.IsNullOrWhiteSpace(text)
+                ? sourceHeader
+                : $"{sourceHeader}\n{text}";
+
+            var mediaFile = await DownloadSingleMediaAsync(message);
+
+            var isAllDelivered = true;
+            foreach (var discordChannelId in targetDiscordChannels)
+            {
+                OperationResult sendResult;
+                if (mediaFile is not null)
+                {
+                    sendResult = await discordGatewayService.SendFileAsync(
+                        discordChannelId,
+                        mediaFile.Value.Stream,
+                        mediaFile.Value.FileName,
+                        caption
+                    );
+                }
+                else
+                {
+                    sendResult = await discordGatewayService.SendMessageAsync(
+                        discordChannelId,
+                        caption
+                    );
+                }
+
                 if (!sendResult.Success)
                 {
                     isAllDelivered = false;
@@ -598,65 +766,203 @@ public class TelegramDiscordBridgeService(
                         discordChannelId,
                         sendResult.Message
                     );
-
-                    if (
-                        sendResult.Message?.Contains(
-                            "не найден",
-                            StringComparison.OrdinalIgnoreCase
-                        ) == true
-                    )
-                    {
-                        var binding =
-                            await dbContext.TelegramDiscordChannelBindings.FirstOrDefaultAsync(e =>
-                                e.TelegramChannelId == telegramChannelId
-                                && e.DiscordChannelId == discordChannelId
-                            );
-                        if (binding is not null)
-                        {
-                            binding.IsEnabled = false;
-                            binding.LastError = sendResult.Message;
-                            binding.UpdatedAtUtc = DateTime.Now;
-                            logger.LogWarning(
-                                "Привязка TG:{TelegramChannelId} -> Discord:{DiscordChannelId} автоматически отключена: {Error}",
-                                telegramChannelId,
-                                discordChannelId,
-                                sendResult.Message
-                            );
-                        }
-                    }
+                    await HandleSendFailureAsync(
+                        dbContext,
+                        telegramChannelId,
+                        discordChannelId,
+                        sendResult.Message
+                    );
                 }
             }
 
             if (isAllDelivered)
             {
-                state.LastProcessedMessageId = message.ID;
-                state.LastUpdatedUtc = DateTime.Now;
-                await dbContext.SaveChangesAsync();
+                var state = await dbContext.TelegramDiscordChannelStates.FirstOrDefaultAsync(e =>
+                    e.TelegramChannelId == telegramChannelId
+                );
+                if (state is not null)
+                {
+                    state.LastProcessedMessageId = message.ID;
+                    state.LastUpdatedUtc = DateTime.Now;
+                    await dbContext.SaveChangesAsync();
+                }
+            }
+
+            if (mediaFile is not null)
+            {
+                await mediaFile.Value.Stream.DisposeAsync();
             }
         }
         catch (Exception ex)
         {
             logger.LogError(
                 ex,
-                "Ошибка пересылки сообщения {MessageId} из Telegram канала {TelegramChannelId} в Discord",
+                "Ошибка пересылки сообщения {MessageId} из Telegram канала {TelegramChannelId}",
                 message.ID,
                 telegramChannelId
             );
         }
     }
 
-    private static string BuildDiscordMessagePayload(TLMessage message, long telegramChannelId)
+    private static long GetTelegramChannelId(TLMessage message)
     {
-        var sourcePart =
-            $"[TG:{telegramChannelId}] msg:{message.ID} time:{message.Date:yyyy-MM-dd HH:mm:ss} UTC";
-        var text = string.IsNullOrWhiteSpace(message.message)
-            ? "(сообщение без текста)"
-            : message.message.Trim();
+        return message.Peer switch
+        {
+            PeerChannel peerChannel => -1000000000000 - peerChannel.channel_id,
+            _ => 0L,
+        };
+    }
 
-        var mediaPart = message.media is null
-            ? string.Empty
-            : $"\n[media: {message.media.GetType().Name}]";
+    private static string ExtractPostText(TLMessage message)
+    {
+        return string.IsNullOrWhiteSpace(message.message) ? string.Empty : message.message.Trim();
+    }
 
-        return $"{sourcePart}\n{text}{mediaPart}";
+    private async Task<List<ulong>> GetTargetDiscordChannelsAsync(
+        AppDbContext dbContext,
+        long telegramChannelId
+    )
+    {
+        return await dbContext
+            .TelegramDiscordChannelBindings.AsNoTracking()
+            .Where(e => e.TelegramChannelId == telegramChannelId && e.IsEnabled)
+            .Select(e => e.DiscordChannelId)
+            .ToListAsync();
+    }
+
+    private async Task<bool> CheckAndUpdateStateAsync(
+        AppDbContext dbContext,
+        long telegramChannelId,
+        int messageId
+    )
+    {
+        var state = await dbContext.TelegramDiscordChannelStates.FirstOrDefaultAsync(e =>
+            e.TelegramChannelId == telegramChannelId
+        );
+
+        if (state is null)
+        {
+            state = new TelegramDiscordChannelState
+            {
+                TelegramChannelId = telegramChannelId,
+                LastProcessedMessageId = 0,
+                LastUpdatedUtc = DateTime.Now,
+            };
+            dbContext.TelegramDiscordChannelStates.Add(state);
+            await dbContext.SaveChangesAsync();
+        }
+
+        return messageId > state.LastProcessedMessageId;
+    }
+
+    private async Task HandleSendFailureAsync(
+        AppDbContext dbContext,
+        long telegramChannelId,
+        ulong discordChannelId,
+        string? errorMessage
+    )
+    {
+        if (errorMessage?.Contains("не найден", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            var binding = await dbContext.TelegramDiscordChannelBindings.FirstOrDefaultAsync(e =>
+                e.TelegramChannelId == telegramChannelId && e.DiscordChannelId == discordChannelId
+            );
+            if (binding is not null)
+            {
+                binding.IsEnabled = false;
+                binding.LastError = errorMessage;
+                binding.UpdatedAtUtc = DateTime.Now;
+                logger.LogWarning(
+                    "Привязка TG:{TelegramChannelId} -> Discord:{DiscordChannelId} автоматически отключена: {Error}",
+                    telegramChannelId,
+                    discordChannelId,
+                    errorMessage
+                );
+            }
+        }
+    }
+
+    private async Task<List<(Stream Stream, string FileName)>> DownloadAlbumMediaAsync(
+        List<TLMessage> messages
+    )
+    {
+        var result = new List<(Stream Stream, string FileName)>();
+
+        foreach (var message in messages)
+        {
+            var file = await DownloadSingleMediaAsync(message);
+            if (file is not null)
+            {
+                result.Add(file.Value);
+            }
+        }
+
+        return result;
+    }
+
+    private async Task<(Stream Stream, string FileName)?> DownloadSingleMediaAsync(
+        TLMessage message
+    )
+    {
+        if (message.media is null || _client is null)
+        {
+            return null;
+        }
+
+        try
+        {
+            return message.media switch
+            {
+                MessageMediaPhoto { photo: Photo photo } => await DownloadPhotoAsync(photo),
+                MessageMediaDocument { document: Document document } => await DownloadDocumentAsync(
+                    document
+                ),
+                _ => null,
+            };
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Ошибка скачивания медиа из сообщения {MessageId}", message.ID);
+            return null;
+        }
+    }
+
+    private async Task<(Stream Stream, string FileName)?> DownloadPhotoAsync(Photo photo)
+    {
+        if (_client is null)
+        {
+            return null;
+        }
+
+        var largestSize = photo
+            .sizes.OfType<PhotoSize>()
+            .OrderByDescending(s => (long)s.w * s.h)
+            .FirstOrDefault();
+        if (largestSize is null)
+        {
+            return null;
+        }
+
+        var stream = new MemoryStream();
+        await _client.DownloadFileAsync(photo, stream, largestSize);
+        stream.Position = 0;
+
+        var fileName = $"photo_{photo.id}.jpg";
+        return (stream, fileName);
+    }
+
+    private async Task<(Stream Stream, string FileName)?> DownloadDocumentAsync(Document document)
+    {
+        if (_client is null)
+        {
+            return null;
+        }
+
+        var stream = new MemoryStream();
+        await _client.DownloadFileAsync(document, stream);
+        stream.Position = 0;
+
+        var fileName = document.Filename ?? $"document_{document.id}";
+        return (stream, fileName);
     }
 }
