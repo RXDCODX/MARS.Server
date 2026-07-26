@@ -11,37 +11,23 @@ namespace MARS.Server.Services.SoundBarService;
 
 public class SoundMuteCoordinator
 {
-    private readonly SoundBarFactory? _soundBarFactory;
     private readonly StateManager _stateManager;
     private readonly ITtsHubBroadcaster _ttsHubBroadcaster;
     private readonly ILogger<SoundMuteCoordinator> _logger;
-    private readonly Func<ISoundBar>? _soundBarProvider;
+    private readonly ISoundBar _soundBar;
 
     // Сохраняем предыдущую громкость TTS, чтобы восстановить после unmute
     private double? _previousTtsVolume;
     private bool _isMuted = false;
 
     public SoundMuteCoordinator(
-        Func<ISoundBar> soundBarProvider,
+        ISoundBar soundBar,
         StateManager stateManager,
         ITtsHubBroadcaster ttsHubBroadcaster,
         ILogger<SoundMuteCoordinator> logger
     )
     {
-        _soundBarProvider = soundBarProvider;
-        _stateManager = stateManager;
-        _ttsHubBroadcaster = ttsHubBroadcaster;
-        _logger = logger;
-    }
-
-    public SoundMuteCoordinator(
-        SoundBarFactory soundBarFactory,
-        StateManager stateManager,
-        ITtsHubBroadcaster ttsHubBroadcaster,
-        ILogger<SoundMuteCoordinator> logger
-    )
-    {
-        _soundBarFactory = soundBarFactory;
+        _soundBar = soundBar;
         _stateManager = stateManager;
         _ttsHubBroadcaster = ttsHubBroadcaster;
         _logger = logger;
@@ -51,8 +37,7 @@ public class SoundMuteCoordinator
     {
         try
         {
-            var sb = _soundBarProvider?.Invoke() ?? _soundBarFactory!.CreateSoundBar();
-            await sb.Mute(args);
+            await _soundBar.Mute(args);
         }
         catch (Exception ex)
         {
@@ -90,8 +75,7 @@ public class SoundMuteCoordinator
     {
         try
         {
-            var sb = _soundBarProvider?.Invoke() ?? _soundBarFactory!.CreateSoundBar();
-            await sb.Unmute();
+            await _soundBar.Unmute();
         }
         catch (Exception ex)
         {
