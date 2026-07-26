@@ -17,6 +17,10 @@ namespace MARS.Server.Services.Twitch.Synthesizer;
 
 public class TtsHubBroadcaster(
     IHubContext<Hubs.VoiceRecognitionHub, IVoiceRecognitionHub> hubContext,
+    IHubContext<
+        Hubs.AudioControllerHub.AudioControllerHub,
+        Hubs.AudioControllerHub.IAudioControllerHub
+    > audioHubContext,
     ILogger<TtsHubBroadcaster> logger,
     ITwitchClient client,
     IHostApplicationLifetime lifetime,
@@ -27,6 +31,7 @@ public class TtsHubBroadcaster(
 ) : BackgroundService, ITtsHubBroadcaster
 {
     private const string TtsConsumersGroupName = "tts-consumers";
+    private const string AudioControllersGroupName = "audio-controllers";
     private readonly Lock _stateGate = new();
 
     public double CurrentVolume
@@ -127,6 +132,9 @@ public class TtsHubBroadcaster(
             }
 
             await hubContext.Clients.Group(TtsConsumersGroupName).PlayTts(ttsUser, message);
+            await audioHubContext
+                .Clients.Group(AudioControllersGroupName)
+                .PlayTts(ttsUser, message);
             logger.LogInformation(
                 "TTS broadcast was sent to hub consumers for user {User}",
                 user.DisplayName
@@ -159,6 +167,9 @@ public class TtsHubBroadcaster(
                 ?? new TtsState { Volume = CurrentVolume, RelayToDiscord = CurrentRelayToDiscord };
 
             await hubContext.Clients.Group(TtsConsumersGroupName).UpdateTtsState(stateToBroadcast);
+            await audioHubContext
+                .Clients.Group(AudioControllersGroupName)
+                .UpdateTtsState(stateToBroadcast);
             logger.LogInformation(
                 "TTS state update was sent to hub consumers: {@State}",
                 stateToBroadcast
@@ -178,6 +189,7 @@ public class TtsHubBroadcaster(
         try
         {
             await hubContext.Clients.Group(TtsConsumersGroupName).ReassignVoice(userId);
+            await audioHubContext.Clients.Group(AudioControllersGroupName).ReassignVoice(userId);
 
             logger.LogInformation(
                 "Voice reassign broadcast sent to hub consumers for user {UserId}",

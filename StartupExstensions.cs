@@ -12,6 +12,7 @@ using MARS.Server.Services.Discord.Gateway;
 using MARS.Server.Services.Discord.PlayRequest;
 using MARS.Server.Services.Discord.TtsVoiceRelay;
 using MARS.Server.Services.Obs;
+using MARS.Server.Services.AudioControllerHub;
 using MARS.Server.Services.PyroAlerts;
 using MARS.Server.Services.Scoreboard;
 using MARS.Server.Services.ServiceManager;
@@ -365,10 +366,6 @@ public static class StartupEstensions
         services.AddSingleton<TwitchMessagesHubAwaker>();
         services.AddHostedService(sp => sp.GetRequiredService<TwitchMessagesHubAwaker>());
 
-        services.AddSingleton<SoundBarFactory>();
-        services.AddSingleton<ISoundBar>(sp =>
-            sp.GetRequiredService<SoundBarFactory>().CreateSoundBar()
-        );
         services.AddSingleton<SoundMuteCoordinator>();
 
         services.AddSingleton<AutoRewardInfoFetcher>();
@@ -462,10 +459,6 @@ public static class StartupEstensions
         services.AddSingleton<InSignalRHubService>();
         services.AddSingleton<OutSignalRHubService>();
         services.AddSingleton<SoundRequestUserQueue>();
-        services.AddSingleton<SoundBarFactory>();
-        services.AddSingleton<ISoundBar>(sp =>
-            sp.GetRequiredService<SoundBarFactory>().CreateSoundBar()
-        );
         services.AddSingleton<SoundMuteCoordinator>();
 
         // YouTube / Discord play request services
@@ -679,8 +672,22 @@ public static class StartupEstensions
 
         internal IServiceCollection AddObsServices()
         {
-            services.AddSingleton<HttpObsService>();
-            services.AddSingleton<IObsService>(sp => sp.GetRequiredService<HttpObsService>());
+            // IObsService is now registered via AddAudioControllerHubServices
+            return services;
+        }
+
+        internal IServiceCollection AddAudioControllerHubServices()
+        {
+            services.AddSingleton<
+                Hubs.AudioControllerHub.AudioControllerCommandTracker
+            >();
+            services.AddSingleton<SignalRAudioControllerService>();
+            services.AddSingleton<ISoundBar>(sp =>
+                sp.GetRequiredService<SignalRAudioControllerService>()
+            );
+            services.AddSingleton<IObsService>(sp =>
+                sp.GetRequiredService<SignalRAudioControllerService>()
+            );
 
             return services;
         }

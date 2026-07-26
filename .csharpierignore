@@ -19,8 +19,11 @@
 **/.vscode/**
 **/.idea/**
 
-# Специфичные файлы (если есть legacy код, который не нужно трогать)
+# Специфичные файлы (еси есть legacy код, который не нужно трогать)
 # Раскомментируйте и добавьте при необходимости:
 # **/Legacy/**
 
-**/external/**
+# C# 14 extension syntax not supported by CSharpier 1.3.0
+**/StartupExstensions.cs
+
+**/external/

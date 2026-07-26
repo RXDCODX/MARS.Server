@@ -11,6 +11,7 @@ using MARS.Server.CustomLoggers.TelegramLogger;
 using MARS.Server.DataBaseContext;
 using MARS.Server.Exstensions;
 using MARS.Server.Hubs;
+using MARS.Server.Services.AudioControllerHub;
 using MARS.Server.Services.CinemaQueue;
 using MARS.Server.Services.CommandExecutor;
 using MARS.Server.Services.Configuration;
@@ -221,7 +222,8 @@ public static class Program
             .AddExternalApiServices()
             .AddSpecializedServices()
             .AddSoundRequest()
-            .AddObsServices();
+            .AddObsServices()
+            .AddAudioControllerHubServices();
 
         // Media file storage
         services.AddSingleton<IMediaFileStorageService, WebRootMediaFileStorageService>();
@@ -304,6 +306,7 @@ public static class Program
         //app.MapHub<SoundBarHub>("/hubs/soundbar");
         app.MapHub<ScoreboardHub>("/hubs/scoreboard");
         app.MapHub<VoiceRecognitionHub>("/hubs/tts");
+        app.MapHub<Hubs.AudioControllerHub.AudioControllerHub>("/hubs/audio-controller");
         app.AddLogerHub();
         if (IsUseSoundRequest)
         {
