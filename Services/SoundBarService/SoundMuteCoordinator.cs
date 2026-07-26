@@ -9,65 +9,52 @@ using Microsoft.Extensions.Logging;
 
 namespace MARS.Server.Services.SoundBarService;
 
-public class SoundMuteCoordinator
+public class SoundMuteCoordinator(
+    ISoundBar soundBar,
+    StateManager stateManager,
+    ITtsHubBroadcaster ttsHubBroadcaster,
+    ILogger<SoundMuteCoordinator> logger
+)
 {
-    private readonly StateManager _stateManager;
-    private readonly ITtsHubBroadcaster _ttsHubBroadcaster;
-    private readonly ILogger<SoundMuteCoordinator> _logger;
-    private readonly ISoundBar _soundBar;
-
     // Сохраняем предыдущую громкость TTS, чтобы восстановить после unmute
     private double? _previousTtsVolume;
     private bool _isMuted = false;
-
-    public SoundMuteCoordinator(
-        ISoundBar soundBar,
-        StateManager stateManager,
-        ITtsHubBroadcaster ttsHubBroadcaster,
-        ILogger<SoundMuteCoordinator> logger
-    )
-    {
-        _soundBar = soundBar;
-        _stateManager = stateManager;
-        _ttsHubBroadcaster = ttsHubBroadcaster;
-        _logger = logger;
-    }
 
     public async Task MuteAsync(params string[] args)
     {
         try
         {
-            await _soundBar.Mute(args);
+            await soundBar.Mute(args);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to call SoundBar.Mute");
+            logger.LogError(ex, "Failed to call SoundBar.Mute");
         }
 
         try
         {
-            var state = await _stateManager.GetStateAsync();
+            var state = await stateManager.GetStateAsync();
             if (state.State == PlaybackState.Playing)
             {
-                await _stateManager.SetPausedAsync(true);
-                await _stateManager.SetPausedByMuteAsync(true);
+                await stateManager.SetPausedAsync(true);
+                await stateManager.SetPausedByMuteAsync(true);
             }
 
-            await _stateManager.SetMutedAsync(true);
+            await stateManager.SetMutedAsync(true);
 
             // Сохраняем текущую громкость TTS и отправляем Volume=0
 
             if (!_isMuted)
             {
-                _previousTtsVolume = _ttsHubBroadcaster.CurrentVolume;
+                _previousTtsVolume = ttsHubBroadcaster.CurrentVolume;
                 var ttsState = new TtsState { IsStopped = true, Volume = 0.0 };
-                await _ttsHubBroadcaster.BroadcastStateAsync(ttsState);
+                await ttsHubBroadcaster.BroadcastStateAsync(ttsState);
                 _isMuted = true;
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to coordinate mute actions");
+            logger.LogError(ex, "Failed to coordinate mute actions");
         }
     }
 
@@ -75,32 +62,32 @@ public class SoundMuteCoordinator
     {
         try
         {
-            await _soundBar.Unmute();
+            await soundBar.Unmute();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to call SoundBar.Unmute");
+            logger.LogError(ex, "Failed to call SoundBar.Unmute");
         }
 
         try
         {
-            await _stateManager.SetMutedAsync(false);
+            await stateManager.SetMutedAsync(false);
 
-            var state = await _stateManager.GetStateAsync();
+            var state = await stateManager.GetStateAsync();
             if (state.PausedByMute)
             {
-                await _stateManager.SetPausedAsync(false);
-                await _stateManager.SetPausedByMuteAsync(false);
+                await stateManager.SetPausedAsync(false);
+                await stateManager.SetPausedByMuteAsync(false);
             }
 
-            var volumeToRestore = _previousTtsVolume ?? _ttsHubBroadcaster.CurrentVolume;
+            var volumeToRestore = _previousTtsVolume ?? ttsHubBroadcaster.CurrentVolume;
             var ttsState = new TtsState { IsStopped = false, Volume = volumeToRestore };
-            await _ttsHubBroadcaster.BroadcastStateAsync(ttsState);
+            await ttsHubBroadcaster.BroadcastStateAsync(ttsState);
             _isMuted = false;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to coordinate unmute actions");
+            logger.LogError(ex, "Failed to coordinate unmute actions");
         }
     }
 }

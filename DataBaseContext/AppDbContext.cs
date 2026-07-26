@@ -27,11 +27,8 @@ using Npgsql;
 
 namespace MARS.Server.DataBaseContext;
 
-public partial class AppDbContext : DbContext
+public partial class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
-    public AppDbContext(DbContextOptions<AppDbContext> options)
-        : base(options) { }
-
     // Таблицы Twitch Users вынесены в TwitchUsersDbContext.cs
 
     public DbSet<Waifu> Waifus { get; set; } = null!;
