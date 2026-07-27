@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Text;
@@ -20,7 +20,7 @@ public class DanbooruRandomPostService(
     /// <summary>
     /// Получить случайный пост по заданным тегам.
     /// </summary>
-    public async Task<DanbooruPost[]?> GetRandomPostAsync(string tags, int limit = 3)
+    public virtual async Task<DanbooruPost[]?> GetRandomPostAsync(string tags, int limit = 3)
     {
         const string arara = "RxdcodxStreamerBot/1.0";
 

@@ -8,26 +8,25 @@ using System.Threading.Tasks;
 using Cronos;
 using MARS.Server.DataBaseContext;
 using MARS.Server.Services.BooruShared;
-using MARS.Server.Services.DanbooruAutoPost.Entities;
 using MARS.Server.Services.Discord.Gateway;
+using MARS.Server.Services.NSFWBooru.Entities;
 using MARS.Server.Services.Telegram.DiscordBridge.Entitys;
-using MARS.Server.Services.Twitch.Rewards._27_RandomArt;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace MARS.Server.Services.DanbooruAutoPost;
+namespace MARS.Server.Services.NSFWBooru;
 
-public class DanbooruAutoPostService(
-    ILogger<DanbooruAutoPostService> logger,
+public class NSFWBooruAutoPostService(
+    ILogger<NSFWBooruAutoPostService> logger,
     IDbContextFactory<AppDbContext> dbContextFactory,
-    DanbooruRandomPostService danbooruService,
+    Rule34RandomPostService rule34Service,
     IDiscordGatewayService discordGatewayService,
     IHttpClientFactory httpClientFactory,
     IDeduplicationService deduplicationService
-) : BackgroundService, IDanbooruAutoPostService
+) : BackgroundService, INSFWBooruAutoPostService
 {
-    private const string Source = "Danbooru";
+    private const string Source = "Rule34";
     private const int MaxDedupRetries = 5;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -42,7 +41,7 @@ public class DanbooruAutoPostService(
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Ошибка в цикле DanbooruAutoPostService");
+                logger.LogError(ex, "Ошибка в цикле NSFWBooruAutoPostService");
             }
         }
     }
@@ -52,7 +51,7 @@ public class DanbooruAutoPostService(
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
 
         var configs = await dbContext
-            .DanbooruAutoPostConfigs.AsNoTracking()
+            .NSFWBooruAutoPostConfigs.AsNoTracking()
             .Where(c => c.IsEnabled)
             .ToListAsync(cancellationToken);
 
@@ -74,7 +73,7 @@ public class DanbooruAutoPostService(
                     await using var updateContext = await dbContextFactory.CreateDbContextAsync(
                         cancellationToken
                     );
-                    var entity = await updateContext.DanbooruAutoPostConfigs.FindAsync(
+                    var entity = await updateContext.NSFWBooruAutoPostConfigs.FindAsync(
                         [config.Id],
                         cancellationToken
                     );
@@ -107,13 +106,13 @@ public class DanbooruAutoPostService(
     }
 
     private async Task PostImageAsync(
-        DanbooruAutoPostConfig config,
+        NSFWBooruAutoPostConfig config,
         CancellationToken cancellationToken
     )
     {
         for (var attempt = 0; attempt <= MaxDedupRetries; attempt++)
         {
-            var posts = await danbooruService.GetRandomPostAsync(config.Tags, 1);
+            var posts = await rule34Service.GetRandomPostAsync(config.Tags, 1);
             if (posts is null || posts.Length == 0)
             {
                 logger.LogWarning(
@@ -145,7 +144,7 @@ public class DanbooruAutoPostService(
                 continue;
             }
 
-            var fileUrl = post.FileUrl ?? post.LargeFileUrl;
+            var fileUrl = post.FileUrl ?? post.SampleUrl;
             if (string.IsNullOrWhiteSpace(fileUrl))
             {
                 logger.LogWarning(
@@ -162,18 +161,16 @@ public class DanbooruAutoPostService(
 
             var fileBytes = await response.Content.ReadAsByteArrayAsync(cancellationToken);
             var fileName = Path.GetFileName(new Uri(fileUrl).AbsolutePath);
-            var tagPreview = string.IsNullOrWhiteSpace(post.TagStringCharacter)
-                ? post
-                    .TagStringGeneral?.Split(' ')
-                    .Take(5)
-                    .Aggregate("", (a, b) => $"{a} {b}")
-                    .Trim()
-                : post.TagStringCharacter;
+            var tagPreview = post
+                .Tags?.Split(' ')
+                .Take(5)
+                .Aggregate("", (a, b) => $"{a} {b}")
+                .Trim();
 
             var message =
-                $"**Danbooru** | Score: {post.Score} | Rating: {post.Rating}\n"
+                $"**Rule34** | Score: {post.Score} | Rating: {post.Rating}\n"
                 + $"Tags: {tagPreview}\n"
-                + $"https://danbooru.donmai.us/posts/{post.Id}";
+                + $"https://rule34.xxx/index.php?page=post&s=view&id={post.Id}";
 
             await using var stream = new MemoryStream(fileBytes);
             var result = await discordGatewayService.SendFileAsync(
@@ -212,11 +209,11 @@ public class DanbooruAutoPostService(
         );
     }
 
-    public async Task<OperationResult<List<DanbooruAutoPostConfigDto>>> GetAllAsync(
+    public async Task<OperationResult<List<NSFWBooruAutoPostConfigDto>>> GetAllAsync(
         CancellationToken cancellationToken = default
     )
     {
-        var result = OperationResult<List<DanbooruAutoPostConfigDto>>.Bad(
+        var result = OperationResult<List<NSFWBooruAutoPostConfigDto>>.Bad(
             "Не удалось получить конфигурации",
             []
         );
@@ -227,10 +224,10 @@ public class DanbooruAutoPostService(
                 cancellationToken
             );
             var configs = await dbContext
-                .DanbooruAutoPostConfigs.AsNoTracking()
+                .NSFWBooruAutoPostConfigs.AsNoTracking()
                 .OrderBy(c => c.DiscordChannelId)
                 .ThenBy(c => c.CreatedAtUtc)
-                .Select(c => new DanbooruAutoPostConfigDto
+                .Select(c => new NSFWBooruAutoPostConfigDto
                 {
                     Id = c.Id,
                     DiscordChannelId = c.DiscordChannelId,
@@ -243,43 +240,43 @@ public class DanbooruAutoPostService(
                 })
                 .ToListAsync(cancellationToken);
 
-            result = OperationResult<List<DanbooruAutoPostConfigDto>>.Ok(
+            result = OperationResult<List<NSFWBooruAutoPostConfigDto>>.Ok(
                 "Конфигурации получены",
                 configs
             );
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Ошибка получения конфигураций DanbooruAutoPost");
-            result = OperationResult<List<DanbooruAutoPostConfigDto>>.Bad(ex.Message, []);
+            logger.LogError(ex, "Ошибка получения конфигураций NSFWBooruAutoPost");
+            result = OperationResult<List<NSFWBooruAutoPostConfigDto>>.Bad(ex.Message, []);
         }
 
         return result;
     }
 
-    public async Task<OperationResult<DanbooruAutoPostConfigDto>> CreateAsync(
-        DanbooruAutoPostCreateRequest request,
+    public async Task<OperationResult<NSFWBooruAutoPostConfigDto>> CreateAsync(
+        NSFWBooruAutoPostCreateRequest request,
         CancellationToken cancellationToken = default
     )
     {
-        var result = OperationResult<DanbooruAutoPostConfigDto>.Bad(
+        var result = OperationResult<NSFWBooruAutoPostConfigDto>.Bad(
             "Не удалось создать конфигурацию",
-            new DanbooruAutoPostConfigDto()
+            new NSFWBooruAutoPostConfigDto()
         );
 
         if (request.DiscordChannelId == 0)
         {
-            return OperationResult<DanbooruAutoPostConfigDto>.Bad(
+            return OperationResult<NSFWBooruAutoPostConfigDto>.Bad(
                 "DiscordChannelId обязателен",
-                new DanbooruAutoPostConfigDto()
+                new NSFWBooruAutoPostConfigDto()
             );
         }
 
         if (string.IsNullOrWhiteSpace(request.CronExpression))
         {
-            return OperationResult<DanbooruAutoPostConfigDto>.Bad(
+            return OperationResult<NSFWBooruAutoPostConfigDto>.Bad(
                 "CRON выражение обязательно",
-                new DanbooruAutoPostConfigDto()
+                new NSFWBooruAutoPostConfigDto()
             );
         }
 
@@ -289,18 +286,18 @@ public class DanbooruAutoPostService(
         }
         catch (CronFormatException)
         {
-            return OperationResult<DanbooruAutoPostConfigDto>.Bad(
+            return OperationResult<NSFWBooruAutoPostConfigDto>.Bad(
                 "Некорректное CRON выражение",
-                new DanbooruAutoPostConfigDto()
+                new NSFWBooruAutoPostConfigDto()
             );
         }
 
         var tagValidationError = TagValidator.GetValidationError(request.Tags);
         if (tagValidationError is not null)
         {
-            return OperationResult<DanbooruAutoPostConfigDto>.Bad(
+            return OperationResult<NSFWBooruAutoPostConfigDto>.Bad(
                 tagValidationError,
-                new DanbooruAutoPostConfigDto()
+                new NSFWBooruAutoPostConfigDto()
             );
         }
 
@@ -311,7 +308,7 @@ public class DanbooruAutoPostService(
             );
 
             var now = DateTime.Now;
-            var entity = new DanbooruAutoPostConfig
+            var entity = new NSFWBooruAutoPostConfig
             {
                 DiscordChannelId = request.DiscordChannelId,
                 Tags = request.Tags.Trim(),
@@ -321,12 +318,12 @@ public class DanbooruAutoPostService(
                 UpdatedAtUtc = now,
             };
 
-            dbContext.DanbooruAutoPostConfigs.Add(entity);
+            dbContext.NSFWBooruAutoPostConfigs.Add(entity);
             await dbContext.SaveChangesAsync(cancellationToken);
 
-            result = OperationResult<DanbooruAutoPostConfigDto>.Ok(
+            result = OperationResult<NSFWBooruAutoPostConfigDto>.Ok(
                 "Конфигурация создана",
-                new DanbooruAutoPostConfigDto
+                new NSFWBooruAutoPostConfigDto
                 {
                     Id = entity.Id,
                     DiscordChannelId = entity.DiscordChannelId,
@@ -341,31 +338,31 @@ public class DanbooruAutoPostService(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Ошибка создания конфигурации DanbooruAutoPost");
-            result = OperationResult<DanbooruAutoPostConfigDto>.Bad(
+            logger.LogError(ex, "Ошибка создания конфигурации NSFWBooruAutoPost");
+            result = OperationResult<NSFWBooruAutoPostConfigDto>.Bad(
                 $"Ошибка создания: {ex.Message}",
-                new DanbooruAutoPostConfigDto()
+                new NSFWBooruAutoPostConfigDto()
             );
         }
 
         return result;
     }
 
-    public async Task<OperationResult<DanbooruAutoPostConfigDto>> UpdateAsync(
-        DanbooruAutoPostUpdateRequest request,
+    public async Task<OperationResult<NSFWBooruAutoPostConfigDto>> UpdateAsync(
+        NSFWBooruAutoPostUpdateRequest request,
         CancellationToken cancellationToken = default
     )
     {
-        var result = OperationResult<DanbooruAutoPostConfigDto>.Bad(
+        var result = OperationResult<NSFWBooruAutoPostConfigDto>.Bad(
             "Не удалось обновить конфигурацию",
-            new DanbooruAutoPostConfigDto()
+            new NSFWBooruAutoPostConfigDto()
         );
 
         if (request.Id == Guid.Empty)
         {
-            return OperationResult<DanbooruAutoPostConfigDto>.Bad(
+            return OperationResult<NSFWBooruAutoPostConfigDto>.Bad(
                 "Id не может быть пустым",
-                new DanbooruAutoPostConfigDto()
+                new NSFWBooruAutoPostConfigDto()
             );
         }
 
@@ -375,18 +372,18 @@ public class DanbooruAutoPostService(
         }
         catch (CronFormatException)
         {
-            return OperationResult<DanbooruAutoPostConfigDto>.Bad(
+            return OperationResult<NSFWBooruAutoPostConfigDto>.Bad(
                 "Некорректное CRON выражение",
-                new DanbooruAutoPostConfigDto()
+                new NSFWBooruAutoPostConfigDto()
             );
         }
 
         var tagValidationError = TagValidator.GetValidationError(request.Tags);
         if (tagValidationError is not null)
         {
-            return OperationResult<DanbooruAutoPostConfigDto>.Bad(
+            return OperationResult<NSFWBooruAutoPostConfigDto>.Bad(
                 tagValidationError,
-                new DanbooruAutoPostConfigDto()
+                new NSFWBooruAutoPostConfigDto()
             );
         }
 
@@ -395,7 +392,7 @@ public class DanbooruAutoPostService(
             await using var dbContext = await dbContextFactory.CreateDbContextAsync(
                 cancellationToken
             );
-            var entity = await dbContext.DanbooruAutoPostConfigs.FindAsync(
+            var entity = await dbContext.NSFWBooruAutoPostConfigs.FindAsync(
                 [request.Id],
                 cancellationToken
             );
@@ -408,9 +405,9 @@ public class DanbooruAutoPostService(
                 entity.UpdatedAtUtc = DateTime.Now;
                 await dbContext.SaveChangesAsync(cancellationToken);
 
-                result = OperationResult<DanbooruAutoPostConfigDto>.Ok(
+                result = OperationResult<NSFWBooruAutoPostConfigDto>.Ok(
                     "Конфигурация обновлена",
-                    new DanbooruAutoPostConfigDto
+                    new NSFWBooruAutoPostConfigDto
                     {
                         Id = entity.Id,
                         DiscordChannelId = entity.DiscordChannelId,
@@ -425,18 +422,22 @@ public class DanbooruAutoPostService(
             }
             else
             {
-                result = OperationResult<DanbooruAutoPostConfigDto>.Bad(
+                result = OperationResult<NSFWBooruAutoPostConfigDto>.Bad(
                     "Конфигурация не найдена",
-                    new DanbooruAutoPostConfigDto()
+                    new NSFWBooruAutoPostConfigDto()
                 );
             }
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Ошибка обновления конфигурации DanbooruAutoPost {Id}", request.Id);
-            result = OperationResult<DanbooruAutoPostConfigDto>.Bad(
+            logger.LogError(
+                ex,
+                "Ошибка обновления конфигурации NSFWBooruAutoPost {Id}",
+                request.Id
+            );
+            result = OperationResult<NSFWBooruAutoPostConfigDto>.Bad(
                 $"Ошибка обновления: {ex.Message}",
-                new DanbooruAutoPostConfigDto()
+                new NSFWBooruAutoPostConfigDto()
             );
         }
 
@@ -460,11 +461,14 @@ public class DanbooruAutoPostService(
             await using var dbContext = await dbContextFactory.CreateDbContextAsync(
                 cancellationToken
             );
-            var entity = await dbContext.DanbooruAutoPostConfigs.FindAsync([id], cancellationToken);
+            var entity = await dbContext.NSFWBooruAutoPostConfigs.FindAsync(
+                [id],
+                cancellationToken
+            );
 
             if (entity is not null)
             {
-                dbContext.DanbooruAutoPostConfigs.Remove(entity);
+                dbContext.NSFWBooruAutoPostConfigs.Remove(entity);
                 await dbContext.SaveChangesAsync(cancellationToken);
                 result = OperationResult.Ok("Конфигурация удалена");
             }
@@ -475,29 +479,29 @@ public class DanbooruAutoPostService(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Ошибка удаления конфигурации DanbooruAutoPost {Id}", id);
+            logger.LogError(ex, "Ошибка удаления конфигурации NSFWBooruAutoPost {Id}", id);
             result = OperationResult.Bad($"Ошибка удаления: {ex.Message}");
         }
 
         return result;
     }
 
-    public async Task<OperationResult<DanbooruAutoPostConfigDto>> SetEnabledAsync(
+    public async Task<OperationResult<NSFWBooruAutoPostConfigDto>> SetEnabledAsync(
         Guid id,
         bool isEnabled,
         CancellationToken cancellationToken = default
     )
     {
-        var result = OperationResult<DanbooruAutoPostConfigDto>.Bad(
+        var result = OperationResult<NSFWBooruAutoPostConfigDto>.Bad(
             "Не удалось изменить состояние",
-            new DanbooruAutoPostConfigDto()
+            new NSFWBooruAutoPostConfigDto()
         );
 
         if (id == Guid.Empty)
         {
-            return OperationResult<DanbooruAutoPostConfigDto>.Bad(
+            return OperationResult<NSFWBooruAutoPostConfigDto>.Bad(
                 "Id не может быть пустым",
-                new DanbooruAutoPostConfigDto()
+                new NSFWBooruAutoPostConfigDto()
             );
         }
 
@@ -506,7 +510,10 @@ public class DanbooruAutoPostService(
             await using var dbContext = await dbContextFactory.CreateDbContextAsync(
                 cancellationToken
             );
-            var entity = await dbContext.DanbooruAutoPostConfigs.FindAsync([id], cancellationToken);
+            var entity = await dbContext.NSFWBooruAutoPostConfigs.FindAsync(
+                [id],
+                cancellationToken
+            );
 
             if (entity is not null)
             {
@@ -514,9 +521,9 @@ public class DanbooruAutoPostService(
                 entity.UpdatedAtUtc = DateTime.Now;
                 await dbContext.SaveChangesAsync(cancellationToken);
 
-                result = OperationResult<DanbooruAutoPostConfigDto>.Ok(
+                result = OperationResult<NSFWBooruAutoPostConfigDto>.Ok(
                     "Состояние обновлено",
-                    new DanbooruAutoPostConfigDto
+                    new NSFWBooruAutoPostConfigDto
                     {
                         Id = entity.Id,
                         DiscordChannelId = entity.DiscordChannelId,
@@ -531,18 +538,18 @@ public class DanbooruAutoPostService(
             }
             else
             {
-                result = OperationResult<DanbooruAutoPostConfigDto>.Bad(
+                result = OperationResult<NSFWBooruAutoPostConfigDto>.Bad(
                     "Конфигурация не найдена",
-                    new DanbooruAutoPostConfigDto()
+                    new NSFWBooruAutoPostConfigDto()
                 );
             }
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Ошибка изменения состояния DanbooruAutoPost {Id}", id);
-            result = OperationResult<DanbooruAutoPostConfigDto>.Bad(
+            logger.LogError(ex, "Ошибка изменения состояния NSFWBooruAutoPost {Id}", id);
+            result = OperationResult<NSFWBooruAutoPostConfigDto>.Bad(
                 $"Ошибка: {ex.Message}",
-                new DanbooruAutoPostConfigDto()
+                new NSFWBooruAutoPostConfigDto()
             );
         }
 
@@ -567,14 +574,14 @@ public class DanbooruAutoPostService(
                 cancellationToken
             );
             var config = await dbContext
-                .DanbooruAutoPostConfigs.AsNoTracking()
+                .NSFWBooruAutoPostConfigs.AsNoTracking()
                 .FirstOrDefaultAsync(c => c.Id == id, cancellationToken);
 
             if (config is not null)
             {
                 await PostImageAsync(config, cancellationToken);
 
-                var entity = await dbContext.DanbooruAutoPostConfigs.FindAsync(
+                var entity = await dbContext.NSFWBooruAutoPostConfigs.FindAsync(
                     [id],
                     cancellationToken
                 );
@@ -593,7 +600,7 @@ public class DanbooruAutoPostService(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Ошибка ручного триггера DanbooruAutoPost {Id}", id);
+            logger.LogError(ex, "Ошибка ручного триггера NSFWBooruAutoPost {Id}", id);
             result = OperationResult.Bad($"Ошибка: {ex.Message}");
         }
 
@@ -655,7 +662,7 @@ public class DanbooruAutoPostService(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Ошибка получения Discord каналов для DanbooruAutoPost");
+            logger.LogError(ex, "Ошибка получения Discord каналов для NSFWBooruAutoPost");
             result = OperationResult<List<DiscordChannelOptionDto>>.Bad(
                 $"Ошибка: {ex.Message}",
                 []
