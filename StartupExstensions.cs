@@ -626,7 +626,7 @@ public static class StartupEstensions
 
             services.AddSingleton<IDeduplicationService, DeduplicationService>();
 
-            services.AddSingleton<Rule34RandomPostService>();
+            services.AddSingleton<NSFWBooruRandomPostService>();
             services.AddSingleton<NSFWBooruAutoPostService>();
             services.AddSingleton<INSFWBooruAutoPostService>(sp =>
                 sp.GetRequiredService<NSFWBooruAutoPostService>()

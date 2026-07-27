@@ -8,17 +8,17 @@ using Microsoft.Extensions.Logging;
 
 namespace MARS.Server.Services.NSFWBooru;
 
-public class Rule34RandomPostService(
-    ILogger<Rule34RandomPostService> logger,
+public class NSFWBooruRandomPostService(
+    ILogger<NSFWBooruRandomPostService> logger,
     IHttpClientFactory factory
 )
 {
     private const string UserAgent = "MarsBot/1.0";
     private const string BaseUrl = "https://api.rule34.xxx/index.php";
 
-    public virtual async Task<Rule34Post[]?> GetRandomPostAsync(string tags, int limit = 1)
+    public virtual async Task<NSFWBooruPost[]?> GetRandomPostAsync(string tags, int limit = 1)
     {
-        Rule34Post[]? result = null;
+        NSFWBooruPost[]? result = null;
 
         try
         {
@@ -33,7 +33,7 @@ public class Rule34RandomPostService(
             if (!response.IsSuccessStatusCode)
             {
                 logger.LogWarning(
-                    "Rule34 API вернул {StatusCode} для тегов '{Tags}'",
+                    "NSFWBooru API вернул {StatusCode} для тегов '{Tags}'",
                     response.StatusCode,
                     tags
                 );
@@ -46,7 +46,7 @@ public class Rule34RandomPostService(
                 return null;
             }
 
-            var posts = JsonSerializer.Deserialize<Rule34Post[]>(content);
+            var posts = JsonSerializer.Deserialize<NSFWBooruPost[]>(content);
             if (posts is null || posts.Length == 0)
             {
                 return null;
@@ -64,7 +64,7 @@ public class Rule34RandomPostService(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Ошибка при запросе к Rule34 API для тегов '{Tags}'", tags);
+            logger.LogError(ex, "Ошибка при запросе к NSFWBooru API для тегов '{Tags}'", tags);
         }
 
         return result;

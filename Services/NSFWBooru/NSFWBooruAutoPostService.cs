@@ -20,13 +20,13 @@ namespace MARS.Server.Services.NSFWBooru;
 public class NSFWBooruAutoPostService(
     ILogger<NSFWBooruAutoPostService> logger,
     IDbContextFactory<AppDbContext> dbContextFactory,
-    Rule34RandomPostService rule34Service,
+    NSFWBooruRandomPostService nsfwBooruService,
     IDiscordGatewayService discordGatewayService,
     IHttpClientFactory httpClientFactory,
     IDeduplicationService deduplicationService
 ) : BackgroundService, INSFWBooruAutoPostService
 {
-    private const string Source = "Rule34";
+    private const string Source = "NSFWBooru";
     private const int MaxDedupRetries = 5;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -112,7 +112,7 @@ public class NSFWBooruAutoPostService(
     {
         for (var attempt = 0; attempt <= MaxDedupRetries; attempt++)
         {
-            var posts = await rule34Service.GetRandomPostAsync(config.Tags, 1);
+            var posts = await nsfwBooruService.GetRandomPostAsync(config.Tags, 1);
             if (posts is null || posts.Length == 0)
             {
                 logger.LogWarning(
@@ -168,7 +168,7 @@ public class NSFWBooruAutoPostService(
                 .Trim();
 
             var message =
-                $"**Rule34** | Score: {post.Score} | Rating: {post.Rating}\n"
+                $"**NSFWBooru** | Score: {post.Score} | Rating: {post.Rating}\n"
                 + $"Tags: {tagPreview}\n"
                 + $"https://rule34.xxx/index.php?page=post&s=view&id={post.Id}";
 

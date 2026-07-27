@@ -2,7 +2,7 @@ using System.Text.Json.Serialization;
 
 namespace MARS.Server.Services.NSFWBooru.Entities;
 
-public class Rule34Post
+public class NSFWBooruPost
 {
     [JsonPropertyName("id")]
     public int Id { get; set; }
