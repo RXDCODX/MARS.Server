@@ -7,7 +7,9 @@ using MARS.Server.Hubs.Filters;
 using MARS.Server.Hubs.Interfaces;
 using MARS.Server.Migrations;
 using MARS.Server.Services._365Genius;
+using MARS.Server.Services.BooruShared;
 using MARS.Server.Services.DanbooruAutoPost;
+using MARS.Server.Services.NSFWBooru;
 using MARS.Server.Services.Discord.Gateway;
 using MARS.Server.Services.Discord.PlayRequest;
 using MARS.Server.Services.Discord.TtsVoiceRelay;
@@ -621,6 +623,15 @@ public static class StartupEstensions
                 sp.GetRequiredService<DanbooruAutoPostService>()
             );
             services.AddHostedService(sp => sp.GetRequiredService<DanbooruAutoPostService>());
+
+            services.AddSingleton<IDeduplicationService, DeduplicationService>();
+
+            services.AddSingleton<NSFWBooruRandomPostService>();
+            services.AddSingleton<NSFWBooruAutoPostService>();
+            services.AddSingleton<INSFWBooruAutoPostService>(sp =>
+                sp.GetRequiredService<NSFWBooruAutoPostService>()
+            );
+            services.AddHostedService(sp => sp.GetRequiredService<NSFWBooruAutoPostService>());
 
             return services;
         }
