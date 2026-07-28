@@ -1,4 +1,5 @@
 using System;
+using System.Text.Json.Serialization;
 
 namespace MARS.Server.Services.NSFWBooru.Entities;
 
@@ -6,6 +7,9 @@ public class NSFWBooruAutoPostConfigDto
 {
     public Guid Id { get; set; }
 
+    [JsonNumberHandling(
+        JsonNumberHandling.AllowReadingFromString | JsonNumberHandling.WriteAsString
+    )]
     public ulong DiscordChannelId { get; set; }
 
     public string Tags { get; set; } = "";

@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Cronos;
@@ -23,7 +22,6 @@ public class DanbooruAutoPostService(
     IDbContextFactory<AppDbContext> dbContextFactory,
     DanbooruRandomPostService danbooruService,
     IDiscordGatewayService discordGatewayService,
-    IHttpClientFactory httpClientFactory,
     IDeduplicationService deduplicationService
 ) : BackgroundService, IDanbooruAutoPostService
 {
@@ -156,12 +154,10 @@ public class DanbooruAutoPostService(
                 return;
             }
 
-            using var httpClient = httpClientFactory.CreateClient();
-            using var response = await httpClient.GetAsync(fileUrl, cancellationToken);
-            response.EnsureSuccessStatusCode();
-
-            var fileBytes = await response.Content.ReadAsByteArrayAsync(cancellationToken);
-            var fileName = Path.GetFileName(new Uri(fileUrl).AbsolutePath);
+            var (fileBytes, fileName) = await danbooruService.DownloadFileBytesAsync(
+                fileUrl,
+                cancellationToken
+            );
             var tagPreview = string.IsNullOrWhiteSpace(post.TagStringCharacter)
                 ? post
                     .TagStringGeneral?.Split(' ')

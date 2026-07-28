@@ -625,12 +625,7 @@ public class TelegramDiscordBridgeService(
                 return;
             }
 
-            var text = ExtractPostText(firstMessage);
-            var sourceHeader =
-                $"[TG:{telegramChannelId}] time:{firstMessage.Date:yyyy-MM-dd HH:mm:ss} UTC";
-            var caption = string.IsNullOrWhiteSpace(text)
-                ? sourceHeader
-                : $"{sourceHeader}\n{text}";
+            var caption = ExtractPostText(firstMessage);
 
             var mediaFiles = await DownloadAlbumMediaAsync(messages);
 
@@ -727,12 +722,7 @@ public class TelegramDiscordBridgeService(
                 return;
             }
 
-            var text = ExtractPostText(message);
-            var sourceHeader =
-                $"[TG:{telegramChannelId}] msg:{message.ID} time:{message.Date:yyyy-MM-dd HH:mm:ss} UTC";
-            var caption = string.IsNullOrWhiteSpace(text)
-                ? sourceHeader
-                : $"{sourceHeader}\n{text}";
+            var caption = ExtractPostText(message);
 
             var mediaFile = await DownloadSingleMediaAsync(message);
 
@@ -944,10 +934,11 @@ public class TelegramDiscordBridgeService(
         }
 
         var stream = new MemoryStream();
-        await _client.DownloadFileAsync(photo, stream, largestSize);
+        var fileType = await _client.DownloadFileAsync(photo, stream, largestSize);
         stream.Position = 0;
 
-        var fileName = $"photo_{photo.id}.jpg";
+        var extension = GetExtensionForPhoto(fileType);
+        var fileName = $"photo_{photo.id}{extension}";
         return (stream, fileName);
     }
 
@@ -962,7 +953,82 @@ public class TelegramDiscordBridgeService(
         await _client.DownloadFileAsync(document, stream);
         stream.Position = 0;
 
-        var fileName = document.Filename ?? $"document_{document.id}";
+        var fileName = document
+            .attributes.OfType<DocumentAttributeFilename>()
+            .FirstOrDefault()
+            ?.file_name;
+
+        if (string.IsNullOrEmpty(fileName))
+        {
+            var extension = GetExtensionFromMimeType(document.mime_type);
+            fileName = $"document_{document.id}{extension}";
+        }
+        else
+        {
+            var extension = GetExtensionFromMimeType(document.mime_type);
+            if (
+                !string.IsNullOrEmpty(extension)
+                && !fileName.EndsWith(extension, StringComparison.OrdinalIgnoreCase)
+            )
+            {
+                fileName += extension;
+            }
+        }
+
         return (stream, fileName);
+    }
+
+    public static string GetExtensionFromMimeType(string? mimeType)
+    {
+        return mimeType?.ToLowerInvariant() switch
+        {
+            "image/jpeg" or "image/jpg" => ".jpg",
+            "image/png" => ".png",
+            "image/gif" => ".gif",
+            "image/webp" => ".webp",
+            "image/bmp" or "image/x-ms-bmp" => ".bmp",
+            "image/tiff" or "image/x-tiff" => ".tiff",
+            "image/svg+xml" => ".svg",
+            "video/mp4" or "video/x-mp4" => ".mp4",
+            "video/x-matroska" or "video/mkv" => ".mkv",
+            "video/webm" => ".webm",
+            "video/quicktime" or "video/mov" => ".mov",
+            "video/x-msvideo" or "video/avi" => ".avi",
+            "video/x-ms-wmv" => ".wmv",
+            "video/mpeg" => ".mpeg",
+            "audio/mpeg" or "audio/mp3" => ".mp3",
+            "audio/ogg" or "audio/vorbis" => ".ogg",
+            "audio/aac" or "audio/x-aac" => ".aac",
+            "audio/flac" or "audio/x-flac" => ".flac",
+            "audio/wav" or "audio/x-wav" or "audio/vnd.wave" => ".wav",
+            "audio/opus" => ".opus",
+            "audio/webm" => ".weba",
+            "application/pdf" => ".pdf",
+            "application/zip" => ".zip",
+            "application/x-rar-compressed" or "application/vnd.rar" => ".rar",
+            "application/x-7z-compressed" => ".7z",
+            "application/gzip" or "application/x-gzip" => ".gz",
+            "application/x-tar" => ".tar",
+            "application/x-bzip2" => ".bz2",
+            "text/plain" => ".txt",
+            "text/html" => ".html",
+            "application/json" => ".json",
+            "application/xml" or "text/xml" => ".xml",
+            _ => "",
+        };
+    }
+
+    public static string GetExtensionForPhoto(Storage_FileType fileType)
+    {
+        return fileType switch
+        {
+            Storage_FileType.jpeg => ".jpg",
+            Storage_FileType.png => ".png",
+            Storage_FileType.webp => ".webp",
+            Storage_FileType.gif => ".gif",
+            Storage_FileType.mov => ".mov",
+            Storage_FileType.mp4 => ".mp4",
+            _ => ".jpg",
+        };
     }
 }

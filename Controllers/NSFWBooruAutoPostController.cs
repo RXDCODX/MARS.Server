@@ -125,7 +125,7 @@ public class NSFWBooruAutoPostController(
     [HttpPut("configs/{id:guid}/enabled")]
     public async Task<ActionResult<OperationResult<NSFWBooruAutoPostConfigDto>>> SetEnabled(
         Guid id,
-        [FromBody] SetEnabledRequest request,
+        [FromBody] NSFWSetEnabledRequest request,
         CancellationToken cancellationToken
     )
     {
@@ -202,7 +202,7 @@ public class NSFWBooruAutoPostController(
         return result;
     }
 
-    public class SetEnabledRequest
+    public class NSFWSetEnabledRequest
     {
         public bool IsEnabled { get; set; }
     }
