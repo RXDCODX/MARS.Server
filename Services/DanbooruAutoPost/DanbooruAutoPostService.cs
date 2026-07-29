@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Cronos;
@@ -23,7 +22,6 @@ public class DanbooruAutoPostService(
     IDbContextFactory<AppDbContext> dbContextFactory,
     DanbooruRandomPostService danbooruService,
     IDiscordGatewayService discordGatewayService,
-    IHttpClientFactory httpClientFactory,
     IDeduplicationService deduplicationService
 ) : BackgroundService, IDanbooruAutoPostService
 {
@@ -63,8 +61,12 @@ public class DanbooruAutoPostService(
             try
             {
                 var cron = CronExpression.Parse(config.CronExpression);
-                var nextOccurrence = config.LastExecutedAtUtc.HasValue
-                    ? cron.GetNextOccurrence(config.LastExecutedAtUtc.Value)
+                var lastExecuted = config.LastExecutedAtUtc.HasValue
+                    ? DateTime.SpecifyKind(config.LastExecutedAtUtc.Value, DateTimeKind.Utc)
+                    : (DateTime?)null;
+
+                var nextOccurrence = lastExecuted.HasValue
+                    ? cron.GetNextOccurrence(lastExecuted.Value)
                     : cron.GetNextOccurrence(now.AddMinutes(-1));
 
                 if (nextOccurrence.HasValue && nextOccurrence.Value <= now)
@@ -156,12 +158,10 @@ public class DanbooruAutoPostService(
                 return;
             }
 
-            using var httpClient = httpClientFactory.CreateClient();
-            using var response = await httpClient.GetAsync(fileUrl, cancellationToken);
-            response.EnsureSuccessStatusCode();
-
-            var fileBytes = await response.Content.ReadAsByteArrayAsync(cancellationToken);
-            var fileName = Path.GetFileName(new Uri(fileUrl).AbsolutePath);
+            var (fileBytes, fileName) = await danbooruService.DownloadFileBytesAsync(
+                fileUrl,
+                cancellationToken
+            );
             var tagPreview = string.IsNullOrWhiteSpace(post.TagStringCharacter)
                 ? post
                     .TagStringGeneral?.Split(' ')
@@ -310,7 +310,7 @@ public class DanbooruAutoPostService(
                 cancellationToken
             );
 
-            var now = DateTime.Now;
+            var now = DateTime.UtcNow;
             var entity = new DanbooruAutoPostConfig
             {
                 DiscordChannelId = request.DiscordChannelId,
@@ -405,7 +405,7 @@ public class DanbooruAutoPostService(
                 entity.DiscordChannelId = request.DiscordChannelId;
                 entity.Tags = request.Tags.Trim();
                 entity.CronExpression = request.CronExpression.Trim();
-                entity.UpdatedAtUtc = DateTime.Now;
+                entity.UpdatedAtUtc = DateTime.UtcNow;
                 await dbContext.SaveChangesAsync(cancellationToken);
 
                 result = OperationResult<DanbooruAutoPostConfigDto>.Ok(
@@ -511,7 +511,7 @@ public class DanbooruAutoPostService(
             if (entity is not null)
             {
                 entity.IsEnabled = isEnabled;
-                entity.UpdatedAtUtc = DateTime.Now;
+                entity.UpdatedAtUtc = DateTime.UtcNow;
                 await dbContext.SaveChangesAsync(cancellationToken);
 
                 result = OperationResult<DanbooruAutoPostConfigDto>.Ok(

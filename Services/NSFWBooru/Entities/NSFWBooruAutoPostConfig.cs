@@ -18,7 +18,7 @@ public class NSFWBooruAutoPostConfig
 
     public DateTime? LastExecutedAtUtc { get; set; }
 
-    public DateTime CreatedAtUtc { get; set; } = DateTime.Now;
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 
-    public DateTime UpdatedAtUtc { get; set; } = DateTime.Now;
+    public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
 }

@@ -22,15 +22,7 @@ public class DanbooruRandomPostService(
     /// </summary>
     public virtual async Task<DanbooruPost[]?> GetRandomPostAsync(string tags, int limit = 3)
     {
-        const string arara = "RxdcodxStreamerBot/1.0";
-
-        using var httpClient = factory.CreateClient(arara);
-
-        httpClient.DefaultRequestHeaders.Add("User-Agent", arara);
-        httpClient.DefaultRequestHeaders.Add("Accept", "application/json");
-        httpClient.DefaultRequestHeaders.Add("Authorization", $"Basic {GetCredentionals()}");
-
-        httpClient.BaseAddress = _uri;
+        using var httpClient = CreateConfiguredClient();
 
         var posts = await GetPostsByTagsAsync(httpClient, tags, limit);
         if (posts == null || posts.Length == 0)
@@ -39,6 +31,38 @@ public class DanbooruRandomPostService(
         }
 
         return posts;
+    }
+
+    /// <summary>
+    /// Скачать файл изображения с Danbooru с корректными заголовками.
+    /// </summary>
+    public virtual async Task<(byte[] FileBytes, string FileName)> DownloadFileBytesAsync(
+        string fileUrl,
+        CancellationToken cancellationToken = default
+    )
+    {
+        using var httpClient = CreateConfiguredClient();
+
+        using var response = await httpClient.GetAsync(fileUrl, cancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        var fileBytes = await response.Content.ReadAsByteArrayAsync(cancellationToken);
+        var fileName = Path.GetFileName(new Uri(fileUrl).AbsolutePath);
+
+        return (fileBytes, fileName);
+    }
+
+    private HttpClient CreateConfiguredClient()
+    {
+        const string arara = "RxdcodxStreamerBot/1.0";
+
+        var httpClient = factory.CreateClient(arara);
+        httpClient.DefaultRequestHeaders.Add("User-Agent", arara);
+        httpClient.DefaultRequestHeaders.Add("Accept", "application/json");
+        httpClient.DefaultRequestHeaders.Add("Authorization", $"Basic {GetCredentionals()}");
+        httpClient.BaseAddress = _uri;
+
+        return httpClient;
     }
 
     private static async Task<DanbooruPost[]?> GetPostsByTagsAsync(

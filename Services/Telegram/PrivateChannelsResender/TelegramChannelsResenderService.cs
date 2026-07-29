@@ -549,11 +549,12 @@ public class TelegramChannelsResenderService(
 
             var buffer = new byte[Math.Max(1, largestSize.FileSize)];
             await using var stream = new MemoryStream(buffer);
-            await _client.DownloadFileAsync(photo, stream, largestSize);
+            var fileType = await _client.DownloadFileAsync(photo, stream, largestSize);
 
             stream.Position = 0;
 
-            var inputFile = await _client.UploadFileAsync(stream, $"photo_{photo.id}.jpg");
+            var extension = GetExtensionForPhoto(fileType);
+            var inputFile = await _client.UploadFileAsync(stream, $"photo_{photo.id}{extension}");
 
             return new InputMediaUploadedPhoto { file = inputFile };
         }
@@ -579,9 +580,27 @@ public class TelegramChannelsResenderService(
 
             stream.Position = 0;
 
-            var fileName =
-                document.attributes.OfType<DocumentAttributeFilename>().FirstOrDefault()?.file_name
-                ?? $"file_{document.id}";
+            var fileName = document
+                .attributes.OfType<DocumentAttributeFilename>()
+                .FirstOrDefault()
+                ?.file_name;
+
+            if (string.IsNullOrEmpty(fileName))
+            {
+                var extension = GetExtensionFromMimeType(document.mime_type);
+                fileName = $"file_{document.id}{extension}";
+            }
+            else
+            {
+                var extension = GetExtensionFromMimeType(document.mime_type);
+                if (
+                    !string.IsNullOrEmpty(extension)
+                    && !fileName.EndsWith(extension, StringComparison.OrdinalIgnoreCase)
+                )
+                {
+                    fileName += extension;
+                }
+            }
 
             var inputFile = await _client.UploadFileAsync(stream, fileName);
             var attributes = document.attributes.ToArray();
@@ -704,8 +723,9 @@ public class TelegramChannelsResenderService(
             fileType
         );
 
+        var extension = GetExtensionForPhoto(fileType);
         // Загружаем как новый файл
-        var inputFile = await _client.UploadFileAsync(stream, $"photo_{photo.id}.jpg");
+        var inputFile = await _client.UploadFileAsync(stream, $"photo_{photo.id}{extension}");
 
         // Формируем подпись: оригинальная подпись + метаданные (id, источник, дата)
         var originalCaption = string.IsNullOrWhiteSpace(originalMessage.message)
@@ -776,9 +796,27 @@ public class TelegramChannelsResenderService(
         );
 
         // Определяем имя файла
-        var fileName =
-            document.attributes.OfType<DocumentAttributeFilename>().FirstOrDefault()?.file_name
-            ?? $"file_{document.id}";
+        var fileName = document
+            .attributes.OfType<DocumentAttributeFilename>()
+            .FirstOrDefault()
+            ?.file_name;
+
+        if (string.IsNullOrEmpty(fileName))
+        {
+            var extension = GetExtensionFromMimeType(document.mime_type);
+            fileName = $"file_{document.id}{extension}";
+        }
+        else
+        {
+            var extension = GetExtensionFromMimeType(document.mime_type);
+            if (
+                !string.IsNullOrEmpty(extension)
+                && !fileName.EndsWith(extension, StringComparison.OrdinalIgnoreCase)
+            )
+            {
+                fileName += extension;
+            }
+        }
 
         // Загружаем как новый файл
         var inputFile = await _client.UploadFileAsync(stream, fileName);
@@ -954,6 +992,60 @@ public class TelegramChannelsResenderService(
         _client?.OnUpdates -= OnUpdatesReceived;
 
         base.Dispose();
+    }
+
+    public static string GetExtensionFromMimeType(string? mimeType)
+    {
+        return mimeType?.ToLowerInvariant() switch
+        {
+            "image/jpeg" or "image/jpg" => ".jpg",
+            "image/png" => ".png",
+            "image/gif" => ".gif",
+            "image/webp" => ".webp",
+            "image/bmp" or "image/x-ms-bmp" => ".bmp",
+            "image/tiff" or "image/x-tiff" => ".tiff",
+            "image/svg+xml" => ".svg",
+            "video/mp4" or "video/x-mp4" => ".mp4",
+            "video/x-matroska" or "video/mkv" => ".mkv",
+            "video/webm" => ".webm",
+            "video/quicktime" or "video/mov" => ".mov",
+            "video/x-msvideo" or "video/avi" => ".avi",
+            "video/x-ms-wmv" => ".wmv",
+            "video/mpeg" => ".mpeg",
+            "audio/mpeg" or "audio/mp3" => ".mp3",
+            "audio/ogg" or "audio/vorbis" => ".ogg",
+            "audio/aac" or "audio/x-aac" => ".aac",
+            "audio/flac" or "audio/x-flac" => ".flac",
+            "audio/wav" or "audio/x-wav" or "audio/vnd.wave" => ".wav",
+            "audio/opus" => ".opus",
+            "audio/webm" => ".weba",
+            "application/pdf" => ".pdf",
+            "application/zip" => ".zip",
+            "application/x-rar-compressed" or "application/vnd.rar" => ".rar",
+            "application/x-7z-compressed" => ".7z",
+            "application/gzip" or "application/x-gzip" => ".gz",
+            "application/x-tar" => ".tar",
+            "application/x-bzip2" => ".bz2",
+            "text/plain" => ".txt",
+            "text/html" => ".html",
+            "application/json" => ".json",
+            "application/xml" or "text/xml" => ".xml",
+            _ => "",
+        };
+    }
+
+    public static string GetExtensionForPhoto(Storage_FileType fileType)
+    {
+        return fileType switch
+        {
+            Storage_FileType.jpeg => ".jpg",
+            Storage_FileType.png => ".png",
+            Storage_FileType.webp => ".webp",
+            Storage_FileType.gif => ".gif",
+            Storage_FileType.mov => ".mov",
+            Storage_FileType.mp4 => ".mp4",
+            _ => ".jpg",
+        };
     }
 
     private async Task<List<TLMessage>> FetchGroupedMessagesAsync(
