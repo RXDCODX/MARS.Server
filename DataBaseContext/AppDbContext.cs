@@ -105,22 +105,20 @@ public partial class AppDbContext(DbContextOptions<AppDbContext> options) : DbCo
 
         modelBuilder
             .Entity<MemeType>()
-            .HasData(
-                [
-                    new MemeType
-                    {
-                        Name = "Random Sound",
-                        Id = 3,
-                        FolderPath = "Alerts\\zvik",
-                    },
-                    new MemeType
-                    {
-                        Name = "Random Meme",
-                        Id = 2,
-                        FolderPath = "Alerts\\random_meme",
-                    },
-                ]
-            );
+            .HasData([
+                new MemeType
+                {
+                    Name = "Random Sound",
+                    Id = 3,
+                    FolderPath = "Alerts\\zvik",
+                },
+                new MemeType
+                {
+                    Name = "Random Meme",
+                    Id = 2,
+                    FolderPath = "Alerts\\random_meme",
+                },
+            ]);
 
         // RollCooldowns: уникальный индекс на (TwitchUserId, RollType)
         modelBuilder
@@ -253,47 +251,45 @@ public partial class AppDbContext(DbContextOptions<AppDbContext> options) : DbCo
         modelBuilder.Entity<RootState>().HasIndex(e => e.Name).IsUnique();
         modelBuilder
             .Entity<RootState>()
-            .HasData(
-                [
-                    new RootState
-                    {
-                        Name = RootStateKeys.RandomMemeOnlineIsStop,
-                        Value = false.ToString(),
-                        Description = "Флаг остановки сервиса RandomMemeOnline",
-                        TypeDescription = "bool",
-                    },
-                    new RootState
-                    {
-                        Name = RootStateKeys.PuntoSwitcherFilterEnabled,
-                        Value = true.ToString(),
-                        Description = "Флаг включения фильтра PuntoSwitcher",
-                        TypeDescription = "bool",
-                    },
-                    new RootState
-                    {
-                        Name = RootStateKeys.WaifuRollCooldownMinutes,
-                        Value = 20L.ToString(),
-                        Description = "Кулдаун ролла вайфу в минутах",
-                        TypeDescription = "long",
-                    },
-                    new RootState
-                    {
-                        Name = RootStateKeys.WTelegramMtProxyUrl,
-                        Value = string.Empty,
-                        Description =
-                            "MTProxy URL для WTelegram (например: https://t.me/proxy?server=...)",
-                        TypeDescription = "string",
-                    },
-                    new RootState
-                    {
-                        Name = RootStateKeys.WTelegramProxyUrl,
-                        Value = string.Empty,
-                        Description =
-                            "Прокси для WTelegram: socks5://user:pass@host:port или http://user:pass@host:port",
-                        TypeDescription = "string",
-                    },
-                ]
-            );
+            .HasData([
+                new RootState
+                {
+                    Name = RootStateKeys.RandomMemeOnlineIsStop,
+                    Value = false.ToString(),
+                    Description = "Флаг остановки сервиса RandomMemeOnline",
+                    TypeDescription = "bool",
+                },
+                new RootState
+                {
+                    Name = RootStateKeys.PuntoSwitcherFilterEnabled,
+                    Value = true.ToString(),
+                    Description = "Флаг включения фильтра PuntoSwitcher",
+                    TypeDescription = "bool",
+                },
+                new RootState
+                {
+                    Name = RootStateKeys.WaifuRollCooldownMinutes,
+                    Value = 20L.ToString(),
+                    Description = "Кулдаун ролла вайфу в минутах",
+                    TypeDescription = "long",
+                },
+                new RootState
+                {
+                    Name = RootStateKeys.WTelegramMtProxyUrl,
+                    Value = string.Empty,
+                    Description =
+                        "MTProxy URL для WTelegram (например: https://t.me/proxy?server=...)",
+                    TypeDescription = "string",
+                },
+                new RootState
+                {
+                    Name = RootStateKeys.WTelegramProxyUrl,
+                    Value = string.Empty,
+                    Description =
+                        "Прокси для WTelegram: socks5://user:pass@host:port или http://user:pass@host:port",
+                    TypeDescription = "string",
+                },
+            ]);
 
         // Конфигурация для Scoreboard
         modelBuilder
