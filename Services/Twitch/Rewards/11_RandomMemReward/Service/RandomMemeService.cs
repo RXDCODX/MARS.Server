@@ -218,8 +218,7 @@ public class RandomMemeService(
             var maxOrder =
                 await context
                     .RandomMemeOrder.Where(x => x.MemeTypeId == memeOrder.MemeTypeId)
-                    .MaxAsync(x => (int?)x.Order, cancellationToken)
-                ?? 0;
+                    .MaxAsync(x => (int?)x.Order, cancellationToken) ?? 0;
 
             var entity = new MemeOrder
             {
