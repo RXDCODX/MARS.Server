@@ -62,10 +62,7 @@ public class DanbooruAutoPostService(
             {
                 var cron = CronExpression.Parse(config.CronExpression);
                 var lastExecuted = config.LastExecutedAtUtc.HasValue
-                    ? DateTime.SpecifyKind(
-                        config.LastExecutedAtUtc.Value,
-                        DateTimeKind.Utc
-                    )
+                    ? DateTime.SpecifyKind(config.LastExecutedAtUtc.Value, DateTimeKind.Utc)
                     : (DateTime?)null;
 
                 var nextOccurrence = lastExecuted.HasValue
