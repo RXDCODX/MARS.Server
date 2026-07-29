@@ -61,8 +61,15 @@ public class DanbooruAutoPostService(
             try
             {
                 var cron = CronExpression.Parse(config.CronExpression);
-                var nextOccurrence = config.LastExecutedAtUtc.HasValue
-                    ? cron.GetNextOccurrence(config.LastExecutedAtUtc.Value)
+                var lastExecuted = config.LastExecutedAtUtc.HasValue
+                    ? DateTime.SpecifyKind(
+                        config.LastExecutedAtUtc.Value,
+                        DateTimeKind.Utc
+                    )
+                    : (DateTime?)null;
+
+                var nextOccurrence = lastExecuted.HasValue
+                    ? cron.GetNextOccurrence(lastExecuted.Value)
                     : cron.GetNextOccurrence(now.AddMinutes(-1));
 
                 if (nextOccurrence.HasValue && nextOccurrence.Value <= now)
@@ -306,7 +313,7 @@ public class DanbooruAutoPostService(
                 cancellationToken
             );
 
-            var now = DateTime.Now;
+            var now = DateTime.UtcNow;
             var entity = new DanbooruAutoPostConfig
             {
                 DiscordChannelId = request.DiscordChannelId,
@@ -401,7 +408,7 @@ public class DanbooruAutoPostService(
                 entity.DiscordChannelId = request.DiscordChannelId;
                 entity.Tags = request.Tags.Trim();
                 entity.CronExpression = request.CronExpression.Trim();
-                entity.UpdatedAtUtc = DateTime.Now;
+                entity.UpdatedAtUtc = DateTime.UtcNow;
                 await dbContext.SaveChangesAsync(cancellationToken);
 
                 result = OperationResult<DanbooruAutoPostConfigDto>.Ok(
@@ -507,7 +514,7 @@ public class DanbooruAutoPostService(
             if (entity is not null)
             {
                 entity.IsEnabled = isEnabled;
-                entity.UpdatedAtUtc = DateTime.Now;
+                entity.UpdatedAtUtc = DateTime.UtcNow;
                 await dbContext.SaveChangesAsync(cancellationToken);
 
                 result = OperationResult<DanbooruAutoPostConfigDto>.Ok(

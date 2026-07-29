@@ -2,10 +2,34 @@ import xml.etree.ElementTree as ET
 import subprocess
 import sys
 import os
+import re
 
 
 def esc(s):
     return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+def short_class_name(full_name):
+    """MARS.Tests.Foo.BarTests.Method → BarTests.Method"""
+    parts = full_name.split(".")
+    if len(parts) >= 2:
+        return ".".join(parts[-2:])
+    return full_name
+
+
+def summarize_error(msg, max_len=120):
+    """Extract the core assertion failure or exception, skip stack traces."""
+    if not msg:
+        return ""
+    # Take first line only
+    first = msg.split("\n")[0].strip()
+    # Remove "Assert.Xxx() Failure:" prefix noise, keep the actual mismatch
+    first = re.sub(r"^Assert\.\w+\(\)\s*Failure:\s*", "", first)
+    # Remove Moq boilerplate
+    first = re.sub(r"^Expected invocation.*but was \d+ times:\s*", "Moq: ", first)
+    if len(first) > max_len:
+        first = first[:max_len] + "…"
+    return first
 
 
 def parse_trx(trx_path):
@@ -16,19 +40,39 @@ def parse_trx(trx_path):
             r for r in tree.findall(".//t:UnitTestResult", ns) if r.get("outcome") == "Failed"
         ]
         if not failed:
-            return "No failed tests found in TRX"
+            return ""
         lines = []
-        for r in failed[:10]:
-            name = esc(r.get("testName", "?"))
+        for r in failed[:8]:
+            raw_name = r.get("testName", "?")
+            name = short_class_name(raw_name)
             msg_el = r.find("t:Output/t:ErrorInfo/t:Message", ns)
-            msg = esc(msg_el.text[:200]) if msg_el is not None and msg_el.text else ""
-            lines.append(f"  - {name}: {msg}")
-        result = f"{len(failed)} test(s) failed:\n" + "\n".join(lines)
-        if len(failed) > 10:
-            result += f"\n  ... and {len(failed) - 10} more"
+            msg_text = msg_el.text if msg_el is not None and msg_el.text else ""
+            err_type = ""
+            # Detect exception type
+            if "NullReferenceException" in msg_text:
+                err_type = "NRE"
+            elif "Assert.Contains" in msg_text:
+                err_type = "Contains"
+            elif "Assert.False" in msg_text:
+                err_type = "False"
+            elif "Assert.Null" in msg_text:
+                err_type = "NotNull"
+            elif "Assert.True" in msg_text:
+                err_type = "True"
+            elif "Moq.MockException" in msg_text:
+                err_type = "Moq"
+            summary = summarize_error(msg_text)
+            tag = f" <code>[{err_type}]</code>" if err_type else ""
+            line = f"• <code>{esc(name)}</code>{tag}"
+            if summary:
+                line += f"\n  <i>{esc(summary)}</i>"
+            lines.append(line)
+        result = f"<b>{len(failed)} тестов упали:</b>\n\n" + "\n".join(lines)
+        if len(failed) > 8:
+            result += f"\n… и ещё {len(failed) - 8}"
         return result
     except Exception as e:
-        return f"Could not parse TRX: {e}"
+        return f"Ошибка парсинга TRX: {e}"
 
 
 def main():
@@ -39,10 +83,10 @@ def main():
     if trx_path and os.path.isfile(trx_path):
         trx_info = parse_trx(trx_path)
     else:
-        trx_info = f"TRX file not found: {trx_path}"
+        trx_info = f"TRX не найден: {trx_path}"
 
     branch = os.environ.get("GITHUB_REF_NAME", "?")
-    sha = os.environ.get("GITHUB_SHA", "?")
+    sha = os.environ.get("GITHUB_SHA", "?")[:8]
     actor = os.environ.get("GITHUB_ACTOR", "?")
     run_url = (
         os.environ.get("GITHUB_SERVER_URL", "")
@@ -52,11 +96,9 @@ def main():
         + os.environ.get("GITHUB_RUN_ID", "")
     )
 
-    msg = f"{workflow_name} FAILED\n\n"
-    msg += f"Branch: {branch}\n"
-    msg += f"Commit: {sha}\n"
-    msg += f"Actor: {actor}\n"
-    msg += f"{run_url}\n\n"
+    msg = f"🔴 <b>{esc(workflow_name)}</b>\n"
+    msg += f"<code>{esc(branch)}</code> @ {sha} — {esc(actor)}\n"
+    msg += f'<a href="{run_url}">Логи →</a>\n\n'
     msg += trx_info
 
     bot_token = os.environ.get("BOT_TOKEN", "")
@@ -66,6 +108,7 @@ def main():
             "curl", "-s", "-X", "POST",
             f"https://api.telegram.org/bot{bot_token}/sendMessage",
             "-d", f"chat_id={admin_id}",
+            "-d", "parse_mode=HTML",
             "--data-urlencode", f"text={msg}",
         ]
     )

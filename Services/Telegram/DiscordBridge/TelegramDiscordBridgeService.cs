@@ -50,6 +50,8 @@ public class TelegramDiscordBridgeService(
             _client.OnUpdates += OnUpdatesReceived;
 
             logger.LogInformation("TelegramDiscordBridgeService инициализирован");
+
+            _ = Task.Run(() => CatchUpMissedMessagesAsync(cancellationToken), cancellationToken);
         }
         catch (Exception ex)
         {
@@ -599,13 +601,17 @@ public class TelegramDiscordBridgeService(
             return;
         }
 
-        var firstMessage = messages[0];
-        var telegramChannelId = GetTelegramChannelId(firstMessage);
+        var telegramChannelId = GetTelegramChannelId(messages[0]);
         if (telegramChannelId == 0)
         {
             return;
         }
 
+        await ProcessAlbumMessagesAsync(messages, telegramChannelId);
+    }
+
+    private async Task ProcessAlbumMessagesAsync(List<TLMessage> messages, long telegramChannelId)
+    {
         try
         {
             await using var dbContext = await dbContextFactory.CreateDbContextAsync();
@@ -625,7 +631,13 @@ public class TelegramDiscordBridgeService(
                 return;
             }
 
-            var caption = ExtractPostText(firstMessage);
+            var firstMessage = messages[0];
+            var text = ExtractPostText(firstMessage);
+            var sourceHeader =
+                $"[TG:{telegramChannelId}] time:{firstMessage.Date:yyyy-MM-dd HH:mm:ss} UTC";
+            var caption = string.IsNullOrWhiteSpace(text)
+                ? sourceHeader
+                : $"{sourceHeader}\n{text}";
 
             var mediaFiles = await DownloadAlbumMediaAsync(messages);
 
@@ -653,8 +665,7 @@ public class TelegramDiscordBridgeService(
                 {
                     isAllDelivered = false;
                     logger.LogWarning(
-                        "Не удалось отправить Telegram альбом {GroupedId} в Discord канал {DiscordChannelId}: {Error}",
-                        groupedId,
+                        "Не удалось отправить Telegram альбом в Discord канал {DiscordChannelId}: {Error}",
                         discordChannelId,
                         sendResult.Message
                     );
@@ -689,8 +700,7 @@ public class TelegramDiscordBridgeService(
         {
             logger.LogError(
                 ex,
-                "Ошибка пересылки альбома {GroupedId} из Telegram канала {TelegramChannelId}",
-                groupedId,
+                "Ошибка пересылки альбома из Telegram канала {TelegramChannelId}",
                 telegramChannelId
             );
         }
@@ -1030,5 +1040,216 @@ public class TelegramDiscordBridgeService(
             Storage_FileType.mp4 => ".mp4",
             _ => ".jpg",
         };
+    }
+
+    private async Task<InputPeerChannel?> GetInputPeerChannelAsync(long channelId)
+    {
+        if (_client is null)
+        {
+            return null;
+        }
+
+        var actualChannelId = -channelId - 1000000000000;
+        var allChats = await _client.Messages_GetAllChats();
+
+        var channel = allChats
+            .chats.Values.OfType<Channel>()
+            .FirstOrDefault(c => c.id == actualChannelId);
+
+        return channel is not null ? new InputPeerChannel(channel.id, channel.access_hash) : null;
+    }
+
+    private async Task CatchUpMissedMessagesAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await using var dbContext = await dbContextFactory.CreateDbContextAsync(
+                cancellationToken
+            );
+
+            var boundChannelIds = await dbContext
+                .TelegramDiscordChannelBindings.AsNoTracking()
+                .Where(e => e.IsEnabled)
+                .Select(e => e.TelegramChannelId)
+                .Distinct()
+                .ToListAsync(cancellationToken);
+
+            if (boundChannelIds.Count == 0)
+            {
+                logger.LogInformation("Catch-up: нет активных привязок, пропуск");
+                return;
+            }
+
+            logger.LogInformation("Catch-up: обработка {Count} каналов", boundChannelIds.Count);
+
+            foreach (var channelId in boundChannelIds)
+            {
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    break;
+                }
+
+                try
+                {
+                    await CatchUpChannelAsync(channelId, cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Catch-up: ошибка обработки канала {ChannelId}", channelId);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Catch-up: ошибка инициализации");
+        }
+    }
+
+    private async Task CatchUpChannelAsync(
+        long telegramChannelId,
+        CancellationToken cancellationToken
+    )
+    {
+        if (_client is null)
+        {
+            logger.LogWarning(
+                "Catch-up: Telegram клиент недоступен, пропуск канала {ChannelId}",
+                telegramChannelId
+            );
+            return;
+        }
+
+        var inputPeer = await GetInputPeerChannelAsync(telegramChannelId);
+        if (inputPeer is null)
+        {
+            logger.LogWarning(
+                "Catch-up: не удалось получить InputPeer для канала {ChannelId}",
+                telegramChannelId
+            );
+            return;
+        }
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+
+        var state = await dbContext.TelegramDiscordChannelStates.FirstOrDefaultAsync(
+            e => e.TelegramChannelId == telegramChannelId,
+            cancellationToken
+        );
+
+        var lastProcessedId = state?.LastProcessedMessageId ?? 0;
+
+        logger.LogInformation(
+            "Catch-up: канал {ChannelId}, последний обработанный ID: {LastId}",
+            telegramChannelId,
+            lastProcessedId
+        );
+
+        var allNewMessages = new List<TLMessage>();
+        var offsetId = 0;
+
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            var historyResult = await _client.Messages_GetHistory(
+                peer: inputPeer,
+                offset_id: offsetId,
+                add_offset: 0,
+                limit: 100
+            );
+
+            if (historyResult is not Messages_ChannelMessages channelMessages)
+            {
+                break;
+            }
+
+            var batch = channelMessages
+                .messages.OfType<TLMessage>()
+                .Where(m => m.ID > lastProcessedId)
+                .ToList();
+
+            if (batch.Count == 0)
+            {
+                break;
+            }
+
+            allNewMessages.AddRange(batch);
+
+            var minIdInBatch = channelMessages.messages.OfType<TLMessage>().Min(m => m.ID);
+            if (minIdInBatch <= lastProcessedId)
+            {
+                break;
+            }
+
+            offsetId = minIdInBatch;
+        }
+
+        if (allNewMessages.Count == 0)
+        {
+            logger.LogInformation(
+                "Catch-up: канал {ChannelId} — нет пропущенных сообщений",
+                telegramChannelId
+            );
+            return;
+        }
+
+        allNewMessages = allNewMessages.OrderBy(m => m.ID).DistinctBy(m => m.ID).ToList();
+
+        logger.LogInformation(
+            "Catch-up: канал {ChannelId} — найдено {Count} пропущенных сообщений",
+            telegramChannelId,
+            allNewMessages.Count
+        );
+
+        var albumGroups = allNewMessages
+            .Where(m => m.grouped_id != 0)
+            .GroupBy(m => m.grouped_id)
+            .ToList();
+
+        var singleMessages = allNewMessages.Where(m => m.grouped_id == 0).ToList();
+
+        var processedCount = 0;
+
+        foreach (var message in singleMessages)
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                break;
+            }
+
+            await ProcessSingleMessageAsync(message);
+            processedCount++;
+
+            if (cancellationToken.IsCancellationRequested)
+            {
+                break;
+            }
+
+            await Task.Delay(TimeSpan.FromMinutes(1), cancellationToken);
+        }
+
+        foreach (var albumGroup in albumGroups)
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                break;
+            }
+
+            var albumMessages = albumGroup.OrderBy(m => m.ID).ToList();
+            await ProcessAlbumMessagesAsync(albumMessages, telegramChannelId);
+            processedCount++;
+
+            if (cancellationToken.IsCancellationRequested)
+            {
+                break;
+            }
+
+            await Task.Delay(TimeSpan.FromMinutes(1), cancellationToken);
+        }
+
+        logger.LogInformation(
+            "Catch-up: канал {ChannelId} — обработано {ProcessedCount}/{TotalCount} сообщений",
+            telegramChannelId,
+            processedCount,
+            allNewMessages.Count
+        );
     }
 }
