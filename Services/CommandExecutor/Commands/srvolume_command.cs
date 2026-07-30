@@ -22,7 +22,7 @@ public class SrVolumeCommand(StateManager stateManager) : BaseCommand
                 Name = "volume",
                 Description = "Громкость в процентах от 0 до 100",
                 Type = "int",
-                Required = true,
+                Required = false,
             },
         ];
 
@@ -32,7 +32,7 @@ public class SrVolumeCommand(StateManager stateManager) : BaseCommand
         CancellationToken cancellationToken = default
     )
     {
-        var result = "Не удалось установить громкость";
+        string result;
 
         if (parameters.TryGetValue("volume", out var volumeObj))
         {
@@ -56,7 +56,16 @@ public class SrVolumeCommand(StateManager stateManager) : BaseCommand
         }
         else
         {
-            result = "Необходимо указать громкость от 0 до 100";
+            var state = stateManager.GetState();
+
+            if (state.IsMuted)
+            {
+                result = $"Текущая громкость звуковых запросов: {state.Volume}% (звук выключен)";
+            }
+            else
+            {
+                result = $"Текущая громкость звуковых запросов: {state.Volume}%";
+            }
         }
 
         return result;
