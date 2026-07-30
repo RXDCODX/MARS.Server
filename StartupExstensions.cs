@@ -206,6 +206,8 @@ public static class StartupEstensions
         // Регистрируем сервис для пересылки медиа из forwarded сообщений
         services.AddHostedService<TelegramChannelsResenderService>();
 
+        services.AddSingleton<IMediaCompressor, MediaCompressor>();
+
         services.AddSingleton<DiscordGatewayService>();
         services.AddSingleton<IDiscordGatewayService>(sp =>
             sp.GetRequiredService<DiscordGatewayService>()
