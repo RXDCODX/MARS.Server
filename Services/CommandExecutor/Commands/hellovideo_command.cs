@@ -46,7 +46,7 @@ public class HellovideoCommand(HelloVideoWorker helloVideoWorker) : BaseCommand
         }
 
         var name = nameObj.ToString() ?? "";
-        name = name.StartsWith('@') ? name.Substring(1) : name;
+        name = name.StartsWith('@') ? name[1..] : name;
         var color = parameters.TryGetValue("color", out var colorObj) ? colorObj?.ToString() : null;
 
         string? resultName;

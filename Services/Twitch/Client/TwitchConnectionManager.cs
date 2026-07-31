@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -24,8 +24,8 @@ public class TwitchConnectionManager : IHostedService, IAsyncDisposable
     private readonly IOptionsMonitor<TwitchConfiguration> _twitchOptions;
     private readonly ILoggerFactory _loggerFactory;
 
-    private readonly TwitchClient _client;
-    private readonly IClient _transport;
+    private TwitchClient _client;
+    private IClient _transport;
     private readonly ConnectionCredentials _credentials;
     private string _currentOAuth;
     private readonly IDisposable? _changeToken;
@@ -45,10 +45,11 @@ public class TwitchConnectionManager : IHostedService, IAsyncDisposable
     private readonly SemaphoreSlim _connectLock = new(1, 1);
 
     private const int MaxReconnectAttempts = 10;
+    private const int DeepRecreationThreshold = 4;
     private const int BaseDelaySeconds = 2;
     private const int MaxDelaySeconds = 300;
 
-    public ITwitchClient Client => _client;
+    public TwitchClientProxy Proxy { get; }
 
     public TwitchConnectionManager(
         ILogger<TwitchConnectionManager> logger,
@@ -64,6 +65,7 @@ public class TwitchConnectionManager : IHostedService, IAsyncDisposable
 
         _transport = CreateTransportClient(config.TransportProtocol);
         _client = CreateTwitchClient(config.TransportProtocol);
+        Proxy = new TwitchClientProxy(_client);
 
         _currentOAuth = config.OAuth;
 
@@ -220,7 +222,7 @@ public class TwitchConnectionManager : IHostedService, IAsyncDisposable
 
         await StopAsync(CancellationToken.None);
 
-        (_transport as IDisposable)?.Dispose();
+        _transport?.Dispose();
         _reconnectLock.Dispose();
         _connectLock.Dispose();
     }
@@ -317,9 +319,24 @@ public class TwitchConnectionManager : IHostedService, IAsyncDisposable
                     return;
                 }
 
-                await EnsureInitializedAndConnected();
+                bool success;
+                if (_reconnectAttempts < DeepRecreationThreshold)
+                {
+                    // Simple reconnect — reuse existing client
+                    await EnsureInitializedAndConnected();
+                    success = _client.IsConnected;
+                }
+                else
+                {
+                    // Deep recreation — dispose old client, create new one, swap via proxy
+                    _logger.LogWarning(
+                        "Simple reconnect failed {N} times, performing deep client recreation",
+                        _reconnectAttempts - 1
+                    );
+                    success = await TryDeepRecreationAsync();
+                }
 
-                if (_client.IsConnected)
+                if (success)
                 {
                     _logger.LogInformation("Successfully reconnected to Twitch");
                     _isReconnecting = false;
@@ -347,6 +364,42 @@ public class TwitchConnectionManager : IHostedService, IAsyncDisposable
         }
 
         _isReconnecting = false;
+    }
+
+    private async Task<bool> TryDeepRecreationAsync()
+    {
+        // 1. Safely disconnect old client
+        try
+        {
+            if (_client.IsConnected)
+            {
+                await _client.DisconnectAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Error disconnecting old client during deep recreation");
+        }
+
+        // 2. Dispose old transport
+        _transport?.Dispose();
+
+        // 3. Create new transport + client
+        var config = _twitchOptions.CurrentValue;
+        _transport = CreateTransportClient(config.TransportProtocol);
+        _client = CreateTwitchClient(config.TransportProtocol);
+
+        // 4. Atomic swap via proxy — old client is disposed inside ReplaceClient
+        Proxy.ReplaceClient(_client);
+
+        // 5. Re-wire manager events on new client
+        WireEvents();
+
+        // 6. Reset state and connect
+        _initialized = false;
+        await EnsureInitializedAndConnected();
+
+        return _client.IsConnected;
     }
 
     private static TimeSpan CalculateReconnectDelay(int attempt)

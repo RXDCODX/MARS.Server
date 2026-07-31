@@ -29,10 +29,17 @@ public class RollWaifuCommand(
         [
             new()
             {
-                Name = "username",
+                Name = "displayName",
                 Description = "Имя пользователя",
                 Type = "string",
                 Required = true,
+            },
+            new()
+            {
+                Name = "color",
+                Description = "Цвет (опционально)",
+                Type = "string",
+                Required = false,
             },
         ];
 
@@ -42,14 +49,14 @@ public class RollWaifuCommand(
         CancellationToken cancellationToken = default
     )
     {
-        if (!parameters.TryGetValue("username", out var usernameObj))
+        if (!parameters.TryGetValue(Parameters[0]!.Name, out var usernameObj))
         {
             return "Необходимо указать имя пользователя";
         }
 
-        var username = usernameObj.ToString() ?? "";
+        var username = usernameObj as string ?? "";
 
-        username = username.StartsWith('@') ? username.Substring(1) : username;
+        username = username.StartsWith('@') ? username[1..] : username;
 
         try
         {

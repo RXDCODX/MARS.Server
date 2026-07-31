@@ -17,8 +17,8 @@ using Microsoft.Extensions.Logging;
 
 namespace MARS.Server.Services.NSFWBooru;
 
-public class NSFWBooruAutoPostService(
-    ILogger<NSFWBooruAutoPostService> logger,
+public class NsfwBooruAutoPostService(
+    ILogger<NsfwBooruAutoPostService> logger,
     IDbContextFactory<AppDbContext> dbContextFactory,
     NSFWBooruRandomPostService nsfwBooruService,
     IDiscordGatewayService discordGatewayService,
@@ -217,10 +217,7 @@ public class NSFWBooruAutoPostService(
         CancellationToken cancellationToken = default
     )
     {
-        var result = OperationResult<List<NSFWBooruAutoPostConfigDto>>.Bad(
-            "Не удалось получить конфигурации",
-            []
-        );
+        OperationResult<List<NSFWBooruAutoPostConfigDto>> result;
 
         try
         {
@@ -263,10 +260,7 @@ public class NSFWBooruAutoPostService(
         CancellationToken cancellationToken = default
     )
     {
-        var result = OperationResult<NSFWBooruAutoPostConfigDto>.Bad(
-            "Не удалось создать конфигурацию",
-            new NSFWBooruAutoPostConfigDto()
-        );
+        OperationResult<NSFWBooruAutoPostConfigDto> result;
 
         if (request.DiscordChannelId == 0)
         {
@@ -357,10 +351,7 @@ public class NSFWBooruAutoPostService(
         CancellationToken cancellationToken = default
     )
     {
-        var result = OperationResult<NSFWBooruAutoPostConfigDto>.Bad(
-            "Не удалось обновить конфигурацию",
-            new NSFWBooruAutoPostConfigDto()
-        );
+        OperationResult<NSFWBooruAutoPostConfigDto> result;
 
         if (request.Id == Guid.Empty)
         {
@@ -453,7 +444,7 @@ public class NSFWBooruAutoPostService(
         CancellationToken cancellationToken = default
     )
     {
-        var result = OperationResult.Bad("Не удалось удалить конфигурацию");
+        OperationResult result;
 
         if (id == Guid.Empty)
         {
@@ -496,10 +487,7 @@ public class NSFWBooruAutoPostService(
         CancellationToken cancellationToken = default
     )
     {
-        var result = OperationResult<NSFWBooruAutoPostConfigDto>.Bad(
-            "Не удалось изменить состояние",
-            new NSFWBooruAutoPostConfigDto()
-        );
+        OperationResult<NSFWBooruAutoPostConfigDto> result;
 
         if (id == Guid.Empty)
         {
@@ -565,7 +553,7 @@ public class NSFWBooruAutoPostService(
         CancellationToken cancellationToken = default
     )
     {
-        var result = OperationResult.Bad("Не удалось выполнить триггер");
+        OperationResult result;
 
         if (id == Guid.Empty)
         {
@@ -615,18 +603,13 @@ public class NSFWBooruAutoPostService(
         CancellationToken cancellationToken = default
     )
     {
-        var result = OperationResult<List<DiscordChannelOptionDto>>.Bad(
-            "Не удалось получить Discord каналы",
-            []
-        );
+        OperationResult<List<DiscordChannelOptionDto>> result;
 
         try
         {
-            var client = discordGatewayService.Client;
-            if (client is null)
-            {
-                client = await discordGatewayService.EnsureConnectedAsync(cancellationToken);
-            }
+            var client =
+                discordGatewayService.Client
+                ?? await discordGatewayService.EnsureConnectedAsync(cancellationToken);
 
             if (client is not null)
             {

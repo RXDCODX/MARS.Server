@@ -26,6 +26,9 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'" />
+  <ItemGroup>
+    <InternalsVisibleTo Include="MARS.Tests" />
+  </ItemGroup>
   <PropertyGroup>
     <IsCiBuild Condition="'$(CI)' == 'true' or '$(GITHUB_ACTIONS)' == 'true'">true</IsCiBuild>
     <IsFolderPublish Condition="'$(WebPublishMethod)' == 'FileSystem' or '$(_TargetId)' == 'Folder'"
