@@ -52,7 +52,7 @@ public class FumoCommand(
         }
 
         var displayName = displayNameObj.ToString() ?? "";
-        displayName = displayName.StartsWith('@') ? displayName.Substring(1) : displayName;
+        displayName = displayName.StartsWith('@') ? displayName[1..] : displayName;
         var color = parameters.TryGetValue("color", out var colorObj) ? colorObj?.ToString() : null;
 
         var twitchUser = await ensureService.EnsureUserExistsByLoginAsync(

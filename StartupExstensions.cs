@@ -322,7 +322,7 @@ public static class StartupEstensions
         services.AddSingleton<TwitchConnectionManager>();
         services.AddHostedService(sp => sp.GetRequiredService<TwitchConnectionManager>());
         services.AddSingleton<ITwitchClient>(sp =>
-            sp.GetRequiredService<TwitchConnectionManager>().Client
+            sp.GetRequiredService<TwitchConnectionManager>().Proxy
         );
 
         services.AddTwitchLibEventSubWebsockets();
@@ -629,11 +629,11 @@ public static class StartupEstensions
             services.AddSingleton<IDeduplicationService, DeduplicationService>();
 
             services.AddSingleton<NSFWBooruRandomPostService>();
-            services.AddSingleton<NSFWBooruAutoPostService>();
+            services.AddSingleton<NsfwBooruAutoPostService>();
             services.AddSingleton<INSFWBooruAutoPostService>(sp =>
-                sp.GetRequiredService<NSFWBooruAutoPostService>()
+                sp.GetRequiredService<NsfwBooruAutoPostService>()
             );
-            services.AddHostedService(sp => sp.GetRequiredService<NSFWBooruAutoPostService>());
+            services.AddHostedService(sp => sp.GetRequiredService<NsfwBooruAutoPostService>());
 
             return services;
         }
