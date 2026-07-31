@@ -57,6 +57,28 @@ public class SoundRequestHub(
     /// <param name="newState">Новое состояние плеера от фронтенда</param>
     public async Task FrontStateChange(PlayerState newState)
     {
+        // Если фронтенд останавливает воспроизведение, а плеер уже эффективно остановлен
+        // (остановлен, либо стоит на паузе без загруженного трека) - повторное нажатие
+        // "Стоп" отменяет остановку: запускаем воспроизведение, если в очереди есть треки,
+        // либо переходим в паузу, если очередь пуста
+        if (newState.State == PlaybackState.Stopped)
+        {
+            var currentState = await stateManager.GetStateAsync();
+            var isEffectivelyStopped =
+                currentState.State == PlaybackState.Stopped
+                || (
+                    currentState.State == PlaybackState.Paused
+                    && currentState.CurrentQueueItemId == null
+                );
+
+            if (isEffectivelyStopped)
+            {
+                var queueItems = await mainPlayer.GetQueueAsync();
+                newState.State =
+                    queueItems.Count > 0 ? PlaybackState.Playing : PlaybackState.Paused;
+            }
+        }
+
         // Если фронтенд пытается запустить воспроизведение (Play),
         // проверяем, что текущий трек загружен
         if (newState.State == PlaybackState.Playing)
@@ -72,6 +94,13 @@ public class SoundRequestHub(
             state.Volume = newState.Volume;
             state.VideoState = newState.VideoState;
             state.CurrentTrackProgress = newState.CurrentTrackProgress;
+
+            // При остановке сбрасываем текущий трек
+            if (newState.State == PlaybackState.Stopped)
+            {
+                state.CurrentQueueItem = null;
+                state.CurrentQueueItemId = null;
+            }
         });
     }
 
