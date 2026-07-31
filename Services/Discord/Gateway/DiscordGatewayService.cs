@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using DSharpPlus;
@@ -20,9 +21,15 @@ namespace MARS.Server.Services.Discord.Gateway;
 
 public class DiscordGatewayService(
     IOptions<ServerDiscordConfiguration> configuration,
-    ILogger<DiscordGatewayService> logger
+    ILogger<DiscordGatewayService> logger,
+    IMediaCompressor compressor
 ) : IDiscordGatewayService, IHostedService
 {
+    private const long DefaultUploadLimitBytes = 25L * 1024 * 1024;
+    private const long Tier2UploadLimitBytes = 50L * 1024 * 1024;
+    private const long Tier3UploadLimitBytes = 100L * 1024 * 1024;
+    private const long SafetyMarginBytes = 512 * 1024;
+
     private readonly ServerDiscordConfiguration _configuration = configuration.Value;
     private readonly List<Func<DiscordClient, MessageCreatedEventArgs, Task>> _messageHandlers = [];
     private readonly List<
@@ -191,14 +198,31 @@ public class DiscordGatewayService(
                     var channel = await client.GetChannelAsync(channelId);
                     if (channel is not null)
                     {
-                        var builder = new DiscordMessageBuilder();
-                        if (!string.IsNullOrWhiteSpace(message))
+                        var maxSize = GetMaxUploadSize(channel);
+
+                        if (fileStream.Length > maxSize)
                         {
-                            builder.WithContent(message);
+                            result = await HandleLargeFileAsync(
+                                channel,
+                                fileStream,
+                                fileName,
+                                message,
+                                maxSize,
+                                cancellationToken
+                            );
                         }
-                        builder.AddFile(fileName, fileStream, true);
-                        await channel.SendMessageAsync(builder);
-                        result = OperationResult.Ok("Файл отправлен в Discord");
+                        else
+                        {
+                            var builder = new DiscordMessageBuilder();
+                            if (!string.IsNullOrWhiteSpace(message))
+                            {
+                                builder.WithContent(message);
+                            }
+
+                            builder.AddFile(fileName, fileStream, true);
+                            await channel.SendMessageAsync(builder);
+                            result = OperationResult.Ok("Файл отправлен в Discord");
+                        }
                     }
                     else
                     {
@@ -243,19 +267,57 @@ public class DiscordGatewayService(
                     var channel = await client.GetChannelAsync(channelId);
                     if (channel is not null)
                     {
-                        var builder = new DiscordMessageBuilder();
-                        if (!string.IsNullOrWhiteSpace(message))
+                        var maxSize = GetMaxUploadSize(channel);
+                        var preparedFiles = new List<(Stream Stream, string FileName)>();
+
+                        foreach (var (stream, name) in files)
                         {
-                            builder.WithContent(message);
+                            if (stream.Length > maxSize)
+                            {
+                                var prepared = await TryPrepareFileAsync(
+                                    stream,
+                                    name,
+                                    maxSize,
+                                    cancellationToken
+                                );
+
+                                if (prepared is not null)
+                                {
+                                    preparedFiles.Add(
+                                        (prepared.Value.Stream, prepared.Value.FileName)
+                                    );
+                                }
+                            }
+                            else
+                            {
+                                preparedFiles.Add((stream, name));
+                            }
                         }
 
-                        foreach (var (stream, fileName) in files)
+                        if (preparedFiles.Count > 0)
                         {
-                            builder.AddFile(fileName, stream, true);
-                        }
+                            var builder = new DiscordMessageBuilder();
 
-                        await channel.SendMessageAsync(builder);
-                        result = OperationResult.Ok("Файлы отправлены в Discord");
+                            if (!string.IsNullOrWhiteSpace(message))
+                            {
+                                builder.WithContent(message);
+                            }
+
+                            foreach (var (stream, name) in preparedFiles)
+                            {
+                                builder.AddFile(name, stream, true);
+                            }
+
+                            await channel.SendMessageAsync(builder);
+                            result = OperationResult.Ok("Файлы отправлены в Discord");
+                        }
+                        else
+                        {
+                            logger.LogInformation(
+                                "Все файлы альбома пропущены: превышен лимит Discord"
+                            );
+                            result = OperationResult.Ok("Все файлы пропущены");
+                        }
                     }
                     else
                     {
@@ -343,6 +405,198 @@ public class DiscordGatewayService(
         }
 
         return result;
+    }
+
+    private async Task<OperationResult> HandleLargeFileAsync(
+        DiscordChannel channel,
+        Stream fileStream,
+        string fileName,
+        string? message,
+        long maxSize,
+        CancellationToken ct
+    )
+    {
+        var result = OperationResult.Ok("Файл пропущен");
+
+        if (VideoExtensions.IsVideoFile(fileName))
+        {
+            var segments = await compressor.CompressVideoAsync(fileStream, fileName, maxSize, ct);
+
+            if (segments is null || segments.Count == 0)
+            {
+                logger.LogInformation(
+                    "Видео {FileName} ({Size}MB) пропущено: не удалось сжать до лимита {Limit}MB",
+                    fileName,
+                    fileStream.Length / 1024.0 / 1024.0,
+                    maxSize / 1024 / 1024
+                );
+                return result;
+            }
+
+            foreach (var (segment, segName) in segments)
+            {
+                await using var seg = segment;
+                var segBuilder = new DiscordMessageBuilder();
+
+                if (!string.IsNullOrWhiteSpace(message))
+                {
+                    segBuilder.WithContent(message);
+                }
+
+                segBuilder.AddFile(segName, seg, true);
+                await channel.SendMessageAsync(segBuilder);
+            }
+
+            result = OperationResult.Ok($"Видео отправлено {segments.Count} сегментами");
+        }
+        else if (VideoExtensions.IsImageFile(fileName))
+        {
+            var compressed = await compressor.CompressImageAsync(fileStream, fileName, maxSize, ct);
+
+            if (compressed is null)
+            {
+                logger.LogInformation(
+                    "Изображение {FileName} ({Size}MB) пропущено: не удалось сжать до лимита {Limit}MB",
+                    fileName,
+                    fileStream.Length / 1024.0 / 1024.0,
+                    maxSize / 1024 / 1024
+                );
+                return result;
+            }
+
+            await using var cmp = compressed;
+            var builder = new DiscordMessageBuilder();
+
+            if (!string.IsNullOrWhiteSpace(message))
+            {
+                builder.WithContent(message);
+            }
+
+            builder.AddFile(fileName, cmp, true);
+            await channel.SendMessageAsync(builder);
+            result = OperationResult.Ok("Файл сжат и отправлен в Discord");
+        }
+        else if (VideoExtensions.IsAudioFile(fileName))
+        {
+            var compressed = await compressor.CompressAudioAsync(fileStream, fileName, maxSize, ct);
+
+            if (compressed is null)
+            {
+                logger.LogInformation(
+                    "Аудио {FileName} ({Size}MB) пропущено: не удалось сжать до лимита {Limit}MB",
+                    fileName,
+                    fileStream.Length / 1024.0 / 1024.0,
+                    maxSize / 1024 / 1024
+                );
+                return result;
+            }
+
+            await using var cmp = compressed;
+            var builder = new DiscordMessageBuilder();
+
+            if (!string.IsNullOrWhiteSpace(message))
+            {
+                builder.WithContent(message);
+            }
+
+            builder.AddFile(fileName, cmp, true);
+            await channel.SendMessageAsync(builder);
+            result = OperationResult.Ok("Файл сжат и отправлен в Discord");
+        }
+        else
+        {
+            logger.LogInformation(
+                "Файл {FileName} ({Size}MB) пропущен: не поддаётся сжатию, превышен лимит {Limit}MB",
+                fileName,
+                fileStream.Length / 1024.0 / 1024.0,
+                maxSize / 1024 / 1024
+            );
+        }
+
+        return result;
+    }
+
+    private async Task<(Stream Stream, string FileName)?> TryPrepareFileAsync(
+        Stream fileStream,
+        string fileName,
+        long maxSize,
+        CancellationToken ct
+    )
+    {
+        if (VideoExtensions.IsVideoFile(fileName))
+        {
+            var segments = await compressor.CompressVideoAsync(fileStream, fileName, maxSize, ct);
+
+            if (segments is null || segments.Count == 0)
+            {
+                logger.LogInformation(
+                    "Файл {FileName} ({Size}MB) пропущен в альбоме",
+                    fileName,
+                    fileStream.Length / 1024.0 / 1024.0
+                );
+                return null;
+            }
+
+            return (segments[0].Stream, segments[0].FileName);
+        }
+
+        if (VideoExtensions.IsImageFile(fileName))
+        {
+            var compressed = await compressor.CompressImageAsync(fileStream, fileName, maxSize, ct);
+
+            if (compressed is null)
+            {
+                logger.LogInformation(
+                    "Изображение {FileName} ({Size}MB) пропущено в альбоме",
+                    fileName,
+                    fileStream.Length / 1024.0 / 1024.0
+                );
+                return null;
+            }
+
+            return (compressed, fileName);
+        }
+
+        if (VideoExtensions.IsAudioFile(fileName))
+        {
+            var compressed = await compressor.CompressAudioAsync(fileStream, fileName, maxSize, ct);
+
+            if (compressed is null)
+            {
+                logger.LogInformation(
+                    "Аудио {FileName} ({Size}MB) пропущено в альбоме",
+                    fileName,
+                    fileStream.Length / 1024.0 / 1024.0
+                );
+                return null;
+            }
+
+            return (compressed, fileName);
+        }
+
+        logger.LogInformation(
+            "Файл {FileName} ({Size}MB) пропущен в альбоме: не поддаётся сжатию",
+            fileName,
+            fileStream.Length / 1024.0 / 1024.0
+        );
+        return null;
+    }
+
+    private static long GetMaxUploadSize(DiscordChannel? channel)
+    {
+        var result = DefaultUploadLimitBytes;
+
+        if (channel?.Guild is { } guild)
+        {
+            result = guild.PremiumTier switch
+            {
+                DiscordPremiumTier.Tier_2 => Tier2UploadLimitBytes,
+                DiscordPremiumTier.Tier_3 => Tier3UploadLimitBytes,
+                _ => DefaultUploadLimitBytes,
+            };
+        }
+
+        return result - SafetyMarginBytes;
     }
 
     private async Task HandleMessageCreatedAsync(DiscordClient client, MessageCreatedEventArgs args)
