@@ -45,7 +45,7 @@ public class ServerStatsController(
     /// Получить статистику сервера
     /// </summary>
     [HttpGet]
-    public async Task<ActionResult<OperationResult<ServerStatsResponse>>> GetStats(
+    public async Task<ActionResult<OperationResult<ServerStatsResponse>>> GetStatsAsync(
         CancellationToken cancellationToken = default
     )
     {
@@ -112,7 +112,7 @@ public class ServerStatsController(
     /// Переключить фильтр дубликатов TTS сообщений
     /// </summary>
     [HttpPost("toggle-tts-filter")]
-    public async Task<ActionResult<OperationResult<bool>>> ToggleTtsFilter(
+    public async Task<ActionResult<OperationResult<bool>>> ToggleTtsFilterAsync(
         CancellationToken cancellationToken = default
     )
     {
@@ -156,7 +156,7 @@ public class ServerStatsController(
     /// Переключить PuntoSwitcher фильтрацию
     /// </summary>
     [HttpPost("toggle-punto-switcher")]
-    public async Task<ActionResult<OperationResult<bool>>> TogglePuntoSwitcher(
+    public async Task<ActionResult<OperationResult<bool>>> TogglePuntoSwitcherAsync(
         CancellationToken cancellationToken = default
     )
     {
