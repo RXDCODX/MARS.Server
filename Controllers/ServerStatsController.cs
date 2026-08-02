@@ -90,6 +90,53 @@ public class ServerStatsController(
                 NearestWeddingAnniversaryUser = nearestAnniversary?.DisplayName,
             };
 
+            await using var db = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+
+            stats.DanbooruAutoPostTotalPosts = await db
+                .PostedImageRecords.AsNoTracking()
+                .CountAsync(r => r.Source == "Danbooru", cancellationToken);
+
+            if (stats.DanbooruAutoPostTotalPosts > 0)
+            {
+                stats.DanbooruAutoPostLastPostedAtUtc = await db
+                    .PostedImageRecords.AsNoTracking()
+                    .Where(r => r.Source == "Danbooru")
+                    .OrderByDescending(r => r.PostedAtUtc)
+                    .Select(r => r.PostedAtUtc)
+                    .FirstAsync(cancellationToken);
+            }
+
+            stats.NsfwBooruAutoPostTotalPosts = await db
+                .PostedImageRecords.AsNoTracking()
+                .CountAsync(r => r.Source == "NSFWBooru", cancellationToken);
+
+            if (stats.NsfwBooruAutoPostTotalPosts > 0)
+            {
+                stats.NsfwBooruAutoPostLastPostedAtUtc = await db
+                    .PostedImageRecords.AsNoTracking()
+                    .Where(r => r.Source == "NSFWBooru")
+                    .OrderByDescending(r => r.PostedAtUtc)
+                    .Select(r => r.PostedAtUtc)
+                    .FirstAsync(cancellationToken);
+            }
+
+            stats.TelegramDiscordBridgeTotalBindings = await db
+                .TelegramDiscordChannelBindings.AsNoTracking()
+                .CountAsync(cancellationToken);
+
+            var hasStates = await db
+                .TelegramDiscordChannelStates.AsNoTracking()
+                .AnyAsync(cancellationToken);
+
+            if (hasStates)
+            {
+                stats.TelegramDiscordBridgeLastProcessedAtUtc = await db
+                    .TelegramDiscordChannelStates.AsNoTracking()
+                    .OrderByDescending(s => s.LastUpdatedUtc)
+                    .Select(s => s.LastUpdatedUtc)
+                    .FirstAsync(cancellationToken);
+            }
+
             result = Ok(
                 OperationResult<ServerStatsResponse>.Ok("Статистика сервера получена", stats)
             );
@@ -345,4 +392,34 @@ public class ServerStatsResponse
     /// Пользователь ближайшей годовщины свадьбы
     /// </summary>
     public string? NearestWeddingAnniversaryUser { get; set; }
+
+    /// <summary>
+    /// Общее количество отправленных изображений Danbooru
+    /// </summary>
+    public int DanbooruAutoPostTotalPosts { get; set; }
+
+    /// <summary>
+    /// Время последней отправки Danbooru
+    /// </summary>
+    public DateTime? DanbooruAutoPostLastPostedAtUtc { get; set; }
+
+    /// <summary>
+    /// Общее количество отправленных изображений NSFWBooru
+    /// </summary>
+    public int NsfwBooruAutoPostTotalPosts { get; set; }
+
+    /// <summary>
+    /// Время последней отправки NSFWBooru
+    /// </summary>
+    public DateTime? NsfwBooruAutoPostLastPostedAtUtc { get; set; }
+
+    /// <summary>
+    /// Общее количество связей Telegram-Discord
+    /// </summary>
+    public int TelegramDiscordBridgeTotalBindings { get; set; }
+
+    /// <summary>
+    /// Время последней обработки Telegram-Discord моста
+    /// </summary>
+    public DateTime? TelegramDiscordBridgeLastProcessedAtUtc { get; set; }
 }
