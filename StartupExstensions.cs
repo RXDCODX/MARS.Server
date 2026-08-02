@@ -614,6 +614,7 @@ public static class StartupEstensions
         {
             services.AddSingleton<IDnsResolver, SystemDnsResolver>();
             services.AddSingleton<SiteAvailabilityChecker>();
+            services.AddSingleton<SiteUnavailableNotifier>();
             services.AddSingleton<Worker365>();
             services.AddHostedService(sp => sp.GetRequiredService<Worker365>());
             return services;
