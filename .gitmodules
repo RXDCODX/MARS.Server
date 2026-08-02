@@ -5,6 +5,3 @@
 	path = external/DSharpPlus
 	url = https://github.com/DSharpPlus/DSharpPlus.git
 	branch = voice-rewrite
-[submodule "wwwroot/Alerts/random_meme"]
-	path = wwwroot/Alerts/random_meme
-	url = https://github.com/RXDCODX/random-memes.git
