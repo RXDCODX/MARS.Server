@@ -35,8 +35,10 @@ public class RollCooldownService(IDbContextFactory<AppDbContext> factory)
                         return (false, cooldown - elapsed);
                     }
 
-                    existing.LastRollTime = DateTime.Now;
-                    dbContext.RollCooldowns.Update(existing);
+                    var tracked = await dbContext.RollCooldowns.FirstAsync(r =>
+                        r.TwitchUserId == twitchUserId && r.RollType == rollType
+                    );
+                    tracked.LastRollTime = DateTime.Now;
                 }
                 else
                 {
@@ -56,10 +58,6 @@ public class RollCooldownService(IDbContextFactory<AppDbContext> factory)
             catch (PostgresException ex) when (ex.SqlState == "23505" && attempt < MaxRetries)
             {
                 // Duplicate key — concurrent insert, retry
-            }
-            catch
-            {
-                return (true, TimeSpan.Zero);
             }
         }
 

@@ -120,7 +120,7 @@ public class SoundRequestCommandsService(
                     }
                     else if (isSpotifyUrl)
                     {
-                        if (isSpotifyAllowed)
+                        if (isSpotifyAllowed && spotifyResolver is not null)
                         {
                             info = await spotifyResolver.ResolveTrackAsync(
                                 normalizedQuery,
@@ -128,7 +128,7 @@ public class SoundRequestCommandsService(
                             );
                         }
                     }
-                    else if (isYouTubeAllowed)
+                    else if (isYouTubeAllowed && ytResolver is not null)
                     {
                         info = await ytResolver.ResolveVideoAsync(
                             normalizedQuery,
@@ -139,11 +139,15 @@ public class SoundRequestCommandsService(
             }
             else
             {
-                if (provider == SoundRequestProvider.Spotify && isSpotifyAllowed)
+                if (
+                    provider == SoundRequestProvider.Spotify
+                    && isSpotifyAllowed
+                    && spotifyResolver is not null
+                )
                 {
                     info = await spotifyResolver.ResolveQueryAsync(query, cancellationToken);
                 }
-                else if (isYouTubeAllowed)
+                else if (isYouTubeAllowed && ytResolver is not null)
                 {
                     info = await ytResolver.ResolveQueryAsync(query, cancellationToken);
                 }
@@ -389,6 +393,11 @@ public class SoundRequestCommandsService(
     {
         var result = "Не удалось найти плейлист по запросу";
 
+        if (ytResolver is null)
+        {
+            return result;
+        }
+
         var playlist = await ytResolver.ResolvePlaylistQueryAsync(
             query,
             maxTracksToAdd,
@@ -442,7 +451,7 @@ public class SoundRequestCommandsService(
         {
             items = await soundCloudResolver.ResolvePlaylistAsync(playlistUrl, cancellationToken);
         }
-        else
+        else if (ytResolver is not null)
         {
             items = await ytResolver.ResolvePlaylistAsync(playlistUrl);
         }
@@ -863,7 +872,11 @@ public class SoundRequestCommandsService(
                 result = $"soundcloud:{soundCloudTrackId}";
             }
         }
-        else if (IsSpotifyUrl(normalizedQuery) && IsPlatformAllowed("Spotify"))
+        else if (
+            IsSpotifyUrl(normalizedQuery)
+            && IsPlatformAllowed("Spotify")
+            && spotifyResolver is not null
+        )
         {
             var spotifyTrackId = spotifyResolver.ExtractTrackId(normalizedQuery);
             if (!string.IsNullOrWhiteSpace(spotifyTrackId))
