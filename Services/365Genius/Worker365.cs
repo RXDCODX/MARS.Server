@@ -29,6 +29,8 @@ public class Worker365(
     IHostEnvironment environment,
     IDbContextFactory<AppDbContext> appDbContextFactory,
     WTelegramClientService wTelegramClientService,
+    SiteAvailabilityChecker siteAvailabilityChecker,
+    SiteUnavailableNotifier siteUnavailableNotifier,
     ILogger<Worker365> logger
 ) : IHostedService
 {
@@ -39,6 +41,16 @@ public class Worker365(
     public async Task Main()
     {
         ValidateConfig(options.Value);
+
+        try
+        {
+            await siteAvailabilityChecker.CheckAllAsync(_site, _cancellationToken);
+        }
+        catch (Exception e)
+        {
+            await siteUnavailableNotifier.NotifyAsync(_site, e, _cancellationToken);
+            throw;
+        }
 
         var httpClient = httpClientFactory.CreateClient();
 
