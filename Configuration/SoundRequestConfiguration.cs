@@ -1,3 +1,5 @@
+using System;
+
 namespace MARS.Server.Configuration;
 
 public class SoundRequestConfiguration
@@ -6,11 +8,12 @@ public class SoundRequestConfiguration
 
     public SoundRequestProvider Provider { get; set; } = SoundRequestProvider.YouTube;
 
-    public string[] EnabledPlatforms { get; set; } = Array.Empty<string>();
+    public string[] EnabledPlatforms { get; set; } = [];
 }
 
 public enum SoundRequestProvider
 {
+    Null = -1,
     YouTube = 0,
     Spotify = 1,
 }
