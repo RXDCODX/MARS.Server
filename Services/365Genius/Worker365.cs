@@ -54,7 +54,11 @@ public class Worker365(
 
         var httpClient = httpClientFactory.CreateClient();
 
-        var response = await httpClient.GetAsync(_site, _cancellationToken);
+        var response = await httpClient.GetAsync(
+            _site,
+            HttpCompletionOption.ResponseHeadersRead,
+            _cancellationToken
+        );
 
         if (!response.IsSuccessStatusCode)
         {
@@ -64,7 +68,12 @@ public class Worker365(
         var sessionId = GetPhpSessionId(response);
 
         var cookies = CreateLogPassCookies();
-        cookies.Add(_site, sessionId);
+
+        if (sessionId != null)
+        {
+            cookies.Add(_site, sessionId);
+        }
+
         httpClient.DefaultRequestHeaders.Add("cookie", cookies.GetCookieHeader(_site));
 
         var request = GetFavoritePageRequestMessage(null);
@@ -183,7 +192,7 @@ public class Worker365(
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        if (environment.IsProduction())
+        //if (environment.IsProduction())
         {
             try
             {
@@ -220,21 +229,24 @@ public class Worker365(
         return container;
     }
 
-    private Cookie GetPhpSessionId(HttpResponseMessage response)
+    private Cookie? GetPhpSessionId(HttpResponseMessage response)
     {
         var container = new CookieContainer();
-        var responseCookies = response.Headers.GetValues("Set-Cookie");
-        foreach (var responseCookie in responseCookies)
+
+        if (response.Headers.TryGetValues("Set-Cookie", out var responseCookies))
         {
-            container.SetCookies(_site, responseCookie);
+            foreach (var responseCookie in responseCookies)
+            {
+                container.SetCookies(_site, responseCookie);
+            }
         }
 
-        var cookie = new Cookie(
-            "PHPSESSID",
-            container.GetCookies(_site).FirstOrDefault(c => c.Name == "PHPSESSID")?.Value
-        );
+        var sessionId = container
+            .GetCookies(_site)
+            .FirstOrDefault(c => c.Name == "PHPSESSID")
+            ?.Value;
 
-        return cookie;
+        return string.IsNullOrEmpty(sessionId) ? null : new Cookie("PHPSESSID", sessionId);
     }
 
     private static void ValidateFavouriteCountVideos(IHtmlDocument doc)
