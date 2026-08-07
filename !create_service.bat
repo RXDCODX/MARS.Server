@@ -21,23 +21,10 @@ if not exist "%currentDir%MARS.Server.exe" (
     exit /b 1
 )
 
-:: Проверяем, что служба ещё не создана
+:: Создаём службу, только если её ещё нет (уже существующую не трогаем)
 sc query "!ZYZ" >nul 2>&1
-if %errorlevel% equ 0 (
-    echo Служба "!ZYZ" уже существует. Создание отменено.
-    pause
-    exit /b 1
-)
+if %errorlevel% equ 0 goto serviceExists
 
-:: Проверяем, что переменная окружения ещё не установлена
-reg query "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment" /v ZYZ_SERVICE_PATH >nul 2>&1
-if %errorlevel% equ 0 (
-    echo Переменная окружения ZYZ_SERVICE_PATH уже существует. Создание отменено.
-    pause
-    exit /b 1
-)
-
-:: Создаем службу "!ZYZ"
 echo Создание службы "!ZYZ"...
 sc.exe create "!ZYZ" binPath= "%currentDir%MARS.Server.exe" start= delayed-auto
 if %errorlevel% neq 0 (
@@ -46,27 +33,37 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 echo Служба "!ZYZ" успешно создана.
+goto varSetup
 
-:: Добавляем переменную окружения ZYZ_SERVICE_PATH
-echo Добавление переменной окружения ZYZ_SERVICE_PATH...
-setx /m ZYZ_SERVICE_PATH "%currentDir%" >nul 2>&1
+:serviceExists
+echo Служба "!ZYZ" уже существует. Пересоздание не выполняется.
+
+:varSetup
+:: Устанавливаем переменную окружения (reg add вместо setx - setx ломает значение, заканчивающееся на "\")
+echo Установка переменной окружения ZYZ_SERVICE_PATH...
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment" /v ZYZ_SERVICE_PATH /t REG_SZ /d "%currentDir%" /f >nul 2>&1
 if %errorlevel% neq 0 (
-    echo Ошибка при добавлении переменной окружения ZYZ_SERVICE_PATH.
-    echo Откат: удаление службы "!ZYZ"...
-    sc.exe delete "!ZYZ" >nul 2>&1
+    echo Ошибка при установке переменной окружения ZYZ_SERVICE_PATH.
     pause
     exit /b 1
 )
-echo Переменная окружения ZYZ_SERVICE_PATH успешно добавлена: %currentDir%
+echo Переменная окружения ZYZ_SERVICE_PATH успешно установлена: %currentDir%
 
-:: Запускаем службу "!ZYZ"
+:: Запускаем службу, если она ещё не запущена
+sc query "!ZYZ" | find "RUNNING" >nul 2>&1
+if %errorlevel% equ 0 (
+    echo Служба "!ZYZ" уже запущена.
+    pause
+    exit /b 0
+)
+
 echo Запуск службы "!ZYZ"...
 sc.exe start "!ZYZ" >nul 2>&1
 
 :: Ожидаем перехода службы в RUNNING (SCM может вернуть 1053, если старт занимает более 30 секунд)
 set /a attempts=0
 :waitStart
-timeout /t 2 /nobreak >nul
+ping -n 3 127.0.0.1 >nul
 sc query "!ZYZ" | find "RUNNING" >nul 2>&1
 if %errorlevel% equ 0 goto serviceRunning
 set /a attempts+=1

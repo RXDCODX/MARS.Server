@@ -36,7 +36,7 @@ sc query "!ZYZ" | find "RUNNING" >nul 2>&1
 if %errorlevel% equ 0 (
     echo Остановка службы "!ZYZ"...
     sc stop "!ZYZ" >nul 2>&1
-    timeout /t 3 /nobreak >nul
+    ping -n 4 127.0.0.1 >nul
 )
 
 :: Удаляем службу
@@ -47,7 +47,7 @@ sc delete "!ZYZ" >nul 2>&1
 echo Ожидание полного удаления службы...
 set /a attempts=0
 :waitDeleteRestart
-timeout /t 2 /nobreak >nul
+ping -n 3 127.0.0.1 >nul
 sc query "!ZYZ" >nul 2>&1
 if %errorlevel% neq 0 goto serviceDeletedRestart
 set /a attempts+=1
@@ -61,15 +61,15 @@ goto waitDeleteRestart
 :serviceDeletedRestart
 echo Служба "!ZYZ" полностью удалена.
 
-:: === Этап 2: Создание службы заново ::
+:: === Этап 2: Создание службы заново ===
 
-:: Добавляем переменную окружения ZYZ_SERVICE_PATH
-echo Добавление переменной окружения ZYZ_SERVICE_PATH...
-setx /m ZYZ_SERVICE_PATH "%currentDir%" >nul 2>&1
+:: Устанавливаем переменную окружения (reg add вместо setx - setx ломает значение, заканчивающееся на "\")
+echo Установка переменной окружения ZYZ_SERVICE_PATH...
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment" /v ZYZ_SERVICE_PATH /t REG_SZ /d "%currentDir%" /f >nul 2>&1
 if %errorlevel% equ 0 (
-    echo Переменная окружения ZYZ_SERVICE_PATH успешно добавлена: %currentDir%
+    echo Переменная окружения ZYZ_SERVICE_PATH успешно установлена: %currentDir%
 ) else (
-    echo Ошибка при добавлении переменной окружения ZYZ_SERVICE_PATH.
+    echo Ошибка при установке переменной окружения ZYZ_SERVICE_PATH.
     pause
     exit /b 1
 )
@@ -92,7 +92,7 @@ sc.exe start "!ZYZ" >nul 2>&1
 :: Ожидаем перехода службы в RUNNING (SCM может вернуть 1053, если старт занимает более 30 секунд)
 set /a attempts=0
 :waitStart
-timeout /t 2 /nobreak >nul
+ping -n 3 127.0.0.1 >nul
 sc query "!ZYZ" | find "RUNNING" >nul 2>&1
 if %errorlevel% equ 0 goto serviceRunning
 set /a attempts+=1

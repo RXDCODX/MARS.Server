@@ -21,17 +21,17 @@ if %errorlevel% neq 0 (
 
 :: Останавливаем службу, если запущена
 sc query "!ZYZ" | find "RUNNING" >nul 2>&1
-if %errorlevel% equ 0 (
-    echo Остановка службы "!ZYZ"...
-    sc.exe stop "!ZYZ"
-    if %errorlevel% neq 0 (
-        echo Ошибка при остановке службы "!ZYZ".
-        pause
-        exit /b 1
-    )
-    echo Служба "!ZYZ" успешно остановлена.
-    timeout /t 3 /nobreak >nul
+if %errorlevel% neq 0 goto notRunning
+echo Остановка службы "!ZYZ"...
+sc.exe stop "!ZYZ"
+if %errorlevel% neq 0 (
+    echo Ошибка при остановке службы "!ZYZ".
+    pause
+    exit /b 1
 )
+echo Служба "!ZYZ" успешно остановлена.
+ping -n 4 127.0.0.1 >nul
+:notRunning
 
 :: Удаляем службу "!ZYZ"
 echo Удаление службы "!ZYZ"...
@@ -47,7 +47,7 @@ echo Запрос на удаление службы "!ZYZ" отправлен.
 echo Ожидание полного удаления службы...
 set /a attempts=0
 :waitDelete
-timeout /t 2 /nobreak >nul
+ping -n 3 127.0.0.1 >nul
 sc query "!ZYZ" >nul 2>&1
 if %errorlevel% neq 0 goto serviceDeleted
 set /a attempts+=1
