@@ -61,12 +61,24 @@ echo Переменная окружения ZYZ_SERVICE_PATH успешно д�
 
 :: Запускаем службу "!ZYZ"
 echo Запуск службы "!ZYZ"...
-sc.exe start "!ZYZ"
-if %errorlevel% neq 0 (
-    echo Ошибка при запуске службы "!ZYZ".
+sc.exe start "!ZYZ" >nul 2>&1
+
+:: Ожидаем перехода службы в RUNNING (SCM может вернуть 1053, если старт занимает более 30 секунд)
+set /a attempts=0
+:waitStart
+timeout /t 2 /nobreak >nul
+sc query "!ZYZ" | find "RUNNING" >nul 2>&1
+if %errorlevel% equ 0 goto serviceRunning
+set /a attempts+=1
+if %attempts% geq 90 (
+    echo Служба "!ZYZ" не перешла в состояние RUNNING в течение 3 минут.
+    echo Проверьте журнал событий Windows для диагностики.
     pause
     exit /b 1
 )
+echo Ожидание запуска службы "!ZYZ"... (%attempts%)
+goto waitStart
+:serviceRunning
 echo Служба "!ZYZ" успешно запущена.
 
 pause
