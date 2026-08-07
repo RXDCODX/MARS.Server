@@ -1,4 +1,4 @@
-@echo off
+﻿@echo off
 setlocal disabledelayedexpansion
 chcp 65001 >nul
 
@@ -21,29 +21,18 @@ if not exist "%currentDir%MARS.Server.exe" (
     exit /b 1
 )
 
-:: Проверяем, что служба "!ZYZ" не существует
+:: Проверяем, что служба ещё не создана
 sc query "!ZYZ" >nul 2>&1
 if %errorlevel% equ 0 (
-    echo Служба "!ZYZ" уже существует. Удалите её перед созданием.
+    echo Служба "!ZYZ" уже существует. Создание отменено.
     pause
     exit /b 1
 )
 
-:: Проверяем, что переменная окружения ZYZ_SERVICE_PATH не задана
+:: Проверяем, что переменная окружения ещё не установлена
 reg query "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment" /v ZYZ_SERVICE_PATH >nul 2>&1
 if %errorlevel% equ 0 (
-    echo Переменная окружения ZYZ_SERVICE_PATH уже существует. Удалите её перед созданием.
-    pause
-    exit /b 1
-)
-
-:: Добавляем переменную окружения ZYZ_SERVICE_PATH
-echo Добавление переменной окружения ZYZ_SERVICE_PATH...
-setx /m ZYZ_SERVICE_PATH "%currentDir%" >nul 2>&1
-if %errorlevel% equ 0 (
-    echo Переменная окружения ZYZ_SERVICE_PATH успешно добавлена: %currentDir%
-) else (
-    echo Ошибка при добавлении переменной окружения ZYZ_SERVICE_PATH.
+    echo Переменная окружения ZYZ_SERVICE_PATH уже существует. Создание отменено.
     pause
     exit /b 1
 )
@@ -51,23 +40,33 @@ if %errorlevel% equ 0 (
 :: Создаем службу "!ZYZ"
 echo Создание службы "!ZYZ"...
 sc.exe create "!ZYZ" binPath= "%currentDir%MARS.Server.exe" start= delayed-auto
-if %errorlevel% equ 0 (
-    echo Служба "!ZYZ" успешно создана.
-) else (
+if %errorlevel% neq 0 (
     echo Ошибка при создании службы "!ZYZ".
     pause
     exit /b 1
 )
+echo Служба "!ZYZ" успешно создана.
 
-:: Запускаем службу
+:: Добавляем переменную окружения ZYZ_SERVICE_PATH
+echo Добавление переменной окружения ZYZ_SERVICE_PATH...
+setx /m ZYZ_SERVICE_PATH "%currentDir%" >nul 2>&1
+if %errorlevel% neq 0 (
+    echo Ошибка при добавлении переменной окружения ZYZ_SERVICE_PATH.
+    echo Откат: удаление службы "!ZYZ"...
+    sc.exe delete "!ZYZ" >nul 2>&1
+    pause
+    exit /b 1
+)
+echo Переменная окружения ZYZ_SERVICE_PATH успешно добавлена: %currentDir%
+
+:: Запускаем службу "!ZYZ"
 echo Запуск службы "!ZYZ"...
 sc.exe start "!ZYZ"
-if %errorlevel% equ 0 (
-    echo Служба "!ZYZ" успешно запущена.
-) else (
+if %errorlevel% neq 0 (
     echo Ошибка при запуске службы "!ZYZ".
     pause
     exit /b 1
 )
+echo Служба "!ZYZ" успешно запущена.
 
 pause

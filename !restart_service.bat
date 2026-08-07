@@ -1,4 +1,4 @@
-@echo off
+﻿@echo off
 setlocal disabledelayedexpansion
 chcp 65001 >nul
 
@@ -29,48 +29,43 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
-:: Останавливаем службу
-echo Остановка службы "!ZYZ"...
+:: === Этап 1: Удаление существующей службы ===
+
+:: Останавливаем, если запущена
 sc query "!ZYZ" | find "RUNNING" >nul 2>&1
 if %errorlevel% equ 0 (
-    sc stop "!ZYZ"
-    if %errorlevel% equ 0 (
-        echo Служба "!ZYZ" успешно остановлена.
-    ) else (
-        echo Ошибка при остановке службы "!ZYZ".
-        pause
-        exit /b 1
-    )
+    echo Остановка службы "!ZYZ"...
+    sc stop "!ZYZ" >nul 2>&1
     timeout /t 3 /nobreak >nul
-) else (
-    echo Служба "!ZYZ" уже остановлена.
 )
 
 :: Удаляем службу
 echo Удаление службы "!ZYZ"...
-sc delete "!ZYZ"
-if %errorlevel% equ 0 (
-    echo Запрос на удаление службы "!ZYZ" отправлен.
-) else (
-    echo Ошибка при удалении службы "!ZYZ".
+sc delete "!ZYZ" >nul 2>&1
+
+:: Ждём полного удаления (включая "marked for deletion")
+echo Ожидание полного удаления службы...
+set /a attempts=0
+:waitDeleteRestart
+timeout /t 2 /nobreak >nul
+sc query "!ZYZ" >nul 2>&1
+if %errorlevel% neq 0 goto serviceDeletedRestart
+set /a attempts+=1
+if %attempts% geq 15 (
+    echo Служба "!ZYZ" всё ещё отмечена для удаления. Проверьте её вручную.
     pause
     exit /b 1
 )
-
-:: Ждём полного удаления службы (включая стадию "marked for deletion")
-echo Ожидание полного удаления службы...
-:waitDelete
-timeout /t 2 /nobreak >nul
-sc query "!ZYZ" >nul 2>&1
-if %errorlevel% equ 0 (
-    echo Служба ещё существует (возможно, marked for deletion). Ожидание...
-    goto waitDelete
-)
+echo Служба ещё существует (marked for deletion). Ожидание...
+goto waitDeleteRestart
+:serviceDeletedRestart
 echo Служба "!ZYZ" полностью удалена.
+
+:: === Этап 2: Создание службы заново ::
 
 :: Добавляем переменную окружения ZYZ_SERVICE_PATH
 echo Добавление переменной окружения ZYZ_SERVICE_PATH...
-setx /m ZYZ_SERVICE_PATH %currentDir% >nul 2>&1
+setx /m ZYZ_SERVICE_PATH "%currentDir%" >nul 2>&1
 if %errorlevel% equ 0 (
     echo Переменная окружения ZYZ_SERVICE_PATH успешно добавлена: %currentDir%
 ) else (
