@@ -41,13 +41,14 @@ echo Служба "!ZYZ" уже существует. Пересоздание �
 :varSetup
 :: Устанавливаем переменную окружения (reg add вместо setx - setx ломает значение, заканчивающееся на "\")
 echo Установка переменной окружения ZYZ_SERVICE_PATH...
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment" /v ZYZ_SERVICE_PATH /t REG_SZ /d "%currentDir%" /f >nul 2>&1
+set "servicePath=%currentDir:~0,-1%"
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment" /v ZYZ_SERVICE_PATH /t REG_SZ /d "%servicePath%" /f >nul 2>&1
 if %errorlevel% neq 0 (
     echo Ошибка при установке переменной окружения ZYZ_SERVICE_PATH.
     pause
     exit /b 1
 )
-echo Переменная окружения ZYZ_SERVICE_PATH успешно установлена: %currentDir%
+echo Переменная окружения ZYZ_SERVICE_PATH успешно установлена: %servicePath%
 
 :: Запускаем службу, если она ещё не запущена
 sc query "!ZYZ" | find "RUNNING" >nul 2>&1
