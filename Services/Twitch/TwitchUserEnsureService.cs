@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -10,6 +11,7 @@ using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.Twitch.TwitchFollowers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Npgsql;
 using TwitchLib.Api.Interfaces;
 using TwitchLib.Client.Events;
 using TwitchLib.Client.Models;
@@ -194,6 +196,23 @@ public class TwitchUserEnsureService : ITwitchUserEnsureService
             return null!; // callers treat null as not‑found.
         }
 
+        // Serialize concurrent get‑or‑create for the same TwitchId to avoid PK_TwitchUsers races.
+        var userLock = await AcquireUserLockAsync(twitchUser.TwitchId, cancellationToken);
+        try
+        {
+            return await EnsureUserExistsCoreAsync(twitchUser, cancellationToken);
+        }
+        finally
+        {
+            userLock.Release();
+        }
+    }
+
+    private async Task<TwitchUser> EnsureUserExistsCoreAsync(
+        TwitchUser twitchUser,
+        CancellationToken cancellationToken
+    )
+    {
         try
         {
             if (_dbFactory != null)
@@ -235,28 +254,14 @@ public class TwitchUserEnsureService : ITwitchUserEnsureService
                 return enriched;
             }
         }
-        catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("23505") == true)
+        catch (PostgresException ex) when (ex.SqlState == "23505")
         {
-            // Race condition – another thread created the record concurrently.
-            _logger?.LogInformation(
-                "Конфликт при создании пользователя {TwitchId}. Получение существующего пользователя.",
-                twitchUser.TwitchId
-            );
-            if (_dbFactory != null)
-            {
-                await using var dbRetry = await _dbFactory.CreateDbContextAsync(cancellationToken);
-                var created = await dbRetry.TwitchUsers.FirstOrDefaultAsync(
-                    u => u.TwitchId == twitchUser.TwitchId,
-                    cancellationToken
-                );
-                if (created != null)
-                {
-                    return created;
-                }
-            }
-            throw new InvalidOperationException(
-                $"Не удалось получить пользователя {twitchUser.TwitchId} после constraint violation"
-            );
+            return await RecoverExistingUserAsync(twitchUser, cancellationToken);
+        }
+        catch (DbUpdateException ex)
+            when ((ex.InnerException as PostgresException)?.SqlState == "23505")
+        {
+            return await RecoverExistingUserAsync(twitchUser, cancellationToken);
         }
         catch (Exception ex)
         {
@@ -320,6 +325,45 @@ public class TwitchUserEnsureService : ITwitchUserEnsureService
     }
 
     // ----- Private helpers -------------------------------------------------
+    private static readonly ConcurrentDictionary<string, SemaphoreSlim> TwitchUserLocks = new();
+
+    private static async Task<SemaphoreSlim> AcquireUserLockAsync(
+        string twitchId,
+        CancellationToken cancellationToken
+    )
+    {
+        var userLock = TwitchUserLocks.GetOrAdd(twitchId, static _ => new SemaphoreSlim(1, 1));
+        await userLock.WaitAsync(cancellationToken);
+        return userLock;
+    }
+
+    private async Task<TwitchUser> RecoverExistingUserAsync(
+        TwitchUser twitchUser,
+        CancellationToken cancellationToken
+    )
+    {
+        // Race condition — другой поток уже создал запись, получаем существующего.
+        _logger?.LogInformation(
+            "Конфликт при создании пользователя {TwitchId}. Получение существующего пользователя.",
+            twitchUser.TwitchId
+        );
+        if (_dbFactory != null)
+        {
+            await using var dbRetry = await _dbFactory.CreateDbContextAsync(cancellationToken);
+            var created = await dbRetry.TwitchUsers.FirstOrDefaultAsync(
+                u => u.TwitchId == twitchUser.TwitchId,
+                cancellationToken
+            );
+            if (created != null)
+            {
+                return created;
+            }
+        }
+        throw new InvalidOperationException(
+            $"Не удалось получить пользователя {twitchUser.TwitchId} после constraint violation"
+        );
+    }
+
     private async Task<TwitchUser> EnrichUserDataFromApiAsync(TwitchUser twitchUser)
     {
         if (_tokenService?.Token?.AccessToken == null)
