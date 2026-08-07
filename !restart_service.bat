@@ -21,25 +21,56 @@ if not exist "%currentDir%MARS.Server.exe" (
     exit /b 1
 )
 
-:: Проверяем, что служба "!ZYZ" не существует
+:: Проверяем, существует ли служба "!ZYZ"
 sc query "!ZYZ" >nul 2>&1
-if %errorlevel% equ 0 (
-    echo Служба "!ZYZ" уже существует. Удалите её перед созданием.
+if %errorlevel% neq 0 (
+    echo Служба "!ZYZ" не существует. Используйте !create_service.bat для создания.
     pause
     exit /b 1
 )
 
-:: Проверяем, что переменная окружения ZYZ_SERVICE_PATH не задана
-reg query "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment" /v ZYZ_SERVICE_PATH >nul 2>&1
+:: Останавливаем службу
+echo Остановка службы "!ZYZ"...
+sc query "!ZYZ" | find "RUNNING" >nul 2>&1
 if %errorlevel% equ 0 (
-    echo Переменная окружения ZYZ_SERVICE_PATH уже существует. Удалите её перед созданием.
+    sc stop "!ZYZ"
+    if %errorlevel% equ 0 (
+        echo Служба "!ZYZ" успешно остановлена.
+    ) else (
+        echo Ошибка при остановке службы "!ZYZ".
+        pause
+        exit /b 1
+    )
+    timeout /t 3 /nobreak >nul
+) else (
+    echo Служба "!ZYZ" уже остановлена.
+)
+
+:: Удаляем службу
+echo Удаление службы "!ZYZ"...
+sc delete "!ZYZ"
+if %errorlevel% equ 0 (
+    echo Запрос на удаление службы "!ZYZ" отправлен.
+) else (
+    echo Ошибка при удалении службы "!ZYZ".
     pause
     exit /b 1
 )
+
+:: Ждём полного удаления службы (включая стадию "marked for deletion")
+echo Ожидание полного удаления службы...
+:waitDelete
+timeout /t 2 /nobreak >nul
+sc query "!ZYZ" >nul 2>&1
+if %errorlevel% equ 0 (
+    echo Служба ещё существует (возможно, marked for deletion). Ожидание...
+    goto waitDelete
+)
+echo Служба "!ZYZ" полностью удалена.
 
 :: Добавляем переменную окружения ZYZ_SERVICE_PATH
 echo Добавление переменной окружения ZYZ_SERVICE_PATH...
-setx /m ZYZ_SERVICE_PATH "%currentDir%" >nul 2>&1
+setx /m ZYZ_SERVICE_PATH %currentDir% >nul 2>&1
 if %errorlevel% equ 0 (
     echo Переменная окружения ZYZ_SERVICE_PATH успешно добавлена: %currentDir%
 ) else (
@@ -48,7 +79,7 @@ if %errorlevel% equ 0 (
     exit /b 1
 )
 
-:: Создаем службу "!ZYZ"
+:: Создаём службу "!ZYZ"
 echo Создание службы "!ZYZ"...
 sc.exe create "!ZYZ" binPath= "%currentDir%MARS.Server.exe" start= delayed-auto
 if %errorlevel% equ 0 (
@@ -70,4 +101,6 @@ if %errorlevel% equ 0 (
     exit /b 1
 )
 
+echo.
+echo Перезапуск службы "!ZYZ" завершён успешно.
 pause

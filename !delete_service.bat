@@ -1,6 +1,6 @@
 @echo off
 setlocal disabledelayedexpansion
-chcp 65001
+chcp 65001 >nul
 
 :: Проверка прав администратора
 net session >nul 2>&1
@@ -19,10 +19,10 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
-:: Проверяем, запущена ли служба "!ZYZ"
+:: Останавливаем службу, если запущена
 sc query "!ZYZ" | find "RUNNING" >nul 2>&1
 if %errorlevel% equ 0 (
-    echo Служба "!ZYZ" запущена. Останавливаем...
+    echo Остановка службы "!ZYZ"...
     sc stop "!ZYZ"
     if %errorlevel% equ 0 (
         echo Служба "!ZYZ" успешно остановлена.
@@ -31,7 +31,6 @@ if %errorlevel% equ 0 (
         pause
         exit /b 1
     )
-    :: Ждем немного для корректного завершения
     timeout /t 3 /nobreak >nul
 )
 
@@ -39,12 +38,23 @@ if %errorlevel% equ 0 (
 echo Удаление службы "!ZYZ"...
 sc delete "!ZYZ"
 if %errorlevel% equ 0 (
-    echo Служба "!ZYZ" успешно удалена.
+    echo Запрос на удаление службы "!ZYZ" отправлен.
 ) else (
     echo Ошибка при удалении службы "!ZYZ".
     pause
     exit /b 1
 )
+
+:: Ждём полного удаления службы (включая стадию "marked for deletion")
+echo Ожидание полного удаления службы...
+:waitDelete
+timeout /t 2 /nobreak >nul
+sc query "!ZYZ" >nul 2>&1
+if %errorlevel% equ 0 (
+    echo Служба ещё существует (marked for deletion). Ожидание...
+    goto waitDelete
+)
+echo Служба "!ZYZ" полностью удалена.
 
 :: Удаляем переменную окружения ZYZ_SERVICE_PATH
 echo Удаление переменной окружения ZYZ_SERVICE_PATH...
