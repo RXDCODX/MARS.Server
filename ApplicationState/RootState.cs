@@ -43,6 +43,9 @@ public static class RootStateKeys
     public const string DiscordTtsRelayTargetUserId = "DiscordTtsRelayTargetUserId";
     public const string DiscordTtsRelayTargetVoiceChannelId = "DiscordTtsRelayTargetVoiceChannelId";
 
+    // 7TV
+    public const string SevenTvProxyUrl = "SevenTvProxyUrl";
+
     // Google PhotosKeys
     public const string GooglePhotosAccessToken = "GooglePhotosAccessToken";
     public const string GooglePhotosRefreshToken = "GooglePhotosRefreshToken";
