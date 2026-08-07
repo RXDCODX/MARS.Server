@@ -124,11 +124,9 @@ public class TelegramDiscordBridgeService(
         {
             try
             {
-                var client = discordGatewayService.Client;
-                if (client is null)
-                {
-                    client = await discordGatewayService.EnsureConnectedAsync(cancellationToken);
-                }
+                var client =
+                    discordGatewayService.Client
+                    ?? await discordGatewayService.EnsureConnectedAsync(cancellationToken);
 
                 if (client is null)
                 {
@@ -633,11 +631,6 @@ public class TelegramDiscordBridgeService(
 
             var firstMessage = messages[0];
             var text = ExtractPostText(firstMessage);
-            var sourceHeader =
-                $"[TG:{telegramChannelId}] time:{firstMessage.Date:yyyy-MM-dd HH:mm:ss} UTC";
-            var caption = string.IsNullOrWhiteSpace(text)
-                ? sourceHeader
-                : $"{sourceHeader}\n{text}";
 
             var mediaFiles = await DownloadAlbumMediaAsync(messages);
 
@@ -650,14 +643,14 @@ public class TelegramDiscordBridgeService(
                     sendResult = await discordGatewayService.SendFilesAsync(
                         discordChannelId,
                         mediaFiles,
-                        caption
+                        text
                     );
                 }
                 else
                 {
                     sendResult = await discordGatewayService.SendMessageAsync(
                         discordChannelId,
-                        caption
+                        text
                     );
                 }
 
@@ -691,7 +684,7 @@ public class TelegramDiscordBridgeService(
                 }
             }
 
-            foreach (var (fileStream, _) in mediaFiles)
+            foreach ((Stream fileStream, var _) in mediaFiles)
             {
                 await fileStream.DisposeAsync();
             }
