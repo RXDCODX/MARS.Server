@@ -15,8 +15,10 @@
     <SpaClientUrl>http://localhost:44478</SpaClientUrl>
     <SpaLaunchCommand>yarn dev</SpaLaunchCommand>
     <OpenApiExportOnRun>false</OpenApiExportOnRun>
-    <RunArguments Condition="'$(OpenApiExportOnRun)' == 'true' and '$(RunArguments)' == ''">--generate-openapi</RunArguments>
-    <RunArguments Condition="'$(OpenApiExportOnRun)' == 'true' and '$(RunArguments)' != ''">$(RunArguments) --generate-openapi</RunArguments>
+    <RunArguments Condition="'$(OpenApiExportOnRun)' == 'true' and '$(RunArguments)' == ''"
+      >--generate-openapi</RunArguments>
+    <RunArguments Condition="'$(OpenApiExportOnRun)' == 'true' and '$(RunArguments)' != ''"
+      >$(RunArguments) --generate-openapi</RunArguments>
     <!-- Change the timeout of the proxy (defaults to 120 seconds) -->
     <SpaProxyTimeoutInSeconds>1200</SpaProxyTimeoutInSeconds>
     <!-- Optionally forward only request starting with the specified path -->
@@ -29,13 +31,21 @@
   </ItemGroup>
   <PropertyGroup>
     <IsCiBuild Condition="'$(CI)' == 'true' or '$(GITHUB_ACTIONS)' == 'true'">true</IsCiBuild>
-    <IsFolderPublish Condition="'$(WebPublishMethod)' == 'FileSystem' or '$(_TargetId)' == 'Folder'">true</IsFolderPublish>
-    <UseLocalYoutubeReExplode Condition="'$(UseLocalYoutubeReExplode)' == '' and '$(IsFolderPublish)' == 'true'">true</UseLocalYoutubeReExplode>
-    <UseLocalYoutubeReExplode Condition="'$(UseLocalYoutubeReExplode)' == '' and '$(IsCiBuild)' == 'true'">false</UseLocalYoutubeReExplode>
-    <UseLocalYoutubeReExplode Condition="'$(UseLocalYoutubeReExplode)' == ''">true</UseLocalYoutubeReExplode>
-    <UseNugetDSharpPlus Condition="'$(UseNugetDSharpPlus)' == '' and '$(IsCiBuild)' == 'true'">true</UseNugetDSharpPlus>
+    <IsFolderPublish Condition="'$(WebPublishMethod)' == 'FileSystem' or '$(_TargetId)' == 'Folder'"
+      >true</IsFolderPublish>
+    <UseLocalYoutubeReExplode
+      Condition="'$(UseLocalYoutubeReExplode)' == '' and '$(IsFolderPublish)' == 'true'"
+      >true</UseLocalYoutubeReExplode>
+    <UseLocalYoutubeReExplode
+      Condition="'$(UseLocalYoutubeReExplode)' == '' and '$(IsCiBuild)' == 'true'"
+      >false</UseLocalYoutubeReExplode>
+    <UseLocalYoutubeReExplode Condition="'$(UseLocalYoutubeReExplode)' == ''"
+      >true</UseLocalYoutubeReExplode>
+    <UseNugetDSharpPlus Condition="'$(UseNugetDSharpPlus)' == '' and '$(IsCiBuild)' == 'true'"
+      >true</UseNugetDSharpPlus>
     <UseNugetDSharpPlus Condition="'$(UseNugetDSharpPlus)' == ''">false</UseNugetDSharpPlus>
-    <DefineConstants Condition="'$(UseNugetDSharpPlus)' != 'true'">$(DefineConstants);USE_LOCAL_DSHARPPLUS_VOICE</DefineConstants>
+    <DefineConstants Condition="'$(UseNugetDSharpPlus)' != 'true'"
+      >$(DefineConstants);USE_LOCAL_DSHARPPLUS_VOICE</DefineConstants>
     <RunTestsOnPublish Condition="'$(RunTestsOnPublish)' == ''">true</RunTestsOnPublish>
   </PropertyGroup>
   <ItemGroup>
@@ -125,14 +135,23 @@
     <PackageReference Include="WTelegramClient" />
   </ItemGroup>
   <ItemGroup Condition="'$(UseLocalYoutubeReExplode)' == 'true'">
-    <ProjectReference Include="external\YoutubeExplode\YoutubeExplode\YoutubeExplode.csproj" AdditionalProperties="ManagePackageVersionsCentrally=false;ImportDirectoryPackagesProps=false" />
+    <ProjectReference
+      Include="external\YoutubeExplode\YoutubeExplode\YoutubeExplode.csproj"
+      AdditionalProperties="ManagePackageVersionsCentrally=false;ImportDirectoryPackagesProps=false"
+    />
   </ItemGroup>
   <ItemGroup Condition="'$(UseLocalYoutubeReExplode)' != 'true'">
     <PackageReference Include="YoutubeExplode" />
   </ItemGroup>
   <ItemGroup Condition="'$(UseNugetDSharpPlus)' != 'true'">
-    <ProjectReference Include="external\DSharpPlus\DSharpPlus\DSharpPlus.csproj" AdditionalProperties="ManagePackageVersionsCentrally=false;ImportDirectoryPackagesProps=false" />
-    <ProjectReference Include="external\DSharpPlus\DSharpPlus.Voice\DSharpPlus.Voice.csproj" AdditionalProperties="ManagePackageVersionsCentrally=false;ImportDirectoryPackagesProps=false" />
+    <ProjectReference
+      Include="external\DSharpPlus\DSharpPlus\DSharpPlus.csproj"
+      AdditionalProperties="ManagePackageVersionsCentrally=false;ImportDirectoryPackagesProps=false"
+    />
+    <ProjectReference
+      Include="external\DSharpPlus\DSharpPlus.Voice\DSharpPlus.Voice.csproj"
+      AdditionalProperties="ManagePackageVersionsCentrally=false;ImportDirectoryPackagesProps=false"
+    />
   </ItemGroup>
   <ItemGroup Condition="'$(UseNugetDSharpPlus)' == 'true'">
     <PackageReference Include="DSharpPlus" />
@@ -197,7 +216,11 @@
     <Exec WorkingDirectory="..\mars.client" Command="yarn install" />
     <Exec WorkingDirectory="..\mars.client" Command="yarn build" />
   </Target>
-  <Target Name="RunTestsBeforePublish" BeforeTargets="BuildClientApp" Condition="'$(RunTestsOnPublish)' == 'true'">
+  <Target
+    Name="RunTestsBeforePublish"
+    BeforeTargets="BuildClientApp"
+    Condition="'$(RunTestsOnPublish)' == 'true'"
+  >
     <Message Importance="high" Text="Проверка: запуск тестов перед publish..." />
     <Exec Command="dotnet test &quot;..\MARS.Tests\MARS.Tests.csproj&quot; --configuration $(Configuration) --verbosity minimal -p:UseLocalYoutubeReExplode=true" />
   </Target>
@@ -215,11 +238,24 @@
     <ItemGroup>
       <DistFiles Include="..\mars.client\dist\**\*" />
     </ItemGroup>
-    <Copy SourceFiles="@(DistFiles)" DestinationFolder="$(PublishDir)wwwroot\%(RecursiveDir)" SkipUnchangedFiles="true" />
+    <Copy
+      SourceFiles="@(DistFiles)"
+      DestinationFolder="$(PublishDir)wwwroot\%(RecursiveDir)"
+      SkipUnchangedFiles="true"
+    />
   </Target>
 
   <Target Name="Husky" BeforeTargets="Restore;CollectPackageReferences" Condition="'$(HUSKY)' != 0">
-    <Exec Command="dotnet tool restore" StandardOutputImportance="Low" StandardErrorImportance="High" />
-    <Exec Command="dotnet husky install" StandardOutputImportance="Low" StandardErrorImportance="High" WorkingDirectory="." />
+    <Exec
+      Command="dotnet tool restore"
+      StandardOutputImportance="Low"
+      StandardErrorImportance="High"
+    />
+    <Exec
+      Command="dotnet husky install"
+      StandardOutputImportance="Low"
+      StandardErrorImportance="High"
+      WorkingDirectory="."
+    />
   </Target>
 </Project>
