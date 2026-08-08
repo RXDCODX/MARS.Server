@@ -289,6 +289,14 @@ public partial class AppDbContext(DbContextOptions<AppDbContext> options) : DbCo
                         "Прокси для WTelegram: socks5://user:pass@host:port или http://user:pass@host:port",
                     TypeDescription = "string",
                 },
+                new RootState
+                {
+                    Name = RootStateKeys.SevenTvProxyUrl,
+                    Value = string.Empty,
+                    Description =
+                        "Прокси для 7TV API: http://user:pass@host:port или socks5://user:pass@host:port",
+                    TypeDescription = "string",
+                },
             ]);
 
         // Конфигурация для Scoreboard

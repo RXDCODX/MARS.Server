@@ -5,22 +5,21 @@ using System.Threading;
 using System.Threading.Tasks;
 using MARS.Server.DataBaseContext;
 using MARS.Server.Exstensions;
+using MARS.Server.Services.SevenTv;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using SevenTV;
 
 namespace MARS.Server.Services.Twitch.Synthesizer;
 
 public sealed class SevenTvEmoteService(
     IDbContextFactory<AppDbContext> dbContextFactory,
     ILogger<SevenTvEmoteService> logger,
-    SevenTVClient? sevenTvClient = null
+    ISevenTvApiService sevenTvApiService
 ) : BackgroundService, ISevenTvEmoteService
 {
     private static readonly TimeSpan RefreshInterval = TimeSpan.FromMinutes(10);
 
-    internal readonly SevenTVClient _sevenTvClient = sevenTvClient ?? new();
     private readonly Lock _emotesLock = new();
 
     private HashSet<string> _emoteNames = new(StringComparer.OrdinalIgnoreCase);
@@ -89,7 +88,7 @@ public sealed class SevenTvEmoteService(
         {
             var fetchedEmotes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            var sevenTvUser = await _sevenTvClient.rest.GetUser(TwitchExstension.SevenTvUserId);
+            var sevenTvUser = await sevenTvApiService.GetUserAsync(TwitchExstension.SevenTvUserId);
 
             if (sevenTvUser is { emote_sets: { Length: > 0 } })
             {
@@ -97,7 +96,7 @@ public sealed class SevenTvEmoteService(
                 {
                     if (emoteSet is { id: not null })
                     {
-                        var emoteSetEmojis = await _sevenTvClient.rest.GetEmoteSet(emoteSet.id);
+                        var emoteSetEmojis = await sevenTvApiService.GetEmoteSetAsync(emoteSet.id);
 
                         if (emoteSetEmojis is { emotes: { Length: > 0 } })
                         {

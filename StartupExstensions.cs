@@ -63,6 +63,7 @@ using MARS.Server.Services.Twitch.Rewards._9_AudioQuiz;
 using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
 using MARS.Server.Services.Twitch.StreamBotNotifications;
 using MARS.Server.Services.Twitch.StreamManagement;
+using MARS.Server.Services.SevenTv;
 using MARS.Server.Services.Twitch.Synthesizer;
 using MARS.Server.Services.Twitch.TwitchFollowers;
 using MARS.Server.Services.Twitch.Validation;
@@ -597,6 +598,8 @@ public static class StartupEstensions
 
         internal IServiceCollection AddSyntheziaServices()
         {
+            services.AddHttpClient("SevenTv");
+            services.AddSingleton<ISevenTvApiService, SevenTvApiService>();
             services.AddSingleton<ISevenTvEmoteService, SevenTvEmoteService>();
             services.AddHostedService(sp =>
                 (SevenTvEmoteService)sp.GetRequiredService<ISevenTvEmoteService>()
