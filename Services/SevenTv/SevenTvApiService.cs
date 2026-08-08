@@ -50,7 +50,7 @@ public sealed class SevenTvApiService(
                 var proxyUrl = proxyState.Value.Trim();
                 var handler = new HttpClientHandler
                 {
-                    Proxy = new WebProxy(proxyUrl),
+                    Proxy = CreateWebProxy(proxyUrl),
                     UseProxy = true,
                 };
                 _httpClient = new HttpClient(handler) { BaseAddress = new Uri(BaseUrl) };
@@ -94,5 +94,24 @@ public sealed class SevenTvApiService(
             logger.LogError(ex, "Failed to get 7TV emote set {EmoteSetId}", emoteSetId);
             return null;
         }
+    }
+
+    public static WebProxy CreateWebProxy(string proxyUrl)
+    {
+        var proxyUri = new Uri(proxyUrl);
+        var proxy = new WebProxy(
+            proxyUri.GetComponents(UriComponents.SchemeAndServer, UriFormat.UriEscaped)
+        );
+
+        if (!string.IsNullOrEmpty(proxyUri.UserInfo))
+        {
+            var userInfo = proxyUri.UserInfo.Split(':', 2);
+            proxy.Credentials = new NetworkCredential(
+                Uri.UnescapeDataString(userInfo[0]),
+                userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : string.Empty
+            );
+        }
+
+        return proxy;
     }
 }
