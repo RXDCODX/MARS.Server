@@ -6,6 +6,7 @@ using MARS.Server.DataBaseContext;
 using MARS.Server.Exstensions;
 using MARS.Server.Hubs;
 using MARS.Server.Hubs.Interfaces;
+using MARS.Server.Migrations;
 using MARS.Server.Services.PyroAlerts.Entitys;
 using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Management;
@@ -23,6 +24,7 @@ using TwitchLib.Client.Interfaces;
 using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Core.SubscriptionTypes.Channel;
 using TwitchLib.EventSub.Websockets;
+using TwitchUser = MARS.Server.Services.Twitch.Entitys.TwitchUser;
 
 namespace MARS.Server.Services.Twitch.Rewards._170_MikuMondayAlert;
 
@@ -45,9 +47,7 @@ public class MikuMondayAlert_TwitchReward(
     /// <summary>
     /// Статичный Guid записи Miku Monday Alert в таблице Alerts (см. миграцию SeedMikuMondayAlertMedia).
     /// </summary>
-    public static readonly Guid MikuMondayAlertMediaId = Guid.Parse(
-        "B4A5F2C1-0000-4D49-4B55-4D4F4E444159"
-    );
+    public readonly Guid MikuMondayAlertMediaId = SeedMikuMondayAlertMedia.MikuMondayAlertMediaId;
 
     private static readonly TimeSpan GlobalCooldown = TimeSpan.FromMinutes(20);
 

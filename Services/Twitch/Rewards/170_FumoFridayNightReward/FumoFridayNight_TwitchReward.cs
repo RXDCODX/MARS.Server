@@ -36,4 +36,6 @@ public class FumoFridayNight_TwitchReward(
     public override int Cost { get; init; } = 170;
     public override Func<bool> IsRewardEnabled { get; set; } =
         () => DateTime.Now.DayOfWeek == DayOfWeek.Friday;
+
+    protected override bool IsRewardActive => IsRewardEnabled();
 }
