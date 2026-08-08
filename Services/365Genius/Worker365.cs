@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using AngleSharp.Dom;
@@ -192,7 +193,7 @@ public class Worker365(
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        if (environment.IsProduction())
+        if (environment.IsProduction() || environment.IsDevelopment())
         {
             try
             {
@@ -430,11 +431,7 @@ public class Worker365(
             (document.Body?.SelectSingleNode("//video[@playsinline]") as IElement)?.GetAttribute(
                 "src"
             ) ?? string.Empty;
-        var downloadUrlElement =
-            (
-                document.Body?.SelectSingleNode("//ul[@class='download_ul']") as IElement
-            )?.SelectSingleNode(".//a[@title]") as IElement;
-        var downloadUrl = downloadUrlElement?.GetAttribute("href") ?? string.Empty;
+        var downloadUrl = GetDownloadUrl(httpClient, document);
         var durationStr = (
             document.Head?.SelectSingleNode("//meta[@property='video:duration']") as IElement
         )?.GetAttribute("content");
@@ -536,5 +533,84 @@ public class Worker365(
 
         var msg = new HttpRequestMessage(HttpMethod.Get, newUri);
         return msg;
+    }
+
+    private static string GetDownloadUrl(HttpClient httpClient, IHtmlDocument document)
+    {
+        // 1. Try direct HTML parsing first (works if download links are in static HTML)
+        var downloadUrlElement =
+            (
+                document.Body?.SelectSingleNode("//ul[@class='download_ul']") as IElement
+            )?.SelectSingleNode(".//a[@title]") as IElement;
+        var downloadUrl = downloadUrlElement?.GetAttribute("href") ?? string.Empty;
+
+        if (!string.IsNullOrWhiteSpace(downloadUrl))
+        {
+            return downloadUrl;
+        }
+
+        // 2. Fallback: extract from JavaScript decodeURIComponent calls
+        // The site injects download links via: insertAdjacentHTML("beforeend", decodeURIComponent('...'))
+        var scriptTags = document.Body?.GetElementsByTagName("script")?.Cast<IElement>();
+        if (scriptTags == null)
+        {
+            return string.Empty;
+        }
+
+        var decodePattern = new Regex(
+            @"decodeURIComponent\(\s*'([^']+)'\s*\)",
+            RegexOptions.Compiled
+        );
+
+        foreach (var script in scriptTags)
+        {
+            var scriptContent = script.TextContent;
+            if (string.IsNullOrEmpty(scriptContent))
+            {
+                continue;
+            }
+
+            var matches = decodePattern.Matches(scriptContent);
+            foreach (Match match in matches)
+            {
+                if (!match.Success)
+                {
+                    continue;
+                }
+
+                try
+                {
+                    var encodedString = match.Groups[1].Value;
+                    var decodedHtml = Uri.UnescapeDataString(encodedString);
+
+                    if (!decodedHtml.Contains("<li>") || !decodedHtml.Contains("<a"))
+                    {
+                        continue;
+                    }
+
+                    var decodedDoc = new HtmlParser().ParseDocument(decodedHtml);
+                    var hdLink =
+                        (
+                            decodedDoc.Body?.SelectSingleNode("//a[@title]") as IElement
+                        )?.GetAttribute("href")
+                        ?? (
+                            decodedDoc.Body?.SelectSingleNode("//a[contains(@href, '.mp4')]")
+                            as IElement
+                        )?.GetAttribute("href")
+                        ?? string.Empty;
+
+                    if (!string.IsNullOrWhiteSpace(hdLink))
+                    {
+                        return hdLink;
+                    }
+                }
+                catch
+                {
+                    // URL decoding failed, skip this match
+                }
+            }
+        }
+
+        return string.Empty;
     }
 }
