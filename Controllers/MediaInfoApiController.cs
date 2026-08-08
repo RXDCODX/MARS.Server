@@ -6,11 +6,14 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using MARS.Server.DataBaseContext;
 using MARS.Server.Exstensions;
+using MARS.Server.Hubs;
+using MARS.Server.Hubs.Interfaces;
 using MARS.Server.Services;
 using MARS.Server.Services.Media;
 using MARS.Server.Services.PyroAlerts.Entitys;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using JsonSerializer = System.Text.Json.JsonSerializer;
@@ -28,7 +31,8 @@ public class MediaInfoApiController(
     IMediaFileStorageService storage,
     IMediaInspector inspector,
     IMediaTranscoder transcoder,
-    IWebHostEnvironment webHostEnvironment
+    IWebHostEnvironment webHostEnvironment,
+    IHubContext<TelegramusHub, ITelegramusHub> hubContext
 ) : ControllerBase
 {
     private static readonly JsonSerializerOptions FormJsonOptions = new(JsonSerializerDefaults.Web)
@@ -748,6 +752,59 @@ public class MediaInfoApiController(
         {
             logger.LogError(ex, "Ошибка при удалении алерта {Id}", id);
             result = Ok(OperationResult.Bad("Ошибка при удалении алерта"));
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Протестировать награду: отправить алерт всем клиентам как при активации награды
+    /// </summary>
+    /// <param name="id">ID алерта</param>
+    /// <param name="cancellationToken">Токен отмены</param>
+    /// <returns>Результат операции</returns>
+    [HttpPost("{id:guid}/test")]
+    public async Task<ActionResult<OperationResult>> TestReward(
+        Guid id,
+        CancellationToken cancellationToken
+    )
+    {
+        ActionResult<OperationResult> result = null!;
+
+        try
+        {
+            await using var dbContext = await factory.CreateDbContextAsync(cancellationToken);
+
+            var alert = await dbContext
+                .Alerts.AsNoTracking()
+                .FirstOrDefaultAsync(a => a.Id == id, cancellationToken);
+
+            if (alert == null)
+            {
+                result = Ok(OperationResult.Bad($"Алерт с ID '{id}' не найден"));
+            }
+            else if (!IsFreezeRuleValid(alert.MetaInfo))
+            {
+                result = Ok(
+                    OperationResult.Bad(
+                        "IsFreezeRequired может быть true только когда Priority = High"
+                    )
+                );
+            }
+            else
+            {
+                var mediaClone = alert.CloneTo();
+                var dto = new MediaDto { MediaInfo = mediaClone };
+
+                await hubContext.Clients.All.Alert(dto);
+
+                result = Ok(OperationResult.Ok("Награда протестирована: алерт отправлен"));
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при тестировании награды {Id}", id);
+            result = Ok(OperationResult.Bad("Ошибка при тестировании награды"));
         }
 
         return result;
