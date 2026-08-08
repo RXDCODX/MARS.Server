@@ -175,14 +175,13 @@ public abstract class TemporaryReward(
             var needUpdate = false;
             var updateRequest = new UpdateCustomRewardRequest { IsEnabled = shouldBeEnabled };
 
-            if (desiredIsGLobalCooldownEnabled != existingReward.GlobalCooldownSetting.IsEnabled)
+            if (
+                desiredIsGLobalCooldownEnabled != existingReward.GlobalCooldownSetting.IsEnabled
+                || existingReward.GlobalCooldownSetting.GlobalCooldownSeconds
+                    != desiredGlobalCooldown
+            )
             {
                 updateRequest.IsGlobalCooldownEnabled = desiredIsGLobalCooldownEnabled;
-                needUpdate = true;
-            }
-
-            if (existingReward.GlobalCooldownSetting.GlobalCooldownSeconds != desiredGlobalCooldown)
-            {
                 updateRequest.GlobalCooldownSeconds = desiredGlobalCooldown;
                 needUpdate = true;
             }
