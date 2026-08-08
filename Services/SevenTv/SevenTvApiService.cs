@@ -64,6 +64,7 @@ public sealed class SevenTvApiService(
         }
 
         _httpClient = httpClientFactory.CreateClient(ClientName);
+        _httpClient.BaseAddress = new Uri(BaseUrl);
         return _httpClient;
     }
 
