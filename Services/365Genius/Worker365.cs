@@ -193,7 +193,7 @@ public class Worker365(
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        if (environment.IsProduction() || environment.IsDevelopment())
+        if (environment.IsProduction())
         {
             try
             {
