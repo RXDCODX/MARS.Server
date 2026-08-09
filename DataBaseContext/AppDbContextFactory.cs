@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
+using Npgsql;
 
 namespace MARS.Server.DataBaseContext;
 
@@ -67,7 +68,11 @@ public class AppDbContextFactory
                 ? configuration.GetConnectionString("Prod_Path")
                 : configuration.GetConnectionString("Dev_Path");
 
-        optionsBuilder.UseNpgsql(connectionString);
+        var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString);
+        dataSourceBuilder.UseVector();
+        var dataSource = dataSourceBuilder.Build();
+
+        optionsBuilder.UseNpgsql(dataSource);
         optionsBuilder.UseQueryTrackingBehavior(QueryTrackingBehavior.TrackAll);
         optionsBuilder.EnableThreadSafetyChecks();
 
@@ -99,7 +104,11 @@ public class AppDbContextFactory
 
         var connectionString = configuration.GetConnectionString("Dev_Path");
 
-        optionsBuilder.UseNpgsql(connectionString);
+        var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString);
+        dataSourceBuilder.UseVector();
+        var dataSource = dataSourceBuilder.Build();
+
+        optionsBuilder.UseNpgsql(dataSource);
         optionsBuilder.UseQueryTrackingBehavior(QueryTrackingBehavior.TrackAll);
         optionsBuilder.EnableThreadSafetyChecks();
 

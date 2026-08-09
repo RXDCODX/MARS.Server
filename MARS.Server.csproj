@@ -102,6 +102,7 @@
     <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" />
     <PackageReference Include="Microsoft.Extensions.Http.Polly" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <PackageReference Include="Pgvector" />
     <PackageReference Include="obs-websocket-dotnet" />
     <PackageReference Include="OpenTelemetry.Api" />
     <PackageReference Include="SevenTV-lib" />

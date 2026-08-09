@@ -77,6 +77,10 @@ public partial class AppDbContext(DbContextOptions<AppDbContext> options) : DbCo
     public DbSet<NSFWBooruAutoPostConfig> NSFWBooruAutoPostConfigs { get; set; } = null!;
     public DbSet<PostedImageRecord> PostedImageRecords { get; set; } = null!;
 
+    // WaifuChat RAG
+    public DbSet<WaifuChatEmbedding> WaifuChatEmbeddings { get; set; } = null!;
+    public DbSet<WaifuChatFact> WaifuChatFacts { get; set; } = null!;
+
     /// <summary>
     /// Partial метод для конфигурации таблиц, связанных с TwitchUser (реализован в TwitchUsersDbContext.cs)
     /// </summary>
@@ -405,6 +409,16 @@ public partial class AppDbContext(DbContextOptions<AppDbContext> options) : DbCo
 
         // Конфигурация для EnvironmentVariable
         modelBuilder.Entity<EnvironmentVariable>().HasIndex(e => e.Key).IsUnique();
+
+        // pgvector: WaifuChatEmbeddings HNSW индекс для cosine поиска
+        modelBuilder.HasPostgresExtension("vector");
+        modelBuilder
+            .Entity<WaifuChatEmbedding>()
+            .HasIndex(e => e.Embedding)
+            .HasMethod("hnsw")
+            .HasOperators("vector_cosine_ops");
+        modelBuilder.Entity<WaifuChatEmbedding>().HasIndex(e => e.TwitchId);
+        modelBuilder.Entity<WaifuChatFact>().HasIndex(e => e.TwitchId);
 
         // Конвертация для Fumo.WhenAdded и Fumo.LastOrder — колонки хранятся как character varying
         var dateTimeToString = new ValueConverter<DateTime, string>(
