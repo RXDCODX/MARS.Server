@@ -1,41 +1,36 @@
 using System;
 using System.Threading.Tasks;
+using MARS.Server.Exstensions;
 using MARS.Server.Services.Discord.TtsVoiceRelay;
+using MARS.Server.Services.Twitch.Client;
+using MARS.Shared.Hubs;
+using MARS.Shared.Models.WaifuChat;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using SignalRSwaggerGen.Attributes;
 using SignalRSwaggerGen.Enums;
+using TwitchLib.Client.Interfaces;
 
 namespace MARS.Server.Hubs.AudioControllerHub;
 
-/// <summary>
-/// SignalR hub for unified communication with AudioController.
-/// Replaces REST calls for SoundBar, OBS, and Health.
-/// Merges TTS functionality from VoiceRecognitionHub.
-/// </summary>
 [AllowAnonymous]
 [SignalRHub("/hubs/audio-controller", AutoDiscover.MethodsAndParams)]
 public class AudioControllerHub(
     AudioControllerCommandTracker tracker,
     IDiscordTtsVoiceRelayService discordRelayService,
+    ITwitchClient client,
     ILogger<AudioControllerHub> logger
 ) : Hub<IAudioControllerHub>
 {
     private const string GroupName = "audio-controllers";
 
-    /// <summary>
-    /// Register the current connection as an AudioController.
-    /// </summary>
     public async Task RegisterAsAudioController()
     {
         await Groups.AddToGroupAsync(Context.ConnectionId, GroupName);
         logger.LogInformation("AudioController registered: {ConnectionId}", Context.ConnectionId);
     }
 
-    /// <summary>
-    /// Response handler — called by AudioController when a command completes.
-    /// </summary>
     public Task CommandResponse(string correlationId, bool success, string? data, string? error)
     {
         tracker.TryComplete(
@@ -51,9 +46,6 @@ public class AudioControllerHub(
         return Task.CompletedTask;
     }
 
-    /// <summary>
-    /// Receive generated PCM audio from AudioController and play it in Discord voice channel.
-    /// </summary>
     public async Task SubmitAudioForRelay(
         byte[] pcmAudio,
         int sampleRate,
@@ -69,6 +61,24 @@ public class AudioControllerHub(
             pcmAudio.Length
         );
         await discordRelayService.HandleRelayedAudioAsync(pcmAudio, sampleRate, channels, text);
+    }
+
+    public async Task WaifuChatResponse(WaifuChatResponse response)
+    {
+        logger.LogInformation(
+            "WaifuChatResponse: {CorrelationId}, TwitchId={TwitchId}, Response={Response}",
+            response.CorrelationId,
+            response.TwitchId,
+            response.Response
+        );
+
+        if (!string.IsNullOrWhiteSpace(response.Response))
+        {
+            await client.SendMessageToMainTwitchAsync(
+                $"@{response.TwitchId}, {response.Response}",
+                logger
+            );
+        }
     }
 
     public override async Task OnConnectedAsync()

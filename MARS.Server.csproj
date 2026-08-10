@@ -102,7 +102,6 @@
     <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" />
     <PackageReference Include="Microsoft.Extensions.Http.Polly" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
-    <PackageReference Include="Pgvector" />
     <PackageReference Include="obs-websocket-dotnet" />
     <PackageReference Include="OpenTelemetry.Api" />
     <PackageReference Include="SevenTV-lib" />
@@ -211,6 +210,9 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="external\YoutubeExplode\YoutubeExplode.Converter\YoutubeExplode.Converter.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\MARS.Shared\MARS.Shared.csproj" />
   </ItemGroup>
   <Target Name="BuildClientApp" BeforeTargets="Publish" Condition="'$(SkipBuildClient)' != 'true'">
     <Message Importance="high" Text="Сборка фронта через yarn build..." />

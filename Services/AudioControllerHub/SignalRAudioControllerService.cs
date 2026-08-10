@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using MARS.Server.Hubs.AudioControllerHub;
 using MARS.Server.Services.Obs;
 using MARS.Server.Services.SoundBarService.Entitys;
+using MARS.Shared.Hubs;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 

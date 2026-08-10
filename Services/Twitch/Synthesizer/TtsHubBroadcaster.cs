@@ -6,6 +6,8 @@ using MARS.Server.Exstensions;
 using MARS.Server.Hubs.Interfaces;
 using MARS.Server.Hubs.Models.VoiceRecognition;
 using MARS.Server.Services.Twitch.Validation;
+using MARS.Shared.Hubs;
+using MARS.Shared.Models;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -19,7 +21,7 @@ public class TtsHubBroadcaster(
     IHubContext<Hubs.VoiceRecognitionHub, IVoiceRecognitionHub> hubContext,
     IHubContext<
         Hubs.AudioControllerHub.AudioControllerHub,
-        Hubs.AudioControllerHub.IAudioControllerHub
+        MARS.Shared.Hubs.IAudioControllerHub
     > audioHubContext,
     ILogger<TtsHubBroadcaster> logger,
     ITwitchClient client,
@@ -69,7 +71,7 @@ public class TtsHubBroadcaster(
     ) => BroadcastAsync(user, message, cancellationToken);
 
     Task ITtsHubBroadcaster.BroadcastStateAsync(
-        TtsState? state,
+        MARS.Server.Hubs.Models.VoiceRecognition.TtsState? state,
         CancellationToken cancellationToken
     ) => BroadcastStateAsync(state, cancellationToken);
 
@@ -111,11 +113,22 @@ public class TtsHubBroadcaster(
 
         try
         {
-            var ttsUser = user;
-
-            if (!string.IsNullOrWhiteSpace(user.AliasNickname))
+            var sharedTtsUser = new MARS.Shared.Models.TwitchUser
             {
-                ttsUser = new TwitchUser
+                TwitchId = user.TwitchId,
+                UserLogin = user.UserLogin,
+                DisplayName = user.AliasNickname ?? user.DisplayName,
+                ProfileImageUrl = user.ProfileImageUrl,
+                ChatColor = user.ChatColor,
+                IsModerator = user.IsModerator,
+                IsVip = user.IsVip,
+                FollowedAt = user.FollowedAt,
+                LastUpdated = user.LastUpdated,
+                CreatedAt = user.CreatedAt,
+            };
+
+            var serverTtsUser = user.AliasNickname is not null
+                ? new MARS.Server.Services.Twitch.Entitys.TwitchUser
                 {
                     TwitchId = user.TwitchId,
                     UserLogin = user.UserLogin,
@@ -128,13 +141,13 @@ public class TtsHubBroadcaster(
                     LastUpdated = user.LastUpdated,
                     CreatedAt = user.CreatedAt,
                     IsInBlockList = user.IsInBlockList,
-                };
-            }
+                }
+                : user;
 
-            await hubContext.Clients.Group(TtsConsumersGroupName).PlayTts(ttsUser, message);
+            await hubContext.Clients.Group(TtsConsumersGroupName).PlayTts(serverTtsUser, message);
             await audioHubContext
                 .Clients.Group(AudioControllersGroupName)
-                .PlayTts(ttsUser, message);
+                .PlayTts(sharedTtsUser, message);
             logger.LogInformation(
                 "TTS broadcast was sent to hub consumers for user {User}",
                 user.DisplayName
@@ -147,7 +160,7 @@ public class TtsHubBroadcaster(
     }
 
     public async Task BroadcastStateAsync(
-        TtsState? state,
+        MARS.Server.Hubs.Models.VoiceRecognition.TtsState? state,
         CancellationToken cancellationToken = default
     )
     {
@@ -162,17 +175,36 @@ public class TtsHubBroadcaster(
                 }
             }
 
-            var stateToBroadcast =
+            var serverStateToBroadcast =
                 state
-                ?? new TtsState { Volume = CurrentVolume, RelayToDiscord = CurrentRelayToDiscord };
+                ?? new MARS.Server.Hubs.Models.VoiceRecognition.TtsState
+                {
+                    Volume = CurrentVolume,
+                    RelayToDiscord = CurrentRelayToDiscord,
+                };
 
-            await hubContext.Clients.Group(TtsConsumersGroupName).UpdateTtsState(stateToBroadcast);
+            var sharedStateToBroadcast = state is not null
+                ? new MARS.Shared.Models.TtsState
+                {
+                    IsStopped = state.IsStopped,
+                    Volume = state.Volume,
+                    RelayToDiscord = state.RelayToDiscord,
+                }
+                : new MARS.Shared.Models.TtsState
+                {
+                    Volume = CurrentVolume,
+                    RelayToDiscord = CurrentRelayToDiscord,
+                };
+
+            await hubContext
+                .Clients.Group(TtsConsumersGroupName)
+                .UpdateTtsState(serverStateToBroadcast);
             await audioHubContext
                 .Clients.Group(AudioControllersGroupName)
-                .UpdateTtsState(stateToBroadcast);
+                .UpdateTtsState(sharedStateToBroadcast);
             logger.LogInformation(
                 "TTS state update was sent to hub consumers: {@State}",
-                stateToBroadcast
+                sharedStateToBroadcast
             );
         }
         catch (Exception ex)

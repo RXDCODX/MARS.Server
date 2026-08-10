@@ -115,13 +115,4 @@ public interface ITelegramusHub
 
     [SignalRMethod]
     public Task UpdateMikuPrizes(ICollection<MikuPrizeType> prizes);
-
-    [SignalRMethod]
-    public Task WaifuChatMessage(
-        string correlationId,
-        string twitchId,
-        string displayName,
-        string? waifuName,
-        string message
-    );
 }

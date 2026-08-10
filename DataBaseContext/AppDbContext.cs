@@ -77,8 +77,7 @@ public partial class AppDbContext(DbContextOptions<AppDbContext> options) : DbCo
     public DbSet<NSFWBooruAutoPostConfig> NSFWBooruAutoPostConfigs { get; set; } = null!;
     public DbSet<PostedImageRecord> PostedImageRecords { get; set; } = null!;
 
-    // WaifuChat RAG
-    public DbSet<WaifuChatEmbedding> WaifuChatEmbeddings { get; set; } = null!;
+    // WaifuChat — facts о зрителях (embeddings хранятся в LM-Kit FileSystemVectorStore)
     public DbSet<WaifuChatFact> WaifuChatFacts { get; set; } = null!;
 
     /// <summary>
@@ -410,14 +409,7 @@ public partial class AppDbContext(DbContextOptions<AppDbContext> options) : DbCo
         // Конфигурация для EnvironmentVariable
         modelBuilder.Entity<EnvironmentVariable>().HasIndex(e => e.Key).IsUnique();
 
-        // pgvector: WaifuChatEmbeddings HNSW индекс для cosine поиска
-        modelBuilder.HasPostgresExtension("vector");
-        modelBuilder
-            .Entity<WaifuChatEmbedding>()
-            .HasIndex(e => e.Embedding)
-            .HasMethod("hnsw")
-            .HasOperators("vector_cosine_ops");
-        modelBuilder.Entity<WaifuChatEmbedding>().HasIndex(e => e.TwitchId);
+        // WaifuChat: индекс на TwitchId для быстрого поиска фактов
         modelBuilder.Entity<WaifuChatFact>().HasIndex(e => e.TwitchId);
 
         // Конвертация для Fumo.WhenAdded и Fumo.LastOrder — колонки хранятся как character varying
