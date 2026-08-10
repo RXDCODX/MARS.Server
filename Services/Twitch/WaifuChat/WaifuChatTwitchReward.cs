@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using MARS.Server.DataBaseContext;
 using MARS.Server.Exstensions;
+using MARS.Server.Services.Shikimori;
 using MARS.Server.Services.Twitch.Client;
 using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Validation;
@@ -22,10 +23,12 @@ public class WaifuChatTwitchReward(
     IDbContextFactory<AppDbContext> factory,
     IHubContext<AudioHub.AudioControllerHub, MARS.Shared.Hubs.IAudioControllerHub> hubContext,
     ILogger<WaifuChatTwitchReward> logger,
-    ITwitchEventValidationService validator
+    ITwitchEventValidationService validator,
+    ShikimoriService shikimoriService
 ) : BackgroundService
 {
     private readonly ConcurrentDictionary<string, DateTime> _cooldowns = new();
+    private readonly ConcurrentDictionary<string, string> _characterDescriptionCache = new();
 
     private static readonly HashSet<string> IgnoredUsers = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -91,6 +94,8 @@ public class WaifuChatTwitchReward(
                                     var waifu = await db.Waifus.FindAsync(husband.WaifuBrideId);
                                     var waifuName = waifu?.Name ?? "жена";
 
+                                    var characterDescription = await GetCharacterDescriptionAsync(waifu?.ShikiId);
+
                                     var correlationId = Guid.NewGuid().ToString("N");
 
                                     await hubContext.Clients.All.WaifuChatMessage(
@@ -101,6 +106,8 @@ public class WaifuChatTwitchReward(
                                             DisplayName = displayName,
                                             WaifuName = waifuName,
                                             Message = userMessage,
+                                            MessageId = e.ChatMessage.Id,
+                                            CharacterDescription = characterDescription,
                                         }
                                     );
 
@@ -129,11 +136,36 @@ public class WaifuChatTwitchReward(
         }
     }
 
+    private async Task<string?> GetCharacterDescriptionAsync(string? shikiId)
+    {
+        if (string.IsNullOrWhiteSpace(shikiId))
+        {
+            return null;
+        }
+
+        if (_characterDescriptionCache.TryGetValue(shikiId, out var cached))
+        {
+            return cached;
+        }
+
+        if (long.TryParse(shikiId, out var id))
+        {
+            var character = await shikimoriService.GetShikiCharacterById(id);
+            if (character?.Description is { Length: > 0 } description)
+            {
+                _characterDescriptionCache[shikiId] = description;
+                return description;
+            }
+        }
+
+        return null;
+    }
+
     private bool IsOnCooldown(string userId)
     {
         if (_cooldowns.TryGetValue(userId, out var lastTime))
         {
-            return (DateTime.UtcNow - lastTime).TotalSeconds < 30;
+            return (DateTime.UtcNow - lastTime).TotalSeconds < 10;
         }
         return false;
     }

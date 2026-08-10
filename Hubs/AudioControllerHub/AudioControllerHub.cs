@@ -74,10 +74,21 @@ public class AudioControllerHub(
 
         if (!string.IsNullOrWhiteSpace(response.Response))
         {
-            await client.SendMessageToMainTwitchAsync(
-                $"@{response.TwitchId}, {response.Response}",
-                logger
-            );
+            if (!string.IsNullOrWhiteSpace(response.MessageId))
+            {
+                await client.SendReplyAsync(
+                    response.TwitchId,
+                    response.MessageId,
+                    response.Response
+                );
+            }
+            else
+            {
+                await client.SendMessageToMainTwitchAsync(
+                    $"@{response.TwitchId}, {response.Response}",
+                    logger
+                );
+            }
         }
     }
 
