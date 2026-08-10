@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 using MARS.Server.Services.Twitch.ClientMessages.AutoMessages.DTOs;
 
 namespace MARS.Server.Services.Twitch.ClientMessages.AutoMessages.Interfaces;

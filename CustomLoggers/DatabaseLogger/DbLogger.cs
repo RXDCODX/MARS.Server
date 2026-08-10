@@ -1,8 +1,4 @@
-﻿using System;
-using System.Diagnostics.CodeAnalysis;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
+﻿using System.Diagnostics.CodeAnalysis;
 
 namespace MARS.Server.CustomLoggers.DatabaseLogger;
 

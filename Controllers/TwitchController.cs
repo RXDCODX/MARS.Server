@@ -1,12 +1,8 @@
-﻿using System;
-using System.Linq;
-using System.Threading.Tasks;
-using MARS.Server.Services;
+﻿using MARS.Server.Services;
 using MARS.Server.Services.Twitch.Management;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using TwitchLib.Api.Interfaces;
 
 namespace MARS.Server.Controllers;

@@ -1,11 +1,5 @@
-using System;
-using System.IO;
-using System.Linq;
 using System.Net;
-using System.Net.Http;
 using System.Text.RegularExpressions;
-using System.Threading;
-using System.Threading.Tasks;
 using AngleSharp.Dom;
 using AngleSharp.Html.Dom;
 using AngleSharp.Html.Parser;
@@ -16,8 +10,6 @@ using MARS.Server.Exstensions;
 using MARS.Server.Services._365Genius.Entitys;
 using MARS.Server.Services.Telegram.WTelegram;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using TL;
 

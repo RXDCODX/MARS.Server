@@ -1,6 +1,4 @@
-﻿using System;
-using System.Text;
-using Microsoft.Extensions.Logging;
+﻿using System.Text;
 using Telegram.Bot;
 
 #pragma warning disable CS8633 // Nullability in constraints for type parameter doesn't match the constraints for type parameter in implicitly implemented interface method'.

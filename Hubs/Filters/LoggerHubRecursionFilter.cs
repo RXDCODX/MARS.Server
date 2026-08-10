@@ -1,5 +1,3 @@
-using System;
-using System.Threading.Tasks;
 using MARS.Server.CustomLoggers.SignalRLogger;
 using Microsoft.AspNetCore.SignalR;
 

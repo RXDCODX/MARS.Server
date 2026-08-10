@@ -1,13 +1,8 @@
-using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 using MARS.Server.Services;
 using MARS.Server.Services.DanbooruAutoPost;
 using MARS.Server.Services.DanbooruAutoPost.Entities;
 using MARS.Server.Services.Telegram.DiscordBridge.Entitys;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 
 namespace MARS.Server.Controllers;
 

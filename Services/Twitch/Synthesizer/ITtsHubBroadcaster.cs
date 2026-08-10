@@ -1,5 +1,3 @@
-using System.Threading;
-using System.Threading.Tasks;
 using MARS.Server.Hubs.Models.VoiceRecognition;
 using MARS.Server.Services.Twitch.Entitys;
 

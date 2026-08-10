@@ -1,5 +1,4 @@
 using MARS.Server.Services.Telegram.BotService.Abstract;
-using Microsoft.Extensions.Logging;
 using Telegram.Bot;
 
 namespace MARS.Server.Services.Telegram.BotService;

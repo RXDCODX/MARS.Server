@@ -1,6 +1,3 @@
-using System;
-using System.Threading;
-using System.Threading.Tasks;
 using MARS.Server.Configuration;
 using MARS.Server.DataBaseContext;
 using MARS.Server.Exstensions;
@@ -12,9 +9,6 @@ using MARS.Server.Services.Telegram.GooglePhotos;
 using MARS.Server.Services.Telegram.WTelegram;
 using MARS.Server.Services.Twitch.Rewards._11_RandomMemReward.Service;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Telegram.Bot;
 using Telegram.Bot.Exceptions;

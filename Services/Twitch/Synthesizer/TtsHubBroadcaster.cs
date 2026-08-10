@@ -1,16 +1,6 @@
-using System;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using MARS.Server.Exstensions;
 using MARS.Server.Hubs.Interfaces;
-using MARS.Server.Hubs.Models.VoiceRecognition;
 using MARS.Server.Services.Twitch.Validation;
-using MARS.Shared.Hubs;
-using MARS.Shared.Models;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using TwitchLib.Client.Events;
 using TwitchLib.Client.Interfaces;
 using TwitchUser = MARS.Server.Services.Twitch.Entitys.TwitchUser;

@@ -1,10 +1,5 @@
-using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 using MARS.Server.Exstensions;
 using MARS.Server.Services.SoundRequest.Entities;
-using Microsoft.Extensions.Logging;
 using SoundCloudExplode;
 
 namespace MARS.Server.Services.SoundRequest.SoundCloud;

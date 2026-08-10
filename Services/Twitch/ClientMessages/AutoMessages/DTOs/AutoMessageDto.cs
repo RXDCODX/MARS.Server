@@ -1,5 +1,3 @@
-using System;
-
 namespace MARS.Server.Services.Twitch.ClientMessages.AutoMessages.DTOs;
 
 public class AutoMessageDto

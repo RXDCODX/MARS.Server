@@ -2,16 +2,10 @@ using System.Collections.Concurrent;
 using MARS.Server.DataBaseContext;
 using MARS.Server.Exstensions;
 using MARS.Server.Services.Shikimori;
-using MARS.Server.Services.Twitch.Client;
-using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Validation;
-using MARS.Server.Services.WaifuRoll.Entitys;
-using MARS.Shared.Hubs;
 using MARS.Shared.Models.WaifuChat;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using TwitchLib.Client.Events;
 using TwitchLib.Client.Interfaces;
 using AudioHub = MARS.Server.Hubs.AudioControllerHub;
@@ -94,7 +88,9 @@ public class WaifuChatTwitchReward(
                                     var waifu = await db.Waifus.FindAsync(husband.WaifuBrideId);
                                     var waifuName = waifu?.Name ?? "жена";
 
-                                    var characterDescription = await GetCharacterDescriptionAsync(waifu?.ShikiId);
+                                    var characterDescription = await GetCharacterDescriptionAsync(
+                                        waifu?.ShikiId
+                                    );
 
                                     var correlationId = Guid.NewGuid().ToString("N");
 

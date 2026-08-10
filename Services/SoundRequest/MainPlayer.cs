@@ -1,9 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Dynamic.Core;
-using System.Threading;
-using System.Threading.Tasks;
 using MARS.Server.ApplicationState;
 using MARS.Server.Configuration;
 using MARS.Server.DataBaseContext;
@@ -13,9 +7,6 @@ using MARS.Server.Services.SoundRequest.Interfaces;
 using MARS.Server.Services.SoundRequest.Queue;
 using MARS.Server.Services.SoundRequest.Spotify;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.DynamicLinq;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using TwitchLib.Client.Interfaces;
 

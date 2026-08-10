@@ -1,5 +1,3 @@
-using System;
-using System.Globalization;
 using MARS.Server.ApplicationState;
 using MARS.Server.Services._365Genius.Entitys;
 using MARS.Server.Services.BooruShared.Entities;
@@ -25,7 +23,6 @@ using MARS.Server.Services.Twitch.Synthesizer.Entitys;
 using MARS.Server.Services.WaifuRoll.Entitys;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using Npgsql;
 
 namespace MARS.Server.DataBaseContext;
 

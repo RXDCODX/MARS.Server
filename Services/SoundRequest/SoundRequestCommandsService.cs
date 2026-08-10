@@ -1,7 +1,3 @@
-using System;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using MARS.Server.ApplicationState;
 using MARS.Server.Configuration;
 using MARS.Server.DataBaseContext;
@@ -13,7 +9,6 @@ using MARS.Server.Services.SoundRequest.Spotify;
 using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.YouTube;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.DynamicLinq;
 using Microsoft.Extensions.Options;
 using DateTime = System.DateTime;
 using Exception = System.Exception;

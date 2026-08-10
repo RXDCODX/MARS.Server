@@ -1,12 +1,8 @@
-﻿using System;
-using System.Threading;
-using System.Threading.Tasks;
-using MARS.Server.Configuration;
+﻿using MARS.Server.Configuration;
 using MARS.Server.Exstensions;
 using MARS.Server.Services;
 using MARS.Server.Services.Telegram.GooglePhotos;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Telegram.Bot;
 using Telegram.Bot.Types.Enums;

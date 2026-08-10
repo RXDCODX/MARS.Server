@@ -1,5 +1,4 @@
-﻿using System;
-using MARS.Server.Services.PyroAlerts.Entitys;
+﻿using MARS.Server.Services.PyroAlerts.Entitys;
 using MARS.Server.Services.Twitch.Entitys;
 
 namespace MARS.Server.Exstensions;

@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-
 namespace MARS.Server.Services.Discord.Gateway;
 
 public static class VideoExtensions

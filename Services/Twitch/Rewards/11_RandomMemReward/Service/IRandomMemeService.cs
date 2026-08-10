@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 using MARS.Server.Services.Twitch.Rewards._11_RandomMemReward.Service.Entity;
 
 namespace MARS.Server.Services.Twitch.Rewards._11_RandomMemReward.Service;

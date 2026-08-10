@@ -1,9 +1,6 @@
-using System;
-using System.IO;
 using MARS.Server.DataBaseContext;
 using MARS.Server.Services.Telegram.WTelegram.Entities;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 
 namespace MARS.Server.Services.Telegram.WTelegram;
 

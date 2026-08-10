@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace MARS.Server.Services.Twitch.Entitys.Subs;
+﻿namespace MARS.Server.Services.Twitch.Entitys.Subs;
 
 public class StaticContent
 {

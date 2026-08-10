@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-
-namespace MARS.Server.Configuration;
+﻿namespace MARS.Server.Configuration;
 
 public class ChannelsSpy
 {

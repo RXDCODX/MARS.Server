@@ -1,5 +1,3 @@
-using System;
-
 namespace MARS.Server.Services.Shikimori.Entitys;
 
 /// <summary>

@@ -1,15 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
-using MARS.Server.Exstensions;
+﻿using MARS.Server.Exstensions;
 using MARS.Server.Services;
 using MARS.Server.Services.SoundRequest;
 using MARS.Server.Services.SoundRequest.Entities;
 using MARS.Server.Services.SoundRequest.Queue;
 using MARS.Server.Services.Twitch;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 
 namespace MARS.Server.Controllers;
 

@@ -1,6 +1,3 @@
-using System.Threading;
-using System.Threading.Tasks;
-
 namespace MARS.Server.Services.Media;
 
 public interface IMediaTranscoder

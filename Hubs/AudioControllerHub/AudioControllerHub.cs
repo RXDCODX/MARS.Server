@@ -1,13 +1,9 @@
-using System;
-using System.Threading.Tasks;
 using MARS.Server.Exstensions;
 using MARS.Server.Services.Discord.TtsVoiceRelay;
-using MARS.Server.Services.Twitch.Client;
 using MARS.Shared.Hubs;
 using MARS.Shared.Models.WaifuChat;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.Logging;
 using SignalRSwaggerGen.Attributes;
 using SignalRSwaggerGen.Enums;
 using TwitchLib.Client.Interfaces;

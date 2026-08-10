@@ -1,4 +1,3 @@
-using System.Threading.Tasks;
 using MARS.Server.Services.Twitch.Entitys;
 
 namespace MARS.Server.Hubs.Interfaces;

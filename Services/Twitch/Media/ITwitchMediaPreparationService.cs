@@ -1,6 +1,3 @@
-using System;
-using System.Threading;
-using System.Threading.Tasks;
 using MARS.Server.Services.PyroAlerts.Entitys;
 
 namespace MARS.Server.Services.Twitch.Media;

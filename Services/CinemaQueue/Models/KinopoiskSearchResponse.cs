@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-
 namespace MARS.Server.Services.CinemaQueue.Models;
 
 public class KinopoiskSearchResponse

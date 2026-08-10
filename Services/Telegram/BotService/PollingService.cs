@@ -1,8 +1,6 @@
-using System;
 using MARS.Server.DataBaseContext;
 using MARS.Server.Services.Telegram.BotService.Abstract;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 
 namespace MARS.Server.Services.Telegram.BotService;
 
