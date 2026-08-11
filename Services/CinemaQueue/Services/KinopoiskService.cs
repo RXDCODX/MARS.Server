@@ -1,12 +1,7 @@
-﻿using System;
-using System.Net.Http;
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.RegularExpressions;
-using System.Threading;
-using System.Threading.Tasks;
 using MARS.Server.Configuration;
 using MARS.Server.Services.CinemaQueue.Models;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 

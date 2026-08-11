@@ -1,10 +1,4 @@
-using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 using TwitchLib.Api.Helix.Models.ChannelPoints;
 
 namespace MARS.Server.Services.Twitch.Rewards.ChannelRewards;

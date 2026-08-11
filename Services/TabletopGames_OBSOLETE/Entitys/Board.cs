@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-
-namespace MARS.Server.Services.TabletopGames_OBSOLETE.Entitys;
+﻿namespace MARS.Server.Services.TabletopGames_OBSOLETE.Entitys;
 
 /// <summary>
 /// Represents the game board for a tabletop game, such as checkers.

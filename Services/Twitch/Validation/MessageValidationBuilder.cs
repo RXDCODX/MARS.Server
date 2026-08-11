@@ -1,10 +1,6 @@
-using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 using MARS.Server.Exstensions;
 using MARS.Server.Services.Twitch.TwitchFollowers;
-using Microsoft.Extensions.Logging;
 using TwitchLib.Client.Events;
 using TwitchLib.Client.Interfaces;
 

@@ -1,6 +1,5 @@
 using System.Collections.Concurrent;
 using MARS.Server.Services.Twitch.TwitchFollowers;
-using Microsoft.Extensions.Logging;
 using TwitchLib.Client.Events;
 using TwitchLib.Client.Interfaces;
 using TwitchLib.EventSub.Core.EventArgs.Channel;

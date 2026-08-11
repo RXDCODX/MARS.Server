@@ -1,14 +1,9 @@
-using System;
-using System.Threading;
-using System.Threading.Tasks;
 using MARS.Server.DataBaseContext;
 using MARS.Server.Exstensions;
 using MARS.Server.Services.CinemaQueue.Entitys;
 using MARS.Server.Services.CinemaQueue.Interfaces;
 using MARS.Server.Services.Twitch.Validation;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using TwitchLib.Client.Interfaces;
 using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Websockets;

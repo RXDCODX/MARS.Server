@@ -1,10 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
 using Cronos;
 using MARS.Server.DataBaseContext;
 using MARS.Server.Services.BooruShared;
@@ -12,8 +5,6 @@ using MARS.Server.Services.Discord.Gateway;
 using MARS.Server.Services.NSFWBooru.Entities;
 using MARS.Server.Services.Telegram.DiscordBridge.Entitys;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 
 namespace MARS.Server.Services.NSFWBooru;
 

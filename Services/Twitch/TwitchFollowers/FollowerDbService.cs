@@ -1,11 +1,6 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using MARS.Server.DataBaseContext;
 using MARS.Server.Services.Twitch.TwitchFollowers.Entitys;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 
 namespace MARS.Server.Services.Twitch.TwitchFollowers;
 

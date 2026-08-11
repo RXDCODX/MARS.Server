@@ -1,5 +1,3 @@
-using System.Threading;
-using System.Threading.Tasks;
 using MARS.Server.Services.SoundRequest.Entities;
 
 namespace MARS.Server.Services.SoundRequest.Spotify;

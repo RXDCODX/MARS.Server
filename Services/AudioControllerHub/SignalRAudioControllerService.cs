@@ -1,12 +1,9 @@
-using System;
 using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
 using MARS.Server.Hubs.AudioControllerHub;
 using MARS.Server.Services.Obs;
 using MARS.Server.Services.SoundBarService.Entitys;
+using MARS.Shared.Hubs;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.Logging;
 
 namespace MARS.Server.Services.AudioControllerHub;
 

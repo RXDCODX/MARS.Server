@@ -1,10 +1,7 @@
-﻿using System;
-using System.Threading.Tasks;
-using MARS.Server.Hubs;
+﻿using MARS.Server.Hubs;
 using MARS.Server.Hubs.Interfaces;
 using MARS.Server.Hubs.Models.LoggerHub;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.Logging;
 
 namespace MARS.Server.CustomLoggers.SignalRLogger;
 

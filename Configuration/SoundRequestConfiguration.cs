@@ -1,5 +1,3 @@
-using System;
-
 namespace MARS.Server.Configuration;
 
 public class SoundRequestConfiguration

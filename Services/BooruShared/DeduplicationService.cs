@@ -1,10 +1,6 @@
-using System;
-using System.Threading;
-using System.Threading.Tasks;
 using MARS.Server.DataBaseContext;
 using MARS.Server.Services.BooruShared.Entities;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 
 namespace MARS.Server.Services.BooruShared;
 

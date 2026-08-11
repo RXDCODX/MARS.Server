@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-
 namespace MARS.Server.CustomLoggers.SignalRLogger;
 
 public class SignalRLoggerOptions

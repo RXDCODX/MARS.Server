@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Threading.Tasks;
+﻿using System.Collections.Concurrent;
 using Telegram.Bot;
 
 namespace MARS.Server.CustomLoggers.TelegramLogger;

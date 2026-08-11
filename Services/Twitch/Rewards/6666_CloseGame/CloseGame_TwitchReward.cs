@@ -1,14 +1,9 @@
-using System;
 using System.Diagnostics;
 using System.Drawing;
-using System.Threading;
-using System.Threading.Tasks;
 using MARS.Server.Exstensions;
 using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
 using MARS.Server.Services.Twitch.Validation;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using TwitchLib.Client.Interfaces;
 using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Websockets;

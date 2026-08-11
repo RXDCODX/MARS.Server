@@ -1,7 +1,4 @@
-﻿using System.Threading;
-using System.Threading.Tasks;
-
-namespace MARS.Server.Services.StreamAcrhive_UNUSED.Interfaces;
+﻿namespace MARS.Server.Services.StreamAcrhive_UNUSED.Interfaces;
 
 public interface IStreamArchiveService
 {

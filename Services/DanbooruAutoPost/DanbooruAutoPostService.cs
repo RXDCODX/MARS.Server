@@ -1,9 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using Cronos;
 using MARS.Server.DataBaseContext;
 using MARS.Server.Services.BooruShared;
@@ -12,8 +6,6 @@ using MARS.Server.Services.Discord.Gateway;
 using MARS.Server.Services.Telegram.DiscordBridge.Entitys;
 using MARS.Server.Services.Twitch.Rewards._27_RandomArt;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 
 namespace MARS.Server.Services.DanbooruAutoPost;
 

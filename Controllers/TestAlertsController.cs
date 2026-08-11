@@ -1,17 +1,10 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Text.Json;
-using System.Threading.Tasks;
 using MARS.Server.Hubs;
 using MARS.Server.Hubs.Interfaces;
 using MARS.Server.Services;
 using MARS.Server.Services.PyroAlerts.Entitys;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.Hosting;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace MARS.Server.Controllers;

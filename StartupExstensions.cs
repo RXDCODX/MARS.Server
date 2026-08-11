@@ -7,17 +7,18 @@ using MARS.Server.Hubs.Filters;
 using MARS.Server.Hubs.Interfaces;
 using MARS.Server.Migrations;
 using MARS.Server.Services._365Genius;
+using MARS.Server.Services.AudioControllerHub;
 using MARS.Server.Services.BooruShared;
 using MARS.Server.Services.DanbooruAutoPost;
-using MARS.Server.Services.NSFWBooru;
 using MARS.Server.Services.Discord.Gateway;
 using MARS.Server.Services.Discord.PlayRequest;
 using MARS.Server.Services.Discord.TtsVoiceRelay;
+using MARS.Server.Services.NSFWBooru;
 using MARS.Server.Services.Obs;
-using MARS.Server.Services.AudioControllerHub;
 using MARS.Server.Services.PyroAlerts;
 using MARS.Server.Services.Scoreboard;
 using MARS.Server.Services.ServiceManager;
+using MARS.Server.Services.SevenTv;
 using MARS.Server.Services.Shikimori;
 using MARS.Server.Services.Shikimori.Entitys;
 using MARS.Server.Services.SoundBarService;
@@ -43,11 +44,9 @@ using MARS.Server.Services.Twitch.ClientMessages.TwitchAutoHello;
 using MARS.Server.Services.Twitch.HelloVideos;
 using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.Twitch.Media;
-using MARS.Server.Services.Twitch.MiniGamesStats;
 using MARS.Server.Services.Twitch.PuntoSwitcher;
 using MARS.Server.Services.Twitch.Rewards;
 using MARS.Server.Services.Twitch.Rewards._11_RandomMemReward.Service;
-using MARS.Server.Services.Twitch.Rewards._13_FumoFriday;
 using MARS.Server.Services.Twitch.Rewards._1580_MikuBeam;
 using MARS.Server.Services.Twitch.Rewards._160_LegBum;
 using MARS.Server.Services.Twitch.Rewards._2_WaifuMarriage;
@@ -63,22 +62,17 @@ using MARS.Server.Services.Twitch.Rewards._9_AudioQuiz;
 using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
 using MARS.Server.Services.Twitch.StreamBotNotifications;
 using MARS.Server.Services.Twitch.StreamManagement;
-using MARS.Server.Services.SevenTv;
 using MARS.Server.Services.Twitch.Synthesizer;
 using MARS.Server.Services.Twitch.TwitchFollowers;
 using MARS.Server.Services.Twitch.Validation;
+using MARS.Server.Services.Twitch.WaifuChat;
 using MARS.Server.Services.Twitch.WeddingAnniversary;
 using MARS.Server.Services.WaifuRoll;
 using MARS.Server.Services.WaifuRoll.Entitys.Interfaces;
 using MARS.Server.Services.WaifuRoll.helpers;
 using MARS.Server.Services.YouTube;
 using MARS.Server.Swagger;
-using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi;
 using Telegram.Bot;
 using TwitchLib.Api;
@@ -380,6 +374,9 @@ public static class StartupEstensions
         services.Configure<TwitchRewardsOptions>(
             manager.GetSection(AppBase.Base).GetSection(TwitchRewardsOptions.SectionName)
         );
+
+        services.AddSingleton<WaifuChatTwitchReward>();
+        services.AddHostedService(sp => sp.GetRequiredService<WaifuChatTwitchReward>());
 
         return services;
     }

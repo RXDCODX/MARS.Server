@@ -1,16 +1,10 @@
-using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using MARS.Server.DataBaseContext;
 using MARS.Server.Exstensions;
 using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.Twitch.TwitchFollowers;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using Npgsql;
 using TwitchLib.Api.Interfaces;
 using TwitchLib.Client.Events;

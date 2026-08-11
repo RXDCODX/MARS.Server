@@ -1,11 +1,7 @@
-﻿using System;
-using System.Linq;
-using System.Threading.Tasks;
-using MARS.Server.Configuration;
+﻿using MARS.Server.Configuration;
 using MARS.Server.Exstensions;
 using MARS.Server.Services.Shikimori.Entitys;
 using MARS.Server.Services.Telegram;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using ShikimoriSharp;
 using ShikimoriSharp.Bases;

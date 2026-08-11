@@ -1,5 +1,3 @@
-using System.Threading;
-using System.Threading.Tasks;
 using MARS.Server.Services;
 using MARS.Server.Services.SoundRequest.Spotify;
 using Microsoft.AspNetCore.Mvc;

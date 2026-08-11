@@ -1,10 +1,5 @@
-using System;
 using System.Net;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
 using MARS.Server.Exstensions;
-using Microsoft.Extensions.Logging;
 
 namespace MARS.Server.Services._365Genius;
 

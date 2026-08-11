@@ -1,5 +1,3 @@
-using System;
-
 namespace MARS.Server.Services.Telegram.DiscordBridge.Entitys;
 
 public class TelegramDiscordChannelStateDto

@@ -1,5 +1,3 @@
-using System;
-using System.Globalization;
 using MARS.Server.ApplicationState;
 using MARS.Server.Services._365Genius.Entitys;
 using MARS.Server.Services.BooruShared.Entities;
@@ -25,7 +23,6 @@ using MARS.Server.Services.Twitch.Synthesizer.Entitys;
 using MARS.Server.Services.WaifuRoll.Entitys;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using Npgsql;
 
 namespace MARS.Server.DataBaseContext;
 
@@ -76,6 +73,9 @@ public partial class AppDbContext(DbContextOptions<AppDbContext> options) : DbCo
     public DbSet<DanbooruAutoPostConfig> DanbooruAutoPostConfigs { get; set; } = null!;
     public DbSet<NSFWBooruAutoPostConfig> NSFWBooruAutoPostConfigs { get; set; } = null!;
     public DbSet<PostedImageRecord> PostedImageRecords { get; set; } = null!;
+
+    // WaifuChat — facts о зрителях (embeddings хранятся в LM-Kit FileSystemVectorStore)
+    public DbSet<WaifuChatFact> WaifuChatFacts { get; set; } = null!;
 
     /// <summary>
     /// Partial метод для конфигурации таблиц, связанных с TwitchUser (реализован в TwitchUsersDbContext.cs)
@@ -405,6 +405,9 @@ public partial class AppDbContext(DbContextOptions<AppDbContext> options) : DbCo
 
         // Конфигурация для EnvironmentVariable
         modelBuilder.Entity<EnvironmentVariable>().HasIndex(e => e.Key).IsUnique();
+
+        // WaifuChat: индекс на TwitchId для быстрого поиска фактов
+        modelBuilder.Entity<WaifuChatFact>().HasIndex(e => e.TwitchId);
 
         // Конвертация для Fumo.WhenAdded и Fumo.LastOrder — колонки хранятся как character varying
         var dateTimeToString = new ValueConverter<DateTime, string>(

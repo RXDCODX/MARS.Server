@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace MARS.Server.Services.Scoreboard.Entitys;
+﻿namespace MARS.Server.Services.Scoreboard.Entitys;
 
 public class ScoreboardState
 {

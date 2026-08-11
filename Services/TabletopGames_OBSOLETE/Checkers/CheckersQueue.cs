@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace MARS.Server.Services.TabletopGames_OBSOLETE.Checkers;
+﻿namespace MARS.Server.Services.TabletopGames_OBSOLETE.Checkers;
 
 /// <summary>
 /// Manages the queue of players waiting to join a checkers game.

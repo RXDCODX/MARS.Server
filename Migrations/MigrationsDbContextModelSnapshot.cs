@@ -1652,6 +1652,33 @@ namespace MARS.Server.Migrations
                     b.ToTable("Waifus");
                 });
 
+            modelBuilder.Entity("MARS.Server.Services.WaifuRoll.Entitys.WaifuChatFact", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("ExtractedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Fact")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("Importance")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("TwitchId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TwitchId");
+
+                    b.ToTable("WaifuChatFacts");
+                });
+
             modelBuilder.Entity("MARS.Server.Services.WaifuRoll.Entitys.WaifuRollAudio", b =>
                 {
                     b.Property<Guid>("Id")

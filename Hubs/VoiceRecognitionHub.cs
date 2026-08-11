@@ -1,10 +1,7 @@
-using System;
-using System.Threading.Tasks;
 using MARS.Server.Hubs.Interfaces;
 using MARS.Server.Services.Discord.TtsVoiceRelay;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.Logging;
 using SignalRSwaggerGen.Attributes;
 using SignalRSwaggerGen.Enums;
 

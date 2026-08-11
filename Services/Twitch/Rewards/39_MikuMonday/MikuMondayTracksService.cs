@@ -1,18 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.IO;
-using System.Linq;
+﻿using System.Globalization;
 using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
 using MARS.Server.DataBaseContext;
 using MARS.Server.Exstensions;
 using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.YouTube;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace MARS.Server.Services.Twitch.Rewards._39_MikuMonday;
