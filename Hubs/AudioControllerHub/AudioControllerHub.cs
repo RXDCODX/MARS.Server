@@ -70,15 +70,13 @@ public class AudioControllerHub(
 
         if (!string.IsNullOrWhiteSpace(response.Response))
         {
-            if (!string.IsNullOrWhiteSpace(response.MessageId))
+            var channel = client.GetJoinedChannel(TwitchExstension.Channel);
+
+            if (channel is not null && !string.IsNullOrWhiteSpace(response.MessageId))
             {
-                await client.SendReplyAsync(
-                    response.TwitchId,
-                    response.MessageId,
-                    response.Response
-                );
+                await client.SendReplyAsync(channel, response.MessageId, response.Response);
             }
-            else
+            else if (channel is not null)
             {
                 await client.SendMessageToMainTwitchAsync(
                     $"@{response.TwitchId}, {response.Response}",

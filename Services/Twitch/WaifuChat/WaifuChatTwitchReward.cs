@@ -35,10 +35,24 @@ public class WaifuChatTwitchReward(
 
     private static readonly string[] TriggerKeywords =
     [
-        "жена", "wife", "муж", "husband", "супруг", "spouse",
-        "партнёр", "partner", "половинка", "милая", "милый",
-        "дорогая", "дорогой", "любимая", "любимый",
-        "котик", "солнце", "зайка",
+        "жена",
+        "wife",
+        "муж",
+        "husband",
+        "супруг",
+        "spouse",
+        "партнёр",
+        "partner",
+        "половинка",
+        "милая",
+        "милый",
+        "дорогая",
+        "дорогой",
+        "любимая",
+        "любимый",
+        "котик",
+        "солнце",
+        "зайка",
     ];
 
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
@@ -61,19 +75,26 @@ public class WaifuChatTwitchReward(
 
         logger.LogDebug(
             "[WaifuChat] Received: '{Message}' from {DisplayName} ({UserId})",
-            message, displayName, userId);
+            message,
+            displayName,
+            userId
+        );
 
         if (!MightBeWaifuChat(message))
         {
             logger.LogDebug(
                 "[WaifuChat] Skipping '{Message}' — не похоже на обращение к жене",
-                message);
+                message
+            );
             return;
         }
 
         logger.LogInformation(
             "[WaifuChat] Message '{Message}' от {DisplayName} ({UserId}) прошёл keyword check",
-            message, displayName, userId);
+            message,
+            displayName,
+            userId
+        );
 
         var vr = await validator
             .ForMessageReceived(e)
@@ -86,7 +107,9 @@ public class WaifuChatTwitchReward(
         {
             logger.LogWarning(
                 "[WaifuChat] Validation failed for {DisplayName}: {Error}",
-                displayName, vr.FirstError);
+                displayName,
+                vr.FirstError
+            );
             return;
         }
 
@@ -116,7 +139,9 @@ public class WaifuChatTwitchReward(
             {
                 logger.LogDebug(
                     "[WaifuChat] {DisplayName} не женат (IsPrivated={IsPrivated})",
-                    displayName, husband?.IsPrivated);
+                    displayName,
+                    husband?.IsPrivated
+                );
                 await client.SendMessageToMainTwitchAsync(
                     $"@{displayName}, ты пока не женат! Сначала найди свою жену.",
                     logger
@@ -127,7 +152,9 @@ public class WaifuChatTwitchReward(
             if (string.IsNullOrWhiteSpace(husband.WaifuBrideId))
             {
                 logger.LogWarning(
-                    "[WaifuChat] {DisplayName} женат, но WaifuBrideId пустой", displayName);
+                    "[WaifuChat] {DisplayName} женат, но WaifuBrideId пустой",
+                    displayName
+                );
                 return;
             }
 
@@ -143,11 +170,17 @@ public class WaifuChatTwitchReward(
             var correlationId = Guid.NewGuid().ToString("N");
 
             logger.LogInformation(
-                "[WaifuChat] Sending to AudioController: correlationId={CorrelationId}, " +
-                "userId={UserId}, displayName={DisplayName}, waifuName={WaifuName}, " +
-                "messageId={MessageId}, hasCharDescr={HasDescr}, wasGreetedToday={WasGreeted}",
-                correlationId, userId, displayName, waifuName,
-                e.ChatMessage.Id, characterDescription?.Length > 0, wasGreetedToday);
+                "[WaifuChat] Sending to AudioController: correlationId={CorrelationId}, "
+                    + "userId={UserId}, displayName={DisplayName}, waifuName={WaifuName}, "
+                    + "messageId={MessageId}, hasCharDescr={HasDescr}, wasGreetedToday={WasGreeted}",
+                correlationId,
+                userId,
+                displayName,
+                waifuName,
+                e.ChatMessage.Id,
+                characterDescription?.Length > 0,
+                wasGreetedToday
+            );
 
             await hubContext.Clients.All.WaifuChatMessage(
                 new WaifuChatMessage
@@ -169,14 +202,17 @@ public class WaifuChatTwitchReward(
 
             logger.LogInformation(
                 "[WaifuChat] Message sent to AudioController successfully for {DisplayName}",
-                displayName);
+                displayName
+            );
         }
         catch (Exception ex)
         {
             logger.LogError(
                 ex,
                 "[WaifuChat] Error processing message for {DisplayName} ({UserId})",
-                displayName, userId);
+                displayName,
+                userId
+            );
         }
     }
 
