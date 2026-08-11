@@ -56,11 +56,24 @@ public class WaifuChatTwitchReward(
     private async Task OnMessageReceived(object? sender, OnMessageReceivedArgs e)
     {
         var message = e.ChatMessage.Message.Trim();
+        var displayName = e.ChatMessage.DisplayName;
+        var userId = e.ChatMessage.UserId;
+
+        logger.LogDebug(
+            "[WaifuChat] Received: '{Message}' from {DisplayName} ({UserId})",
+            message, displayName, userId);
 
         if (!MightBeWaifuChat(message))
         {
+            logger.LogDebug(
+                "[WaifuChat] Skipping '{Message}' — не похоже на обращение к жене",
+                message);
             return;
         }
+
+        logger.LogInformation(
+            "[WaifuChat] Message '{Message}' от {DisplayName} ({UserId}) прошёл keyword check",
+            message, displayName, userId);
 
         var vr = await validator
             .ForMessageReceived(e)
@@ -71,14 +84,21 @@ public class WaifuChatTwitchReward(
 
         if (vr.IsInvalid)
         {
+            logger.LogWarning(
+                "[WaifuChat] Validation failed for {DisplayName}: {Error}",
+                displayName, vr.FirstError);
             return;
         }
 
-        var userId = e.ChatMessage.UserId;
-        var displayName = e.ChatMessage.DisplayName;
-
-        if (IgnoredUsers.Contains(displayName) || IsOnCooldown(userId))
+        if (IgnoredUsers.Contains(displayName))
         {
+            logger.LogDebug("[WaifuChat] Skipping ignored user {DisplayName}", displayName);
+            return;
+        }
+
+        if (IsOnCooldown(userId))
+        {
+            logger.LogDebug("[WaifuChat] Skipping {DisplayName} — cooldown", displayName);
             return;
         }
 
@@ -94,6 +114,9 @@ public class WaifuChatTwitchReward(
 
             if (husband is not { IsPrivated: true })
             {
+                logger.LogDebug(
+                    "[WaifuChat] {DisplayName} не женат (IsPrivated={IsPrivated})",
+                    displayName, husband?.IsPrivated);
                 await client.SendMessageToMainTwitchAsync(
                     $"@{displayName}, ты пока не женат! Сначала найди свою жену.",
                     logger
@@ -103,6 +126,8 @@ public class WaifuChatTwitchReward(
 
             if (string.IsNullOrWhiteSpace(husband.WaifuBrideId))
             {
+                logger.LogWarning(
+                    "[WaifuChat] {DisplayName} женат, но WaifuBrideId пустой", displayName);
                 return;
             }
 
@@ -116,6 +141,13 @@ public class WaifuChatTwitchReward(
                 lastGreeting.HasValue && (DateTime.UtcNow - lastGreeting.Value).TotalHours < 20;
 
             var correlationId = Guid.NewGuid().ToString("N");
+
+            logger.LogInformation(
+                "[WaifuChat] Sending to AudioController: correlationId={CorrelationId}, " +
+                "userId={UserId}, displayName={DisplayName}, waifuName={WaifuName}, " +
+                "messageId={MessageId}, hasCharDescr={HasDescr}, wasGreetedToday={WasGreeted}",
+                correlationId, userId, displayName, waifuName,
+                e.ChatMessage.Id, characterDescription?.Length > 0, wasGreetedToday);
 
             await hubContext.Clients.All.WaifuChatMessage(
                 new WaifuChatMessage
@@ -134,10 +166,17 @@ public class WaifuChatTwitchReward(
             );
 
             _cooldowns[userId] = DateTime.UtcNow;
+
+            logger.LogInformation(
+                "[WaifuChat] Message sent to AudioController successfully for {DisplayName}",
+                displayName);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error processing WaifuChat command for {UserId}", userId);
+            logger.LogError(
+                ex,
+                "[WaifuChat] Error processing message for {DisplayName} ({UserId})",
+                displayName, userId);
         }
     }
 
