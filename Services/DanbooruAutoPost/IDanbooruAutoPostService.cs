@@ -23,6 +23,17 @@ public interface IDanbooruAutoPostService
         CancellationToken cancellationToken = default
     );
 
+    Task<OperationResult<List<DanbooruAutoPostConfigDto>>> RescheduleBatchAsync(
+        Guid batchId,
+        DanbooruAutoPostRescheduleRequest request,
+        CancellationToken cancellationToken = default
+    );
+
+    Task<OperationResult> DeleteBatchAsync(
+        Guid batchId,
+        CancellationToken cancellationToken = default
+    );
+
     Task<OperationResult<DanbooruAutoPostConfigDto>> UpdateAsync(
         DanbooruAutoPostUpdateRequest request,
         CancellationToken cancellationToken = default

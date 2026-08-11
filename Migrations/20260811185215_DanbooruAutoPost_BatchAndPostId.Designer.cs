@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MARS.Server.Migrations.MigrationsDb
 {
     [DbContext(typeof(MigrationsDbContext))]
-    [Migration("20260811141543_DanbooruAutoPost_TelegramAndDeferred")]
-    partial class DanbooruAutoPost_TelegramAndDeferred
+    [Migration("20260811185215_DanbooruAutoPost_BatchAndPostId")]
+    partial class DanbooruAutoPost_BatchAndPostId
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -180,12 +180,18 @@ namespace MARS.Server.Migrations.MigrationsDb
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("BatchId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("CronExpression")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<int?>("DanbooruPostId")
+                        .HasColumnType("integer");
 
                     b.Property<string>("DiscordChannelId")
                         .IsRequired()

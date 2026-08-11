@@ -177,12 +177,18 @@ namespace MARS.Server.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("BatchId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("CronExpression")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<int?>("DanbooruPostId")
+                        .HasColumnType("integer");
 
                     b.Property<string>("DiscordChannelId")
                         .IsRequired()

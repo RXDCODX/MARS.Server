@@ -16,9 +16,7 @@ public class DanbooruAutoPostBatchCreateRequest
 
     public string Tags { get; set; } = "";
 
-    public int Count { get; set; }
+    public string CronExpression { get; set; } = "";
 
-    public double IntervalHours { get; set; }
-
-    public DateTime? StartAtUtc { get; set; }
+    public DateTime EndAtUtc { get; set; }
 }

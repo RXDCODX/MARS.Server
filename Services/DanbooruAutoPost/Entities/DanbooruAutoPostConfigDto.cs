@@ -16,6 +16,10 @@ public class DanbooruAutoPostConfigDto
 
     public long? TelegramChannelId { get; set; }
 
+    public Guid? BatchId { get; set; }
+
+    public int? DanbooruPostId { get; set; }
+
     public string Tags { get; set; } = "";
 
     public string CronExpression { get; set; } = "";

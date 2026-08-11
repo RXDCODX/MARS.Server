@@ -98,6 +98,59 @@ public class DanbooruAutoPostController(
         return result;
     }
 
+    [HttpPut("configs/batch/{batchId:guid}/reschedule")]
+    public async Task<
+        ActionResult<OperationResult<List<DanbooruAutoPostConfigDto>>>
+    > RescheduleBatch(
+        Guid batchId,
+        DanbooruAutoPostRescheduleRequest request,
+        CancellationToken cancellationToken
+    )
+    {
+        ActionResult<OperationResult<List<DanbooruAutoPostConfigDto>>> result;
+
+        try
+        {
+            var serviceResult = await service.RescheduleBatchAsync(
+                batchId,
+                request,
+                cancellationToken
+            );
+            result = Ok(serviceResult);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка перепланирования батча {BatchId}", batchId);
+            result = Ok(
+                OperationResult<List<DanbooruAutoPostConfigDto>>.Bad("Ошибка перепланирования", [])
+            );
+        }
+
+        return result;
+    }
+
+    [HttpDelete("configs/batch/{batchId:guid}")]
+    public async Task<ActionResult<OperationResult>> DeleteBatch(
+        Guid batchId,
+        CancellationToken cancellationToken
+    )
+    {
+        ActionResult<OperationResult> result;
+
+        try
+        {
+            var serviceResult = await service.DeleteBatchAsync(batchId, cancellationToken);
+            result = Ok(serviceResult);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка удаления батча {BatchId}", batchId);
+            result = Ok(OperationResult.Bad("Ошибка удаления батча"));
+        }
+
+        return result;
+    }
+
     [HttpPut("configs/{id:guid}")]
     public async Task<ActionResult<OperationResult<DanbooruAutoPostConfigDto>>> Update(
         Guid id,
