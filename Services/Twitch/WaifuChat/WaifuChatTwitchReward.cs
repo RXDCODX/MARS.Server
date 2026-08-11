@@ -3,11 +3,13 @@ using MARS.Server.DataBaseContext;
 using MARS.Server.Exstensions;
 using MARS.Server.Services.Shikimori;
 using MARS.Server.Services.Twitch.Validation;
+using MARS.Server.Services.WaifuRoll.Entitys;
 using MARS.Shared.Models.WaifuChat;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using TwitchLib.Client.Events;
 using TwitchLib.Client.Interfaces;
+using TwitchLib.Client.Models;
 using AudioHub = MARS.Server.Hubs.AudioControllerHub;
 
 namespace MARS.Server.Services.Twitch.WaifuChat;
@@ -55,6 +57,13 @@ public class WaifuChatTwitchReward(
         "зайка",
     ];
 
+    private static readonly string[] AutoHelloPatterns =
+    [
+        "прислал",
+        "поздравляет",
+        "сообщение:",
+    ];
+
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
         client.OnMessageReceived += OnMessageReceived;
@@ -80,7 +89,7 @@ public class WaifuChatTwitchReward(
             userId
         );
 
-        if (!MightBeWaifuChat(message))
+        if (!MightBeWaifuChat(message, e.ChatMessage))
         {
             logger.LogDebug(
                 "[WaifuChat] Skipping '{Message}' — не похоже на обращение к жене",
@@ -163,23 +172,23 @@ public class WaifuChatTwitchReward(
 
             var characterDescription = await GetCharacterDescriptionAsync(waifu?.ShikiId);
 
-            var lastGreeting = husband.HusbandGreetings?.Time;
-            var wasGreetedToday =
-                lastGreeting.HasValue && (DateTime.UtcNow - lastGreeting.Value).TotalHours < 20;
+            // Определяем контекст AutoHello
+            var autoHelloContext = await GetAutoHelloContextAsync(
+                e.ChatMessage, userId, husband, db);
 
             var correlationId = Guid.NewGuid().ToString("N");
 
             logger.LogInformation(
                 "[WaifuChat] Sending to AudioController: correlationId={CorrelationId}, "
                     + "userId={UserId}, displayName={DisplayName}, waifuName={WaifuName}, "
-                    + "messageId={MessageId}, hasCharDescr={HasDescr}, wasGreetedToday={WasGreeted}",
+                    + "messageId={MessageId}, hasCharDescr={HasDescr}, autoHelloContext={HasContext}",
                 correlationId,
                 userId,
                 displayName,
                 waifuName,
                 e.ChatMessage.Id,
                 characterDescription?.Length > 0,
-                wasGreetedToday
+                autoHelloContext?.Length > 0
             );
 
             await hubContext.Clients.All.WaifuChatMessage(
@@ -192,9 +201,7 @@ public class WaifuChatTwitchReward(
                     Message = message,
                     MessageId = e.ChatMessage.Id,
                     CharacterDescription = characterDescription,
-                    LastAutoHelloMessage = wasGreetedToday
-                        ? $"Ты уже приветствовала мужа сегодня в {lastGreeting:HH:mm}."
-                        : null,
+                    LastAutoHelloMessage = autoHelloContext,
                 }
             );
 
@@ -216,8 +223,9 @@ public class WaifuChatTwitchReward(
         }
     }
 
-    public bool MightBeWaifuChat(string message)
+    public bool MightBeWaifuChat(string message, ChatMessage? chatMessage = null)
     {
+        // Команда !жена / !waifu
         if (
             message.StartsWith("!жена ", StringComparison.OrdinalIgnoreCase)
             || message.StartsWith("!waifu ", StringComparison.OrdinalIgnoreCase)
@@ -226,8 +234,77 @@ public class WaifuChatTwitchReward(
             return true;
         }
 
+        // Keyword check
         var lower = message.ToLowerInvariant();
-        return TriggerKeywords.Any(kw => lower.Contains(kw));
+        if (TriggerKeywords.Any(kw => lower.Contains(kw)))
+        {
+            return true;
+        }
+
+        // Реплай на AutoHello сообщение бота
+        if (chatMessage is not null && IsReplyToBotAutoHello(chatMessage))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool IsReplyToBotAutoHello(ChatMessage chatMessage)
+    {
+        var reply = chatMessage.ChatReply;
+        if (reply is null)
+        {
+            return false;
+        }
+
+        // Проверяем что реплай на сообщение бота
+        if (
+            !string.Equals(
+                reply.ParentUserLogin,
+                TwitchExstension.BotName,
+                StringComparison.OrdinalIgnoreCase
+            )
+        )
+        {
+            return false;
+        }
+
+        // Проверяем что текст содержит AutoHello паттерн
+        var parentBody = reply.ParentMsgBody ?? "";
+        return AutoHelloPatterns.Any(pattern =>
+            parentBody.Contains(pattern, StringComparison.OrdinalIgnoreCase)
+        );
+    }
+
+    private async Task<string?> GetAutoHelloContextAsync(
+        ChatMessage chatMessage,
+        string userId,
+        Husband husband,
+        AppDbContext db)
+    {
+        // Если это реплай на AutoHello — передаём текст приветствия
+        if (chatMessage.ChatReply is { } reply && IsReplyToBotAutoHello(chatMessage))
+        {
+            var parentBody = reply.ParentMsgBody ?? "";
+            logger.LogInformation(
+                "[WaifuChat] Reply to AutoHello detected: {ParentBody}",
+                parentBody
+            );
+            return $"Муж ответил на твоё приветственное сообщение: \"{parentBody}\"";
+        }
+
+        // Иначе — проверяем было ли приветствие сегодня
+        var lastGreeting = husband.HusbandGreetings?.Time;
+        var wasGreetedToday =
+            lastGreeting.HasValue && (DateTime.UtcNow - lastGreeting.Value).TotalHours < 20;
+
+        if (wasGreetedToday)
+        {
+            return $"Ты уже приветствовала мужа сегодня в {lastGreeting:HH:mm}.";
+        }
+
+        return null;
     }
 
     private async Task<string?> GetCharacterDescriptionAsync(string? shikiId)
