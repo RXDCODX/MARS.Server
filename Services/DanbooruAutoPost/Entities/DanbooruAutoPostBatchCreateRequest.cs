@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 
 namespace MARS.Server.Services.DanbooruAutoPost.Entities;
 
-public class DanbooruAutoPostCreateRequest
+public class DanbooruAutoPostBatchCreateRequest
 {
     public TargetPlatform TargetPlatform { get; set; }
 
@@ -16,7 +16,9 @@ public class DanbooruAutoPostCreateRequest
 
     public string Tags { get; set; } = "";
 
-    public string CronExpression { get; set; } = "";
+    public int Count { get; set; }
 
-    public DateTime? ScheduledAtUtc { get; set; }
+    public double IntervalHours { get; set; }
+
+    public DateTime? StartAtUtc { get; set; }
 }

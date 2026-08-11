@@ -18,6 +18,11 @@ public interface IDanbooruAutoPostService
         CancellationToken cancellationToken = default
     );
 
+    Task<OperationResult<List<DanbooruAutoPostConfigDto>>> BatchCreateAsync(
+        DanbooruAutoPostBatchCreateRequest request,
+        CancellationToken cancellationToken = default
+    );
+
     Task<OperationResult<DanbooruAutoPostConfigDto>> UpdateAsync(
         DanbooruAutoPostUpdateRequest request,
         CancellationToken cancellationToken = default
@@ -34,6 +39,10 @@ public interface IDanbooruAutoPostService
     Task<OperationResult> TriggerNowAsync(Guid id, CancellationToken cancellationToken = default);
 
     Task<OperationResult<List<DiscordChannelOptionDto>>> GetDiscordChannelsAsync(
+        CancellationToken cancellationToken = default
+    );
+
+    Task<OperationResult<List<TelegramChannelOptionDto>>> GetTelegramChannelsAsync(
         CancellationToken cancellationToken = default
     );
 }

@@ -71,6 +71,33 @@ public class DanbooruAutoPostController(
         return result;
     }
 
+    [HttpPost("configs/batch")]
+    public async Task<ActionResult<OperationResult<List<DanbooruAutoPostConfigDto>>>> BatchCreate(
+        DanbooruAutoPostBatchCreateRequest request,
+        CancellationToken cancellationToken
+    )
+    {
+        ActionResult<OperationResult<List<DanbooruAutoPostConfigDto>>> result;
+
+        try
+        {
+            var serviceResult = await service.BatchCreateAsync(request, cancellationToken);
+            result = Ok(serviceResult);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка пакетного создания DanbooruAutoPost");
+            result = Ok(
+                OperationResult<List<DanbooruAutoPostConfigDto>>.Bad(
+                    "Ошибка пакетного создания",
+                    []
+                )
+            );
+        }
+
+        return result;
+    }
+
     [HttpPut("configs/{id:guid}")]
     public async Task<ActionResult<OperationResult<DanbooruAutoPostConfigDto>>> Update(
         Guid id,
@@ -194,6 +221,32 @@ public class DanbooruAutoPostController(
             result = Ok(
                 OperationResult<List<DiscordChannelOptionDto>>.Bad(
                     "Ошибка получения Discord каналов",
+                    []
+                )
+            );
+        }
+
+        return result;
+    }
+
+    [HttpGet("telegram-channels")]
+    public async Task<
+        ActionResult<OperationResult<List<TelegramChannelOptionDto>>>
+    > GetTelegramChannels(CancellationToken cancellationToken)
+    {
+        ActionResult<OperationResult<List<TelegramChannelOptionDto>>> result;
+
+        try
+        {
+            var serviceResult = await service.GetTelegramChannelsAsync(cancellationToken);
+            result = Ok(serviceResult);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка получения Telegram каналов для DanbooruAutoPost");
+            result = Ok(
+                OperationResult<List<TelegramChannelOptionDto>>.Bad(
+                    "Ошибка получения Telegram каналов",
                     []
                 )
             );

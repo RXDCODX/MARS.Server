@@ -14,5 +14,7 @@ public class PostedImageRecord
 
     public ulong DiscordChannelId { get; set; }
 
+    public string? ChannelKey { get; set; }
+
     public DateTime PostedAtUtc { get; set; } = DateTime.UtcNow;
 }
