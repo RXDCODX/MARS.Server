@@ -78,6 +78,7 @@ public class WaifuChatTwitchReward(
 
                             var husband = await db
                                 .Husbands.Include(h => h.TwitchUser)
+                                .Include(h => h.HusbandGreetings)
                                 .AsNoTracking()
                                 .FirstOrDefaultAsync(h => h.TwitchId == userId);
 
@@ -92,6 +93,11 @@ public class WaifuChatTwitchReward(
                                         waifu?.ShikiId
                                     );
 
+                                    // Проверяем было ли приветствие сегодня
+                                    var lastGreeting = husband.HusbandGreetings?.Time;
+                                    var wasGreetedToday = lastGreeting.HasValue
+                                        && (DateTime.UtcNow - lastGreeting.Value).TotalHours < 20;
+
                                     var correlationId = Guid.NewGuid().ToString("N");
 
                                     await hubContext.Clients.All.WaifuChatMessage(
@@ -104,6 +110,9 @@ public class WaifuChatTwitchReward(
                                             Message = userMessage,
                                             MessageId = e.ChatMessage.Id,
                                             CharacterDescription = characterDescription,
+                                            LastAutoHelloMessage = wasGreetedToday
+                                                ? $"Ты уже приветствовала мужа сегодня в {lastGreeting:HH:mm}."
+                                                : null,
                                         }
                                     );
 
