@@ -1,11 +1,22 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Cronos;
 using MARS.Server.DataBaseContext;
 using MARS.Server.Services.BooruShared;
 using MARS.Server.Services.DanbooruAutoPost.Entities;
 using MARS.Server.Services.Discord.Gateway;
+using MARS.Server.Services.Telegram.DiscordBridge;
 using MARS.Server.Services.Telegram.DiscordBridge.Entitys;
 using MARS.Server.Services.Twitch.Rewards._27_RandomArt;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Telegram.Bot;
+using Telegram.Bot.Types;
 
 namespace MARS.Server.Services.DanbooruAutoPost;
 
@@ -14,7 +25,8 @@ public class DanbooruAutoPostService(
     IDbContextFactory<AppDbContext> dbContextFactory,
     DanbooruRandomPostService danbooruService,
     IDiscordGatewayService discordGatewayService,
-    IDeduplicationService deduplicationService
+    IDeduplicationService deduplicationService,
+    ITelegramBotClient telegramBotClient
 ) : BackgroundService, IDanbooruAutoPostService
 {
     private const string Source = "Danbooru";
@@ -52,16 +64,33 @@ public class DanbooruAutoPostService(
         {
             try
             {
-                var cron = CronExpression.Parse(config.CronExpression);
-                var lastExecuted = config.LastExecutedAtUtc.HasValue
-                    ? DateTime.SpecifyKind(config.LastExecutedAtUtc.Value, DateTimeKind.Utc)
-                    : (DateTime?)null;
+                var shouldPost = false;
 
-                var nextOccurrence = lastExecuted.HasValue
-                    ? cron.GetNextOccurrence(lastExecuted.Value)
-                    : cron.GetNextOccurrence(now.AddMinutes(-1));
+                if (config.ScheduledAtUtc.HasValue && config.ScheduledAtUtc.Value <= now)
+                {
+                    shouldPost = true;
+                }
+                else if (
+                    !string.IsNullOrWhiteSpace(config.CronExpression)
+                    && !config.ScheduledAtUtc.HasValue
+                )
+                {
+                    var cron = CronExpression.Parse(config.CronExpression);
+                    var lastExecuted = config.LastExecutedAtUtc.HasValue
+                        ? DateTime.SpecifyKind(config.LastExecutedAtUtc.Value, DateTimeKind.Utc)
+                        : (DateTime?)null;
 
-                if (nextOccurrence.HasValue && nextOccurrence.Value <= now)
+                    var nextOccurrence = lastExecuted.HasValue
+                        ? cron.GetNextOccurrence(lastExecuted.Value)
+                        : cron.GetNextOccurrence(now.AddMinutes(-1));
+
+                    if (nextOccurrence.HasValue && nextOccurrence.Value <= now)
+                    {
+                        shouldPost = true;
+                    }
+                }
+
+                if (shouldPost)
                 {
                     await PostImageAsync(config, cancellationToken);
 
@@ -75,6 +104,13 @@ public class DanbooruAutoPostService(
                     if (entity is not null)
                     {
                         entity.LastExecutedAtUtc = now;
+
+                        if (config.ScheduledAtUtc.HasValue)
+                        {
+                            entity.ScheduledAtUtc = null;
+                            entity.IsEnabled = false;
+                        }
+
                         await updateContext.SaveChangesAsync(cancellationToken);
                     }
                 }
@@ -92,9 +128,8 @@ public class DanbooruAutoPostService(
             {
                 logger.LogError(
                     ex,
-                    "Ошибка отправки изображения для конфига {ConfigId} в канал {ChannelId}",
-                    config.Id,
-                    config.DiscordChannelId
+                    "Ошибка отправки изображения для конфига {ConfigId}",
+                    config.Id
                 );
             }
         }
@@ -105,10 +140,23 @@ public class DanbooruAutoPostService(
         CancellationToken cancellationToken
     )
     {
+        var channelId = GetChannelId(config);
+
         for (var attempt = 0; attempt <= MaxDedupRetries; attempt++)
         {
-            var posts = await danbooruService.GetRandomPostAsync(config.Tags, 1);
-            if (posts is null || posts.Length == 0)
+            DanbooruPost? post;
+
+            if (config.DanbooruPostId.HasValue)
+            {
+                post = await danbooruService.GetPostByIdAsync(config.DanbooruPostId.Value);
+            }
+            else
+            {
+                var posts = await danbooruService.GetRandomPostAsync(config.Tags, 1);
+                post = posts is { Length: > 0 } ? posts[0] : null;
+            }
+
+            if (post is null)
             {
                 logger.LogWarning(
                     "Не найдено постов по тегам '{Tags}' для конфига {ConfigId}",
@@ -118,21 +166,29 @@ public class DanbooruAutoPostService(
                 return;
             }
 
-            var post = posts[0];
-
             if (
                 await deduplicationService.IsAlreadyPostedAsync(
                     Source,
                     post.Id,
-                    config.DiscordChannelId,
+                    channelId,
                     cancellationToken
                 )
             )
             {
+                if (config.DanbooruPostId.HasValue)
+                {
+                    logger.LogInformation(
+                        "Изображение {PostId} уже отправлено в канал {ChannelId}",
+                        post.Id,
+                        channelId
+                    );
+                    return;
+                }
+
                 logger.LogInformation(
                     "Изображение {PostId} уже отправлено в канал {ChannelId}, попытка {Attempt}/{Max}",
                     post.Id,
-                    config.DiscordChannelId,
+                    channelId,
                     attempt + 1,
                     MaxDedupRetries
                 );
@@ -162,35 +218,57 @@ public class DanbooruAutoPostService(
                     .Trim()
                 : post.TagStringCharacter;
 
-            var message =
-                $"**Danbooru** | Score: {post.Score} | Rating: {post.Rating}\n"
+            var caption =
+                $"Danbooru | Score: {post.Score} | Rating: {post.Rating}\n"
                 + $"Tags: {tagPreview}\n"
                 + $"https://danbooru.donmai.us/posts/{post.Id}";
 
-            await using var stream = new MemoryStream(fileBytes);
-            var result = await discordGatewayService.SendFileAsync(
-                config.DiscordChannelId,
-                stream,
-                fileName,
-                message,
-                cancellationToken
-            );
+            OperationResult sendResult;
 
-            if (result.Success)
+            if (config.TargetPlatform == TargetPlatform.Telegram)
+            {
+                sendResult = await PostToTelegramAsync(
+                    config,
+                    fileBytes,
+                    fileName,
+                    caption,
+                    cancellationToken
+                );
+            }
+            else
+            {
+                await using var stream = new MemoryStream(fileBytes);
+                var message =
+                    $"**Danbooru** | Score: {post.Score} | Rating: {post.Rating}\n"
+                    + $"Tags: {tagPreview}\n"
+                    + $"https://danbooru.donmai.us/posts/{post.Id}";
+
+                var discordResult = await discordGatewayService.SendFileAsync(
+                    config.DiscordChannelId,
+                    stream,
+                    fileName,
+                    message,
+                    cancellationToken
+                );
+                sendResult = discordResult;
+            }
+
+            if (sendResult.Success)
             {
                 await deduplicationService.RecordPostAsync(
                     Source,
                     post.Id,
-                    config.DiscordChannelId,
+                    channelId,
                     cancellationToken
                 );
             }
             else
             {
                 logger.LogWarning(
-                    "Не удалось отправить изображение в Discord канал {ChannelId}: {Error}",
-                    config.DiscordChannelId,
-                    result.Message
+                    "Не удалось отправить изображение в {Platform} канал {ChannelId}: {Error}",
+                    config.TargetPlatform,
+                    channelId,
+                    sendResult.Message
                 );
             }
 
@@ -202,6 +280,55 @@ public class DanbooruAutoPostService(
             MaxDedupRetries,
             config.Id
         );
+    }
+
+    private async Task<OperationResult> PostToTelegramAsync(
+        DanbooruAutoPostConfig config,
+        byte[] fileBytes,
+        string fileName,
+        string caption,
+        CancellationToken cancellationToken
+    )
+    {
+        var result = OperationResult.Bad("Не удалось отправить в Telegram");
+
+        try
+        {
+            if (config.TelegramChannelId is null or 0)
+            {
+                return OperationResult.Bad("TelegramChannelId не указан");
+            }
+
+            await using var stream = new MemoryStream(fileBytes);
+            var inputFile = InputFile.FromStream(stream, fileName);
+
+            await telegramBotClient.SendPhoto(
+                chatId: config.TelegramChannelId.Value,
+                photo: inputFile,
+                caption: caption,
+                cancellationToken: cancellationToken
+            );
+
+            result = OperationResult.Ok("Изображение отправлено в Telegram");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(
+                ex,
+                "Ошибка отправки в Telegram канал {ChannelId}",
+                config.TelegramChannelId
+            );
+            result = OperationResult.Bad($"Ошибка Telegram: {ex.Message}");
+        }
+
+        return result;
+    }
+
+    private static ulong GetChannelId(DanbooruAutoPostConfig config)
+    {
+        return config.TargetPlatform == TargetPlatform.Telegram
+            ? (ulong)Math.Abs(config.TelegramChannelId ?? 0)
+            : config.DiscordChannelId;
     }
 
     public async Task<OperationResult<List<DanbooruAutoPostConfigDto>>> GetAllAsync(
@@ -220,14 +347,20 @@ public class DanbooruAutoPostService(
             );
             var configs = await dbContext
                 .DanbooruAutoPostConfigs.AsNoTracking()
-                .OrderBy(c => c.DiscordChannelId)
+                .OrderBy(c => c.TargetPlatform)
+                .ThenBy(c => c.DiscordChannelId)
                 .ThenBy(c => c.CreatedAtUtc)
                 .Select(c => new DanbooruAutoPostConfigDto
                 {
                     Id = c.Id,
+                    TargetPostCount = c.TargetPostCount,
+                    DanbooruPostId = c.DanbooruPostId,
+                    TargetPlatform = c.TargetPlatform,
                     DiscordChannelId = c.DiscordChannelId,
+                    TelegramChannelId = c.TelegramChannelId,
                     Tags = c.Tags,
                     CronExpression = c.CronExpression,
+                    ScheduledAtUtc = c.ScheduledAtUtc,
                     IsEnabled = c.IsEnabled,
                     LastExecutedAtUtc = c.LastExecutedAtUtc,
                     CreatedAtUtc = c.CreatedAtUtc,
@@ -259,30 +392,11 @@ public class DanbooruAutoPostService(
             new DanbooruAutoPostConfigDto()
         );
 
-        if (request.DiscordChannelId == 0)
+        var validationError = ValidateCreateRequest(request);
+        if (validationError is not null)
         {
             return OperationResult<DanbooruAutoPostConfigDto>.Bad(
-                "DiscordChannelId обязателен",
-                new DanbooruAutoPostConfigDto()
-            );
-        }
-
-        if (string.IsNullOrWhiteSpace(request.CronExpression))
-        {
-            return OperationResult<DanbooruAutoPostConfigDto>.Bad(
-                "CRON выражение обязательно",
-                new DanbooruAutoPostConfigDto()
-            );
-        }
-
-        try
-        {
-            CronExpression.Parse(request.CronExpression);
-        }
-        catch (CronFormatException)
-        {
-            return OperationResult<DanbooruAutoPostConfigDto>.Bad(
-                "Некорректное CRON выражение",
+                validationError,
                 new DanbooruAutoPostConfigDto()
             );
         }
@@ -305,9 +419,16 @@ public class DanbooruAutoPostService(
             var now = DateTime.UtcNow;
             var entity = new DanbooruAutoPostConfig
             {
-                DiscordChannelId = request.DiscordChannelId,
+                TargetPlatform = request.TargetPlatform,
+                DiscordChannelId =
+                    request.TargetPlatform == TargetPlatform.Discord ? request.DiscordChannelId : 0,
+                TelegramChannelId =
+                    request.TargetPlatform == TargetPlatform.Telegram
+                        ? request.TelegramChannelId
+                        : null,
                 Tags = request.Tags.Trim(),
-                CronExpression = request.CronExpression.Trim(),
+                CronExpression = request.CronExpression?.Trim() ?? "",
+                ScheduledAtUtc = request.ScheduledAtUtc,
                 IsEnabled = true,
                 CreatedAtUtc = now,
                 UpdatedAtUtc = now,
@@ -318,17 +439,7 @@ public class DanbooruAutoPostService(
 
             result = OperationResult<DanbooruAutoPostConfigDto>.Ok(
                 "Конфигурация создана",
-                new DanbooruAutoPostConfigDto
-                {
-                    Id = entity.Id,
-                    DiscordChannelId = entity.DiscordChannelId,
-                    Tags = entity.Tags,
-                    CronExpression = entity.CronExpression,
-                    IsEnabled = entity.IsEnabled,
-                    LastExecutedAtUtc = entity.LastExecutedAtUtc,
-                    CreatedAtUtc = entity.CreatedAtUtc,
-                    UpdatedAtUtc = entity.UpdatedAtUtc,
-                }
+                MapToDto(entity)
             );
         }
         catch (Exception ex)
@@ -361,16 +472,31 @@ public class DanbooruAutoPostService(
             );
         }
 
-        try
-        {
-            CronExpression.Parse(request.CronExpression);
-        }
-        catch (CronFormatException)
+        if (
+            request
+            is { TargetPlatform: TargetPlatform.Discord, DiscordChannelId: 0 }
+                or { TargetPlatform: TargetPlatform.Telegram, TelegramChannelId: null or 0 }
+        )
         {
             return OperationResult<DanbooruAutoPostConfigDto>.Bad(
-                "Некорректное CRON выражение",
+                "Канал не указан для выбранной платформы",
                 new DanbooruAutoPostConfigDto()
             );
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.CronExpression))
+        {
+            try
+            {
+                CronExpression.Parse(request.CronExpression);
+            }
+            catch (CronFormatException)
+            {
+                return OperationResult<DanbooruAutoPostConfigDto>.Bad(
+                    "Некорректное CRON выражение",
+                    new DanbooruAutoPostConfigDto()
+                );
+            }
         }
 
         var tagValidationError = TagValidator.GetValidationError(request.Tags);
@@ -394,25 +520,22 @@ public class DanbooruAutoPostService(
 
             if (entity is not null)
             {
-                entity.DiscordChannelId = request.DiscordChannelId;
+                entity.TargetPlatform = request.TargetPlatform;
+                entity.DiscordChannelId =
+                    request.TargetPlatform == TargetPlatform.Discord ? request.DiscordChannelId : 0;
+                entity.TelegramChannelId =
+                    request.TargetPlatform == TargetPlatform.Telegram
+                        ? request.TelegramChannelId
+                        : null;
                 entity.Tags = request.Tags.Trim();
-                entity.CronExpression = request.CronExpression.Trim();
+                entity.CronExpression = request.CronExpression?.Trim() ?? "";
+                entity.ScheduledAtUtc = request.ScheduledAtUtc;
                 entity.UpdatedAtUtc = DateTime.UtcNow;
                 await dbContext.SaveChangesAsync(cancellationToken);
 
                 result = OperationResult<DanbooruAutoPostConfigDto>.Ok(
                     "Конфигурация обновлена",
-                    new DanbooruAutoPostConfigDto
-                    {
-                        Id = entity.Id,
-                        DiscordChannelId = entity.DiscordChannelId,
-                        Tags = entity.Tags,
-                        CronExpression = entity.CronExpression,
-                        IsEnabled = entity.IsEnabled,
-                        LastExecutedAtUtc = entity.LastExecutedAtUtc,
-                        CreatedAtUtc = entity.CreatedAtUtc,
-                        UpdatedAtUtc = entity.UpdatedAtUtc,
-                    }
+                    MapToDto(entity)
                 );
             }
             else
@@ -508,17 +631,7 @@ public class DanbooruAutoPostService(
 
                 result = OperationResult<DanbooruAutoPostConfigDto>.Ok(
                     "Состояние обновлено",
-                    new DanbooruAutoPostConfigDto
-                    {
-                        Id = entity.Id,
-                        DiscordChannelId = entity.DiscordChannelId,
-                        Tags = entity.Tags,
-                        CronExpression = entity.CronExpression,
-                        IsEnabled = entity.IsEnabled,
-                        LastExecutedAtUtc = entity.LastExecutedAtUtc,
-                        CreatedAtUtc = entity.CreatedAtUtc,
-                        UpdatedAtUtc = entity.UpdatedAtUtc,
-                    }
+                    MapToDto(entity)
                 );
             }
             else
@@ -655,5 +768,65 @@ public class DanbooruAutoPostService(
         }
 
         return result;
+    }
+
+    private static string? ValidateCreateRequest(DanbooruAutoPostCreateRequest request)
+    {
+        if (request.TargetPlatform == TargetPlatform.Discord && request.DiscordChannelId == 0)
+        {
+            return "DiscordChannelId обязателен для Discord";
+        }
+
+        if (
+            request.TargetPlatform == TargetPlatform.Telegram
+            && request.TelegramChannelId is null or 0
+        )
+        {
+            return "TelegramChannelId обязателен для Telegram";
+        }
+
+        if (request.ScheduledAtUtc.HasValue && request.ScheduledAtUtc.Value <= DateTime.UtcNow)
+        {
+            return "Дата отложенной публикации должна быть в будущем";
+        }
+
+        if (!request.ScheduledAtUtc.HasValue && string.IsNullOrWhiteSpace(request.CronExpression))
+        {
+            return "Укажите CRON выражение или дату отложенной публикации";
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.CronExpression))
+        {
+            try
+            {
+                CronExpression.Parse(request.CronExpression);
+            }
+            catch (CronFormatException)
+            {
+                return "Некорректное CRON выражение";
+            }
+        }
+
+        return null;
+    }
+
+    private static DanbooruAutoPostConfigDto MapToDto(DanbooruAutoPostConfig entity)
+    {
+        return new DanbooruAutoPostConfigDto
+        {
+            Id = entity.Id,
+            TargetPostCount = entity.TargetPostCount,
+            DanbooruPostId = entity.DanbooruPostId,
+            TargetPlatform = entity.TargetPlatform,
+            DiscordChannelId = entity.DiscordChannelId,
+            TelegramChannelId = entity.TelegramChannelId,
+            Tags = entity.Tags,
+            CronExpression = entity.CronExpression,
+            ScheduledAtUtc = entity.ScheduledAtUtc,
+            IsEnabled = entity.IsEnabled,
+            LastExecutedAtUtc = entity.LastExecutedAtUtc,
+            CreatedAtUtc = entity.CreatedAtUtc,
+            UpdatedAtUtc = entity.UpdatedAtUtc,
+        };
     }
 }

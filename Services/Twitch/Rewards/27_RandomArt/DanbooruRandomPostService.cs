@@ -1,5 +1,9 @@
+using System;
+using System.Collections.Generic;
+using System.Net.Http;
 using System.Text;
 using System.Text.Json.Serialization;
+using System.Threading.Tasks;
 using MARS.Server.Configuration;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Linq;
@@ -27,6 +31,24 @@ public class DanbooruRandomPostService(
         }
 
         return posts;
+    }
+
+    /// <summary>
+    /// Получить конкретный пост по ID.
+    /// </summary>
+    public virtual async Task<DanbooruPost?> GetPostByIdAsync(int postId)
+    {
+        using var httpClient = CreateConfiguredClient();
+
+        var response = await httpClient.GetAsync($"posts/{postId}.json");
+        if (!response.IsSuccessStatusCode)
+        {
+            return null;
+        }
+
+        var content = await response.Content.ReadAsStringAsync();
+        var posts = DanbooruPost.FromJson(content);
+        return posts is { Length: > 0 } ? posts[0] : null;
     }
 
     /// <summary>

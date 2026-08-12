@@ -1,3 +1,6 @@
+using System.Threading;
+using System.Threading.Tasks;
+
 namespace MARS.Server.Services.BooruShared;
 
 public interface IDeduplicationService

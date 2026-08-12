@@ -1,3 +1,7 @@
+using System;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using MARS.Server.Services.DanbooruAutoPost.Entities;
 using MARS.Server.Services.Telegram.DiscordBridge.Entitys;
 

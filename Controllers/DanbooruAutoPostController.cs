@@ -1,8 +1,16 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using MARS.Server.Services;
 using MARS.Server.Services.DanbooruAutoPost;
 using MARS.Server.Services.DanbooruAutoPost.Entities;
 using MARS.Server.Services.Telegram.DiscordBridge.Entitys;
+using MARS.Server.Services.Telegram.WTelegram;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
+using TL;
 
 namespace MARS.Server.Controllers;
 
@@ -10,6 +18,7 @@ namespace MARS.Server.Controllers;
 [Route("api/[controller]")]
 public class DanbooruAutoPostController(
     IDanbooruAutoPostService service,
+    WTelegramClientService wTelegramClientService,
     ILogger<DanbooruAutoPostController> logger
 ) : ControllerBase
 {
@@ -189,6 +198,52 @@ public class DanbooruAutoPostController(
             result = Ok(
                 OperationResult<List<DiscordChannelOptionDto>>.Bad(
                     "Ошибка получения Discord каналов",
+                    []
+                )
+            );
+        }
+
+        return result;
+    }
+
+    [HttpGet("telegram-channels")]
+    public async Task<
+        ActionResult<OperationResult<List<TelegramChannelOptionDto>>>
+    > GetTelegramChannels(CancellationToken cancellationToken)
+    {
+        ActionResult<OperationResult<List<TelegramChannelOptionDto>>> result;
+
+        try
+        {
+            var client = await wTelegramClientService.GetClientAsync(cancellationToken);
+            var chats = await client.Messages_GetAllChats();
+            var channels = chats
+                .chats.Values.OfType<Channel>()
+                .Where(channel => channel.admin_rights is not null)
+                .Select(channel => new TelegramChannelOptionDto
+                {
+                    Id = -1000000000000 - channel.id,
+                    Title = string.IsNullOrWhiteSpace(channel.title)
+                        ? $"channel-{channel.id}"
+                        : channel.title,
+                })
+                .OrderBy(e => e.Title)
+                .ThenBy(e => e.Id)
+                .ToList();
+
+            result = Ok(
+                OperationResult<List<TelegramChannelOptionDto>>.Ok(
+                    "Telegram каналы получены",
+                    channels
+                )
+            );
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка получения Telegram каналов для DanbooruAutoPost");
+            result = Ok(
+                OperationResult<List<TelegramChannelOptionDto>>.Bad(
+                    "Ошибка получения Telegram каналов",
                     []
                 )
             );
