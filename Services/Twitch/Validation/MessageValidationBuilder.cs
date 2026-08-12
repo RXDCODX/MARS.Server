@@ -248,9 +248,7 @@ public sealed class MessageValidationBuilder(
                         )
                     )
                     {
-                        throw new ValidationException(
-                            "Реплай не на сообщение бота"
-                        );
+                        throw new ValidationException("Реплай не на сообщение бота");
                     }
 
                     return Task.CompletedTask;

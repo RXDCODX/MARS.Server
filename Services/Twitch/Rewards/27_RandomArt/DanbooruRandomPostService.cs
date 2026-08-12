@@ -30,6 +30,24 @@ public class DanbooruRandomPostService(
     }
 
     /// <summary>
+    /// Получить конкретный пост по ID.
+    /// </summary>
+    public virtual async Task<DanbooruPost?> GetPostByIdAsync(int postId)
+    {
+        using var httpClient = CreateConfiguredClient();
+
+        var response = await httpClient.GetAsync($"posts/{postId}.json");
+        if (!response.IsSuccessStatusCode)
+        {
+            return null;
+        }
+
+        var content = await response.Content.ReadAsStringAsync();
+        var posts = DanbooruPost.FromJson(content);
+        return posts is { Length: > 0 } ? posts[0] : null;
+    }
+
+    /// <summary>
     /// Скачать файл изображения с Danbooru с корректными заголовками.
     /// </summary>
     public virtual async Task<(byte[] FileBytes, string FileName)> DownloadFileBytesAsync(
