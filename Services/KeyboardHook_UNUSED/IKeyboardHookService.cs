@@ -1,7 +1,4 @@
-﻿using System.Threading;
-using System.Threading.Tasks;
-
-namespace MARS.Server.Services.KeyboardHook_UNUSED;
+﻿namespace MARS.Server.Services.KeyboardHook_UNUSED;
 
 public interface IKeyboardHookService
 {

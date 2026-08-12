@@ -1,6 +1,3 @@
-using System;
-using System.Threading.Tasks;
-
 namespace MARS.Server.Services.Twitch.Validation;
 
 public interface IMessageValidationBuilder
@@ -13,6 +10,7 @@ public interface IMessageValidationBuilder
     IMessageValidationBuilder RequireServiceActive(bool isActive, bool loud = false);
     IMessageValidationBuilder RequireUserId(bool loud = false);
     IMessageValidationBuilder RequireFollower(bool loud = true);
+    IMessageValidationBuilder IsReplyToBot(bool loud = true);
     Task<ValidationResult> ValidateAsync();
     Task<ValidationResult> ValidateWithResponseAsync(string userName);
 }

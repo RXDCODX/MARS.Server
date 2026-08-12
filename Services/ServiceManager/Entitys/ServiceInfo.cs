@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace MARS.Server.Services.ServiceManager.Entitys;
+﻿namespace MARS.Server.Services.ServiceManager.Entitys;
 
 /// <summary>
 /// Информация о сервисе

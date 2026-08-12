@@ -1,8 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
 using DSharpPlus;
 using DSharpPlus.Entities;
 using FFMpegCore;
@@ -12,7 +7,6 @@ using MARS.Server.Services.Discord.Gateway;
 using MARS.Server.Services.SoundRequest.Entities;
 using MARS.Server.Services.SoundRequest.SoundCloud;
 using MARS.Server.Services.YouTube;
-using Microsoft.Extensions.Logging;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using YoutubeExplode;

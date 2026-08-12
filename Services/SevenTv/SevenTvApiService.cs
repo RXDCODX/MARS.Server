@@ -1,12 +1,7 @@
-using System;
 using System.Net;
-using System.Net.Http;
-using System.Net.Http.Json;
-using System.Threading.Tasks;
 using MARS.Server.ApplicationState;
 using MARS.Server.DataBaseContext;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using SevenTV.Types.Rest;
 
 namespace MARS.Server.Services.SevenTv;

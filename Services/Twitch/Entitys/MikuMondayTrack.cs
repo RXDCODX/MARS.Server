@@ -1,5 +1,4 @@
-﻿using System;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using MARS.Server.Services.SoundRequest.Entities;
 
 namespace MARS.Server.Services.Twitch.Entitys;

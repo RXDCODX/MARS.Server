@@ -1,6 +1,4 @@
-﻿using System.Linq;
-using System.Threading.Tasks;
-using MARS.Server.DataBaseContext;
+﻿using MARS.Server.DataBaseContext;
 using MARS.Server.Hubs;
 using MARS.Server.Hubs.Interfaces;
 using MARS.Server.Services.PyroAlerts.Entitys;

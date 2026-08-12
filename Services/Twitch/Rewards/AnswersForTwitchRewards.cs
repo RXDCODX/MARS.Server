@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using MARS.Server.Services.WaifuRoll.Entitys;
+﻿using MARS.Server.Services.WaifuRoll.Entitys;
 using ShikimoriSharp.Classes;
 
 namespace MARS.Server.Services.Twitch.Rewards;

@@ -1,11 +1,6 @@
-using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Management.Entitys;
-using Microsoft.Extensions.Logging;
 using TwitchLib.Api.Auth;
 using TwitchLib.Api.Helix.Models.Chat;
 using TwitchLib.Api.Interfaces;

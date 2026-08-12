@@ -1,5 +1,3 @@
-using System;
-
 namespace MARS.Server.Services.CinemaQueue.Entitys;
 
 public class CreateMediaItemRequest

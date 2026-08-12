@@ -1,15 +1,9 @@
-using System;
 using System.Diagnostics;
-using System.Linq;
 using System.Runtime.InteropServices;
-using System.Threading;
-using System.Threading.Tasks;
 using MARS.Server.ApplicationState;
 using MARS.Server.DataBaseContext;
 using MARS.Server.Services;
 using MARS.Server.Services.Discord.TtsVoiceRelay;
-using MARS.Server.Services.ServiceManager;
-using MARS.Server.Services.ServiceManager.Entitys;
 using MARS.Server.Services.SoundBarService.Entitys;
 using MARS.Server.Services.Twitch.Client;
 using MARS.Server.Services.Twitch.Management;
@@ -18,7 +12,6 @@ using MARS.Server.Services.Twitch.Synthesizer;
 using MARS.Server.Services.Twitch.WeddingAnniversary;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 
 namespace MARS.Server.Controllers;
 

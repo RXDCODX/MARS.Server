@@ -1,9 +1,6 @@
-using System;
 using System.Drawing;
 using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 
 namespace MARS.Server.Services.Twitch.Rewards._1510_StatusQuestion;
 

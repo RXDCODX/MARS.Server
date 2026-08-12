@@ -1,8 +1,4 @@
-﻿using System;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-
-namespace MARS.Server.CustomLoggers.SignalRLogger;
+﻿namespace MARS.Server.CustomLoggers.SignalRLogger;
 
 public static class SignalRLoggerExtensions
 {

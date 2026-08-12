@@ -1,6 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-
-namespace MARS.Server.Services.Twitch.Rewards.ChannelRewards;
+﻿namespace MARS.Server.Services.Twitch.Rewards.ChannelRewards;
 
 public static class ChannelRewardsServiceCollectionExtensions
 {

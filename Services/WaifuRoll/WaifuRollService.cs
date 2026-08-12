@@ -1,15 +1,9 @@
-using System;
 using System.Collections.Concurrent;
-using System.Linq;
-using System.Linq.Dynamic.Core;
-using System.Threading;
-using System.Threading.Tasks;
 using MARS.Server.ApplicationState;
 using MARS.Server.Configuration;
 using MARS.Server.DataBaseContext;
 using MARS.Server.Exstensions;
 using MARS.Server.Services.Twitch;
-using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Rewards;
 using MARS.Server.Services.Twitch.WeddingAnniversary;
 using MARS.Server.Services.WaifuRoll.Entitys;
@@ -17,8 +11,6 @@ using MARS.Server.Services.WaifuRoll.helpers;
 using MARS.Server.Services.WaifuRoll.Interfaces;
 using MARS.Server.Services.WaifuRoll.Models;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.DynamicLinq;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using ShikimoriSharp.Classes;
 

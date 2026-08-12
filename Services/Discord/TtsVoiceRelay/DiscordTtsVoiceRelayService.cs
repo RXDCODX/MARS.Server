@@ -1,16 +1,9 @@
-using System;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using DSharpPlus;
-using DSharpPlus.Entities;
 using DSharpPlus.EventArgs;
 using MARS.Server.ApplicationState;
 using MARS.Server.DataBaseContext;
 using MARS.Server.Services.Discord.Gateway;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 #if !USE_LOCAL_DSHARPPLUS_VOICE
 using DSharpPlus.VoiceNext;
 #else

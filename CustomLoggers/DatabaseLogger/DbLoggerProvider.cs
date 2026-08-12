@@ -1,7 +1,4 @@
-﻿using System;
-using Microsoft.Extensions.Logging;
-
-namespace MARS.Server.CustomLoggers.DatabaseLogger;
+﻿namespace MARS.Server.CustomLoggers.DatabaseLogger;
 
 [ProviderAlias("Database")]
 public class DbLoggerProvider(DbLoggerOptions options) : ILoggerProvider

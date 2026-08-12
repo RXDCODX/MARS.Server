@@ -1,10 +1,6 @@
-using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 using MARS.Server.Exstensions;
 using MARS.Server.Services.Twitch.TwitchFollowers;
-using Microsoft.Extensions.Logging;
 using TwitchLib.Client.Events;
 using TwitchLib.Client.Interfaces;
 
@@ -221,6 +217,43 @@ public sealed class MessageValidationBuilder(
                             "Подпишись на канал, чтобы использовать эту команду"
                         );
                     }
+                },
+                loud
+            )
+        );
+
+        return this;
+    }
+
+    public IMessageValidationBuilder IsReplyToBot(bool loud = true)
+    {
+        _checks.Add(
+            (
+                () =>
+                {
+                    var reply = args.ChatMessage.ChatReply;
+
+                    // Если это не реплай — проверка пропускается (keyword match)
+                    if (reply is null)
+                    {
+                        return Task.CompletedTask;
+                    }
+
+                    // Если это реплай, но НЕ на бота — ошибка
+                    if (
+                        !string.Equals(
+                            reply.ParentUserLogin,
+                            TwitchExstension.BotName,
+                            StringComparison.OrdinalIgnoreCase
+                        )
+                    )
+                    {
+                        throw new ValidationException(
+                            "Реплай не на сообщение бота"
+                        );
+                    }
+
+                    return Task.CompletedTask;
                 },
                 loud
             )

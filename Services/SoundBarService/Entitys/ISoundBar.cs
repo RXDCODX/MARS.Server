@@ -1,6 +1,4 @@
-﻿using System.Threading.Tasks;
-
-namespace MARS.Server.Services.SoundBarService.Entitys;
+﻿namespace MARS.Server.Services.SoundBarService.Entitys;
 
 public interface ISoundBar
 {
