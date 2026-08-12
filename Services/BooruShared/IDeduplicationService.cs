@@ -18,18 +18,4 @@ public interface IDeduplicationService
         ulong discordChannelId,
         CancellationToken cancellationToken = default
     );
-
-    Task<bool> IsAlreadyPostedAsync(
-        string source,
-        int imageId,
-        string channelKey,
-        CancellationToken cancellationToken = default
-    );
-
-    Task RecordPostAsync(
-        string source,
-        int imageId,
-        string channelKey,
-        CancellationToken cancellationToken = default
-    );
 }

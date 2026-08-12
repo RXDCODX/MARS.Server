@@ -14,7 +14,7 @@ public class DanbooruAutoPostConfig
 
     public long? TelegramChannelId { get; set; }
 
-    public Guid? BatchId { get; set; }
+    public int TargetPostCount { get; set; } = 1;
 
     public int? DanbooruPostId { get; set; }
 

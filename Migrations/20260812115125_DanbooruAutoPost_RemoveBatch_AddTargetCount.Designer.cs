@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MARS.Server.Migrations.MigrationsDb
 {
     [DbContext(typeof(MigrationsDbContext))]
-    [Migration("20260811185215_DanbooruAutoPost_BatchAndPostId")]
-    partial class DanbooruAutoPost_BatchAndPostId
+    [Migration("20260812115125_DanbooruAutoPost_RemoveBatch_AddTargetCount")]
+    partial class DanbooruAutoPost_RemoveBatch_AddTargetCount
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -100,9 +100,6 @@ namespace MARS.Server.Migrations.MigrationsDb
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("ChannelKey")
-                        .HasColumnType("text");
-
                     b.Property<string>("DiscordChannelId")
                         .IsRequired()
                         .HasColumnType("character varying(64)");
@@ -180,9 +177,6 @@ namespace MARS.Server.Migrations.MigrationsDb
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<Guid?>("BatchId")
-                        .HasColumnType("uuid");
-
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
@@ -211,6 +205,9 @@ namespace MARS.Server.Migrations.MigrationsDb
                         .HasColumnType("text");
 
                     b.Property<int>("TargetPlatform")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TargetPostCount")
                         .HasColumnType("integer");
 
                     b.Property<long?>("TelegramChannelId")

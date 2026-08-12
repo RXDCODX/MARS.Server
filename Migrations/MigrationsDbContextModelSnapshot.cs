@@ -97,9 +97,6 @@ namespace MARS.Server.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("ChannelKey")
-                        .HasColumnType("text");
-
                     b.Property<string>("DiscordChannelId")
                         .IsRequired()
                         .HasColumnType("character varying(64)");
@@ -177,9 +174,6 @@ namespace MARS.Server.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<Guid?>("BatchId")
-                        .HasColumnType("uuid");
-
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
@@ -208,6 +202,9 @@ namespace MARS.Server.Migrations
                         .HasColumnType("text");
 
                     b.Property<int>("TargetPlatform")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TargetPostCount")
                         .HasColumnType("integer");
 
                     b.Property<long?>("TelegramChannelId")

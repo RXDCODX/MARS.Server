@@ -1,13 +1,16 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using MARS.Server.Services;
 using MARS.Server.Services.DanbooruAutoPost;
 using MARS.Server.Services.DanbooruAutoPost.Entities;
 using MARS.Server.Services.Telegram.DiscordBridge.Entitys;
+using MARS.Server.Services.Telegram.WTelegram;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using TL;
 
 namespace MARS.Server.Controllers;
 
@@ -15,6 +18,7 @@ namespace MARS.Server.Controllers;
 [Route("api/[controller]")]
 public class DanbooruAutoPostController(
     IDanbooruAutoPostService service,
+    WTelegramClientService wTelegramClientService,
     ILogger<DanbooruAutoPostController> logger
 ) : ControllerBase
 {
@@ -66,86 +70,6 @@ public class DanbooruAutoPostController(
                     new DanbooruAutoPostConfigDto()
                 )
             );
-        }
-
-        return result;
-    }
-
-    [HttpPost("configs/batch")]
-    public async Task<ActionResult<OperationResult<List<DanbooruAutoPostConfigDto>>>> BatchCreate(
-        DanbooruAutoPostBatchCreateRequest request,
-        CancellationToken cancellationToken
-    )
-    {
-        ActionResult<OperationResult<List<DanbooruAutoPostConfigDto>>> result;
-
-        try
-        {
-            var serviceResult = await service.BatchCreateAsync(request, cancellationToken);
-            result = Ok(serviceResult);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Ошибка пакетного создания DanbooruAutoPost");
-            result = Ok(
-                OperationResult<List<DanbooruAutoPostConfigDto>>.Bad(
-                    "Ошибка пакетного создания",
-                    []
-                )
-            );
-        }
-
-        return result;
-    }
-
-    [HttpPut("configs/batch/{batchId:guid}/reschedule")]
-    public async Task<
-        ActionResult<OperationResult<List<DanbooruAutoPostConfigDto>>>
-    > RescheduleBatch(
-        Guid batchId,
-        DanbooruAutoPostRescheduleRequest request,
-        CancellationToken cancellationToken
-    )
-    {
-        ActionResult<OperationResult<List<DanbooruAutoPostConfigDto>>> result;
-
-        try
-        {
-            var serviceResult = await service.RescheduleBatchAsync(
-                batchId,
-                request,
-                cancellationToken
-            );
-            result = Ok(serviceResult);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Ошибка перепланирования батча {BatchId}", batchId);
-            result = Ok(
-                OperationResult<List<DanbooruAutoPostConfigDto>>.Bad("Ошибка перепланирования", [])
-            );
-        }
-
-        return result;
-    }
-
-    [HttpDelete("configs/batch/{batchId:guid}")]
-    public async Task<ActionResult<OperationResult>> DeleteBatch(
-        Guid batchId,
-        CancellationToken cancellationToken
-    )
-    {
-        ActionResult<OperationResult> result;
-
-        try
-        {
-            var serviceResult = await service.DeleteBatchAsync(batchId, cancellationToken);
-            result = Ok(serviceResult);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Ошибка удаления батча {BatchId}", batchId);
-            result = Ok(OperationResult.Bad("Ошибка удаления батча"));
         }
 
         return result;
@@ -291,8 +215,27 @@ public class DanbooruAutoPostController(
 
         try
         {
-            var serviceResult = await service.GetTelegramChannelsAsync(cancellationToken);
-            result = Ok(serviceResult);
+            var client = await wTelegramClientService.GetClientAsync(cancellationToken);
+            var chats = await client.Messages_GetAllChats();
+            var channels = chats
+                .chats.Values.OfType<Channel>()
+                .Select(channel => new TelegramChannelOptionDto
+                {
+                    Id = -1000000000000 - channel.id,
+                    Title = string.IsNullOrWhiteSpace(channel.title)
+                        ? $"channel-{channel.id}"
+                        : channel.title,
+                })
+                .OrderBy(e => e.Title)
+                .ThenBy(e => e.Id)
+                .ToList();
+
+            result = Ok(
+                OperationResult<List<TelegramChannelOptionDto>>.Ok(
+                    "Telegram каналы получены",
+                    channels
+                )
+            );
         }
         catch (Exception ex)
         {

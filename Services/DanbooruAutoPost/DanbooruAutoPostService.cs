@@ -26,8 +26,7 @@ public class DanbooruAutoPostService(
     DanbooruRandomPostService danbooruService,
     IDiscordGatewayService discordGatewayService,
     IDeduplicationService deduplicationService,
-    ITelegramBotClient telegramBotClient,
-    ITelegramDiscordBridgeService telegramDiscordBridgeService
+    ITelegramBotClient telegramBotClient
 ) : BackgroundService, IDanbooruAutoPostService
 {
     private const string Source = "Danbooru";
@@ -141,7 +140,7 @@ public class DanbooruAutoPostService(
         CancellationToken cancellationToken
     )
     {
-        var channelKey = GetChannelKey(config);
+        var channelId = GetChannelId(config);
 
         for (var attempt = 0; attempt <= MaxDedupRetries; attempt++)
         {
@@ -171,7 +170,7 @@ public class DanbooruAutoPostService(
                 await deduplicationService.IsAlreadyPostedAsync(
                     Source,
                     post.Id,
-                    channelKey,
+                    channelId,
                     cancellationToken
                 )
             )
@@ -179,17 +178,17 @@ public class DanbooruAutoPostService(
                 if (config.DanbooruPostId.HasValue)
                 {
                     logger.LogInformation(
-                        "Изображение {PostId} уже отправлено в канал {ChannelKey}",
+                        "Изображение {PostId} уже отправлено в канал {ChannelId}",
                         post.Id,
-                        channelKey
+                        channelId
                     );
                     return;
                 }
 
                 logger.LogInformation(
-                    "Изображение {PostId} уже отправлено в канал {ChannelKey}, попытка {Attempt}/{Max}",
+                    "Изображение {PostId} уже отправлено в канал {ChannelId}, попытка {Attempt}/{Max}",
                     post.Id,
-                    channelKey,
+                    channelId,
                     attempt + 1,
                     MaxDedupRetries
                 );
@@ -259,16 +258,16 @@ public class DanbooruAutoPostService(
                 await deduplicationService.RecordPostAsync(
                     Source,
                     post.Id,
-                    channelKey,
+                    channelId,
                     cancellationToken
                 );
             }
             else
             {
                 logger.LogWarning(
-                    "Не удалось отправить изображение в {Platform} канал {ChannelKey}: {Error}",
+                    "Не удалось отправить изображение в {Platform} канал {ChannelId}: {Error}",
                     config.TargetPlatform,
-                    channelKey,
+                    channelId,
                     sendResult.Message
                 );
             }
@@ -325,11 +324,11 @@ public class DanbooruAutoPostService(
         return result;
     }
 
-    private static string GetChannelKey(DanbooruAutoPostConfig config)
+    private static ulong GetChannelId(DanbooruAutoPostConfig config)
     {
         return config.TargetPlatform == TargetPlatform.Telegram
-            ? $"tg_{config.TelegramChannelId}"
-            : $"dc_{config.DiscordChannelId}";
+            ? (ulong)Math.Abs(config.TelegramChannelId ?? 0)
+            : config.DiscordChannelId;
     }
 
     public async Task<OperationResult<List<DanbooruAutoPostConfigDto>>> GetAllAsync(
@@ -354,7 +353,7 @@ public class DanbooruAutoPostService(
                 .Select(c => new DanbooruAutoPostConfigDto
                 {
                     Id = c.Id,
-                    BatchId = c.BatchId,
+                    TargetPostCount = c.TargetPostCount,
                     DanbooruPostId = c.DanbooruPostId,
                     TargetPlatform = c.TargetPlatform,
                     DiscordChannelId = c.DiscordChannelId,
@@ -453,377 +452,6 @@ public class DanbooruAutoPostService(
         }
 
         return result;
-    }
-
-    public async Task<OperationResult<List<DanbooruAutoPostConfigDto>>> BatchCreateAsync(
-        DanbooruAutoPostBatchCreateRequest request,
-        CancellationToken cancellationToken = default
-    )
-    {
-        var result = OperationResult<List<DanbooruAutoPostConfigDto>>.Bad(
-            "Не удалось создать пакет конфигураций",
-            []
-        );
-
-        if (
-            request
-            is { TargetPlatform: TargetPlatform.Discord, DiscordChannelId: 0 }
-                or { TargetPlatform: TargetPlatform.Telegram, TelegramChannelId: null or 0 }
-        )
-        {
-            return OperationResult<List<DanbooruAutoPostConfigDto>>.Bad("Канал не указан", []);
-        }
-
-        if (string.IsNullOrWhiteSpace(request.CronExpression))
-        {
-            return OperationResult<List<DanbooruAutoPostConfigDto>>.Bad(
-                "CRON выражение обязательно",
-                []
-            );
-        }
-
-        CronExpression cron;
-        try
-        {
-            cron = CronExpression.Parse(request.CronExpression);
-        }
-        catch (CronFormatException)
-        {
-            return OperationResult<List<DanbooruAutoPostConfigDto>>.Bad(
-                "Некорректное CRON выражение",
-                []
-            );
-        }
-
-        if (request.EndAtUtc <= DateTime.UtcNow)
-        {
-            return OperationResult<List<DanbooruAutoPostConfigDto>>.Bad(
-                "Дата окончания должна быть в будущем",
-                []
-            );
-        }
-
-        var tagValidationError = TagValidator.GetValidationError(request.Tags);
-        if (tagValidationError is not null)
-        {
-            return OperationResult<List<DanbooruAutoPostConfigDto>>.Bad(tagValidationError, []);
-        }
-
-        try
-        {
-            var now = DateTime.UtcNow;
-            var batchId = Guid.NewGuid();
-            var timeSlots = GenerateTimeSlots(cron, now, request.EndAtUtc);
-
-            if (timeSlots.Count == 0)
-            {
-                return OperationResult<List<DanbooruAutoPostConfigDto>>.Bad(
-                    "Не удалось вычислить слоты расписания",
-                    []
-                );
-            }
-
-            var channelKey = GetChannelKey(
-                request.TargetPlatform,
-                request.DiscordChannelId,
-                request.TelegramChannelId
-            );
-
-            var images = await FetchUniqueImagesAsync(
-                request.Tags,
-                timeSlots.Count,
-                channelKey,
-                cancellationToken
-            );
-
-            if (images.Count == 0)
-            {
-                return OperationResult<List<DanbooruAutoPostConfigDto>>.Bad(
-                    "Не найдено доступных изображений",
-                    []
-                );
-            }
-
-            await using var dbContext = await dbContextFactory.CreateDbContextAsync(
-                cancellationToken
-            );
-
-            var slotCount = Math.Min(timeSlots.Count, images.Count);
-            var entities = new List<DanbooruAutoPostConfig>();
-
-            for (var i = 0; i < slotCount; i++)
-            {
-                var image = images[i];
-                var imageTags = string.IsNullOrWhiteSpace(image.TagStringCharacter)
-                    ? image
-                        .TagStringGeneral?.Split(' ')
-                        .Take(2)
-                        .Aggregate("", (a, b) => $"{a} {b}")
-                        .Trim()
-                    : image.TagStringCharacter;
-
-                var entity = new DanbooruAutoPostConfig
-                {
-                    BatchId = batchId,
-                    DanbooruPostId = image.Id,
-                    TargetPlatform = request.TargetPlatform,
-                    DiscordChannelId =
-                        request.TargetPlatform == TargetPlatform.Discord
-                            ? request.DiscordChannelId
-                            : 0,
-                    TelegramChannelId =
-                        request.TargetPlatform == TargetPlatform.Telegram
-                            ? request.TelegramChannelId
-                            : null,
-                    Tags = (imageTags ?? request.Tags).Trim(),
-                    CronExpression = "",
-                    ScheduledAtUtc = timeSlots[i],
-                    IsEnabled = true,
-                    CreatedAtUtc = now,
-                    UpdatedAtUtc = now,
-                };
-                entities.Add(entity);
-            }
-
-            dbContext.DanbooruAutoPostConfigs.AddRange(entities);
-            await dbContext.SaveChangesAsync(cancellationToken);
-
-            var dtos = entities.Select(MapToDto).ToList();
-            result = OperationResult<List<DanbooruAutoPostConfigDto>>.Ok(
-                $"Создано {entities.Count} отложенных постов (батч {batchId})",
-                dtos
-            );
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Ошибка пакетного создания DanbooruAutoPost");
-            result = OperationResult<List<DanbooruAutoPostConfigDto>>.Bad(
-                $"Ошибка: {ex.Message}",
-                []
-            );
-        }
-
-        return result;
-    }
-
-    public async Task<OperationResult<List<DanbooruAutoPostConfigDto>>> RescheduleBatchAsync(
-        Guid batchId,
-        DanbooruAutoPostRescheduleRequest request,
-        CancellationToken cancellationToken = default
-    )
-    {
-        var result = OperationResult<List<DanbooruAutoPostConfigDto>>.Bad(
-            "Не удалось перепланировать батч",
-            []
-        );
-
-        if (batchId == Guid.Empty)
-        {
-            return OperationResult<List<DanbooruAutoPostConfigDto>>.Bad(
-                "BatchId не может быть пустым",
-                []
-            );
-        }
-
-        CronExpression cron;
-        try
-        {
-            cron = CronExpression.Parse(request.NewCronExpression);
-        }
-        catch (CronFormatException)
-        {
-            return OperationResult<List<DanbooruAutoPostConfigDto>>.Bad(
-                "Некорректное CRON выражение",
-                []
-            );
-        }
-
-        try
-        {
-            await using var dbContext = await dbContextFactory.CreateDbContextAsync(
-                cancellationToken
-            );
-
-            var now = DateTime.UtcNow;
-            var configs = await dbContext
-                .DanbooruAutoPostConfigs.Where(c =>
-                    c.BatchId == batchId && c.ScheduledAtUtc.HasValue
-                )
-                .OrderBy(c => c.ScheduledAtUtc)
-                .ToListAsync(cancellationToken);
-
-            if (configs.Count == 0)
-            {
-                return OperationResult<List<DanbooruAutoPostConfigDto>>.Bad(
-                    "Батч не найден или нет отложенных постов",
-                    []
-                );
-            }
-
-            var timeSlots = GenerateTimeSlots(cron, now, now.AddDays(365));
-            var slotIndex = 0;
-
-            foreach (var config in configs)
-            {
-                if (config.ScheduledAtUtc.HasValue && config.ScheduledAtUtc.Value <= now)
-                {
-                    continue;
-                }
-
-                if (slotIndex < timeSlots.Count)
-                {
-                    config.ScheduledAtUtc = timeSlots[slotIndex];
-                    config.UpdatedAtUtc = now;
-                    slotIndex++;
-                }
-            }
-
-            await dbContext.SaveChangesAsync(cancellationToken);
-
-            var dtos = configs.Select(MapToDto).ToList();
-            result = OperationResult<List<DanbooruAutoPostConfigDto>>.Ok(
-                $"Перепланировано {slotIndex} постов",
-                dtos
-            );
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Ошибка перепланирования батча {BatchId}", batchId);
-            result = OperationResult<List<DanbooruAutoPostConfigDto>>.Bad(
-                $"Ошибка: {ex.Message}",
-                []
-            );
-        }
-
-        return result;
-    }
-
-    public async Task<OperationResult> DeleteBatchAsync(
-        Guid batchId,
-        CancellationToken cancellationToken = default
-    )
-    {
-        var result = OperationResult.Bad("Не удалось удалить батч");
-
-        if (batchId == Guid.Empty)
-        {
-            return OperationResult.Bad("BatchId не может быть пустым");
-        }
-
-        try
-        {
-            await using var dbContext = await dbContextFactory.CreateDbContextAsync(
-                cancellationToken
-            );
-
-            var configs = await dbContext
-                .DanbooruAutoPostConfigs.Where(c => c.BatchId == batchId)
-                .ToListAsync(cancellationToken);
-
-            if (configs.Count == 0)
-            {
-                return OperationResult.Bad("Батч не найден");
-            }
-
-            dbContext.DanbooruAutoPostConfigs.RemoveRange(configs);
-            await dbContext.SaveChangesAsync(cancellationToken);
-
-            result = OperationResult.Ok($"Удалено {configs.Count} постов");
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Ошибка удаления батча {BatchId}", batchId);
-            result = OperationResult.Bad($"Ошибка: {ex.Message}");
-        }
-
-        return result;
-    }
-
-    private static List<DateTime> GenerateTimeSlots(
-        CronExpression cron,
-        DateTime start,
-        DateTime end
-    )
-    {
-        var slots = new List<DateTime>();
-        var current = start;
-
-        while (current < end && slots.Count < 10_000)
-        {
-            var next = cron.GetNextOccurrence(current);
-            if (next.HasValue && next.Value <= end)
-            {
-                slots.Add(next.Value);
-                current = next.Value.AddSeconds(1);
-            }
-            else
-            {
-                break;
-            }
-        }
-
-        return slots;
-    }
-
-    private async Task<List<DanbooruPost>> FetchUniqueImagesAsync(
-        string tags,
-        int needed,
-        string channelKey,
-        CancellationToken cancellationToken
-    )
-    {
-        var uniqueImages = new List<DanbooruPost>();
-        var seenIds = new HashSet<int>();
-        var maxRetries = 5;
-        var batchSize = Math.Min(needed * 2, 200);
-
-        for (var attempt = 0; attempt < maxRetries && uniqueImages.Count < needed; attempt++)
-        {
-            var posts = await danbooruService.GetRandomPostAsync(tags, batchSize);
-            if (posts is null || posts.Length == 0)
-            {
-                break;
-            }
-
-            foreach (var post in posts)
-            {
-                if (uniqueImages.Count >= needed)
-                {
-                    break;
-                }
-
-                if (seenIds.Contains(post.Id))
-                {
-                    continue;
-                }
-
-                var isDuplicate = await deduplicationService.IsAlreadyPostedAsync(
-                    Source,
-                    post.Id,
-                    channelKey,
-                    cancellationToken
-                );
-
-                if (!isDuplicate)
-                {
-                    seenIds.Add(post.Id);
-                    uniqueImages.Add(post);
-                }
-            }
-        }
-
-        return uniqueImages;
-    }
-
-    private static string GetChannelKey(
-        TargetPlatform platform,
-        ulong discordChannelId,
-        long? telegramChannelId
-    )
-    {
-        return platform == TargetPlatform.Telegram
-            ? $"tg_{telegramChannelId}"
-            : $"dc_{discordChannelId}";
     }
 
     public async Task<OperationResult<DanbooruAutoPostConfigDto>> UpdateAsync(
@@ -1142,13 +770,6 @@ public class DanbooruAutoPostService(
         return result;
     }
 
-    public async Task<OperationResult<List<TelegramChannelOptionDto>>> GetTelegramChannelsAsync(
-        CancellationToken cancellationToken = default
-    )
-    {
-        return await telegramDiscordBridgeService.GetTelegramChannelsAsync(cancellationToken);
-    }
-
     private static string? ValidateCreateRequest(DanbooruAutoPostCreateRequest request)
     {
         if (request.TargetPlatform == TargetPlatform.Discord && request.DiscordChannelId == 0)
@@ -1194,7 +815,7 @@ public class DanbooruAutoPostService(
         return new DanbooruAutoPostConfigDto
         {
             Id = entity.Id,
-            BatchId = entity.BatchId,
+            TargetPostCount = entity.TargetPostCount,
             DanbooruPostId = entity.DanbooruPostId,
             TargetPlatform = entity.TargetPlatform,
             DiscordChannelId = entity.DiscordChannelId,
