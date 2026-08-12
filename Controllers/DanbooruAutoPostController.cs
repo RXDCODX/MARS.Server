@@ -219,6 +219,7 @@ public class DanbooruAutoPostController(
             var chats = await client.Messages_GetAllChats();
             var channels = chats
                 .chats.Values.OfType<Channel>()
+                .Where(channel => channel.admin_rights is not null)
                 .Select(channel => new TelegramChannelOptionDto
                 {
                     Id = -1000000000000 - channel.id,
