@@ -225,6 +225,43 @@ public sealed class MessageValidationBuilder(
         return this;
     }
 
+    public IMessageValidationBuilder IsReplyToBot(bool loud = true)
+    {
+        _checks.Add(
+            (
+                () =>
+                {
+                    var reply = args.ChatMessage.ChatReply;
+
+                    // Если это не реплай — проверка пропускается (keyword match)
+                    if (reply is null)
+                    {
+                        return Task.CompletedTask;
+                    }
+
+                    // Если это реплай, но НЕ на бота — ошибка
+                    if (
+                        !string.Equals(
+                            reply.ParentUserLogin,
+                            TwitchExstension.BotName,
+                            StringComparison.OrdinalIgnoreCase
+                        )
+                    )
+                    {
+                        throw new ValidationException(
+                            "Реплай не на сообщение бота"
+                        );
+                    }
+
+                    return Task.CompletedTask;
+                },
+                loud
+            )
+        );
+
+        return this;
+    }
+
     public async Task<ValidationResult> ValidateAsync()
     {
         var result = new ValidationResult();
