@@ -9,6 +9,7 @@ using MARS.Server.DataBaseContext;
 using MARS.Server.Services.BooruShared;
 using MARS.Server.Services.DanbooruAutoPost.Entities;
 using MARS.Server.Services.Discord.Gateway;
+using MARS.Server.Services.Telegram.DiscordBridge;
 using MARS.Server.Services.Telegram.DiscordBridge.Entitys;
 using MARS.Server.Services.Twitch.Rewards._27_RandomArt;
 using Microsoft.EntityFrameworkCore;
