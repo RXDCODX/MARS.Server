@@ -104,14 +104,9 @@ public sealed class MessageValidationBuilder(
         _checks.Add(
             (
                 () =>
-                {
-                    if (string.IsNullOrWhiteSpace(args.ChatMessage.CustomRewardId))
-                    {
-                        throw new ValidationException("Не удалось определить награду");
-                    }
-
-                    return Task.CompletedTask;
-                },
+                    string.IsNullOrWhiteSpace(args.ChatMessage.CustomRewardId)
+                        ? throw new ValidationException("Не удалось определить награду")
+                        : Task.CompletedTask,
                 loud
             )
         );
@@ -150,14 +145,9 @@ public sealed class MessageValidationBuilder(
         _checks.Add(
             (
                 () =>
-                {
-                    if (!isActive)
-                    {
-                        throw new ValidationException("Сервис временно неактивен");
-                    }
-
-                    return Task.CompletedTask;
-                },
+                    !isActive
+                        ? throw new ValidationException("Сервис временно неактивен")
+                        : Task.CompletedTask,
                 loud
             )
         );
@@ -170,14 +160,9 @@ public sealed class MessageValidationBuilder(
         _checks.Add(
             (
                 () =>
-                {
-                    if (string.IsNullOrWhiteSpace(args.ChatMessage.UserId))
-                    {
-                        throw new ValidationException("Не удалось определить пользователя");
-                    }
-
-                    return Task.CompletedTask;
-                },
+                    string.IsNullOrWhiteSpace(args.ChatMessage.UserId)
+                        ? throw new ValidationException("Не удалось определить пользователя")
+                        : Task.CompletedTask,
                 loud
             )
         );
