@@ -162,17 +162,12 @@ public class NsfwBooruAutoPostService(
                 .Aggregate("", (a, b) => $"{a} {b}")
                 .Trim();
 
-            var message =
-                $"**NSFWBooru** | Score: {post.Score} | Rating: {post.Rating}\n"
-                + $"Tags: {tagPreview}\n"
-                + $"https://rule34.xxx/index.php?page=post&s=view&id={post.Id}";
-
             await using var stream = new MemoryStream(fileBytes);
             var result = await discordGatewayService.SendFileAsync(
                 config.DiscordChannelId,
                 stream,
                 fileName,
-                message,
+                null,
                 cancellationToken
             );
 

@@ -212,11 +212,6 @@ public class DanbooruAutoPostService(
                     .Trim()
                 : post.TagStringCharacter;
 
-            var caption =
-                $"Danbooru | Score: {post.Score} | Rating: {post.Rating}\n"
-                + $"Tags: {tagPreview}\n"
-                + $"https://danbooru.donmai.us/posts/{post.Id}";
-
             OperationResult sendResult;
 
             if (config.TargetPlatform == TargetPlatform.Telegram)
@@ -225,23 +220,19 @@ public class DanbooruAutoPostService(
                     config,
                     fileBytes,
                     fileName,
-                    caption,
+                    null,
                     cancellationToken
                 );
             }
             else
             {
                 await using var stream = new MemoryStream(fileBytes);
-                var message =
-                    $"**Danbooru** | Score: {post.Score} | Rating: {post.Rating}\n"
-                    + $"Tags: {tagPreview}\n"
-                    + $"https://danbooru.donmai.us/posts/{post.Id}";
 
                 var discordResult = await discordGatewayService.SendFileAsync(
                     config.DiscordChannelId,
                     stream,
                     fileName,
-                    message,
+                    null,
                     cancellationToken
                 );
                 sendResult = discordResult;
@@ -280,7 +271,7 @@ public class DanbooruAutoPostService(
         DanbooruAutoPostConfig config,
         byte[] fileBytes,
         string fileName,
-        string caption,
+        string? caption,
         CancellationToken cancellationToken
     )
     {
