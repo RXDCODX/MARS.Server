@@ -52,4 +52,7 @@ public static class RootStateKeys
     public const string GooglePhotosAccessTokenExpiresAtUtc = "GooglePhotosAccessTokenExpiresAtUtc";
     public const string GooglePhotosOAuthState = "GooglePhotosOAuthState";
     public const string GooglePhotosIsAuthorized = "GooglePhotosIsAuthorized";
+
+    // Tekken streams forwarder
+    public const string TekkenStreamsDiscordChannelId = "TekkenStreamsDiscordChannelId";
 }
