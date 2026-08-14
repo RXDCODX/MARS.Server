@@ -581,15 +581,12 @@ public class WaifuRollService(
                     .Include(e => e.HusbandGreetings)
                     .Include(e => e.TwitchUser)
                     .Where(e => !e.IsPrivated)
+                    .OrderBy(e => e.TwitchId)
                     .ElementAtAsync(Random.Shared.Next(count));
 
-                var replace = message.Replace(
+                result = message.Replace(
                     "{randomHost}",
                     husband.TwitchUser?.DisplayName ?? "Unknown"
-                );
-                result = string.Concat(
-                    "@{user}, твой супруг прислал(-а) тебе сообщение: ",
-                    replace
                 );
             }
         }
