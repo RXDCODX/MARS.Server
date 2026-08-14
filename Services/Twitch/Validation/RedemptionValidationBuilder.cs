@@ -236,7 +236,13 @@ public sealed class RedemptionValidationBuilder(
     {
         var result = await ValidateAsync();
 
-        if (result is { IsInvalid: true, FirstError: not null })
+        if (
+            result is { IsInvalid: true, FirstError: not null }
+            && Event.BroadcasterUserLogin.Equals(
+                TwitchExstension.Channel,
+                StringComparison.OrdinalIgnoreCase
+            )
+        )
         {
             var key = Event.Id;
 

@@ -1,9 +1,16 @@
+using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using MARS.Server.ApplicationState;
 using MARS.Server.DataBaseContext;
 using MARS.Server.Exstensions;
 using MARS.Server.Services.Discord.Gateway;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using TwitchLib.Api.Helix.Models.Chat.ChatSettings;
 using TwitchLib.Api.Interfaces;
 using TwitchLib.Client.Events;

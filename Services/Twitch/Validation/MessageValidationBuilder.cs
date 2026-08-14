@@ -1,6 +1,12 @@
+using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using MARS.Server.Exstensions;
 using MARS.Server.Services.Twitch.TwitchFollowers;
+using Microsoft.Extensions.Logging;
 using TwitchLib.Client.Events;
 using TwitchLib.Client.Interfaces;
 
@@ -297,11 +303,17 @@ public sealed class MessageValidationBuilder(
     {
         var result = await ValidateAsync();
 
-        if (result is { IsInvalid: true, FirstError: not null })
+        if (
+            result is { IsInvalid: true, FirstError: not null }
+            && args.ChatMessage.Channel.Equals(
+                TwitchExstension.Channel,
+                StringComparison.OrdinalIgnoreCase
+            )
+        )
         {
             var key = args.ChatMessage.Id;
 
-            if (key is null || sentEventErrors.TryAdd(key, DateTime.Now))
+            if (sentEventErrors.TryAdd(key, DateTime.Now))
             {
                 try
                 {
@@ -315,19 +327,16 @@ public sealed class MessageValidationBuilder(
                     logger.LogError(ex, "Failed to send validation error message");
                 }
 
-                if (key is not null)
-                {
-                    await Task.Factory.StartNew(
-                        async () =>
-                        {
-                            await Task.Delay(TimeSpan.FromSeconds(30));
-                            sentEventErrors.TryRemove(key, out _);
-                        },
-                        CancellationToken.None,
-                        TaskCreationOptions.DenyChildAttach,
-                        TaskScheduler.Default
-                    );
-                }
+                await Task.Factory.StartNew(
+                    async () =>
+                    {
+                        await Task.Delay(TimeSpan.FromSeconds(30));
+                        sentEventErrors.TryRemove(key, out _);
+                    },
+                    CancellationToken.None,
+                    TaskCreationOptions.DenyChildAttach,
+                    TaskScheduler.Default
+                );
             }
         }
 
