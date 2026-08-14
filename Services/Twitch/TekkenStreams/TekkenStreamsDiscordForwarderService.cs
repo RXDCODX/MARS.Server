@@ -150,7 +150,6 @@ public class TekkenStreamsDiscordForwarderService(
                 || twitchClient.JoinedChannels.Any(e =>
                     e.Channel.Equals(stream.UserLogin, StringComparison.OrdinalIgnoreCase)
                 )
-                || !await IsChatJoinableAsync(stream.Id, cancellationToken)
             )
             {
                 continue;
@@ -164,60 +163,19 @@ public class TekkenStreamsDiscordForwarderService(
         }
     }
 
-    private async Task<bool> IsChatJoinableAsync(
-        string broadcasterId,
-        CancellationToken cancellationToken
-    )
-    {
-        var result = true;
-
-        try
-        {
-            var response = await api.Helix.Chat.GetChatSettingsAsync(broadcasterId, broadcasterId);
-            var settings = response.Data[0];
-
-            if (
-                settings is not null
-                && !settings.FollowerMode
-                && !settings.EmoteMode
-                && !settings.SubscriberMode
-                && !settings.UniqueChatMode
-            )
-            {
-                logger.LogDebug("Чат канала {BroadcasterId} доступен для пересылки", broadcasterId);
-            }
-            else
-            {
-                result = false;
-                logger.LogInformation(
-                    "Чат канала {BroadcasterId} имеет ограничения, пропускаем",
-                    broadcasterId
-                );
-            }
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarning(
-                ex,
-                "Не удалось получить настройки чата {BroadcasterId}, считаем канал доступным",
-                broadcasterId
-            );
-        }
-
-        return result;
-    }
-
     private async Task<Stream[]> GetRuTekkenStreamsAsync(CancellationToken cancellationToken)
     {
         Stream[] result = [];
 
         try
         {
-            var response = await api.Helix.Streams.GetStreamsAsync(
-                first: 100,
-                gameIds: [TekkenGameId],
-                languages: [StreamLanguage]
-            );
+            var response = await api
+                .Helix.Streams.GetStreamsAsync(
+                    first: 100,
+                    gameIds: [TekkenGameId],
+                    languages: [StreamLanguage]
+                )
+                .WaitAsync(cancellationToken);
             result = response.Streams;
         }
         catch (Exception ex)
