@@ -185,6 +185,13 @@ public sealed class ConfigurationKeysBootstrapHostedService(
                 Description = "ID Discord голосового канала для TTS voice relay",
                 TypeDescription = "ulong",
             },
+            RootStateKeys.TekkenStreamsDiscordChannelId => new RootState
+            {
+                Name = key,
+                Value = string.Empty,
+                Description = "ID Discord канала для пересылки чатов русскоязычных теккен-стримов",
+                TypeDescription = "ulong",
+            },
             _ => new RootState
             {
                 Name = key,

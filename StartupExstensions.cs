@@ -63,6 +63,7 @@ using MARS.Server.Services.Twitch.Rewards.ChannelRewards;
 using MARS.Server.Services.Twitch.StreamBotNotifications;
 using MARS.Server.Services.Twitch.StreamManagement;
 using MARS.Server.Services.Twitch.Synthesizer;
+using MARS.Server.Services.Twitch.TekkenStreams;
 using MARS.Server.Services.Twitch.TwitchFollowers;
 using MARS.Server.Services.Twitch.Validation;
 using MARS.Server.Services.Twitch.WaifuChat;
@@ -377,6 +378,11 @@ public static class StartupEstensions
 
         services.AddSingleton<WaifuChatTwitchReward>();
         services.AddHostedService(sp => sp.GetRequiredService<WaifuChatTwitchReward>());
+
+        services.AddSingleton<TekkenStreamsDiscordForwarderService>();
+        services.AddHostedService(sp =>
+            sp.GetRequiredService<TekkenStreamsDiscordForwarderService>()
+        );
 
         return services;
     }
