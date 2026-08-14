@@ -69,7 +69,11 @@ public class TwitchCommandService : PlatformCommandServiceBase<string>, IHostedS
 
     private async Task ClientOnOnMessageReceived(object? sender, OnMessageReceivedArgs e)
     {
-        var result = await _validator.ForMessageReceived(e).SkipBlacklisted().ValidateAsync();
+        var result = await _validator
+            .ForMessageReceived(e)
+            .SkipBlacklisted()
+            .RequireChannel()
+            .ValidateAsync();
 
         if (result.IsInvalid)
         {
