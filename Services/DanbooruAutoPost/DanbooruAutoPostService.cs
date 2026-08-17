@@ -54,7 +54,6 @@ public class DanbooruAutoPostService(
             .Where(p =>
                 p.Status == ScheduledPostStatus.Pending
                 && p.ScheduledAtUtc <= now
-                && p.Config != null
                 && p.Config.TargetPlatform == TargetPlatform.Discord
             )
             .OrderBy(p => p.ScheduledAtUtc)
@@ -155,16 +154,13 @@ public class DanbooruAutoPostService(
                 }
 
                 var newPosts = scheduledTimes
-                    .Select(
-                        time =>
-                            new DanbooruScheduledPost
-                            {
-                                ConfigId = config.Id,
-                                ScheduledAtUtc = time,
-                                Status = ScheduledPostStatus.Pending,
-                                CreatedAtUtc = now,
-                            }
-                    )
+                    .Select(time => new DanbooruScheduledPost
+                    {
+                        ConfigId = config.Id,
+                        ScheduledAtUtc = time,
+                        Status = ScheduledPostStatus.Pending,
+                        CreatedAtUtc = now,
+                    })
                     .ToList();
 
                 dbContext.DanbooruScheduledPosts.AddRange(newPosts);
@@ -195,9 +191,10 @@ public class DanbooruAutoPostService(
         CancellationToken cancellationToken
     )
     {
-        var channelId = config.TargetPlatform == TargetPlatform.Telegram
-            ? (ulong)Math.Abs(config.TelegramChannelId ?? 0)
-            : config.DiscordChannelId;
+        var channelId =
+            config.TargetPlatform == TargetPlatform.Telegram
+                ? (ulong)Math.Abs(config.TelegramChannelId ?? 0)
+                : config.DiscordChannelId;
 
         for (var attempt = 0; attempt <= MaxDedupRetries; attempt++)
         {
@@ -773,9 +770,7 @@ public class DanbooruAutoPostService(
 
                 if (config.DanbooruPostId.HasValue)
                 {
-                    post = await danbooruService.GetPostByIdAsync(
-                        config.DanbooruPostId.Value
-                    );
+                    post = await danbooruService.GetPostByIdAsync(config.DanbooruPostId.Value);
                 }
                 else
                 {
@@ -827,11 +822,7 @@ public class DanbooruAutoPostService(
             }
             catch (Exception ex)
             {
-                logger.LogError(
-                    ex,
-                    "Ошибка планирования поста в Telegram на {Time}",
-                    time
-                );
+                logger.LogError(ex, "Ошибка планирования поста в Telegram на {Time}", time);
             }
         }
 
@@ -864,16 +855,13 @@ public class DanbooruAutoPostService(
         }
 
         var newPosts = scheduledTimes
-            .Select(
-                time =>
-                    new DanbooruScheduledPost
-                    {
-                        ConfigId = config.Id,
-                        ScheduledAtUtc = time,
-                        Status = ScheduledPostStatus.Pending,
-                        CreatedAtUtc = now,
-                    }
-            )
+            .Select(time => new DanbooruScheduledPost
+            {
+                ConfigId = config.Id,
+                ScheduledAtUtc = time,
+                Status = ScheduledPostStatus.Pending,
+                CreatedAtUtc = now,
+            })
             .ToList();
 
         dbContext.DanbooruScheduledPosts.AddRange(newPosts);
