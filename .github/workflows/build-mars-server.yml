@@ -83,6 +83,15 @@ jobs:
           AppSettings__Telegram__BotConfiguration__BotToken="dummy" \
           AppSettings__Telegram__AdminIdsArray__0="0" \
           dotnet publish-output/MARS.Server.dll --generate-openapi
+
+          # Сервер пишет в ContentRootPath/../mars.client/api/
+          # ContentRootPath = абсолютный путь к publish-output/, т.е. файлы попадают
+          # на один уровень выше workspace root. Копируем в ./mars.client/api/.
+          if [ -f ../mars.client/api/swagger_api.json ]; then
+            cp ../mars.client/api/swagger_api.json mars.client/api/
+            cp ../mars.client/api/swagger_hubs.json mars.client/api/
+          fi
+
           if [ ! -f mars.client/api/swagger_api.json ] || [ ! -f mars.client/api/swagger_hubs.json ]; then
             echo "ERROR: OpenAPI schemas not generated!"
             exit 1
