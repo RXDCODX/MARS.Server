@@ -1,4 +1,5 @@
 using Cronos;
+using MARS.Server.Configuration;
 using MARS.Server.DataBaseContext;
 using MARS.Server.Services.BooruShared;
 using MARS.Server.Services.BooruShared.Entities;
@@ -9,6 +10,9 @@ using MARS.Server.Services.Twitch.Rewards._27_RandomArt;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using Telegram.Bot;
+using Telegram.Bot.Types.Enums;
 
 namespace MARS.Server.Services.DanbooruAutoPost;
 
@@ -19,11 +23,15 @@ public class DanbooruAutoPostService(
     IDanbooruDiscordPoster discordPoster,
     IDanbooruTelegramPoster telegramPoster,
     IDiscordGatewayService discordGatewayService,
-    IDeduplicationService deduplicationService
+    IDeduplicationService deduplicationService,
+    ITelegramBotClient telegramBotClient,
+    IOptions<TelegramConfiguration> telegramConfig
 ) : BackgroundService, IDanbooruAutoPostService
 {
     private const string Source = "Danbooru";
     private const int MaxDedupRetries = 5;
+    private const int SslRetryBaseDelaySeconds = 5;
+    private const int SslRetryMaxDelaySeconds = 300;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -61,15 +69,15 @@ public class DanbooruAutoPostService(
 
         foreach (var scheduledPost in duePosts)
         {
+            var config = scheduledPost.Config;
+            if (config is null || !config.IsEnabled)
+            {
+                scheduledPost.Status = ScheduledPostStatus.Cancelled;
+                continue;
+            }
+
             try
             {
-                var config = scheduledPost.Config;
-                if (config is null || !config.IsEnabled)
-                {
-                    scheduledPost.Status = ScheduledPostStatus.Cancelled;
-                    continue;
-                }
-
                 await PostImageAsync(config, cancellationToken);
 
                 var entity = await dbContext.DanbooruScheduledPosts.FindAsync(
@@ -98,24 +106,159 @@ public class DanbooruAutoPostService(
             }
             catch (Exception ex)
             {
-                logger.LogError(
-                    ex,
-                    "Ошибка отправки изображения для запланированного поста {PostId}",
-                    scheduledPost.Id
-                );
+                var isSslError = ex is HttpRequestException
+                    && ex.Message.Contains(
+                        "SSL connection could not be established",
+                        StringComparison.OrdinalIgnoreCase
+                    );
 
-                await using var errorContext = await dbContextFactory.CreateDbContextAsync(
-                    cancellationToken
-                );
-                var errorEntity = await errorContext.DanbooruScheduledPosts.FindAsync(
-                    [scheduledPost.Id],
-                    cancellationToken
-                );
-                if (errorEntity is not null)
+                if (isSslError)
                 {
-                    errorEntity.Status = ScheduledPostStatus.Failed;
-                    errorEntity.ErrorMessage = ex.Message;
-                    await errorContext.SaveChangesAsync(cancellationToken);
+                    logger.LogWarning(
+                        ex,
+                        "SSL ошибка при отправке поста {PostId}, повторные попытки...",
+                        scheduledPost.Id
+                    );
+
+                    var sslRetryAttempt = 0;
+                    var sslRecovered = false;
+
+                    while (!sslRecovered)
+                    {
+                        sslRetryAttempt++;
+                        var delaySeconds = Math.Min(
+                            SslRetryBaseDelaySeconds * (int)Math.Pow(2, sslRetryAttempt - 1),
+                            SslRetryMaxDelaySeconds
+                        );
+
+                        logger.LogInformation(
+                            "Повторная попытка SSL {Attempt} для поста {PostId} через {Delay}с",
+                            sslRetryAttempt,
+                            scheduledPost.Id,
+                            delaySeconds
+                        );
+
+                        await Task.Delay(
+                            TimeSpan.FromSeconds(delaySeconds),
+                            cancellationToken
+                        );
+
+                        try
+                        {
+                            await PostImageAsync(config, cancellationToken);
+
+                            var successEntity =
+                                await dbContext.DanbooruScheduledPosts.FindAsync(
+                                    [scheduledPost.Id],
+                                    cancellationToken
+                                );
+                            if (successEntity is not null)
+                            {
+                                successEntity.Status = ScheduledPostStatus.Posted;
+                                successEntity.PostedAtUtc = DateTime.UtcNow;
+                                await dbContext.SaveChangesAsync(cancellationToken);
+                            }
+
+                            await using var updateCtx =
+                                await dbContextFactory.CreateDbContextAsync(cancellationToken);
+                            var cfgEntity =
+                                await updateCtx.DanbooruAutoPostConfigs.FindAsync(
+                                    [config.Id],
+                                    cancellationToken
+                                );
+                            if (cfgEntity is not null)
+                            {
+                                cfgEntity.LastExecutedAtUtc = DateTime.UtcNow;
+                                await updateCtx.SaveChangesAsync(cancellationToken);
+                            }
+
+                            sslRecovered = true;
+                            logger.LogInformation(
+                                "SSL восстановлена после {Attempts} попыток для поста {PostId}",
+                                sslRetryAttempt,
+                                scheduledPost.Id
+                            );
+                        }
+                        catch (Exception retryEx)
+                        {
+                            var stillSsl = retryEx is HttpRequestException
+                                && retryEx.Message.Contains(
+                                    "SSL connection could not be established",
+                                    StringComparison.OrdinalIgnoreCase
+                                );
+
+                            if (stillSsl)
+                            {
+                                logger.LogWarning(
+                                    retryEx,
+                                    "SSL ошибка сохраняется, попытка {Attempt}",
+                                    sslRetryAttempt
+                                );
+                            }
+                            else
+                            {
+                                logger.LogError(
+                                    retryEx,
+                                    "Не-SSL ошибка при повторной попытке для поста {PostId}",
+                                    scheduledPost.Id
+                                );
+
+                                await using var nonSslErrorCtx =
+                                    await dbContextFactory.CreateDbContextAsync(
+                                        cancellationToken
+                                    );
+                                var nonSslErrorEntity =
+                                    await nonSslErrorCtx.DanbooruScheduledPosts.FindAsync(
+                                        [scheduledPost.Id],
+                                        cancellationToken
+                                    );
+                                if (nonSslErrorEntity is not null)
+                                {
+                                    nonSslErrorEntity.Status = ScheduledPostStatus.Failed;
+                                    nonSslErrorEntity.ErrorMessage = retryEx.Message;
+                                    await nonSslErrorCtx.SaveChangesAsync(cancellationToken);
+                                }
+
+                                await NotifyAdminsAboutErrorAsync(
+                                    scheduledPost.Id,
+                                    config,
+                                    retryEx,
+                                    cancellationToken
+                                );
+
+                                sslRecovered = true;
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    logger.LogError(
+                        ex,
+                        "Ошибка отправки изображения для поста {PostId}",
+                        scheduledPost.Id
+                    );
+
+                    await using var errorContext = await dbContextFactory.CreateDbContextAsync(
+                        cancellationToken
+                    );
+                    var errorEntity = await errorContext.DanbooruScheduledPosts.FindAsync(
+                        [scheduledPost.Id],
+                        cancellationToken
+                    );
+                    if (errorEntity is not null)
+                    {
+                        errorEntity.Status = ScheduledPostStatus.Failed;
+                        errorEntity.ErrorMessage = ex.Message;
+                        await errorContext.SaveChangesAsync(cancellationToken);
+                    }
+
+                    await NotifyAdminsAboutErrorAsync(
+                        scheduledPost.Id,
+                        config,
+                        ex,
+                        cancellationToken
+                    );
                 }
             }
         }
@@ -988,5 +1131,49 @@ public class DanbooruAutoPostService(
             CreatedAtUtc = entity.CreatedAtUtc,
             UpdatedAtUtc = entity.UpdatedAtUtc,
         };
+    }
+
+    private async Task NotifyAdminsAboutErrorAsync(
+        Guid postId,
+        DanbooruAutoPostConfig config,
+        Exception error,
+        CancellationToken cancellationToken
+    )
+    {
+        var adminIds = telegramConfig.Value.AdminIdsArray ?? [];
+        if (adminIds.Length == 0)
+        {
+            return;
+        }
+
+        var message = $"""
+            <b>DanbooruAutoPost: ошибка отправки</b>
+
+            Пост: {postId}
+            Платформа: {config.TargetPlatform}
+            Конфиг: {config.Id}
+            Ошибка: {error.Message}
+            """;
+
+        foreach (var adminId in adminIds)
+        {
+            try
+            {
+                await telegramBotClient.SendMessage(
+                    adminId,
+                    message,
+                    parseMode: ParseMode.Html,
+                    cancellationToken: cancellationToken
+                );
+            }
+            catch (Exception notifyEx)
+            {
+                logger.LogError(
+                    notifyEx,
+                    "Не удалось отправить уведомление об ошибке админу {AdminId}",
+                    adminId
+                );
+            }
+        }
     }
 }
