@@ -17,16 +17,24 @@ jobs:
     name: Build
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout MARS.Server
         uses: actions/checkout@v4
 
-      - name: Fetch Directory.Packages.props
-        env:
-          GH_TOKEN: ${{ secrets.MONOREPO_PAT }}
+      - name: Checkout monorepo
+        uses: actions/checkout@v4
+        with:
+          repository: RXDCODX/MARS
+          path: _monorepo
+          token: ${{ secrets.MONOREPO_PAT }}
+
+      - name: Assemble project structure
         run: |
-          gh api repos/RXDCODX/MARS/contents/Directory.Packages.props \
-            --jq '.content' | base64 -d > Directory.Packages.props
-          head -5 Directory.Packages.props
+          mkdir -p MARS.Projects/MARS.Server
+          rsync -a --exclude='.git' --exclude='MARS.Projects' --exclude='_monorepo' ./ MARS.Projects/MARS.Server/
+          cp -r _monorepo/MARS.Projects/MARS.Shared MARS.Projects/MARS.Shared
+          cp _monorepo/MARS.sln MARS.sln
+          cp _monorepo/Directory.Packages.props Directory.Packages.props
+          cp _monorepo/Directory.Build.props Directory.Build.props 2>/dev/null || true
 
       - name: Setup .NET 10
         uses: actions/setup-dotnet@v4
@@ -42,14 +50,14 @@ jobs:
             ${{ runner.os }}-nuget-
 
       - name: Restore
-        run: dotnet restore MARS.Server.csproj -p:HUSKY=0 -p:UseLocalYoutubeReExplode=false
+        run: dotnet restore MARS.Projects/MARS.Server/MARS.Server.csproj -p:HUSKY=0 -p:UseLocalYoutubeReExplode=false
 
       - name: Build (skip frontend/publish targets)
-        run: dotnet build MARS.Server.csproj -c Release --no-restore -p:HUSKY=0 -p:UseLocalYoutubeReExplode=false -p:TreatWarningsAsErrors=false
+        run: dotnet build MARS.Projects/MARS.Server/MARS.Server.csproj -c Release --no-restore -p:HUSKY=0 -p:UseLocalYoutubeReExplode=false -p:TreatWarningsAsErrors=false
 
       - name: Publish (for autotests artifact)
         run: |
-          dotnet publish MARS.Server.csproj \
+          dotnet publish MARS.Projects/MARS.Server/MARS.Server.csproj \
             -c Release \
             -o publish-output \
             -p:UseLocalYoutubeReExplode=false \

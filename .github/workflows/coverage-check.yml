@@ -44,6 +44,7 @@ jobs:
           rsync -a --exclude='.git' --exclude='MARS.Projects' --exclude='_monorepo' ./ MARS.Projects/MARS.Server/
           cp -r _monorepo/MARS.Projects/MARS.Tests MARS.Projects/MARS.Tests
           cp -r _monorepo/MARS.Projects/MARS.AudioController MARS.Projects/MARS.AudioController
+          cp -r _monorepo/MARS.Projects/MARS.Shared MARS.Projects/MARS.Shared
           cp _monorepo/MARS.sln MARS.sln
           cp _monorepo/Directory.Packages.props Directory.Packages.props
           cp _monorepo/Directory.Build.props Directory.Build.props 2>/dev/null || true
