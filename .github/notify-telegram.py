@@ -75,26 +75,64 @@ def parse_trx(trx_path):
         return f"Ошибка парсинга TRX: {e}"
 
 
+def parse_coverage(xml_path, warn_threshold, fail_threshold):
+    """Parse Cobertura XML and return coverage report."""
+    try:
+        tree = ET.parse(xml_path)
+        root = tree.getroot()
+        line_pct = float(root.get("line-rate", 0)) * 100
+        branch_pct = float(root.get("branch-rate", 0)) * 100
+
+        if line_pct >= fail_threshold:
+            emoji = "🟢"
+        elif line_pct >= warn_threshold:
+            emoji = "🟡"
+        else:
+            emoji = "🔴"
+
+        result = f"{emoji} <b>Покрытие кода:</b>\n"
+        result += f"  Строки: <code>{line_pct:.1f}%</code>\n"
+        result += f"  Ветки: <code>{branch_pct:.1f}%</code>\n"
+
+        if line_pct < warn_threshold:
+            result += f"\n⚠️ Покрытие ниже порога {warn_threshold}%"
+
+        return result
+    except Exception as e:
+        return f"Ошибка парсинга coverage XML: {e}"
+
+
 def main():
     workflow_name = sys.argv[1] if len(sys.argv) > 1 else "CI"
-    trx_path = sys.argv[2] if len(sys.argv) > 2 else ""
 
-    trx_info = ""
-    if trx_path and os.path.isfile(trx_path):
-        trx_info = parse_trx(trx_path)
-    elif trx_path:
-        # TRX не найден — возможно, тесты не запускались (ошибка сборки/restore)
-        results_dir = os.path.dirname(trx_path)
-        if os.path.isdir(results_dir):
-            files = os.listdir(results_dir)
-            if files:
-                trx_info = f"TRX не найден ({trx_path}). Файлы в {results_dir}: {', '.join(files[:5])}"
-            else:
-                trx_info = f"Тесты не запускались — {results_dir} пуст (вероятна ошибка сборки)"
+    # Режим coverage: --coverage <xml_path> <warn> <fail>
+    if len(sys.argv) > 2 and sys.argv[2] == "--coverage":
+        xml_path = sys.argv[3] if len(sys.argv) > 3 else ""
+        warn = float(sys.argv[4]) if len(sys.argv) > 4 else 50
+        fail = float(sys.argv[5]) if len(sys.argv) > 5 else 75
+        if xml_path and os.path.isfile(xml_path):
+            trx_info = parse_coverage(xml_path, warn, fail)
         else:
-            trx_info = f"Тесты не запускались — {results_dir} не создан (вероятна ошибка сборки)"
+            trx_info = f"Coverage XML не найден: {xml_path}"
     else:
-        trx_info = "Путь к TRX не указан"
+        trx_path = sys.argv[2] if len(sys.argv) > 2 else ""
+
+        trx_info = ""
+        if trx_path and os.path.isfile(trx_path):
+            trx_info = parse_trx(trx_path)
+        elif trx_path:
+            # TRX не найден — возможно, тесты не запускались (ошибка сборки/restore)
+            results_dir = os.path.dirname(trx_path)
+            if os.path.isdir(results_dir):
+                files = os.listdir(results_dir)
+                if files:
+                    trx_info = f"TRX не найден ({trx_path}). Файлы в {results_dir}: {', '.join(files[:5])}"
+                else:
+                    trx_info = f"Тесты не запускались — {results_dir} пуст (вероятна ошибка сборки)"
+            else:
+                trx_info = f"Тесты не запускались — {results_dir} не создан (вероятна ошибка сборки)"
+        else:
+            trx_info = "Путь к TRX не указан"
 
     branch = os.environ.get("GITHUB_REF_NAME", "?")
     sha = os.environ.get("GITHUB_SHA", "?")[:8]

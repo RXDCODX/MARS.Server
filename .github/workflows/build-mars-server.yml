@@ -5,6 +5,7 @@ on:
     branches: [main, master, develop, feature/*]
   pull_request:
     branches: [main, master, develop]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -77,9 +78,17 @@ jobs:
       - name: Generate OpenAPI schemas
         run: |
           mkdir -p mars.client/api
-          dotnet publish-output/MARS.Server.dll --generate-openapi || true
+          ASPNETCORE_ENVIRONMENT=Development \
+          ConnectionStrings__Dev_Path="Host=localhost;Database=dummy;Username=dummy;Password=dummy" \
+          AppSettings__Telegram__BotConfiguration__BotToken="dummy" \
+          AppSettings__Telegram__AdminIdsArray__0="0" \
+          dotnet publish-output/MARS.Server.dll --generate-openapi
+          if [ ! -f mars.client/api/swagger_api.json ] || [ ! -f mars.client/api/swagger_hubs.json ]; then
+            echo "ERROR: OpenAPI schemas not generated!"
+            exit 1
+          fi
           echo "=== Generated swagger files ==="
-          ls -la mars.client/api/ 2>/dev/null || echo "No swagger files generated"
+          ls -la mars.client/api/
 
       - name: Upload swagger schemas
         uses: actions/upload-artifact@v4
@@ -132,14 +141,15 @@ jobs:
         with:
           name: swagger-schemas
           path: _monorepo/MARS.Projects/mars.client/api/
-          run-id: ${{ github.run_id }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Verify API clients are up-to-date
         run: |
           cd _monorepo/MARS.Projects/mars.client
           cp -r src/shared/api src/shared/api-checked-in
           yarn build:api
+          # build-api.js вызывает Prettier через PowerShell — на Linux это не работает.
+          # Форматируем явно, чтобы сгенерированные файлы совпадали с закоммиченными.
+          yarn prettier --write "src/shared/api/**/*.{ts,tsx}" 2>/dev/null || true
           if ! diff -rq src/shared/api src/shared/api-checked-in > /dev/null 2>&1; then
             echo "❌ Сгенерированные API-файлы отличаются от закоммиченных!"
             echo "Запустите 'yarn build:api' локально и закоммитьте изменения."
