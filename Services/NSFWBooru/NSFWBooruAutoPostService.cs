@@ -1,6 +1,7 @@
 using Cronos;
 using MARS.Server.DataBaseContext;
 using MARS.Server.Services.BooruShared;
+using MARS.Server.Services.BooruShared.Entities;
 using MARS.Server.Services.Discord.Gateway;
 using MARS.Server.Services.NSFWBooru.Entities;
 using MARS.Server.Services.Telegram.DiscordBridge.Entitys;
@@ -217,7 +218,7 @@ public class NsfwBooruAutoPostService(
                 .Select(c => new NSFWBooruAutoPostConfigDto
                 {
                     Id = c.Id,
-                    DiscordChannelId = c.DiscordChannelId,
+                    DiscordChannelId = c.DiscordChannelId.ToString(),
                     Tags = c.Tags,
                     CronExpression = c.CronExpression,
                     IsEnabled = c.IsEnabled,
@@ -248,30 +249,24 @@ public class NsfwBooruAutoPostService(
     {
         OperationResult<NSFWBooruAutoPostConfigDto> result;
 
-        if (request.DiscordChannelId == 0)
+        if (
+            BooruValidationHelper.ValidateAndParseDiscordChannelId(
+                request.DiscordChannelId,
+                out _
+            ) is { } channelError
+        )
         {
             return OperationResult<NSFWBooruAutoPostConfigDto>.Bad(
-                "DiscordChannelId обязателен",
+                channelError,
                 new NSFWBooruAutoPostConfigDto()
             );
         }
 
-        if (string.IsNullOrWhiteSpace(request.CronExpression))
+        var cronError = BooruValidationHelper.ValidateCronExpression(request.CronExpression);
+        if (cronError is not null)
         {
             return OperationResult<NSFWBooruAutoPostConfigDto>.Bad(
-                "CRON выражение обязательно",
-                new NSFWBooruAutoPostConfigDto()
-            );
-        }
-
-        try
-        {
-            CronExpression.Parse(request.CronExpression);
-        }
-        catch (CronFormatException)
-        {
-            return OperationResult<NSFWBooruAutoPostConfigDto>.Bad(
-                "Некорректное CRON выражение",
+                cronError,
                 new NSFWBooruAutoPostConfigDto()
             );
         }
@@ -291,10 +286,12 @@ public class NsfwBooruAutoPostService(
                 cancellationToken
             );
 
+            ulong.TryParse(request.DiscordChannelId, out var discordChannelId);
+
             var now = DateTime.UtcNow;
             var entity = new NSFWBooruAutoPostConfig
             {
-                DiscordChannelId = request.DiscordChannelId,
+                DiscordChannelId = discordChannelId,
                 Tags = request.Tags.Trim(),
                 CronExpression = request.CronExpression.Trim(),
                 IsEnabled = true,
@@ -310,7 +307,7 @@ public class NsfwBooruAutoPostService(
                 new NSFWBooruAutoPostConfigDto
                 {
                     Id = entity.Id,
-                    DiscordChannelId = entity.DiscordChannelId,
+                    DiscordChannelId = entity.DiscordChannelId.ToString(),
                     Tags = entity.Tags,
                     CronExpression = entity.CronExpression,
                     IsEnabled = entity.IsEnabled,
@@ -347,14 +344,24 @@ public class NsfwBooruAutoPostService(
             );
         }
 
-        try
-        {
-            CronExpression.Parse(request.CronExpression);
-        }
-        catch (CronFormatException)
+        if (
+            BooruValidationHelper.ValidateAndParseDiscordChannelId(
+                request.DiscordChannelId,
+                out _
+            ) is { } channelError
+        )
         {
             return OperationResult<NSFWBooruAutoPostConfigDto>.Bad(
-                "Некорректное CRON выражение",
+                channelError,
+                new NSFWBooruAutoPostConfigDto()
+            );
+        }
+
+        var cronError = BooruValidationHelper.ValidateCronExpression(request.CronExpression);
+        if (cronError is not null)
+        {
+            return OperationResult<NSFWBooruAutoPostConfigDto>.Bad(
+                cronError,
                 new NSFWBooruAutoPostConfigDto()
             );
         }
@@ -380,7 +387,9 @@ public class NsfwBooruAutoPostService(
 
             if (entity is not null)
             {
-                entity.DiscordChannelId = request.DiscordChannelId;
+                ulong.TryParse(request.DiscordChannelId, out var discordChannelId);
+
+                entity.DiscordChannelId = discordChannelId;
                 entity.Tags = request.Tags.Trim();
                 entity.CronExpression = request.CronExpression.Trim();
                 entity.UpdatedAtUtc = DateTime.UtcNow;
@@ -391,7 +400,7 @@ public class NsfwBooruAutoPostService(
                     new NSFWBooruAutoPostConfigDto
                     {
                         Id = entity.Id,
-                        DiscordChannelId = entity.DiscordChannelId,
+                        DiscordChannelId = entity.DiscordChannelId.ToString(),
                         Tags = entity.Tags,
                         CronExpression = entity.CronExpression,
                         IsEnabled = entity.IsEnabled,
@@ -504,7 +513,7 @@ public class NsfwBooruAutoPostService(
                     new NSFWBooruAutoPostConfigDto
                     {
                         Id = entity.Id,
-                        DiscordChannelId = entity.DiscordChannelId,
+                        DiscordChannelId = entity.DiscordChannelId.ToString(),
                         Tags = entity.Tags,
                         CronExpression = entity.CronExpression,
                         IsEnabled = entity.IsEnabled,
@@ -609,9 +618,9 @@ public class NsfwBooruAutoPostService(
                             })
                             .Select(channel => new DiscordChannelOptionDto
                             {
-                                Id = channel.Id,
+                                Id = channel.Id.ToString(),
                                 Name = channel.Name,
-                                GuildId = guild.Id,
+                                GuildId = guild.Id.ToString(),
                                 GuildName = guild.Name,
                             })
                     )

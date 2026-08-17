@@ -222,7 +222,7 @@ public class DanbooruAutoPostController(
                 .Where(channel => channel.admin_rights is not null)
                 .Select(channel => new TelegramChannelOptionDto
                 {
-                    Id = -1000000000000 - channel.id,
+                    Id = (-1000000000000 - channel.id).ToString(),
                     Title = string.IsNullOrWhiteSpace(channel.title)
                         ? $"channel-{channel.id}"
                         : channel.title,

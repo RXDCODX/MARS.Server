@@ -1,5 +1,3 @@
-using System.Text.Json.Serialization;
-
 namespace MARS.Server.Services.DanbooruAutoPost.Entities;
 
 public class DanbooruAutoPostConfigDto
@@ -8,12 +6,9 @@ public class DanbooruAutoPostConfigDto
 
     public TargetPlatform TargetPlatform { get; set; }
 
-    [JsonNumberHandling(
-        JsonNumberHandling.AllowReadingFromString | JsonNumberHandling.WriteAsString
-    )]
-    public ulong DiscordChannelId { get; set; }
+    public string DiscordChannelId { get; set; } = "";
 
-    public long? TelegramChannelId { get; set; }
+    public string? TelegramChannelId { get; set; }
 
     public int TargetPostCount { get; set; }
 
@@ -23,7 +18,11 @@ public class DanbooruAutoPostConfigDto
 
     public string CronExpression { get; set; } = "";
 
-    public DateTime? ScheduledAtUtc { get; set; }
+    public int PlanningHorizonDays { get; set; }
+
+    public int PendingPostsCount { get; set; }
+
+    public DateTime? NextScheduledAtUtc { get; set; }
 
     public bool IsEnabled { get; set; }
 

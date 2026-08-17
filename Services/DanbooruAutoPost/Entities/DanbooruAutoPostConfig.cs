@@ -21,7 +21,7 @@ public class DanbooruAutoPostConfig
 
     public string CronExpression { get; set; } = "";
 
-    public DateTime? ScheduledAtUtc { get; set; }
+    public int PlanningHorizonDays { get; set; } = 60;
 
     public bool IsEnabled { get; set; } = true;
 

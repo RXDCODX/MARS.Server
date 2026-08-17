@@ -1,22 +1,12 @@
-using System;
-using System.Text.Json.Serialization;
+using MARS.Server.Services.BooruShared.Entities;
 
 namespace MARS.Server.Services.DanbooruAutoPost.Entities;
 
-public class DanbooruAutoPostCreateRequest
+public class DanbooruAutoPostCreateRequest : BooruAutoPostCreateRequestBase
 {
     public TargetPlatform TargetPlatform { get; set; }
 
-    [JsonNumberHandling(
-        JsonNumberHandling.AllowReadingFromString | JsonNumberHandling.WriteAsString
-    )]
-    public ulong DiscordChannelId { get; set; }
+    public string TelegramChannelId { get; set; } = "";
 
-    public long? TelegramChannelId { get; set; }
-
-    public string Tags { get; set; } = "";
-
-    public string CronExpression { get; set; } = "";
-
-    public DateTime? ScheduledAtUtc { get; set; }
+    public int PlanningHorizonDays { get; set; } = 60;
 }

@@ -1,6 +1,7 @@
 using Cronos;
 using MARS.Server.DataBaseContext;
 using MARS.Server.Services.BooruShared;
+using MARS.Server.Services.BooruShared.Entities;
 using MARS.Server.Services.DanbooruAutoPost.Entities;
 using MARS.Server.Services.Discord.Gateway;
 using MARS.Server.Services.Telegram.DiscordBridge;
@@ -60,13 +61,8 @@ public class DanbooruAutoPostService(
             {
                 var shouldPost = false;
 
-                if (config.ScheduledAtUtc.HasValue && config.ScheduledAtUtc.Value <= now)
-                {
-                    shouldPost = true;
-                }
-                else if (
+                if (
                     !string.IsNullOrWhiteSpace(config.CronExpression)
-                    && !config.ScheduledAtUtc.HasValue
                 )
                 {
                     var cron = CronExpression.Parse(config.CronExpression);
@@ -98,13 +94,6 @@ public class DanbooruAutoPostService(
                     if (entity is not null)
                     {
                         entity.LastExecutedAtUtc = now;
-
-                        if (config.ScheduledAtUtc.HasValue)
-                        {
-                            entity.ScheduledAtUtc = null;
-                            entity.IsEnabled = false;
-                        }
-
                         await updateContext.SaveChangesAsync(cancellationToken);
                     }
                 }
@@ -284,17 +273,35 @@ public class DanbooruAutoPostService(
                 return OperationResult.Bad("TelegramChannelId не указан");
             }
 
-            await using var stream = new MemoryStream(fileBytes);
-            var inputFile = InputFile.FromStream(stream, fileName);
+            try
+            {
+                await using var photoStream = new MemoryStream(fileBytes);
+                var photoInputFile = InputFile.FromStream(photoStream, fileName);
 
-            await telegramBotClient.SendPhoto(
-                chatId: config.TelegramChannelId.Value,
-                photo: inputFile,
-                caption: caption,
-                cancellationToken: cancellationToken
-            );
+                await telegramBotClient.SendPhoto(
+                    chatId: config.TelegramChannelId.Value,
+                    photo: photoInputFile,
+                    caption: caption,
+                    cancellationToken: cancellationToken
+                );
 
-            result = OperationResult.Ok("Изображение отправлено в Telegram");
+                result = OperationResult.Ok("Изображение отправлено в Telegram");
+            }
+            catch (Exception photoEx)
+                when (photoEx.Message.Contains("PHOTO_INVALID_DIMENSIONS"))
+            {
+                await using var docStream = new MemoryStream(fileBytes);
+                var docInputFile = InputFile.FromStream(docStream, fileName);
+
+                await telegramBotClient.SendDocument(
+                    chatId: config.TelegramChannelId.Value,
+                    document: docInputFile,
+                    caption: caption,
+                    cancellationToken: cancellationToken
+                );
+
+                result = OperationResult.Ok("Изображение отправлено в Telegram как документ");
+            }
         }
         catch (Exception ex)
         {
@@ -341,11 +348,11 @@ public class DanbooruAutoPostService(
                     TargetPostCount = c.TargetPostCount,
                     DanbooruPostId = c.DanbooruPostId,
                     TargetPlatform = c.TargetPlatform,
-                    DiscordChannelId = c.DiscordChannelId,
-                    TelegramChannelId = c.TelegramChannelId,
+                    DiscordChannelId = c.DiscordChannelId.ToString(),
+                    TelegramChannelId = c.TelegramChannelId.ToString(),
                     Tags = c.Tags,
                     CronExpression = c.CronExpression,
-                    ScheduledAtUtc = c.ScheduledAtUtc,
+                    PlanningHorizonDays = c.PlanningHorizonDays,
                     IsEnabled = c.IsEnabled,
                     LastExecutedAtUtc = c.LastExecutedAtUtc,
                     CreatedAtUtc = c.CreatedAtUtc,
@@ -402,18 +409,30 @@ public class DanbooruAutoPostService(
             );
 
             var now = DateTime.UtcNow;
+
+            ulong discordChannelId = 0;
+            if (request.TargetPlatform == TargetPlatform.Discord)
+            {
+                ulong.TryParse(request.DiscordChannelId, out discordChannelId);
+            }
+
+            long? telegramChannelId = null;
+            if (
+                request.TargetPlatform == TargetPlatform.Telegram
+                && long.TryParse(request.TelegramChannelId, out var parsedTelegramId)
+            )
+            {
+                telegramChannelId = parsedTelegramId;
+            }
+
             var entity = new DanbooruAutoPostConfig
             {
                 TargetPlatform = request.TargetPlatform,
-                DiscordChannelId =
-                    request.TargetPlatform == TargetPlatform.Discord ? request.DiscordChannelId : 0,
-                TelegramChannelId =
-                    request.TargetPlatform == TargetPlatform.Telegram
-                        ? request.TelegramChannelId
-                        : null,
+                DiscordChannelId = discordChannelId,
+                TelegramChannelId = telegramChannelId,
                 Tags = request.Tags.Trim(),
                 CronExpression = request.CronExpression?.Trim() ?? "",
-                ScheduledAtUtc = request.ScheduledAtUtc,
+                PlanningHorizonDays = request.PlanningHorizonDays,
                 IsEnabled = true,
                 CreatedAtUtc = now,
                 UpdatedAtUtc = now,
@@ -457,31 +476,42 @@ public class DanbooruAutoPostService(
             );
         }
 
-        if (
-            request
-            is { TargetPlatform: TargetPlatform.Discord, DiscordChannelId: 0 }
-                or { TargetPlatform: TargetPlatform.Telegram, TelegramChannelId: null or 0 }
-        )
+        if (request.TargetPlatform == TargetPlatform.Discord)
         {
-            return OperationResult<DanbooruAutoPostConfigDto>.Bad(
-                "Канал не указан для выбранной платформы",
-                new DanbooruAutoPostConfigDto()
+            var error = BooruValidationHelper.ValidateAndParseDiscordChannelId(
+                request.DiscordChannelId,
+                out _
             );
-        }
-
-        if (!string.IsNullOrWhiteSpace(request.CronExpression))
-        {
-            try
-            {
-                CronExpression.Parse(request.CronExpression);
-            }
-            catch (CronFormatException)
+            if (error is not null)
             {
                 return OperationResult<DanbooruAutoPostConfigDto>.Bad(
-                    "Некорректное CRON выражение",
+                    error,
                     new DanbooruAutoPostConfigDto()
                 );
             }
+        }
+        else if (request.TargetPlatform == TargetPlatform.Telegram)
+        {
+            var error = BooruValidationHelper.ValidateAndParseTelegramChannelId(
+                request.TelegramChannelId,
+                out _
+            );
+            if (error is not null)
+            {
+                return OperationResult<DanbooruAutoPostConfigDto>.Bad(
+                    error,
+                    new DanbooruAutoPostConfigDto()
+                );
+            }
+        }
+
+        var cronError = BooruValidationHelper.ValidateCronExpression(request.CronExpression);
+        if (cronError is not null)
+        {
+            return OperationResult<DanbooruAutoPostConfigDto>.Bad(
+                cronError,
+                new DanbooruAutoPostConfigDto()
+            );
         }
 
         var tagValidationError = TagValidator.GetValidationError(request.Tags);
@@ -505,16 +535,27 @@ public class DanbooruAutoPostService(
 
             if (entity is not null)
             {
-                entity.TargetPlatform = request.TargetPlatform;
-                entity.DiscordChannelId =
-                    request.TargetPlatform == TargetPlatform.Discord ? request.DiscordChannelId : 0;
-                entity.TelegramChannelId =
+                ulong discordChannelId = 0;
+                if (request.TargetPlatform == TargetPlatform.Discord)
+                {
+                    ulong.TryParse(request.DiscordChannelId, out discordChannelId);
+                }
+
+                long? telegramChannelId = null;
+                if (
                     request.TargetPlatform == TargetPlatform.Telegram
-                        ? request.TelegramChannelId
-                        : null;
+                    && long.TryParse(request.TelegramChannelId, out var parsedTelegramId)
+                )
+                {
+                    telegramChannelId = parsedTelegramId;
+                }
+
+                entity.TargetPlatform = request.TargetPlatform;
+                entity.DiscordChannelId = discordChannelId;
+                entity.TelegramChannelId = telegramChannelId;
                 entity.Tags = request.Tags.Trim();
                 entity.CronExpression = request.CronExpression?.Trim() ?? "";
-                entity.ScheduledAtUtc = request.ScheduledAtUtc;
+                entity.PlanningHorizonDays = request.PlanningHorizonDays;
                 entity.UpdatedAtUtc = DateTime.UtcNow;
                 await dbContext.SaveChangesAsync(cancellationToken);
 
@@ -719,9 +760,9 @@ public class DanbooruAutoPostService(
                             })
                             .Select(channel => new DiscordChannelOptionDto
                             {
-                                Id = channel.Id,
+                                Id = channel.Id.ToString(),
                                 Name = channel.Name,
-                                GuildId = guild.Id,
+                                GuildId = guild.Id.ToString(),
                                 GuildName = guild.Name,
                             })
                     )
@@ -757,42 +798,35 @@ public class DanbooruAutoPostService(
 
     private static string? ValidateCreateRequest(DanbooruAutoPostCreateRequest request)
     {
-        if (request.TargetPlatform == TargetPlatform.Discord && request.DiscordChannelId == 0)
+        string? result;
+
+        if (request.TargetPlatform == TargetPlatform.Discord)
         {
-            return "DiscordChannelId обязателен для Discord";
+            result = BooruValidationHelper.ValidateAndParseDiscordChannelId(
+                request.DiscordChannelId,
+                out _
+            );
+        }
+        else if (request.TargetPlatform == TargetPlatform.Telegram)
+        {
+            result = BooruValidationHelper.ValidateAndParseTelegramChannelId(
+                request.TelegramChannelId,
+                out _
+            );
+        }
+        else
+        {
+            result = null;
         }
 
-        if (
-            request.TargetPlatform == TargetPlatform.Telegram
-            && request.TelegramChannelId is null or 0
-        )
+        if (result is not null)
         {
-            return "TelegramChannelId обязателен для Telegram";
+            return result;
         }
 
-        if (request.ScheduledAtUtc.HasValue && request.ScheduledAtUtc.Value <= DateTime.UtcNow)
-        {
-            return "Дата отложенной публикации должна быть в будущем";
-        }
+        result = BooruValidationHelper.ValidateCronExpression(request.CronExpression);
 
-        if (!request.ScheduledAtUtc.HasValue && string.IsNullOrWhiteSpace(request.CronExpression))
-        {
-            return "Укажите CRON выражение или дату отложенной публикации";
-        }
-
-        if (!string.IsNullOrWhiteSpace(request.CronExpression))
-        {
-            try
-            {
-                CronExpression.Parse(request.CronExpression);
-            }
-            catch (CronFormatException)
-            {
-                return "Некорректное CRON выражение";
-            }
-        }
-
-        return null;
+        return result;
     }
 
     private static DanbooruAutoPostConfigDto MapToDto(DanbooruAutoPostConfig entity)
@@ -803,11 +837,11 @@ public class DanbooruAutoPostService(
             TargetPostCount = entity.TargetPostCount,
             DanbooruPostId = entity.DanbooruPostId,
             TargetPlatform = entity.TargetPlatform,
-            DiscordChannelId = entity.DiscordChannelId,
-            TelegramChannelId = entity.TelegramChannelId,
+            DiscordChannelId = entity.DiscordChannelId.ToString(),
+            TelegramChannelId = entity.TelegramChannelId?.ToString(),
             Tags = entity.Tags,
             CronExpression = entity.CronExpression,
-            ScheduledAtUtc = entity.ScheduledAtUtc,
+            PlanningHorizonDays = entity.PlanningHorizonDays,
             IsEnabled = entity.IsEnabled,
             LastExecutedAtUtc = entity.LastExecutedAtUtc,
             CreatedAtUtc = entity.CreatedAtUtc,
