@@ -82,8 +82,19 @@ def main():
     trx_info = ""
     if trx_path and os.path.isfile(trx_path):
         trx_info = parse_trx(trx_path)
+    elif trx_path:
+        # TRX не найден — возможно, тесты не запускались (ошибка сборки/restore)
+        results_dir = os.path.dirname(trx_path)
+        if os.path.isdir(results_dir):
+            files = os.listdir(results_dir)
+            if files:
+                trx_info = f"TRX не найден ({trx_path}). Файлы в {results_dir}: {', '.join(files[:5])}"
+            else:
+                trx_info = f"Тесты не запускались — {results_dir} пуст (вероятна ошибка сборки)"
+        else:
+            trx_info = f"Тесты не запускались — {results_dir} не создан (вероятна ошибка сборки)"
     else:
-        trx_info = f"TRX не найден: {trx_path}"
+        trx_info = "Путь к TRX не указан"
 
     branch = os.environ.get("GITHUB_REF_NAME", "?")
     sha = os.environ.get("GITHUB_SHA", "?")[:8]
