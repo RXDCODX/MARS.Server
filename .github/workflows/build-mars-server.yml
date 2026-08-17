@@ -1,4 +1,4 @@
-name: Build MARS.Server (server-only)
+name: Build MARS
 
 on:
   push:
@@ -14,7 +14,7 @@ env:
 
 jobs:
   build:
-    name: Build
+    name: Build Backend
     runs-on: ubuntu-latest
     steps:
       - name: Checkout MARS.Server
@@ -70,4 +70,92 @@ jobs:
         with:
           name: backend-publish
           path: publish-output/
+          retention-days: 7
+
+      # --- Генерация OpenAPI-схем ---
+
+      - name: Generate OpenAPI schemas
+        run: |
+          mkdir -p mars.client/api
+          dotnet publish-output/MARS.Server.dll --generate-openapi || true
+          echo "=== Generated swagger files ==="
+          ls -la mars.client/api/ 2>/dev/null || echo "No swagger files generated"
+
+      - name: Upload swagger schemas
+        uses: actions/upload-artifact@v4
+        with:
+          name: swagger-schemas
+          path: |
+            mars.client/api/swagger_api.json
+            mars.client/api/swagger_hubs.json
+          retention-days: 7
+
+  build-frontend:
+    name: Build Frontend
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NODE_VERSION: "22.x"
+      NODE_OPTIONS: "--max-old-space-size=4096"
+    steps:
+      - name: Checkout monorepo
+        uses: actions/checkout@v4
+        with:
+          repository: RXDCODX/MARS
+          path: _monorepo
+          token: ${{ secrets.MONOREPO_PAT }}
+
+      - name: Init mars.client submodule
+        run: |
+          cd _monorepo
+          git submodule update --init MARS.Projects/mars.client
+
+      - name: Enable yarn via corepack
+        run: corepack enable && corepack prepare yarn@4.14.1 --activate
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "yarn"
+          cache-dependency-path: _monorepo/MARS.Projects/mars.client/yarn.lock
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+        working-directory: _monorepo/MARS.Projects/mars.client
+
+      # --- Проверка актуальности сгенерированных API-клиентов ---
+
+      - name: Download swagger schemas
+        uses: actions/download-artifact@v4
+        with:
+          name: swagger-schemas
+          path: _monorepo/MARS.Projects/mars.client/api/
+          run-id: ${{ github.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify API clients are up-to-date
+        run: |
+          cd _monorepo/MARS.Projects/mars.client
+          cp -r src/shared/api src/shared/api-checked-in
+          yarn build:api
+          if ! diff -rq src/shared/api src/shared/api-checked-in > /dev/null 2>&1; then
+            echo "❌ Сгенерированные API-файлы отличаются от закоммиченных!"
+            echo "Запустите 'yarn build:api' локально и закоммитьте изменения."
+            diff -ru src/shared/api-checked-in src/shared/api || true
+            exit 1
+          fi
+          echo "✅ API-файлы актуальны"
+          rm -rf src/shared/api-checked-in
+
+      - name: Build frontend
+        run: yarn build
+        working-directory: _monorepo/MARS.Projects/mars.client
+
+      - name: Upload dist artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: _monorepo/MARS.Projects/mars.client/dist/
           retention-days: 7
