@@ -4,14 +4,11 @@ using MARS.Server.Services.BooruShared;
 using MARS.Server.Services.BooruShared.Entities;
 using MARS.Server.Services.DanbooruAutoPost.Entities;
 using MARS.Server.Services.Discord.Gateway;
-using MARS.Server.Services.Telegram.DiscordBridge;
 using MARS.Server.Services.Telegram.DiscordBridge.Entitys;
 using MARS.Server.Services.Twitch.Rewards._27_RandomArt;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Telegram.Bot;
-using Telegram.Bot.Types;
 
 namespace MARS.Server.Services.DanbooruAutoPost;
 
@@ -19,9 +16,10 @@ public class DanbooruAutoPostService(
     ILogger<DanbooruAutoPostService> logger,
     IDbContextFactory<AppDbContext> dbContextFactory,
     DanbooruRandomPostService danbooruService,
+    IDanbooruDiscordPoster discordPoster,
+    IDanbooruTelegramPoster telegramPoster,
     IDiscordGatewayService discordGatewayService,
-    IDeduplicationService deduplicationService,
-    ITelegramBotClient telegramBotClient
+    IDeduplicationService deduplicationService
 ) : BackgroundService, IDanbooruAutoPostService
 {
     private const string Source = "Danbooru";
@@ -54,7 +52,10 @@ public class DanbooruAutoPostService(
             .DanbooruScheduledPosts.AsNoTracking()
             .Include(p => p.Config)
             .Where(p =>
-                p.Status == ScheduledPostStatus.Pending && p.ScheduledAtUtc <= now
+                p.Status == ScheduledPostStatus.Pending
+                && p.ScheduledAtUtc <= now
+                && p.Config != null
+                && p.Config.TargetPlatform == TargetPlatform.Discord
             )
             .OrderBy(p => p.ScheduledAtUtc)
             .ToListAsync(cancellationToken);
@@ -194,7 +195,9 @@ public class DanbooruAutoPostService(
         CancellationToken cancellationToken
     )
     {
-        var channelId = GetChannelId(config);
+        var channelId = config.TargetPlatform == TargetPlatform.Telegram
+            ? (ulong)Math.Abs(config.TelegramChannelId ?? 0)
+            : config.DiscordChannelId;
 
         for (var attempt = 0; attempt <= MaxDedupRetries; attempt++)
         {
@@ -276,26 +279,21 @@ public class DanbooruAutoPostService(
 
             if (config.TargetPlatform == TargetPlatform.Telegram)
             {
-                sendResult = await PostToTelegramAsync(
-                    config,
+                sendResult = await telegramPoster.PostAsync(
+                    config.TelegramChannelId!.Value,
                     fileBytes,
                     fileName,
-                    null,
                     cancellationToken
                 );
             }
             else
             {
-                await using var stream = new MemoryStream(fileBytes);
-
-                var discordResult = await discordGatewayService.SendFileAsync(
+                sendResult = await discordPoster.PostAsync(
                     config.DiscordChannelId,
-                    stream,
+                    fileBytes,
                     fileName,
-                    null,
                     cancellationToken
                 );
-                sendResult = discordResult;
             }
 
             if (sendResult.Success)
@@ -325,73 +323,6 @@ public class DanbooruAutoPostService(
             MaxDedupRetries,
             config.Id
         );
-    }
-
-    private async Task<OperationResult> PostToTelegramAsync(
-        DanbooruAutoPostConfig config,
-        byte[] fileBytes,
-        string fileName,
-        string? caption,
-        CancellationToken cancellationToken
-    )
-    {
-        var result = OperationResult.Bad("Не удалось отправить в Telegram");
-
-        try
-        {
-            if (config.TelegramChannelId is null or 0)
-            {
-                return OperationResult.Bad("TelegramChannelId не указан");
-            }
-
-            try
-            {
-                await using var photoStream = new MemoryStream(fileBytes);
-                var photoInputFile = InputFile.FromStream(photoStream, fileName);
-
-                await telegramBotClient.SendPhoto(
-                    chatId: config.TelegramChannelId.Value,
-                    photo: photoInputFile,
-                    caption: caption,
-                    cancellationToken: cancellationToken
-                );
-
-                result = OperationResult.Ok("Изображение отправлено в Telegram");
-            }
-            catch (Exception photoEx)
-                when (photoEx.Message.Contains("PHOTO_INVALID_DIMENSIONS"))
-            {
-                await using var docStream = new MemoryStream(fileBytes);
-                var docInputFile = InputFile.FromStream(docStream, fileName);
-
-                await telegramBotClient.SendDocument(
-                    chatId: config.TelegramChannelId.Value,
-                    document: docInputFile,
-                    caption: caption,
-                    cancellationToken: cancellationToken
-                );
-
-                result = OperationResult.Ok("Изображение отправлено в Telegram как документ");
-            }
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(
-                ex,
-                "Ошибка отправки в Telegram канал {ChannelId}",
-                config.TelegramChannelId
-            );
-            result = OperationResult.Bad($"Ошибка Telegram: {ex.Message}");
-        }
-
-        return result;
-    }
-
-    private static ulong GetChannelId(DanbooruAutoPostConfig config)
-    {
-        return config.TargetPlatform == TargetPlatform.Telegram
-            ? (ulong)Math.Abs(config.TelegramChannelId ?? 0)
-            : config.DiscordChannelId;
     }
 
     public async Task<OperationResult<List<DanbooruAutoPostConfigDto>>> GetAllAsync(
@@ -797,40 +728,25 @@ public class DanbooruAutoPostService(
                 nextOccurrence = cron.GetNextOccurrence(nextOccurrence.Value);
             }
 
-            var pendingCount = await dbContext
-                .DanbooruScheduledPosts.AsNoTracking()
-                .CountAsync(
-                    p => p.ConfigId == id && p.Status == ScheduledPostStatus.Pending,
+            if (config.TargetPlatform == TargetPlatform.Telegram)
+            {
+                result = await ScheduleTelegramPostsAsync(
+                    config,
+                    scheduledTimes,
                     cancellationToken
                 );
-
-            if (pendingCount > 0)
-            {
-                result = OperationResult.Ok(
-                    $"Уже запланировано {pendingCount} постов. Дождитесь выполнения или отмените текущие."
-                );
-                return result;
             }
-
-            var newPosts = scheduledTimes
-                .Select(
-                    time =>
-                        new DanbooruScheduledPost
-                        {
-                            ConfigId = id,
-                            ScheduledAtUtc = time,
-                            Status = ScheduledPostStatus.Pending,
-                            CreatedAtUtc = now,
-                        }
-                )
-                .ToList();
-
-            dbContext.DanbooruScheduledPosts.AddRange(newPosts);
-            await dbContext.SaveChangesAsync(cancellationToken);
-
-            result = OperationResult.Ok(
-                $"Запланировано {newPosts.Count} постов до {horizonEnd:dd.MM.yyyy HH:mm}"
-            );
+            else
+            {
+                result = await ScheduleDiscordPostsAsync(
+                    dbContext,
+                    config,
+                    scheduledTimes,
+                    now,
+                    horizonEnd,
+                    cancellationToken
+                );
+            }
         }
         catch (Exception ex)
         {
@@ -839,6 +755,133 @@ public class DanbooruAutoPostService(
         }
 
         return result;
+    }
+
+    private async Task<OperationResult> ScheduleTelegramPostsAsync(
+        DanbooruAutoPostConfig config,
+        List<DateTime> scheduledTimes,
+        CancellationToken cancellationToken
+    )
+    {
+        var scheduledCount = 0;
+
+        foreach (var time in scheduledTimes)
+        {
+            try
+            {
+                DanbooruPost? post;
+
+                if (config.DanbooruPostId.HasValue)
+                {
+                    post = await danbooruService.GetPostByIdAsync(
+                        config.DanbooruPostId.Value
+                    );
+                }
+                else
+                {
+                    var posts = await danbooruService.GetRandomPostAsync(config.Tags, 1);
+                    post = posts is { Length: > 0 } ? posts[0] : null;
+                }
+
+                if (post is null)
+                {
+                    logger.LogWarning(
+                        "Не найдено постов по тегам '{Tags}' для конфига {ConfigId}",
+                        config.Tags,
+                        config.Id
+                    );
+                    continue;
+                }
+
+                var fileUrl = post.FileUrl ?? post.LargeFileUrl;
+                if (string.IsNullOrWhiteSpace(fileUrl))
+                {
+                    continue;
+                }
+
+                var (fileBytes, fileName) = await danbooruService.DownloadFileBytesAsync(
+                    fileUrl,
+                    cancellationToken
+                );
+
+                var sendResult = await telegramPoster.SchedulePostAsync(
+                    config.TelegramChannelId!.Value,
+                    fileBytes,
+                    fileName,
+                    time,
+                    cancellationToken
+                );
+
+                if (sendResult.Success)
+                {
+                    scheduledCount++;
+                }
+                else
+                {
+                    logger.LogWarning(
+                        "Не удалось запланировать пост в Telegram на {Time}: {Error}",
+                        time,
+                        sendResult.Message
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(
+                    ex,
+                    "Ошибка планирования поста в Telegram на {Time}",
+                    time
+                );
+            }
+        }
+
+        return OperationResult.Ok(
+            $"Запланировано {scheduledCount} из {scheduledTimes.Count} постов через Telegram"
+        );
+    }
+
+    private async Task<OperationResult> ScheduleDiscordPostsAsync(
+        AppDbContext dbContext,
+        DanbooruAutoPostConfig config,
+        List<DateTime> scheduledTimes,
+        DateTime now,
+        DateTime horizonEnd,
+        CancellationToken cancellationToken
+    )
+    {
+        var pendingCount = await dbContext
+            .DanbooruScheduledPosts.AsNoTracking()
+            .CountAsync(
+                p => p.ConfigId == config.Id && p.Status == ScheduledPostStatus.Pending,
+                cancellationToken
+            );
+
+        if (pendingCount > 0)
+        {
+            return OperationResult.Ok(
+                $"Уже запланировано {pendingCount} постов. Дождитесь выполнения или отмените текущие."
+            );
+        }
+
+        var newPosts = scheduledTimes
+            .Select(
+                time =>
+                    new DanbooruScheduledPost
+                    {
+                        ConfigId = config.Id,
+                        ScheduledAtUtc = time,
+                        Status = ScheduledPostStatus.Pending,
+                        CreatedAtUtc = now,
+                    }
+            )
+            .ToList();
+
+        dbContext.DanbooruScheduledPosts.AddRange(newPosts);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        return OperationResult.Ok(
+            $"Запланировано {newPosts.Count} постов до {horizonEnd:dd.MM.yyyy HH:mm}"
+        );
     }
 
     public async Task<OperationResult<List<DiscordChannelOptionDto>>> GetDiscordChannelsAsync(

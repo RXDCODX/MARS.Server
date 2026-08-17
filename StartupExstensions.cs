@@ -629,6 +629,8 @@ public static class StartupEstensions
         internal IServiceCollection AddBooruServices()
         {
             services.AddSingleton<DanbooruRandomPostService>();
+            services.AddSingleton<IDanbooruDiscordPoster, DanbooruDiscordPoster>();
+            services.AddSingleton<IDanbooruTelegramPoster, DanbooruTelegramPoster>();
             services.AddSingleton<DanbooruAutoPostService>();
             services.AddSingleton<IDanbooruAutoPostService>(sp =>
                 sp.GetRequiredService<DanbooruAutoPostService>()
