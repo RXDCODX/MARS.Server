@@ -48,55 +48,126 @@ public class DanbooruAutoPostService(
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
 
-        var configs = await dbContext
-            .DanbooruAutoPostConfigs.AsNoTracking()
-            .Where(c => c.IsEnabled)
-            .ToListAsync(cancellationToken);
-
         var now = DateTime.UtcNow;
 
-        foreach (var config in configs)
+        var duePosts = await dbContext
+            .DanbooruScheduledPosts.AsNoTracking()
+            .Include(p => p.Config)
+            .Where(p =>
+                p.Status == ScheduledPostStatus.Pending && p.ScheduledAtUtc <= now
+            )
+            .OrderBy(p => p.ScheduledAtUtc)
+            .ToListAsync(cancellationToken);
+
+        foreach (var scheduledPost in duePosts)
         {
             try
             {
-                var shouldPost = false;
-
-                if (
-                    !string.IsNullOrWhiteSpace(config.CronExpression)
-                )
+                var config = scheduledPost.Config;
+                if (config is null || !config.IsEnabled)
                 {
-                    var cron = CronExpression.Parse(config.CronExpression);
-                    var lastExecuted = config.LastExecutedAtUtc.HasValue
-                        ? DateTime.SpecifyKind(config.LastExecutedAtUtc.Value, DateTimeKind.Utc)
-                        : (DateTime?)null;
-
-                    var nextOccurrence = lastExecuted.HasValue
-                        ? cron.GetNextOccurrence(lastExecuted.Value)
-                        : cron.GetNextOccurrence(now.AddMinutes(-1));
-
-                    if (nextOccurrence.HasValue && nextOccurrence.Value <= now)
-                    {
-                        shouldPost = true;
-                    }
+                    scheduledPost.Status = ScheduledPostStatus.Cancelled;
+                    continue;
                 }
 
-                if (shouldPost)
-                {
-                    await PostImageAsync(config, cancellationToken);
+                await PostImageAsync(config, cancellationToken);
 
-                    await using var updateContext = await dbContextFactory.CreateDbContextAsync(
-                        cancellationToken
-                    );
-                    var entity = await updateContext.DanbooruAutoPostConfigs.FindAsync(
-                        [config.Id],
-                        cancellationToken
-                    );
-                    if (entity is not null)
-                    {
-                        entity.LastExecutedAtUtc = now;
-                        await updateContext.SaveChangesAsync(cancellationToken);
-                    }
+                var entity = await dbContext.DanbooruScheduledPosts.FindAsync(
+                    [scheduledPost.Id],
+                    cancellationToken
+                );
+                if (entity is not null)
+                {
+                    entity.Status = ScheduledPostStatus.Posted;
+                    entity.PostedAtUtc = DateTime.UtcNow;
+                    await dbContext.SaveChangesAsync(cancellationToken);
                 }
+
+                await using var updateContext = await dbContextFactory.CreateDbContextAsync(
+                    cancellationToken
+                );
+                var configEntity = await updateContext.DanbooruAutoPostConfigs.FindAsync(
+                    [config.Id],
+                    cancellationToken
+                );
+                if (configEntity is not null)
+                {
+                    configEntity.LastExecutedAtUtc = DateTime.UtcNow;
+                    await updateContext.SaveChangesAsync(cancellationToken);
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(
+                    ex,
+                    "Ошибка отправки изображения для запланированного поста {PostId}",
+                    scheduledPost.Id
+                );
+
+                await using var errorContext = await dbContextFactory.CreateDbContextAsync(
+                    cancellationToken
+                );
+                var errorEntity = await errorContext.DanbooruScheduledPosts.FindAsync(
+                    [scheduledPost.Id],
+                    cancellationToken
+                );
+                if (errorEntity is not null)
+                {
+                    errorEntity.Status = ScheduledPostStatus.Failed;
+                    errorEntity.ErrorMessage = ex.Message;
+                    await errorContext.SaveChangesAsync(cancellationToken);
+                }
+            }
+        }
+
+        var enabledConfigs = await dbContext
+            .DanbooruAutoPostConfigs.AsNoTracking()
+            .Where(c => c.IsEnabled && !string.IsNullOrWhiteSpace(c.CronExpression))
+            .ToListAsync(cancellationToken);
+
+        foreach (var config in enabledConfigs)
+        {
+            try
+            {
+                var pendingCount = await dbContext
+                    .DanbooruScheduledPosts.AsNoTracking()
+                    .CountAsync(
+                        p => p.ConfigId == config.Id && p.Status == ScheduledPostStatus.Pending,
+                        cancellationToken
+                    );
+
+                if (pendingCount > 0)
+                {
+                    continue;
+                }
+
+                var cron = CronExpression.Parse(config.CronExpression);
+                var horizonEnd = now.AddDays(config.PlanningHorizonDays);
+
+                var scheduledTimes = new List<DateTime>();
+                var nextOccurrence = cron.GetNextOccurrence(now.AddMinutes(-1));
+
+                while (nextOccurrence.HasValue && nextOccurrence.Value <= horizonEnd)
+                {
+                    scheduledTimes.Add(nextOccurrence.Value);
+                    nextOccurrence = cron.GetNextOccurrence(nextOccurrence.Value);
+                }
+
+                var newPosts = scheduledTimes
+                    .Select(
+                        time =>
+                            new DanbooruScheduledPost
+                            {
+                                ConfigId = config.Id,
+                                ScheduledAtUtc = time,
+                                Status = ScheduledPostStatus.Pending,
+                                CreatedAtUtc = now,
+                            }
+                    )
+                    .ToList();
+
+                dbContext.DanbooruScheduledPosts.AddRange(newPosts);
+                await dbContext.SaveChangesAsync(cancellationToken);
             }
             catch (CronFormatException ex)
             {
@@ -111,7 +182,7 @@ public class DanbooruAutoPostService(
             {
                 logger.LogError(
                     ex,
-                    "Ошибка отправки изображения для конфига {ConfigId}",
+                    "Ошибка генерации расписания для конфига {ConfigId}",
                     config.Id
                 );
             }
@@ -701,26 +772,65 @@ public class DanbooruAutoPostService(
                 .DanbooruAutoPostConfigs.AsNoTracking()
                 .FirstOrDefaultAsync(c => c.Id == id, cancellationToken);
 
-            if (config is not null)
-            {
-                await PostImageAsync(config, cancellationToken);
-
-                var entity = await dbContext.DanbooruAutoPostConfigs.FindAsync(
-                    [id],
-                    cancellationToken
-                );
-                if (entity is not null)
-                {
-                    entity.LastExecutedAtUtc = DateTime.UtcNow;
-                    await dbContext.SaveChangesAsync(cancellationToken);
-                }
-
-                result = OperationResult.Ok("Изображение отправлено");
-            }
-            else
+            if (config is null)
             {
                 result = OperationResult.Bad("Конфигурация не найдена");
+                return result;
             }
+
+            if (string.IsNullOrWhiteSpace(config.CronExpression))
+            {
+                result = OperationResult.Bad("CRON выражение не указано");
+                return result;
+            }
+
+            var cron = CronExpression.Parse(config.CronExpression);
+            var now = DateTime.UtcNow;
+            var horizonEnd = now.AddDays(config.PlanningHorizonDays);
+
+            var scheduledTimes = new List<DateTime>();
+            var nextOccurrence = cron.GetNextOccurrence(now.AddMinutes(-1));
+
+            while (nextOccurrence.HasValue && nextOccurrence.Value <= horizonEnd)
+            {
+                scheduledTimes.Add(nextOccurrence.Value);
+                nextOccurrence = cron.GetNextOccurrence(nextOccurrence.Value);
+            }
+
+            var pendingCount = await dbContext
+                .DanbooruScheduledPosts.AsNoTracking()
+                .CountAsync(
+                    p => p.ConfigId == id && p.Status == ScheduledPostStatus.Pending,
+                    cancellationToken
+                );
+
+            if (pendingCount > 0)
+            {
+                result = OperationResult.Ok(
+                    $"Уже запланировано {pendingCount} постов. Дождитесь выполнения или отмените текущие."
+                );
+                return result;
+            }
+
+            var newPosts = scheduledTimes
+                .Select(
+                    time =>
+                        new DanbooruScheduledPost
+                        {
+                            ConfigId = id,
+                            ScheduledAtUtc = time,
+                            Status = ScheduledPostStatus.Pending,
+                            CreatedAtUtc = now,
+                        }
+                )
+                .ToList();
+
+            dbContext.DanbooruScheduledPosts.AddRange(newPosts);
+            await dbContext.SaveChangesAsync(cancellationToken);
+
+            result = OperationResult.Ok(
+                $"Запланировано {newPosts.Count} постов до {horizonEnd:dd.MM.yyyy HH:mm}"
+            );
         }
         catch (Exception ex)
         {

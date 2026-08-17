@@ -71,6 +71,7 @@ public partial class AppDbContext(DbContextOptions<AppDbContext> options) : DbCo
         null!;
     public DbSet<TelegramDiscordChannelState> TelegramDiscordChannelStates { get; set; } = null!;
     public DbSet<DanbooruAutoPostConfig> DanbooruAutoPostConfigs { get; set; } = null!;
+    public DbSet<DanbooruScheduledPost> DanbooruScheduledPosts { get; set; } = null!;
     public DbSet<NSFWBooruAutoPostConfig> NSFWBooruAutoPostConfigs { get; set; } = null!;
     public DbSet<PostedImageRecord> PostedImageRecords { get; set; } = null!;
 
