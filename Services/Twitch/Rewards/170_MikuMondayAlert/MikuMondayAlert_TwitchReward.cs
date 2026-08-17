@@ -74,6 +74,8 @@ public class MikuMondayAlert_TwitchReward(
     public override Func<bool> IsRewardEnabled { get; set; } =
         () => DateTime.Now.DayOfWeek == DayOfWeek.Monday;
 
+    protected override bool IsRewardActive => IsRewardEnabled();
+
     public override async Task StartAsync(CancellationToken cancellationToken)
     {
         lifetime.ApplicationStarted.Register(() =>
