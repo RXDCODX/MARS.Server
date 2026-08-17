@@ -55,6 +55,7 @@ jobs:
           cp _monorepo/.editorconfig .editorconfig 2>/dev/null || true
           cp _monorepo/appsettings.Production.json appsettings.Production.json
           cp _monorepo/appsettings.json appsettings.json 2>/dev/null || true
+          cp _monorepo/coverlet.runsettings coverlet.runsettings
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -72,7 +73,7 @@ jobs:
       - name: Restore
         run: dotnet restore MARS.Projects/MARS.Tests/MARS.Tests.csproj -p:UseLocalYoutubeReExplode=false
 
-      - name: Run tests
+      - name: Run tests with coverage
         run: |
           dotnet test MARS.Projects/MARS.Tests/MARS.Tests.csproj \
             --configuration Release \
@@ -81,6 +82,8 @@ jobs:
             -p:UseLocalYoutubeReExplode=false \
             -p:TreatWarningsAsErrors=false \
             --logger "trx;LogFileName=mars-tests.trx" \
+            --collect:"XPlat Code Coverage" \
+            --settings coverlet.runsettings \
             --results-directory TestResults
 
       - name: Upload test results
@@ -90,6 +93,32 @@ jobs:
           name: mars-tests-results
           path: TestResults/
           retention-days: 30
+
+      - name: Find coverage report
+        id: coverage
+        run: |
+          COVERAGE_XML=$(find TestResults -name "coverage.cobertura.xml" | head -1)
+          echo "xml_path=$COVERAGE_XML" >> "$GITHUB_OUTPUT"
+          echo "Found coverage report: $COVERAGE_XML"
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: TestResults/**/coverage.cobertura.xml
+          retention-days: 30
+
+      - name: Notify coverage report
+        if: success() && steps.coverage.outputs.xml_path != ''
+        run: |
+          export BOT_TOKEN=$(jq -r '.AppSettings.Telegram.BotConfiguration.BotToken' appsettings.Production.json)
+          export ADMIN_ID=$(jq -r '.AppSettings.Telegram.AdminIdsArray[0]' appsettings.Production.json)
+          python3 MARS.Projects/MARS.Server/.github/notify-telegram.py \
+            "MARS.Tests Coverage" \
+            --coverage \
+            "${{ steps.coverage.outputs.xml_path }}" \
+            50 75
 
       - name: Notify Telegram on failure
         if: failure()
