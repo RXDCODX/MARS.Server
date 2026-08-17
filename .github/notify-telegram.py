@@ -17,19 +17,39 @@ def short_class_name(full_name):
     return full_name
 
 
-def summarize_error(msg, max_len=120):
+def summarize_error(msg, max_len=200):
     """Extract the core assertion failure or exception, skip stack traces."""
     if not msg:
         return ""
-    # Take first line only
-    first = msg.split("\n")[0].strip()
-    # Remove "Assert.Xxx() Failure:" prefix noise, keep the actual mismatch
-    first = re.sub(r"^Assert\.\w+\(\)\s*Failure:\s*", "", first)
-    # Remove Moq boilerplate
-    first = re.sub(r"^Expected invocation.*but was \d+ times:\s*", "Moq: ", first)
-    if len(first) > max_len:
-        first = first[:max_len] + "…"
-    return first
+    lines = [l.strip() for l in msg.split("\n") if l.strip()]
+
+    # Moq: первая строка "Moq.MockException :" бесполезна, берём фактическую
+    # ошибку — обычно 2-3 строки (Expected / No setup / Performed invocations)
+    if lines and "Moq.MockException" in lines[0]:
+        relevant = []
+        for line in lines[1:6]:
+            if line.startswith("at ") or line.startswith("   at "):
+                break
+            relevant.append(line)
+        summary = " ".join(relevant) if relevant else lines[0]
+    elif lines and re.match(r"^Assert\.\w+\(\)", lines[0]):
+        # Assertion failure: берём первые строки (Expected/Actual)
+        relevant = []
+        for line in lines[:4]:
+            if line.startswith("at ") or line.startswith("   at "):
+                break
+            relevant.append(line)
+        summary = " ".join(relevant)
+    else:
+        # NRE и прочие — первая строка обычно содержательная
+        summary = lines[0] if lines else ""
+
+    # Убираем повторяющийся префикс имени исключения
+    summary = re.sub(r"^System\.\w+\.\w+\s*:\s*", "", summary)
+
+    if len(summary) > max_len:
+        summary = summary[:max_len] + "…"
+    return summary
 
 
 def parse_trx(trx_path):
