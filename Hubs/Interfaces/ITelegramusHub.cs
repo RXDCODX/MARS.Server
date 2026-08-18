@@ -50,7 +50,7 @@ public interface ITelegramusHub
     public Task AutoMessage(string message);
 
     [SignalRMethod]
-    public Task Adhd(int seconds);
+    public Task Adhd(int? seconds);
 
     [SignalRMethod]
     public Task Explosion();
