@@ -130,7 +130,7 @@ jobs:
           git submodule update --init MARS.Projects/mars.client
 
       - name: Enable yarn via corepack
-        run: corepack enable && corepack prepare yarn@4.14.1 --activate
+        run: corepack enable && corepack prepare yarn@4.18.0 --activate
 
       - name: Setup Node.js
         uses: actions/setup-node@v4

@@ -18,6 +18,8 @@ public class RollWaifuCommand(
     public override string Description => "Выполняет вайфу-ролл для пользователя";
     public override bool IsAdminCommand => true;
 
+    public override string[] Aliases => ["waifuroll"];
+
     public override Platform[] AvailablePlatforms =>
         [Platform.Telegram, Platform.Api, Platform.Twitch];
 
