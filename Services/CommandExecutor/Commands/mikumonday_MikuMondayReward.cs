@@ -75,8 +75,8 @@ public class MikuMondayRewardCommand(
                 .TwitchUsers.AsNoTracking()
                 .FirstOrDefaultAsync(
                     u =>
-                        EF.Functions.Like(u.UserLogin, login)
-                        || EF.Functions.Like(u.DisplayName, displayName),
+                        EF.Functions.ILike(u.UserLogin, login)
+                        || EF.Functions.ILike(u.DisplayName, displayName),
                     cancellationToken
                 );
         }
