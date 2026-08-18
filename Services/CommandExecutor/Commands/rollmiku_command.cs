@@ -76,26 +76,26 @@ public class RollMikuCommand(
                 twitchUser.ChatColor = color;
             }
 
-            var module = await mikuRollService.RollTheMiku();
+            var module = await mikuRollService.GetNextMikuModuleAsync(cancellationToken);
 
             if (module is not null)
             {
                 var collectedCount = 0;
                 var totalCount = 0;
+
                 try
                 {
-                    var stats = await collectionService.RecordRollAsync(
-                        twitchUser.TwitchId,
-                        module.PageId
+                    var (collected, total) = await collectionService.GetUserCollectionStatsAsync(
+                        twitchUser.TwitchId
                     );
-                    collectedCount = stats.CollectedCount;
-                    totalCount = stats.TotalCount;
+                    collectedCount = collected;
+                    totalCount = total;
                 }
                 catch (Exception ex)
                 {
                     logger.LogWarning(
                         ex,
-                        "Failed to record Miku collection for {UserId}",
+                        "Failed to get Miku collection stats for {UserId}",
                         twitchUser.TwitchId
                     );
                 }

@@ -35,6 +35,29 @@ public class MikuRollService(IDbContextFactory<AppDbContext> factory)
         return result;
     }
 
+    public async Task<MikuModule?> GetNextMikuModuleAsync(
+        CancellationToken cancellationToken = default
+    )
+    {
+        MikuModule? result = null;
+
+        try
+        {
+            await using var dbContext = await factory.CreateDbContextAsync();
+
+            result = await dbContext
+                .Miku.AsNoTracking()
+                .OrderBy(e => e.LastOrder)
+                .FirstOrDefaultAsync(cancellationToken);
+        }
+        catch
+        {
+            // Ошибка при получении модуля
+        }
+
+        return result;
+    }
+
     public async Task<OperationResult<ICollection<MikuPrizeType>>> GetMikuPrizesAsync()
     {
         var result = OperationResult<ICollection<MikuPrizeType>>.Bad(
