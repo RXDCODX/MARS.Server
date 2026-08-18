@@ -355,13 +355,63 @@ public class WTelegramClientService : IDisposable
         var client =
             _client ?? throw new InvalidOperationException("WTelegram клиент не инициализирован");
 
-        var user = await client.LoginUserIfNeeded();
+        await InvokeWithFloodWaitRetryAsync(
+            async () =>
+            {
+                var user = await client.LoginUserIfNeeded();
 
-        _logger.LogInformation("Авторизация WTelegram успешна. Пользователь: {User}", user);
+                _logger.LogInformation("Авторизация WTelegram успешна. Пользователь: {User}", user);
 
-        var username = user?.username ?? user?.phone ?? "Unknown";
-        await NotifyAuthSuccessAsync(username);
-        Interlocked.Exchange(ref _proxyConnectivityNotificationSent, 0);
+                var username = user?.username ?? user?.phone ?? "Unknown";
+                await NotifyAuthSuccessAsync(username);
+                Interlocked.Exchange(ref _proxyConnectivityNotificationSent, 0);
+            },
+            cancellationToken
+        );
+    }
+
+    private async Task InvokeWithFloodWaitRetryAsync(
+        Func<Task> action,
+        CancellationToken cancellationToken
+    )
+    {
+        const int maxRetries = 3;
+
+        for (var attempt = 0; attempt < maxRetries; attempt++)
+        {
+            try
+            {
+                await action();
+                return;
+            }
+            catch (TL.RpcException ex)
+                when (ex.Message.Contains("FLOOD_WAIT_", StringComparison.Ordinal)
+                    && int.TryParse(
+                        ex.Message.AsSpan(
+                            ex.Message.IndexOf("FLOOD_WAIT_", StringComparison.Ordinal) + 11
+                        ),
+                        out var waitSeconds
+                    )
+                )
+            {
+                if (attempt < maxRetries - 1)
+                {
+                    var delaySeconds = waitSeconds + 1;
+                    _logger.LogWarning(
+                        "FLOOD_WAIT_{WaitSeconds}: ожидание {DelaySeconds} сек перед повтором (попытка {Attempt}/{MaxRetries})",
+                        waitSeconds,
+                        delaySeconds,
+                        attempt + 1,
+                        maxRetries
+                    );
+                    await Task.Delay(delaySeconds * 1000, cancellationToken);
+                }
+                else
+                {
+                    throw;
+                }
+            }
+        }
     }
 
     private static bool IsCodeExpiredError(Exception exception)
