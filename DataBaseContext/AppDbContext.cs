@@ -1,5 +1,6 @@
 using MARS.Server.ApplicationState;
 using MARS.Server.Services._365Genius.Entitys;
+using MARS.Server.Services.Adhd.Entities;
 using MARS.Server.Services.BooruShared.Entities;
 using MARS.Server.Services.DanbooruAutoPost.Entities;
 using MARS.Server.Services.EnvironmentVariable.Entitys;
@@ -52,6 +53,7 @@ public partial class AppDbContext(DbContextOptions<AppDbContext> options) : DbCo
     public DbSet<ScoreboardState> ScoreboardStates { get; set; } = null!;
     public DbSet<ScoreboardPlayer> ScoreboardPlayers { get; set; } = null!;
     public DbSet<ScoreboardLayout> ScoreboardLayouts { get; set; } = null!;
+    public DbSet<AdhdLayoutConfig> AdhdLayoutConfigs { get; set; } = null!;
     public DbSet<StreamArchiveConfig> StreamArchiveConfigs { get; set; } = null!;
     public DbSet<StreamArchiveFile> StreamArchiveFiles { get; set; } = null!;
     public DbSet<StreamArchiveFileChunk> StreamArchiveFileChunks { get; set; } = null!;
@@ -106,20 +108,22 @@ public partial class AppDbContext(DbContextOptions<AppDbContext> options) : DbCo
 
         modelBuilder
             .Entity<MemeType>()
-            .HasData([
-                new MemeType
-                {
-                    Name = "Random Sound",
-                    Id = 3,
-                    FolderPath = "Alerts\\zvik",
-                },
-                new MemeType
-                {
-                    Name = "Random Meme",
-                    Id = 2,
-                    FolderPath = "Alerts\\random_meme",
-                },
-            ]);
+            .HasData(
+                [
+                    new MemeType
+                    {
+                        Name = "Random Sound",
+                        Id = 3,
+                        FolderPath = "Alerts\\zvik",
+                    },
+                    new MemeType
+                    {
+                        Name = "Random Meme",
+                        Id = 2,
+                        FolderPath = "Alerts\\random_meme",
+                    },
+                ]
+            );
 
         // RollCooldowns: уникальный индекс на (TwitchUserId, RollType)
         modelBuilder
@@ -252,53 +256,55 @@ public partial class AppDbContext(DbContextOptions<AppDbContext> options) : DbCo
         modelBuilder.Entity<RootState>().HasIndex(e => e.Name).IsUnique();
         modelBuilder
             .Entity<RootState>()
-            .HasData([
-                new RootState
-                {
-                    Name = RootStateKeys.RandomMemeOnlineIsStop,
-                    Value = false.ToString(),
-                    Description = "Флаг остановки сервиса RandomMemeOnline",
-                    TypeDescription = "bool",
-                },
-                new RootState
-                {
-                    Name = RootStateKeys.PuntoSwitcherFilterEnabled,
-                    Value = true.ToString(),
-                    Description = "Флаг включения фильтра PuntoSwitcher",
-                    TypeDescription = "bool",
-                },
-                new RootState
-                {
-                    Name = RootStateKeys.WaifuRollCooldownMinutes,
-                    Value = 20L.ToString(),
-                    Description = "Кулдаун ролла вайфу в минутах",
-                    TypeDescription = "long",
-                },
-                new RootState
-                {
-                    Name = RootStateKeys.WTelegramMtProxyUrl,
-                    Value = string.Empty,
-                    Description =
-                        "MTProxy URL для WTelegram (например: https://t.me/proxy?server=...)",
-                    TypeDescription = "string",
-                },
-                new RootState
-                {
-                    Name = RootStateKeys.WTelegramProxyUrl,
-                    Value = string.Empty,
-                    Description =
-                        "Прокси для WTelegram: socks5://user:pass@host:port или http://user:pass@host:port",
-                    TypeDescription = "string",
-                },
-                new RootState
-                {
-                    Name = RootStateKeys.SevenTvProxyUrl,
-                    Value = string.Empty,
-                    Description =
-                        "Прокси для 7TV API: http://user:pass@host:port или socks5://user:pass@host:port",
-                    TypeDescription = "string",
-                },
-            ]);
+            .HasData(
+                [
+                    new RootState
+                    {
+                        Name = RootStateKeys.RandomMemeOnlineIsStop,
+                        Value = false.ToString(),
+                        Description = "Флаг остановки сервиса RandomMemeOnline",
+                        TypeDescription = "bool",
+                    },
+                    new RootState
+                    {
+                        Name = RootStateKeys.PuntoSwitcherFilterEnabled,
+                        Value = true.ToString(),
+                        Description = "Флаг включения фильтра PuntoSwitcher",
+                        TypeDescription = "bool",
+                    },
+                    new RootState
+                    {
+                        Name = RootStateKeys.WaifuRollCooldownMinutes,
+                        Value = 20L.ToString(),
+                        Description = "Кулдаун ролла вайфу в минутах",
+                        TypeDescription = "long",
+                    },
+                    new RootState
+                    {
+                        Name = RootStateKeys.WTelegramMtProxyUrl,
+                        Value = string.Empty,
+                        Description =
+                            "MTProxy URL для WTelegram (например: https://t.me/proxy?server=...)",
+                        TypeDescription = "string",
+                    },
+                    new RootState
+                    {
+                        Name = RootStateKeys.WTelegramProxyUrl,
+                        Value = string.Empty,
+                        Description =
+                            "Прокси для WTelegram: socks5://user:pass@host:port или http://user:pass@host:port",
+                        TypeDescription = "string",
+                    },
+                    new RootState
+                    {
+                        Name = RootStateKeys.SevenTvProxyUrl,
+                        Value = string.Empty,
+                        Description =
+                            "Прокси для 7TV API: http://user:pass@host:port или socks5://user:pass@host:port",
+                        TypeDescription = "string",
+                    },
+                ]
+            );
 
         // Конфигурация для Scoreboard
         modelBuilder
@@ -319,6 +325,8 @@ public partial class AppDbContext(DbContextOptions<AppDbContext> options) : DbCo
             .WithOne(s => s.Layout)
             .HasForeignKey<ScoreboardLayout>(l => l.ScoreboardStateId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<AdhdLayoutConfig>().ToTable("AdhdLayoutConfig");
 
         // Конфигурация для StreamArchive
         modelBuilder
