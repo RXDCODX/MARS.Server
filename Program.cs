@@ -296,6 +296,7 @@ public static class Program
         app.MapHub<TunaHub>("/hubs/tuna");
         //app.MapHub<SoundBarHub>("/hubs/soundbar");
         app.MapHub<ScoreboardHub>("/hubs/scoreboard");
+        app.MapHub<AdhdHub>("/hubs/adhd");
         app.MapHub<VoiceRecognitionHub>("/hubs/tts");
         app.MapHub<Hubs.AudioControllerHub.AudioControllerHub>("/hubs/audio-controller");
         app.AddLogerHub();
