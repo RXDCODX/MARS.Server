@@ -7,6 +7,7 @@ using MARS.Server.Hubs.Filters;
 using MARS.Server.Hubs.Interfaces;
 using MARS.Server.Migrations;
 using MARS.Server.Services._365Genius;
+using MARS.Server.Services.Adhd;
 using MARS.Server.Services.AudioControllerHub;
 using MARS.Server.Services.BooruShared;
 using MARS.Server.Services.DanbooruAutoPost;
@@ -552,6 +553,12 @@ public static class StartupEstensions
             return services;
         }
 
+        internal IServiceCollection AddAdhdServices()
+        {
+            services.AddSingleton<AdhdLayoutService>();
+            return services;
+        }
+
         internal IServiceCollection AddWaifuRollServices()
         {
             services.AddSingleton<WaifuRollService>();
@@ -669,7 +676,8 @@ public static class StartupEstensions
 
                 .AddWaifuRollServices()
                 .AddRandomMemServices()
-                .AddScoreboardServiceSingleton();
+                .AddScoreboardServiceSingleton()
+                .AddAdhdServices();
 
             return services;
         }
