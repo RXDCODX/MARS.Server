@@ -66,6 +66,8 @@ public class AdhdLayoutService(IDbContextFactory<AppDbContext> factory)
             ShowLOFIGirl = config.ShowLOFIGirl,
             ShowCatisa = config.ShowCatisa,
             ShowNotifications = config.ShowNotifications,
+            ShowTimer = config.ShowTimer,
+            DvdLogosCount = config.DvdLogosCount,
         };
     }
 
@@ -85,6 +87,8 @@ public class AdhdLayoutService(IDbContextFactory<AppDbContext> factory)
         config.ShowLOFIGirl = dto.ShowLOFIGirl;
         config.ShowCatisa = dto.ShowCatisa;
         config.ShowNotifications = dto.ShowNotifications;
+        config.ShowTimer = dto.ShowTimer;
+        config.DvdLogosCount = dto.DvdLogosCount;
     }
 
     private static AdhdLayoutConfigDto CreateDefaultConfig()
