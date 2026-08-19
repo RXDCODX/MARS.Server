@@ -1,4 +1,5 @@
 using MARS.Server.Hubs.Models.AudioQuiz;
+using MARS.Server.Services.Adhd.Entities;
 using MARS.Server.Services.AutoArts_OBSOLETE.Entitys;
 using MARS.Server.Services.PyroAlerts.Entitys;
 using MARS.Server.Services.Twitch.Entitys;
@@ -115,4 +116,10 @@ public interface ITelegramusHub
 
     [SignalRMethod]
     public Task UpdateMikuPrizes(ICollection<MikuPrizeType> prizes);
+
+    [SignalRMethod]
+    public Task ReceiveConfig(AdhdLayoutConfigDto config);
+
+    [SignalRMethod]
+    public Task ConfigUpdated(AdhdLayoutConfigDto config);
 }

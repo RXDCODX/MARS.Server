@@ -1,6 +1,8 @@
 using MARS.Server.Configuration;
 using MARS.Server.Exstensions;
 using MARS.Server.Hubs.Interfaces;
+using MARS.Server.Services.Adhd;
+using MARS.Server.Services.Adhd.Entities;
 using MARS.Server.Services.Obs;
 using MARS.Server.Services.SoundBarService;
 using MARS.Server.Services.Twitch.Rewards._1580_MikuBeam;
@@ -40,6 +42,7 @@ public class TelegramusHub(
     MikuMondayTracksService mikuMondayTracksService,
     SoundMuteCoordinator coordinator,
     IObsService obsService,
+    AdhdLayoutService adhdLayoutService,
     ILogger<TelegramusHub> logger
 ) : Hub<ITelegramusHub>
 {
@@ -61,6 +64,7 @@ public class TelegramusHub(
         await Clients.Caller.UpdateFrogPrizes(frogResult.Data);
         var mikuModuleResult = await mikuRollService.GetMikuPrizesAsync();
         await Clients.Caller.UpdateMikuPrizes(mikuModuleResult.Data);
+        await Clients.Caller.ReceiveConfig(await adhdLayoutService.GetCurrentConfigAsync());
     }
 
     public Task LogError(string errorMessage)
@@ -129,5 +133,18 @@ public class TelegramusHub(
             _ => ObsPauseMode.FreezeFrame,
         };
         await obsService.TogglePauseAsync(pauseMode);
+    }
+
+    public async Task GetCurrentConfig()
+    {
+        var config = await adhdLayoutService.GetCurrentConfigAsync();
+        await Clients.Caller.ReceiveConfig(config);
+    }
+
+    public async Task UpdateConfig(AdhdLayoutConfigDto config)
+    {
+        var updated = await adhdLayoutService.UpdateConfigAsync(config);
+        await Clients.Others.ConfigUpdated(updated);
+        logger.LogInformation("ADHD layout config updated by {ConnectionId}", Context.ConnectionId);
     }
 }
