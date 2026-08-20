@@ -263,7 +263,7 @@ public class WaifuRollService(
                     .Husbands.Include(e => e.TwitchUser)
                     .FirstOrDefaultAsync(e =>
                         e.TwitchUser != null
-                        && EF.Functions.ILike(e.TwitchUser.UserLogin, $"%{name}%")
+                        && e.TwitchUser.UserLogin.ToLower().Contains(name.ToLower())
                     );
 
                 if (host is not null)
