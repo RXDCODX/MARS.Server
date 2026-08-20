@@ -41,13 +41,16 @@ public class DanbooruAutoPostService(
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        var isFirstUse = true;
+
         using var timer = new PeriodicTimer(TimeSpan.FromMinutes(1));
 
-        while (await timer.WaitForNextTickAsync(stoppingToken))
+        while (isFirstUse || (!isFirstUse && await timer.WaitForNextTickAsync(stoppingToken)))
         {
             try
             {
                 await ProcessScheduledPostsAsync(stoppingToken);
+                isFirstUse = false;
             }
             catch (Exception ex)
             {
@@ -280,9 +283,21 @@ public class DanbooruAutoPostService(
                     hasUpcomingPosts = await dbContext
                         .DanbooruScheduledPosts.AsNoTracking()
                         .AnyAsync(
-                            p => p.ConfigId == config.Id && p.ScheduledAtUtc > now,
+                            p =>
+                                p.ConfigId == config.Id
+                                && p.Status == ScheduledPostStatus.Posted
+                                && p.ScheduledAtUtc > now,
                             cancellationToken
                         );
+
+                    if (!hasUpcomingPosts)
+                    {
+                        await CancelStaleTelegramPostsAsync(
+                            dbContext,
+                            config.Id,
+                            cancellationToken
+                        );
+                    }
                 }
                 else
                 {
@@ -915,9 +930,17 @@ public class DanbooruAutoPostService(
                 var hasUpcomingPosts = await dbContext
                     .DanbooruScheduledPosts.AsNoTracking()
                     .AnyAsync(
-                        p => p.ConfigId == config.Id && p.ScheduledAtUtc > now,
+                        p =>
+                            p.ConfigId == config.Id
+                            && p.Status == ScheduledPostStatus.Posted
+                            && p.ScheduledAtUtc > now,
                         cancellationToken
                     );
+
+                if (!hasUpcomingPosts)
+                {
+                    await CancelStaleTelegramPostsAsync(dbContext, config.Id, cancellationToken);
+                }
 
                 if (hasUpcomingPosts)
                 {
@@ -980,68 +1003,87 @@ public class DanbooruAutoPostService(
     )
     {
         var scheduledTimesResult = new List<DateTime>();
+        const int danbooruBatchSize = 200;
+        var timeIndex = 0;
 
-        foreach (var time in scheduledTimes)
+        while (timeIndex < scheduledTimes.Count)
         {
             try
             {
-                DanbooruPost? post;
+                DanbooruPost[]? posts;
 
                 if (config.DanbooruPostId.HasValue)
                 {
-                    post = await danbooruService.GetPostByIdAsync(config.DanbooruPostId.Value);
+                    var post = await danbooruService.GetPostByIdAsync(config.DanbooruPostId.Value);
+                    posts = post is not null ? [post] : null;
                 }
                 else
                 {
-                    var posts = await danbooruService.GetRandomPostAsync(config.Tags, 1);
-                    post = posts is { Length: > 0 } ? posts[0] : null;
+                    var batchSize = Math.Min(scheduledTimes.Count - timeIndex, danbooruBatchSize);
+                    posts = await danbooruService.GetRandomPostAsync(config.Tags, batchSize);
                 }
 
-                if (post is null)
+                if (posts is not { Length: > 0 })
                 {
                     logger.LogWarning(
                         "Не найдено постов по тегам '{Tags}' для конфига {ConfigId}",
                         config.Tags,
                         config.Id
                     );
-                    continue;
+                    break;
                 }
 
-                var fileUrl = post.FileUrl ?? post.LargeFileUrl;
-                if (string.IsNullOrWhiteSpace(fileUrl))
+                foreach (var post in posts)
                 {
-                    continue;
-                }
+                    if (timeIndex >= scheduledTimes.Count)
+                    {
+                        break;
+                    }
 
-                var (fileBytes, fileName) = await danbooruService.DownloadFileBytesAsync(
-                    fileUrl,
-                    cancellationToken
-                );
+                    var time = scheduledTimes[timeIndex];
+                    timeIndex++;
 
-                var sendResult = await telegramPoster.SchedulePostAsync(
-                    config.TelegramChannelId!.Value,
-                    fileBytes,
-                    fileName,
-                    time,
-                    cancellationToken
-                );
+                    var fileUrl = post.FileUrl ?? post.LargeFileUrl;
+                    if (string.IsNullOrWhiteSpace(fileUrl))
+                    {
+                        continue;
+                    }
 
-                if (sendResult.Success)
-                {
-                    scheduledTimesResult.Add(time);
-                }
-                else
-                {
-                    logger.LogWarning(
-                        "Не удалось запланировать пост в Telegram на {Time}: {Error}",
-                        time,
-                        sendResult.Message
+                    var (fileBytes, fileName) = await danbooruService.DownloadFileBytesAsync(
+                        fileUrl,
+                        cancellationToken
                     );
+
+                    var sendResult = await telegramPoster.SchedulePostAsync(
+                        config.TelegramChannelId!.Value,
+                        fileBytes,
+                        fileName,
+                        time,
+                        cancellationToken
+                    );
+
+                    if (sendResult.Success)
+                    {
+                        scheduledTimesResult.Add(time);
+                    }
+                    else
+                    {
+                        logger.LogWarning(
+                            "Не удалось запланировать пост в Telegram на {Time}: {Error}",
+                            time,
+                            sendResult.Message
+                        );
+                    }
                 }
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Ошибка планирования поста в Telegram на {Time}", time);
+                logger.LogError(
+                    ex,
+                    "Ошибка планирования поста в Telegram для конфига {ConfigId}",
+                    config.Id
+                );
+                break;
             }
         }
 
@@ -1051,6 +1093,30 @@ public class DanbooruAutoPostService(
         );
 
         return result;
+    }
+
+    private static async Task CancelStaleTelegramPostsAsync(
+        AppDbContext dbContext,
+        Guid configId,
+        CancellationToken cancellationToken
+    )
+    {
+        var stalePosts = await dbContext
+            .DanbooruScheduledPosts.Where(p =>
+                p.ConfigId == configId
+                && (
+                    p.Status == ScheduledPostStatus.Pending
+                    || p.Status == ScheduledPostStatus.Failed
+                )
+            )
+            .ToListAsync(cancellationToken);
+
+        foreach (var stalePost in stalePosts)
+        {
+            stalePost.Status = ScheduledPostStatus.Cancelled;
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
     }
 
     private async Task<OperationResult> ScheduleDiscordPostsAsync(

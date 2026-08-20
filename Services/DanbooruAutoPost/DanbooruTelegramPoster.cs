@@ -1,3 +1,8 @@
+using System;
+using System.IO;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using MARS.Server.Services.Telegram.WTelegram;
 using Microsoft.Extensions.Logging;
 using SixLabors.ImageSharp;
