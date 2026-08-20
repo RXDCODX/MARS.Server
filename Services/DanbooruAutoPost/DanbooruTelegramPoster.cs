@@ -1,9 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using MARS.Server.Services.BooruShared.Entities;
+using MARS.Server.Services.DanbooruAutoPost.Entities;
 using MARS.Server.Services.Telegram.WTelegram;
 using Microsoft.Extensions.Logging;
 using SixLabors.ImageSharp;
@@ -58,6 +60,54 @@ public class DanbooruTelegramPoster(
             scheduleDate,
             cancellationToken
         );
+    }
+
+    public async Task<
+        OperationResult<List<TelegramScheduledMessageInfo>>
+    > GetScheduledMessagesAsync(long chatId, CancellationToken cancellationToken)
+    {
+        var result = OperationResult<List<TelegramScheduledMessageInfo>>.Bad(
+            "Не удалось получить отложенные сообщения Telegram"
+        );
+
+        try
+        {
+            var client = await wTelegramClientService.GetClientAsync(cancellationToken);
+            if (client is not null)
+            {
+                var inputPeer = await ResolveInputPeerAsync(client, chatId);
+                if (inputPeer is not null)
+                {
+                    // hash = 0 — всегда запрашиваем полный список отложенных сообщений
+                    var history = await client.Messages_GetScheduledHistory(inputPeer, 0);
+                    var messages = history
+                        .Messages.OfType<Message>()
+                        .Select(m => new TelegramScheduledMessageInfo(
+                            m.id,
+                            DateTime.SpecifyKind(m.date, DateTimeKind.Utc)
+                        ))
+                        .ToList();
+
+                    result = OperationResult<List<TelegramScheduledMessageInfo>>.Ok(
+                        "Отложенные сообщения получены",
+                        messages
+                    );
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(
+                ex,
+                "Ошибка получения отложенных сообщений Telegram канал {ChannelId}",
+                chatId
+            );
+            result = OperationResult<List<TelegramScheduledMessageInfo>>.Bad(
+                $"Ошибка Telegram: {ex.Message}"
+            );
+        }
+
+        return result;
     }
 
     private async Task<OperationResult> SendMediaAsync(

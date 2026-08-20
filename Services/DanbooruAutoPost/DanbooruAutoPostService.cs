@@ -38,6 +38,7 @@ public class DanbooruAutoPostService(
     private const int MaxDedupRetries = 5;
     private const int SslRetryBaseDelaySeconds = 5;
     private const int SslRetryMaxDelaySeconds = 300;
+    private const int MaxTelegramScheduledMessages = 100;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -273,97 +274,50 @@ public class DanbooruAutoPostService(
             .Where(c => c.IsEnabled && !string.IsNullOrWhiteSpace(c.CronExpression))
             .ToListAsync(cancellationToken);
 
+        var telegramScheduledCache =
+            new Dictionary<long, OperationResult<List<TelegramScheduledMessageInfo>>>();
+
         foreach (var config in enabledConfigs)
         {
             try
             {
-                var hasUpcomingPosts = false;
+                var cron = CronExpression.Parse(config.CronExpression);
+                var horizonEnd = now.AddDays(config.PlanningHorizonDays);
+                var scheduledTimes = GetCronOccurrences(cron, now, horizonEnd);
+
                 if (config.TargetPlatform == TargetPlatform.Telegram)
                 {
-                    hasUpcomingPosts = await dbContext
-                        .DanbooruScheduledPosts.AsNoTracking()
-                        .AnyAsync(
-                            p =>
-                                p.ConfigId == config.Id
-                                && p.Status == ScheduledPostStatus.Posted
-                                && p.ScheduledAtUtc > now,
-                            cancellationToken
-                        );
-
-                    if (!hasUpcomingPosts)
-                    {
-                        await CancelStaleTelegramPostsAsync(
-                            dbContext,
-                            config.Id,
-                            cancellationToken
-                        );
-                    }
+                    await PlanTelegramPostsAsync(
+                        config,
+                        scheduledTimes,
+                        telegramScheduledCache,
+                        cancellationToken
+                    );
                 }
                 else
                 {
-                    hasUpcomingPosts = await dbContext
+                    var hasUpcomingPosts = await dbContext
                         .DanbooruScheduledPosts.AsNoTracking()
                         .AnyAsync(
                             p => p.ConfigId == config.Id && p.Status == ScheduledPostStatus.Pending,
                             cancellationToken
                         );
-                }
 
-                if (hasUpcomingPosts)
-                {
-                    continue;
-                }
-
-                var cron = CronExpression.Parse(config.CronExpression);
-                var horizonEnd = now.AddDays(config.PlanningHorizonDays);
-
-                var scheduledTimes = new List<DateTime>();
-                var nextOccurrence = cron.GetNextOccurrence(now.AddMinutes(-1));
-
-                while (nextOccurrence.HasValue && nextOccurrence.Value <= horizonEnd)
-                {
-                    scheduledTimes.Add(nextOccurrence.Value);
-                    nextOccurrence = cron.GetNextOccurrence(nextOccurrence.Value);
-                }
-
-                if (config.TargetPlatform == TargetPlatform.Telegram)
-                {
-                    var scheduleResult = await ScheduleTelegramPostsAsync(
-                        config,
-                        scheduledTimes,
-                        cancellationToken
-                    );
-
-                    if (scheduleResult.Success && scheduleResult.Data.Count > 0)
+                    if (!hasUpcomingPosts)
                     {
-                        var telegramPosts = scheduleResult
-                            .Data.Select(time => new DanbooruScheduledPost
+                        var discordPosts = scheduledTimes
+                            .Select(time => new DanbooruScheduledPost
                             {
                                 ConfigId = config.Id,
                                 ScheduledAtUtc = time,
-                                Status = ScheduledPostStatus.Posted,
+                                Status = ScheduledPostStatus.Pending,
                                 CreatedAtUtc = now,
                             })
                             .ToList();
 
-                        dbContext.DanbooruScheduledPosts.AddRange(telegramPosts);
+                        dbContext.DanbooruScheduledPosts.AddRange(discordPosts);
                         await dbContext.SaveChangesAsync(cancellationToken);
                     }
-                }
-                else
-                {
-                    var discordPosts = scheduledTimes
-                        .Select(time => new DanbooruScheduledPost
-                        {
-                            ConfigId = config.Id,
-                            ScheduledAtUtc = time,
-                            Status = ScheduledPostStatus.Pending,
-                            CreatedAtUtc = now,
-                        })
-                        .ToList();
-
-                    dbContext.DanbooruScheduledPosts.AddRange(discordPosts);
-                    await dbContext.SaveChangesAsync(cancellationToken);
                 }
             }
             catch (CronFormatException ex)
@@ -384,6 +338,101 @@ public class DanbooruAutoPostService(
                 );
             }
         }
+    }
+
+    private async Task PlanTelegramPostsAsync(
+        DanbooruAutoPostConfig config,
+        List<DateTime> scheduledTimes,
+        Dictionary<long, OperationResult<List<TelegramScheduledMessageInfo>>> scheduledCache,
+        CancellationToken cancellationToken
+    )
+    {
+        var channelId = config.TelegramChannelId ?? 0;
+
+        if (channelId != 0)
+        {
+            if (!scheduledCache.TryGetValue(channelId, out var channelMessages))
+            {
+                channelMessages = await telegramPoster.GetScheduledMessagesAsync(
+                    channelId,
+                    cancellationToken
+                );
+                scheduledCache[channelId] = channelMessages;
+            }
+
+            if (channelMessages.Success)
+            {
+                var matchedCount = TelegramScheduleMatcher.CountMatches(
+                    channelMessages.Data,
+                    scheduledTimes
+                );
+
+                if (matchedCount > 0)
+                {
+                    logger.LogDebug(
+                        "Для конфига {ConfigId} найдено {Count} совпадающих отложенных сообщений в Telegram, планирование пропущено",
+                        config.Id,
+                        matchedCount
+                    );
+                }
+                else
+                {
+                    // Лимит Telegram: ~100 отложенных сообщений на чат
+                    var maxNewPosts = MaxTelegramScheduledMessages - channelMessages.Data.Count;
+                    var timesToSchedule =
+                        maxNewPosts > 0 ? scheduledTimes.Take(maxNewPosts).ToList() : [];
+
+                    if (timesToSchedule.Count > 0)
+                    {
+                        var scheduleResult = await ScheduleTelegramPostsAsync(
+                            config,
+                            timesToSchedule,
+                            cancellationToken
+                        );
+
+                        logger.LogInformation(
+                            "Конфиг {ConfigId}: запланировано {Scheduled} из {Planned} постов в Telegram",
+                            config.Id,
+                            scheduleResult.Data.Count,
+                            timesToSchedule.Count
+                        );
+                    }
+                    else
+                    {
+                        logger.LogWarning(
+                            "Достигнут лимит отложенных сообщений Telegram для канала {ChannelId}, планирование пропущено",
+                            channelId
+                        );
+                    }
+                }
+            }
+            else
+            {
+                logger.LogWarning(
+                    "Не удалось получить отложенные сообщения канала {ChannelId}, планирование пропущено: {Error}",
+                    channelId,
+                    channelMessages.Message
+                );
+            }
+        }
+    }
+
+    private static List<DateTime> GetCronOccurrences(
+        CronExpression cron,
+        DateTime now,
+        DateTime horizonEnd
+    )
+    {
+        var result = new List<DateTime>();
+        var nextOccurrence = cron.GetNextOccurrence(now.AddMinutes(-1));
+
+        while (nextOccurrence.HasValue && nextOccurrence.Value <= horizonEnd)
+        {
+            result.Add(nextOccurrence.Value);
+            nextOccurrence = cron.GetNextOccurrence(nextOccurrence.Value);
+        }
+
+        return result;
     }
 
     private async Task PostImageAsync(
@@ -572,6 +621,8 @@ public class DanbooruAutoPostService(
                 })
                 .ToListAsync(cancellationToken);
 
+            await PopulateSchedulingInfoAsync(dbContext, configs, cancellationToken);
+
             result = OperationResult<List<DanbooruAutoPostConfigDto>>.Ok(
                 "Конфигурации получены",
                 configs
@@ -581,6 +632,106 @@ public class DanbooruAutoPostService(
         {
             logger.LogError(ex, "Ошибка получения конфигураций DanbooruAutoPost");
             result = OperationResult<List<DanbooruAutoPostConfigDto>>.Bad(ex.Message, []);
+        }
+
+        return result;
+    }
+
+    private async Task PopulateSchedulingInfoAsync(
+        AppDbContext dbContext,
+        List<DanbooruAutoPostConfigDto> configs,
+        CancellationToken cancellationToken
+    )
+    {
+        var now = DateTime.UtcNow;
+        var telegramChannelIds = configs
+            .Where(c => c.TargetPlatform == TargetPlatform.Telegram)
+            .Select(c => long.TryParse(c.TelegramChannelId, out var channelId) ? channelId : 0)
+            .Where(id => id != 0)
+            .Distinct()
+            .ToList();
+
+        var telegramMessagesByChannel = new Dictionary<long, List<TelegramScheduledMessageInfo>>();
+
+        foreach (var channelId in telegramChannelIds)
+        {
+            var messagesResult = await telegramPoster.GetScheduledMessagesAsync(
+                channelId,
+                cancellationToken
+            );
+
+            if (messagesResult.Success)
+            {
+                telegramMessagesByChannel[channelId] = messagesResult.Data;
+            }
+            else
+            {
+                logger.LogWarning(
+                    "Не удалось получить отложенные сообщения канала {ChannelId}: {Error}",
+                    channelId,
+                    messagesResult.Message
+                );
+            }
+        }
+
+        foreach (var config in configs)
+        {
+            if (config.TargetPlatform == TargetPlatform.Telegram)
+            {
+                var parsed = long.TryParse(config.TelegramChannelId, out var channelId);
+
+                if (parsed && telegramMessagesByChannel.TryGetValue(channelId, out var messages))
+                {
+                    var occurrences = GetConfigOccurrences(config, now);
+
+                    config.PendingPostsCount = TelegramScheduleMatcher.CountMatches(
+                        messages,
+                        occurrences
+                    );
+                    config.NextScheduledAtUtc = TelegramScheduleMatcher.FindEarliestMatch(
+                        messages,
+                        occurrences
+                    );
+                }
+            }
+            else
+            {
+                var pendingTimes = await dbContext
+                    .DanbooruScheduledPosts.AsNoTracking()
+                    .Where(p =>
+                        p.ConfigId == config.Id
+                        && p.Status == ScheduledPostStatus.Pending
+                        && p.ScheduledAtUtc > now
+                    )
+                    .OrderBy(p => p.ScheduledAtUtc)
+                    .Select(p => p.ScheduledAtUtc)
+                    .ToListAsync(cancellationToken);
+
+                config.PendingPostsCount = pendingTimes.Count;
+                config.NextScheduledAtUtc = pendingTimes.Count > 0 ? pendingTimes[0] : null;
+            }
+        }
+    }
+
+    private static List<DateTime> GetConfigOccurrences(
+        DanbooruAutoPostConfigDto config,
+        DateTime now
+    )
+    {
+        var result = new List<DateTime>();
+
+        if (!string.IsNullOrWhiteSpace(config.CronExpression))
+        {
+            try
+            {
+                var cron = CronExpression.Parse(config.CronExpression);
+                var horizonEnd = now.AddDays(config.PlanningHorizonDays);
+                result = GetCronOccurrences(cron, now, horizonEnd);
+            }
+            catch (CronFormatException)
+            {
+                result = [];
+            }
         }
 
         return result;
@@ -932,64 +1083,66 @@ public class DanbooruAutoPostService(
             var cron = CronExpression.Parse(config.CronExpression);
             var now = DateTime.UtcNow;
             var horizonEnd = now.AddDays(config.PlanningHorizonDays);
-
-            var scheduledTimes = new List<DateTime>();
-            var nextOccurrence = cron.GetNextOccurrence(now.AddMinutes(-1));
-
-            while (nextOccurrence.HasValue && nextOccurrence.Value <= horizonEnd)
-            {
-                scheduledTimes.Add(nextOccurrence.Value);
-                nextOccurrence = cron.GetNextOccurrence(nextOccurrence.Value);
-            }
+            var scheduledTimes = GetCronOccurrences(cron, now, horizonEnd);
 
             if (config.TargetPlatform == TargetPlatform.Telegram)
             {
-                var hasUpcomingPosts = await dbContext
-                    .DanbooruScheduledPosts.AsNoTracking()
-                    .AnyAsync(
-                        p =>
-                            p.ConfigId == config.Id
-                            && p.Status == ScheduledPostStatus.Posted
-                            && p.ScheduledAtUtc > now,
+                var channelId = config.TelegramChannelId ?? 0;
+
+                if (channelId != 0)
+                {
+                    var channelMessages = await telegramPoster.GetScheduledMessagesAsync(
+                        channelId,
                         cancellationToken
                     );
 
-                if (!hasUpcomingPosts)
-                {
-                    await CancelStaleTelegramPostsAsync(dbContext, config.Id, cancellationToken);
-                }
+                    if (channelMessages.Success)
+                    {
+                        var matchedCount = TelegramScheduleMatcher.CountMatches(
+                            channelMessages.Data,
+                            scheduledTimes
+                        );
 
-                if (hasUpcomingPosts)
-                {
-                    result = OperationResult.Ok(
-                        "Уже запланированы отложенные посты в Telegram. Дождитесь доставки или отмените текущие."
-                    );
+                        if (matchedCount > 0)
+                        {
+                            result = OperationResult.Ok(
+                                "Уже запланированы отложенные посты в Telegram. Дождитесь доставки или отмените текущие."
+                            );
+                        }
+                        else
+                        {
+                            // Лимит Telegram: ~100 отложенных сообщений на чат
+                            var maxNewPosts =
+                                MaxTelegramScheduledMessages - channelMessages.Data.Count;
+                            var timesToSchedule =
+                                maxNewPosts > 0 ? scheduledTimes.Take(maxNewPosts).ToList() : [];
+
+                            if (timesToSchedule.Count > 0)
+                            {
+                                var scheduleResult = await ScheduleTelegramPostsAsync(
+                                    config,
+                                    timesToSchedule,
+                                    cancellationToken
+                                );
+
+                                result = OperationResult.Ok(scheduleResult.Message);
+                            }
+                            else
+                            {
+                                result = OperationResult.Ok(
+                                    "Достигнут лимит отложенных сообщений Telegram для этого канала"
+                                );
+                            }
+                        }
+                    }
+                    else
+                    {
+                        result = OperationResult.Bad(channelMessages.Message);
+                    }
                 }
                 else
                 {
-                    var scheduleResult = await ScheduleTelegramPostsAsync(
-                        config,
-                        scheduledTimes,
-                        cancellationToken
-                    );
-
-                    if (scheduleResult.Success && scheduleResult.Data.Count > 0)
-                    {
-                        var newPosts = scheduleResult
-                            .Data.Select(time => new DanbooruScheduledPost
-                            {
-                                ConfigId = config.Id,
-                                ScheduledAtUtc = time,
-                                Status = ScheduledPostStatus.Posted,
-                                CreatedAtUtc = now,
-                            })
-                            .ToList();
-
-                        dbContext.DanbooruScheduledPosts.AddRange(newPosts);
-                        await dbContext.SaveChangesAsync(cancellationToken);
-                    }
-
-                    result = OperationResult.Ok(scheduleResult.Message);
+                    result = OperationResult.Bad("Telegram канал не указан");
                 }
             }
             else
@@ -1127,30 +1280,6 @@ public class DanbooruAutoPostService(
         );
 
         return result;
-    }
-
-    private static async Task CancelStaleTelegramPostsAsync(
-        AppDbContext dbContext,
-        Guid configId,
-        CancellationToken cancellationToken
-    )
-    {
-        var stalePosts = await dbContext
-            .DanbooruScheduledPosts.Where(p =>
-                p.ConfigId == configId
-                && (
-                    p.Status == ScheduledPostStatus.Pending
-                    || p.Status == ScheduledPostStatus.Failed
-                )
-            )
-            .ToListAsync(cancellationToken);
-
-        foreach (var stalePost in stalePosts)
-        {
-            stalePost.Status = ScheduledPostStatus.Cancelled;
-        }
-
-        await dbContext.SaveChangesAsync(cancellationToken);
     }
 
     private async Task<OperationResult> ScheduleDiscordPostsAsync(
