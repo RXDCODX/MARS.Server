@@ -1,3 +1,9 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
 using Cronos;
 using MARS.Server.Configuration;
 using MARS.Server.DataBaseContext;
@@ -106,7 +112,8 @@ public class DanbooruAutoPostService(
             }
             catch (Exception ex)
             {
-                var isSslError = ex is HttpRequestException
+                var isSslError =
+                    ex is HttpRequestException
                     && ex.Message.Contains(
                         "SSL connection could not be established",
                         StringComparison.OrdinalIgnoreCase
@@ -138,20 +145,16 @@ public class DanbooruAutoPostService(
                             delaySeconds
                         );
 
-                        await Task.Delay(
-                            TimeSpan.FromSeconds(delaySeconds),
-                            cancellationToken
-                        );
+                        await Task.Delay(TimeSpan.FromSeconds(delaySeconds), cancellationToken);
 
                         try
                         {
                             await PostImageAsync(config, cancellationToken);
 
-                            var successEntity =
-                                await dbContext.DanbooruScheduledPosts.FindAsync(
-                                    [scheduledPost.Id],
-                                    cancellationToken
-                                );
+                            var successEntity = await dbContext.DanbooruScheduledPosts.FindAsync(
+                                [scheduledPost.Id],
+                                cancellationToken
+                            );
                             if (successEntity is not null)
                             {
                                 successEntity.Status = ScheduledPostStatus.Posted;
@@ -159,13 +162,13 @@ public class DanbooruAutoPostService(
                                 await dbContext.SaveChangesAsync(cancellationToken);
                             }
 
-                            await using var updateCtx =
-                                await dbContextFactory.CreateDbContextAsync(cancellationToken);
-                            var cfgEntity =
-                                await updateCtx.DanbooruAutoPostConfigs.FindAsync(
-                                    [config.Id],
-                                    cancellationToken
-                                );
+                            await using var updateCtx = await dbContextFactory.CreateDbContextAsync(
+                                cancellationToken
+                            );
+                            var cfgEntity = await updateCtx.DanbooruAutoPostConfigs.FindAsync(
+                                [config.Id],
+                                cancellationToken
+                            );
                             if (cfgEntity is not null)
                             {
                                 cfgEntity.LastExecutedAtUtc = DateTime.UtcNow;
@@ -181,7 +184,8 @@ public class DanbooruAutoPostService(
                         }
                         catch (Exception retryEx)
                         {
-                            var stillSsl = retryEx is HttpRequestException
+                            var stillSsl =
+                                retryEx is HttpRequestException
                                 && retryEx.Message.Contains(
                                     "SSL connection could not be established",
                                     StringComparison.OrdinalIgnoreCase
@@ -204,9 +208,7 @@ public class DanbooruAutoPostService(
                                 );
 
                                 await using var nonSslErrorCtx =
-                                    await dbContextFactory.CreateDbContextAsync(
-                                        cancellationToken
-                                    );
+                                    await dbContextFactory.CreateDbContextAsync(cancellationToken);
                                 var nonSslErrorEntity =
                                     await nonSslErrorCtx.DanbooruScheduledPosts.FindAsync(
                                         [scheduledPost.Id],
@@ -272,14 +274,27 @@ public class DanbooruAutoPostService(
         {
             try
             {
-                var pendingCount = await dbContext
-                    .DanbooruScheduledPosts.AsNoTracking()
-                    .CountAsync(
-                        p => p.ConfigId == config.Id && p.Status == ScheduledPostStatus.Pending,
-                        cancellationToken
-                    );
+                var hasUpcomingPosts = false;
+                if (config.TargetPlatform == TargetPlatform.Telegram)
+                {
+                    hasUpcomingPosts = await dbContext
+                        .DanbooruScheduledPosts.AsNoTracking()
+                        .AnyAsync(
+                            p => p.ConfigId == config.Id && p.ScheduledAtUtc > now,
+                            cancellationToken
+                        );
+                }
+                else
+                {
+                    hasUpcomingPosts = await dbContext
+                        .DanbooruScheduledPosts.AsNoTracking()
+                        .AnyAsync(
+                            p => p.ConfigId == config.Id && p.Status == ScheduledPostStatus.Pending,
+                            cancellationToken
+                        );
+                }
 
-                if (pendingCount > 0)
+                if (hasUpcomingPosts)
                 {
                     continue;
                 }
@@ -296,18 +311,45 @@ public class DanbooruAutoPostService(
                     nextOccurrence = cron.GetNextOccurrence(nextOccurrence.Value);
                 }
 
-                var newPosts = scheduledTimes
-                    .Select(time => new DanbooruScheduledPost
-                    {
-                        ConfigId = config.Id,
-                        ScheduledAtUtc = time,
-                        Status = ScheduledPostStatus.Pending,
-                        CreatedAtUtc = now,
-                    })
-                    .ToList();
+                if (config.TargetPlatform == TargetPlatform.Telegram)
+                {
+                    var scheduleResult = await ScheduleTelegramPostsAsync(
+                        config,
+                        scheduledTimes,
+                        cancellationToken
+                    );
 
-                dbContext.DanbooruScheduledPosts.AddRange(newPosts);
-                await dbContext.SaveChangesAsync(cancellationToken);
+                    if (scheduleResult.Success && scheduleResult.Data.Count > 0)
+                    {
+                        var telegramPosts = scheduleResult
+                            .Data.Select(time => new DanbooruScheduledPost
+                            {
+                                ConfigId = config.Id,
+                                ScheduledAtUtc = time,
+                                Status = ScheduledPostStatus.Posted,
+                                CreatedAtUtc = now,
+                            })
+                            .ToList();
+
+                        dbContext.DanbooruScheduledPosts.AddRange(telegramPosts);
+                        await dbContext.SaveChangesAsync(cancellationToken);
+                    }
+                }
+                else
+                {
+                    var discordPosts = scheduledTimes
+                        .Select(time => new DanbooruScheduledPost
+                        {
+                            ConfigId = config.Id,
+                            ScheduledAtUtc = time,
+                            Status = ScheduledPostStatus.Pending,
+                            CreatedAtUtc = now,
+                        })
+                        .ToList();
+
+                    dbContext.DanbooruScheduledPosts.AddRange(discordPosts);
+                    await dbContext.SaveChangesAsync(cancellationToken);
+                }
             }
             catch (CronFormatException ex)
             {
@@ -870,11 +912,45 @@ public class DanbooruAutoPostService(
 
             if (config.TargetPlatform == TargetPlatform.Telegram)
             {
-                result = await ScheduleTelegramPostsAsync(
-                    config,
-                    scheduledTimes,
-                    cancellationToken
-                );
+                var hasUpcomingPosts = await dbContext
+                    .DanbooruScheduledPosts.AsNoTracking()
+                    .AnyAsync(
+                        p => p.ConfigId == config.Id && p.ScheduledAtUtc > now,
+                        cancellationToken
+                    );
+
+                if (hasUpcomingPosts)
+                {
+                    result = OperationResult.Ok(
+                        "Уже запланированы отложенные посты в Telegram. Дождитесь доставки или отмените текущие."
+                    );
+                }
+                else
+                {
+                    var scheduleResult = await ScheduleTelegramPostsAsync(
+                        config,
+                        scheduledTimes,
+                        cancellationToken
+                    );
+
+                    if (scheduleResult.Success && scheduleResult.Data.Count > 0)
+                    {
+                        var newPosts = scheduleResult
+                            .Data.Select(time => new DanbooruScheduledPost
+                            {
+                                ConfigId = config.Id,
+                                ScheduledAtUtc = time,
+                                Status = ScheduledPostStatus.Posted,
+                                CreatedAtUtc = now,
+                            })
+                            .ToList();
+
+                        dbContext.DanbooruScheduledPosts.AddRange(newPosts);
+                        await dbContext.SaveChangesAsync(cancellationToken);
+                    }
+
+                    result = OperationResult.Ok(scheduleResult.Message);
+                }
             }
             else
             {
@@ -897,13 +973,13 @@ public class DanbooruAutoPostService(
         return result;
     }
 
-    private async Task<OperationResult> ScheduleTelegramPostsAsync(
+    private async Task<OperationResult<List<DateTime>>> ScheduleTelegramPostsAsync(
         DanbooruAutoPostConfig config,
         List<DateTime> scheduledTimes,
         CancellationToken cancellationToken
     )
     {
-        var scheduledCount = 0;
+        var scheduledTimesResult = new List<DateTime>();
 
         foreach (var time in scheduledTimes)
         {
@@ -952,7 +1028,7 @@ public class DanbooruAutoPostService(
 
                 if (sendResult.Success)
                 {
-                    scheduledCount++;
+                    scheduledTimesResult.Add(time);
                 }
                 else
                 {
@@ -969,9 +1045,12 @@ public class DanbooruAutoPostService(
             }
         }
 
-        return OperationResult.Ok(
-            $"Запланировано {scheduledCount} из {scheduledTimes.Count} постов через Telegram"
+        var result = OperationResult<List<DateTime>>.Ok(
+            $"Запланировано {scheduledTimesResult.Count} из {scheduledTimes.Count} постов через Telegram",
+            scheduledTimesResult
         );
+
+        return result;
     }
 
     private async Task<OperationResult> ScheduleDiscordPostsAsync(
