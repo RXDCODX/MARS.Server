@@ -464,13 +464,21 @@ public class DanbooruAutoPostService(
                 fileUrl,
                 cancellationToken
             );
-            var tagPreview = string.IsNullOrWhiteSpace(post.TagStringCharacter)
-                ? post
-                    .TagStringGeneral?.Split(' ')
-                    .Take(5)
-                    .Aggregate("", (a, b) => $"{a} {b}")
-                    .Trim()
-                : post.TagStringCharacter;
+
+            var resolvedMessage = BooruMessageTemplateResolver.Resolve(
+                config.Message,
+                new Dictionary<string, string?>
+                {
+                    { "tags", post.TagStringGeneral },
+                    { "character", post.TagStringCharacter },
+                    { "artist", post.TagStringArtist },
+                    { "copyright", post.TagStringCopyright },
+                    { "id", post.Id.ToString() },
+                    { "rating", post.Rating },
+                    { "score", post.Score?.ToString() },
+                    { "source", post.Source },
+                }
+            );
 
             OperationResult sendResult;
 
@@ -480,6 +488,8 @@ public class DanbooruAutoPostService(
                     config.TelegramChannelId!.Value,
                     fileBytes,
                     fileName,
+                    resolvedMessage,
+                    config.TelegramParseMode,
                     cancellationToken
                 );
             }
@@ -489,6 +499,7 @@ public class DanbooruAutoPostService(
                     config.DiscordChannelId,
                     fileBytes,
                     fileName,
+                    string.IsNullOrWhiteSpace(resolvedMessage) ? null : resolvedMessage,
                     cancellationToken
                 );
             }
@@ -553,6 +564,8 @@ public class DanbooruAutoPostService(
                     CronExpression = c.CronExpression,
                     PlanningHorizonDays = c.PlanningHorizonDays,
                     IsEnabled = c.IsEnabled,
+                    Message = c.Message,
+                    TelegramParseMode = c.TelegramParseMode,
                     LastExecutedAtUtc = c.LastExecutedAtUtc,
                     CreatedAtUtc = c.CreatedAtUtc,
                     UpdatedAtUtc = c.UpdatedAtUtc,
@@ -632,6 +645,8 @@ public class DanbooruAutoPostService(
                 Tags = request.Tags.Trim(),
                 CronExpression = request.CronExpression?.Trim() ?? "",
                 PlanningHorizonDays = request.PlanningHorizonDays,
+                Message = request.Message.Trim(),
+                TelegramParseMode = request.TelegramParseMode,
                 IsEnabled = true,
                 CreatedAtUtc = now,
                 UpdatedAtUtc = now,
@@ -755,6 +770,8 @@ public class DanbooruAutoPostService(
                 entity.Tags = request.Tags.Trim();
                 entity.CronExpression = request.CronExpression?.Trim() ?? "";
                 entity.PlanningHorizonDays = request.PlanningHorizonDays;
+                entity.Message = request.Message.Trim();
+                entity.TelegramParseMode = request.TelegramParseMode;
                 entity.UpdatedAtUtc = DateTime.UtcNow;
                 await dbContext.SaveChangesAsync(cancellationToken);
 
@@ -1054,10 +1071,27 @@ public class DanbooruAutoPostService(
                         cancellationToken
                     );
 
+                    var resolvedMessage = BooruMessageTemplateResolver.Resolve(
+                        config.Message,
+                        new Dictionary<string, string?>
+                        {
+                            { "tags", post.TagStringGeneral },
+                            { "character", post.TagStringCharacter },
+                            { "artist", post.TagStringArtist },
+                            { "copyright", post.TagStringCopyright },
+                            { "id", post.Id.ToString() },
+                            { "rating", post.Rating },
+                            { "score", post.Score?.ToString() },
+                            { "source", post.Source },
+                        }
+                    );
+
                     var sendResult = await telegramPoster.SchedulePostAsync(
                         config.TelegramChannelId!.Value,
                         fileBytes,
                         fileName,
+                        resolvedMessage,
+                        config.TelegramParseMode,
                         time,
                         cancellationToken
                     );
@@ -1272,6 +1306,8 @@ public class DanbooruAutoPostService(
             CronExpression = entity.CronExpression,
             PlanningHorizonDays = entity.PlanningHorizonDays,
             IsEnabled = entity.IsEnabled,
+            Message = entity.Message,
+            TelegramParseMode = entity.TelegramParseMode,
             LastExecutedAtUtc = entity.LastExecutedAtUtc,
             CreatedAtUtc = entity.CreatedAtUtc,
             UpdatedAtUtc = entity.UpdatedAtUtc,

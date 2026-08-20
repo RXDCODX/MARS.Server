@@ -1,3 +1,5 @@
+using MARS.Server.Services.BooruShared.Entities;
+
 namespace MARS.Server.Services.DanbooruAutoPost.Entities;
 
 public class DanbooruAutoPostConfigDto
@@ -23,6 +25,10 @@ public class DanbooruAutoPostConfigDto
     public int PendingPostsCount { get; set; }
 
     public DateTime? NextScheduledAtUtc { get; set; }
+
+    public string Message { get; set; } = "";
+
+    public TelegramParseMode TelegramParseMode { get; set; }
 
     public bool IsEnabled { get; set; }
 

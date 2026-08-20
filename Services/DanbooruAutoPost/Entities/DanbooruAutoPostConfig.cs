@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using MARS.Server.Services.BooruShared.Entities;
 
 namespace MARS.Server.Services.DanbooruAutoPost.Entities;
 
@@ -24,6 +25,10 @@ public class DanbooruAutoPostConfig
     public int PlanningHorizonDays { get; set; } = 60;
 
     public bool IsEnabled { get; set; } = true;
+
+    public string Message { get; set; } = "";
+
+    public TelegramParseMode TelegramParseMode { get; set; } = TelegramParseMode.Html;
 
     public DateTime? LastExecutedAtUtc { get; set; }
 

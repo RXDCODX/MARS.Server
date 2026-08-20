@@ -15,6 +15,8 @@ public class NSFWBooruAutoPostConfig
 
     public bool IsEnabled { get; set; } = true;
 
+    public string Message { get; set; } = "";
+
     public DateTime? LastExecutedAtUtc { get; set; }
 
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;

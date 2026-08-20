@@ -6,6 +6,7 @@ public interface IDanbooruDiscordPoster
         ulong channelId,
         byte[] fileBytes,
         string fileName,
+        string? message,
         CancellationToken cancellationToken
     );
 }

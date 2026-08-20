@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using MARS.Server.Services.BooruShared.Entities;
 using MARS.Server.Services.Telegram.WTelegram;
 using Microsoft.Extensions.Logging;
 using SixLabors.ImageSharp;
@@ -22,27 +23,49 @@ public class DanbooruTelegramPoster(
         long chatId,
         byte[] fileBytes,
         string fileName,
+        string message,
+        TelegramParseMode parseMode,
         CancellationToken cancellationToken
     )
     {
-        return await SendMediaAsync(chatId, fileBytes, fileName, null, cancellationToken);
+        return await SendMediaAsync(
+            chatId,
+            fileBytes,
+            fileName,
+            message,
+            parseMode,
+            null,
+            cancellationToken
+        );
     }
 
     public async Task<OperationResult> SchedulePostAsync(
         long chatId,
         byte[] fileBytes,
         string fileName,
+        string message,
+        TelegramParseMode parseMode,
         DateTime scheduleDate,
         CancellationToken cancellationToken
     )
     {
-        return await SendMediaAsync(chatId, fileBytes, fileName, scheduleDate, cancellationToken);
+        return await SendMediaAsync(
+            chatId,
+            fileBytes,
+            fileName,
+            message,
+            parseMode,
+            scheduleDate,
+            cancellationToken
+        );
     }
 
     private async Task<OperationResult> SendMediaAsync(
         long chatId,
         byte[] fileBytes,
         string fileName,
+        string message,
+        TelegramParseMode parseMode,
         DateTime? scheduleDate,
         CancellationToken cancellationToken
     )
@@ -71,6 +94,7 @@ public class DanbooruTelegramPoster(
                     }
 
                     var uploadBytes = readyBytes;
+                    var (caption, entities) = ConvertMessageToEntities(message, parseMode);
 
                     try
                     {
@@ -80,8 +104,9 @@ public class DanbooruTelegramPoster(
                         await client.Messages_SendMedia(
                             peer: inputPeer,
                             media: new InputMediaUploadedPhoto { file = inputFile },
-                            message: "",
+                            message: caption,
                             random_id: Random.Shared.NextInt64(),
+                            entities: entities,
                             schedule_date: scheduleDate
                         );
 
@@ -109,8 +134,9 @@ public class DanbooruTelegramPoster(
                             await client.Messages_SendMedia(
                                 peer: inputPeer,
                                 media: new InputMediaUploadedPhoto { file = retryFile },
-                                message: "",
+                                message: caption,
                                 random_id: Random.Shared.NextInt64(),
+                                entities: entities,
                                 schedule_date: scheduleDate
                             );
 
@@ -132,8 +158,9 @@ public class DanbooruTelegramPoster(
                                         new DocumentAttributeFilename { file_name = fileName },
                                     ],
                                 },
-                                message: "",
+                                message: caption,
                                 random_id: Random.Shared.NextInt64(),
+                                entities: entities,
                                 schedule_date: scheduleDate
                             );
 
@@ -152,6 +179,44 @@ public class DanbooruTelegramPoster(
         }
 
         return result;
+    }
+
+    private static (string caption, MessageEntity[]? entities) ConvertMessageToEntities(
+        string message,
+        TelegramParseMode parseMode
+    )
+    {
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return ("", null);
+        }
+
+        MessageEntity[]? entities = null;
+        var caption = message;
+
+        try
+        {
+            switch (parseMode)
+            {
+                case TelegramParseMode.Html:
+                    var htmlText = message;
+                    entities = HtmlText.HtmlToEntities(null, ref htmlText);
+                    caption = htmlText;
+                    break;
+                case TelegramParseMode.Markdown:
+                    var mdText = message;
+                    entities = Markdown.MarkdownToEntities(null, ref mdText);
+                    caption = mdText;
+                    break;
+            }
+        }
+        catch (Exception)
+        {
+            // Fallback: send as plain text if parsing fails
+            entities = null;
+        }
+
+        return (caption, entities is { Length: > 0 } ? entities : null);
     }
 
     private static async Task<(byte[] Bytes, bool Converted)> EnsureTelegramPhotoCompatibleAsync(

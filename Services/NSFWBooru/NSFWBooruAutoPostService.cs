@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Cronos;
 using MARS.Server.DataBaseContext;
 using MARS.Server.Services.BooruShared;
@@ -157,18 +158,26 @@ public class NsfwBooruAutoPostService(
 
             var fileBytes = await response.Content.ReadAsByteArrayAsync(cancellationToken);
             var fileName = Path.GetFileName(new Uri(fileUrl).AbsolutePath);
-            var tagPreview = post
-                .Tags?.Split(' ')
-                .Take(5)
-                .Aggregate("", (a, b) => $"{a} {b}")
-                .Trim();
+
+            var resolvedMessage = BooruMessageTemplateResolver.Resolve(
+                config.Message,
+                new Dictionary<string, string?>
+                {
+                    { "tags", post.Tags },
+                    { "id", post.Id.ToString() },
+                    { "rating", post.Rating },
+                    { "score", post.Score.ToString() },
+                    { "width", post.Width.ToString() },
+                    { "height", post.Height.ToString() },
+                }
+            );
 
             await using var stream = new MemoryStream(fileBytes);
             var result = await discordGatewayService.SendFileAsync(
                 config.DiscordChannelId,
                 stream,
                 fileName,
-                null,
+                string.IsNullOrWhiteSpace(resolvedMessage) ? null : resolvedMessage,
                 cancellationToken
             );
 
@@ -222,6 +231,7 @@ public class NsfwBooruAutoPostService(
                     Tags = c.Tags,
                     CronExpression = c.CronExpression,
                     IsEnabled = c.IsEnabled,
+                    Message = c.Message,
                     LastExecutedAtUtc = c.LastExecutedAtUtc,
                     CreatedAtUtc = c.CreatedAtUtc,
                     UpdatedAtUtc = c.UpdatedAtUtc,
@@ -253,7 +263,8 @@ public class NsfwBooruAutoPostService(
             BooruValidationHelper.ValidateAndParseDiscordChannelId(
                 request.DiscordChannelId,
                 out _
-            ) is { } channelError
+            ) is
+            { } channelError
         )
         {
             return OperationResult<NSFWBooruAutoPostConfigDto>.Bad(
@@ -294,6 +305,7 @@ public class NsfwBooruAutoPostService(
                 DiscordChannelId = discordChannelId,
                 Tags = request.Tags.Trim(),
                 CronExpression = request.CronExpression.Trim(),
+                Message = request.Message.Trim(),
                 IsEnabled = true,
                 CreatedAtUtc = now,
                 UpdatedAtUtc = now,
@@ -311,6 +323,7 @@ public class NsfwBooruAutoPostService(
                     Tags = entity.Tags,
                     CronExpression = entity.CronExpression,
                     IsEnabled = entity.IsEnabled,
+                    Message = entity.Message,
                     LastExecutedAtUtc = entity.LastExecutedAtUtc,
                     CreatedAtUtc = entity.CreatedAtUtc,
                     UpdatedAtUtc = entity.UpdatedAtUtc,
@@ -348,7 +361,8 @@ public class NsfwBooruAutoPostService(
             BooruValidationHelper.ValidateAndParseDiscordChannelId(
                 request.DiscordChannelId,
                 out _
-            ) is { } channelError
+            ) is
+            { } channelError
         )
         {
             return OperationResult<NSFWBooruAutoPostConfigDto>.Bad(
@@ -392,6 +406,7 @@ public class NsfwBooruAutoPostService(
                 entity.DiscordChannelId = discordChannelId;
                 entity.Tags = request.Tags.Trim();
                 entity.CronExpression = request.CronExpression.Trim();
+                entity.Message = request.Message.Trim();
                 entity.UpdatedAtUtc = DateTime.UtcNow;
                 await dbContext.SaveChangesAsync(cancellationToken);
 
@@ -404,6 +419,7 @@ public class NsfwBooruAutoPostService(
                         Tags = entity.Tags,
                         CronExpression = entity.CronExpression,
                         IsEnabled = entity.IsEnabled,
+                        Message = entity.Message,
                         LastExecutedAtUtc = entity.LastExecutedAtUtc,
                         CreatedAtUtc = entity.CreatedAtUtc,
                         UpdatedAtUtc = entity.UpdatedAtUtc,

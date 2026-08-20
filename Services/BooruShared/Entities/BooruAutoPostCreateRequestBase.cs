@@ -7,4 +7,6 @@ public abstract class BooruAutoPostCreateRequestBase
     public string Tags { get; set; } = "";
 
     public string CronExpression { get; set; } = "";
+
+    public string Message { get; set; } = "";
 }

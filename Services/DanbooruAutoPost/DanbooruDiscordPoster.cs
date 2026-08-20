@@ -9,6 +9,7 @@ public class DanbooruDiscordPoster(IDiscordGatewayService discordGatewayService)
         ulong channelId,
         byte[] fileBytes,
         string fileName,
+        string? message,
         CancellationToken cancellationToken
     )
     {
@@ -21,7 +22,7 @@ public class DanbooruDiscordPoster(IDiscordGatewayService discordGatewayService)
                 channelId,
                 stream,
                 fileName,
-                null,
+                message,
                 cancellationToken
             );
         }
