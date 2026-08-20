@@ -1,3 +1,7 @@
+using System;
+using System.Threading;
+using System.Threading.Tasks;
+
 namespace MARS.Server.Services.DanbooruAutoPost;
 
 public interface IDanbooruTelegramPoster
