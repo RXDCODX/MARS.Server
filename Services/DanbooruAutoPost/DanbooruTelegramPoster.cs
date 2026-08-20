@@ -144,7 +144,10 @@ public class DanbooruTelegramPoster(
                     }
 
                     var uploadBytes = readyBytes;
-                    var (caption, entities) = ConvertMessageToEntities(message, parseMode);
+                    (var caption, MessageEntity[]? entities) = ConvertMessageToEntities(
+                        message,
+                        parseMode
+                    );
 
                     try
                     {

@@ -1,11 +1,17 @@
 @echo off
-setlocal
+setlocal enabledelayedexpansion
 
 set "ROOT_DIR=%~dp0..\..\..\"
 set "PROJECT=%ROOT_DIR%MARS.Projects\MARS.Server\MARS.Server.csproj"
 set "CONFIG=Release"
 set "SKIP_CLIENT=false"
 set "SKIP_TESTS=false"
+
+for /F "delims=#" %%a in ('"prompt #$E# & for %%b in (1) do rem"') do set "ESC=%%a"
+set "RED=%ESC%[91m"
+set "YELLOW=%ESC%[93m"
+set "GREEN=%ESC%[92m"
+set "RESET=%ESC%[0m"
 
 :parse_args
 if "%~1"=="" goto run_publish
@@ -50,13 +56,17 @@ if "%SKIP_TESTS%"=="true" (
 
 if errorlevel 1 (
     echo.
-    echo ERROR: Publish failed.
+    echo !RED!============================================================!RESET!
+    echo !RED!ERROR: Publish failed.!RESET!
+    echo !RED!============================================================!RESET!
+    echo.
+    pause
     exit /b 1
 )
 
 echo.
-echo ============================================================
-echo Publish complete: bin\Release\net10.0\publish\
-echo ============================================================
+echo !GREEN!============================================================!RESET!
+echo !GREEN!Publish complete: bin\Release\net10.0\publish\!RESET!
+echo !GREEN!============================================================!RESET!
 
 exit /b 0
