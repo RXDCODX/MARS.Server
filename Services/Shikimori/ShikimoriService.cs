@@ -1,56 +1,27 @@
-﻿using MARS.Server.Configuration;
-using MARS.Server.Exstensions;
+﻿using MARS.Server.Exstensions;
 using MARS.Server.Services.Shikimori.Entitys;
 using MARS.Server.Services.Telegram;
-using Microsoft.Extensions.Options;
-using ShikimoriSharp;
-using ShikimoriSharp.Bases;
-using ShikimoriSharp.Classes;
-using ShikimoriSharp.Settings;
 
 namespace MARS.Server.Services.Shikimori;
 
-public class ShikimoriService : ITelegramusService
+public class ShikimoriService(
+    ILogger<ShikimoriService> logger,
+    IShikimoriApiClient apiClient,
+    IShikimoriRateLimiter shikimoriRateLimiter
+) : ITelegramusService
 {
-    private readonly ILogger _logger;
-    private readonly ShikimoriClient _client;
-    private readonly IShikimoriRateLimiter _shikimoriRateLimiter;
+    private readonly ILogger _logger = logger;
+    private readonly IShikimoriApiClient _apiClient = apiClient;
+    private readonly IShikimoriRateLimiter _shikimoriRateLimiter = shikimoriRateLimiter;
 
-    public ShikimoriService(
-        ILogger<ShikimoriService> logger,
-        IOptions<ShikimoriClientOptions> configuration,
-        IShikimoriRateLimiter shikimoriRateLimiter
-    )
+    public async Task<ShikimoriAnime?> GetRandomAnime()
     {
-        _logger = logger;
-        _shikimoriRateLimiter = shikimoriRateLimiter;
-        var options = configuration.Value ?? throw new NullReferenceException();
-        var settings = new ClientSettings(
-            options.ClientName,
-            options.ClientId,
-            options.ClientSecret
-        );
-        //_client = new ShikimoriClient(logger, settings);
-        _client = new ShikimoriClient(logger, settings);
-    }
-
-    public async Task<Anime?> GetRandomAnime()
-    {
-        Anime? result = null;
+        ShikimoriAnime? result = null;
 
         try
         {
             await _shikimoriRateLimiter.WaitForSlotAsync();
-
-            var animes = await _client.Animes.GetAnime(
-                new AnimeRequestSettings
-                {
-                    order = ShikimoriSharp.Enums.Order.random,
-                    limit = 1,
-                    score = 7,
-                }
-            );
-            result = animes?.FirstOrDefault();
+            result = await _apiClient.GetRandomAnimeAsync();
         }
         catch (Exception ex)
         {
@@ -60,16 +31,16 @@ public class ShikimoriService : ITelegramusService
         return result;
     }
 
-    public async Task<AnimeID?> GetAnimeById(long id)
+    public async Task<ShikimoriAnime?> GetAnimeById(long id)
     {
-        AnimeID? result = null;
+        ShikimoriAnime? result = null;
 
         if (id > 0)
         {
             try
             {
                 await _shikimoriRateLimiter.WaitForSlotAsync();
-                result = await _client.Animes.GetAnime(id);
+                result = await _apiClient.GetAnimeByIdAsync(id);
             }
             catch (Exception ex)
             {
@@ -80,23 +51,14 @@ public class ShikimoriService : ITelegramusService
         return result;
     }
 
-    public async Task<Manga?> GetRandomManga()
+    public async Task<ShikimoriManga?> GetRandomManga()
     {
-        Manga? result = null;
+        ShikimoriManga? result = null;
 
         try
         {
             await _shikimoriRateLimiter.WaitForSlotAsync();
-
-            var mangas = await _client.Mangas.GetBySearch(
-                new MangaRequestSettings
-                {
-                    order = ShikimoriSharp.Enums.Order.random,
-                    limit = 1,
-                    score = 7,
-                }
-            );
-            result = mangas?.FirstOrDefault();
+            result = await _apiClient.GetRandomMangaAsync();
         }
         catch (Exception ex)
         {
@@ -106,16 +68,16 @@ public class ShikimoriService : ITelegramusService
         return result;
     }
 
-    public async Task<MangaID?> GetMangaById(long id)
+    public async Task<ShikimoriManga?> GetMangaById(long id)
     {
-        MangaID? result = null;
+        ShikimoriManga? result = null;
 
         if (id > 0)
         {
             try
             {
                 await _shikimoriRateLimiter.WaitForSlotAsync();
-                result = await _client.Mangas.GetById(id);
+                result = await _apiClient.GetMangaByIdAsync(id);
             }
             catch (Exception ex)
             {
@@ -126,16 +88,16 @@ public class ShikimoriService : ITelegramusService
         return result;
     }
 
-    public async Task<FullCharacter?> GetShikiCharacterById(long id)
+    public async Task<ShikimoriCharacter?> GetShikiCharacterById(long id)
     {
-        FullCharacter? result = null;
+        ShikimoriCharacter? result = null;
 
         if (id > 0)
         {
             try
             {
                 await _shikimoriRateLimiter.WaitForSlotAsync();
-                result = await _client.Characters.GetCharacterById(id);
+                result = await _apiClient.GetCharacterByIdAsync(id);
             }
             catch (Exception ex)
             {
@@ -156,21 +118,14 @@ public class ShikimoriService : ITelegramusService
             try
             {
                 var character = await GetShikiCharacterById(characterId);
-                if (character?.Animes?.Length > 0)
+
+                if (character?.Animes is { Count: > 0 })
                 {
                     // Выбираем аниме с самым коротким названием
-                    var shortestAnime = character
-                        .Animes.Select(a => new
-                        {
-                            Title = a.Russian ?? a.Name,
-                            (a.Russian ?? a.Name).Length,
-                        })
-                        .MinBy(a => a.Length);
-
-                    if (shortestAnime != null)
-                    {
-                        result = shortestAnime.Title;
-                    }
+                    result = character
+                        .Animes.Select(a => a.Russian ?? a.Name)
+                        .Where(title => !string.IsNullOrWhiteSpace(title))
+                        .MinBy(title => title!.Length);
                 }
             }
             catch (Exception ex)
@@ -195,21 +150,14 @@ public class ShikimoriService : ITelegramusService
             try
             {
                 var character = await GetShikiCharacterById(characterId);
-                if (character?.Mangas?.Length > 0)
+
+                if (character?.Mangas is { Count: > 0 })
                 {
                     // Выбираем мангу с самым коротким названием
-                    var shortestManga = character
-                        .Mangas.Select(m => new
-                        {
-                            Title = m.Russian ?? m.Name,
-                            (m.Russian ?? m.Name).Length,
-                        })
-                        .MinBy(m => m.Length);
-
-                    if (shortestManga != null)
-                    {
-                        result = shortestManga.Title;
-                    }
+                    result = character
+                        .Mangas.Select(m => m.Russian ?? m.Name)
+                        .Where(title => !string.IsNullOrWhiteSpace(title))
+                        .MinBy(title => title!.Length);
                 }
             }
             catch (Exception ex)

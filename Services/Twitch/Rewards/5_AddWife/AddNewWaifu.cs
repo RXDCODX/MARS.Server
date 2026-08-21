@@ -4,6 +4,7 @@ using MARS.Server.Exstensions;
 using MARS.Server.Hubs;
 using MARS.Server.Hubs.Interfaces;
 using MARS.Server.Services.Shikimori;
+using MARS.Server.Services.Shikimori.Entitys;
 using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.Twitch.Validation;
@@ -12,7 +13,6 @@ using MARS.Server.Services.WaifuRoll.Entitys.Interfaces;
 using MARS.Server.Services.WaifuRoll.helpers;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Options;
-using ShikimoriSharp.Classes;
 using TwitchLib.Api.Helix.Models.Chat;
 using TwitchLib.Api.Interfaces;
 using TwitchLib.Client.Events;
@@ -86,7 +86,7 @@ public class AddNewWaifu(
                     return;
                 }
 
-                FullCharacter? character = await shikimoriService.GetShikiCharacterById(id);
+                ShikimoriCharacter? character = await shikimoriService.GetShikiCharacterById(id);
 
                 if (character is null)
                 {

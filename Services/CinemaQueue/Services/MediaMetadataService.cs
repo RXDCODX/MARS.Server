@@ -30,7 +30,7 @@ public class MediaMetadataService(
         RegexOptions.Compiled
     );
     private static readonly Regex ShikimoriUrlRegex = new(
-        @"https://shikimori\.one/animes/(\d+)-",
+        @"https://shikimori\.(one|io)/animes/(\d+)-",
         RegexOptions.Compiled
     );
 
@@ -139,9 +139,9 @@ public class MediaMetadataService(
                 {
                     result = new MediaMetadata
                     {
-                        Title = $"{anime.Russian ?? anime.Name} ({anime.AiredOn?.Year})",
+                        Title = $"{anime.Russian ?? anime.Name} ({anime.AiredOnYear})",
                         Description = anime.Description,
-                        ImageUrl = anime.Image?.Original,
+                        ImageUrl = anime.ImageUrl,
                         SourceUrl = url,
                     };
                 }

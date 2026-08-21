@@ -1,6 +1,6 @@
+using MARS.Server.Services.Shikimori.Entitys;
 using MARS.Server.Services.WaifuRoll.Entitys;
 using MARS.Server.Services.WaifuRoll.Models;
-using ShikimoriSharp.Classes;
 
 namespace MARS.Server.Services.WaifuRoll.Interfaces;
 
@@ -31,7 +31,7 @@ public interface IWaifuRollService
     /// </summary>
     /// <param name="character">Персонаж из Shikimori</param>
     /// <returns>Результат добавления вайфу</returns>
-    Task<OperationResult<AddNewWaifuResponse>> AddNewWaifu(FullCharacter character);
+    Task<OperationResult<AddNewWaifuResponse>> AddNewWaifu(ShikimoriCharacter character);
 
     /// <summary>
     /// Объединение вайфу с хостом

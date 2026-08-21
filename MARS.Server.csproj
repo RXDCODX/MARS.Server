@@ -105,7 +105,6 @@
     <PackageReference Include="obs-websocket-dotnet" />
     <PackageReference Include="OpenTelemetry.Api" />
     <PackageReference Include="SevenTV-lib" />
-    <PackageReference Include="ShikimoriSharp" />
     <PackageReference Include="SignalRSwaggerGen" />
     <PackageReference Include="SignalRSwaggerGen.Core" />
     <PackageReference Include="SignalRSwaggerGen.Utils" />

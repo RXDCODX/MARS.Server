@@ -1,5 +1,5 @@
-﻿using MARS.Server.Services.WaifuRoll.Entitys;
-using ShikimoriSharp.Classes;
+﻿using MARS.Server.Services.Shikimori.Entitys;
+using MARS.Server.Services.WaifuRoll.Entitys;
 
 namespace MARS.Server.Services.Twitch.Rewards;
 
@@ -26,8 +26,8 @@ public class AnswersForTwitchRewards
     public static string ReplaceKeywordsInAnswer(
         string displayName,
         string message,
-        AnimeID? shikiAnime = null,
-        MangaID? shikiMangas = null,
+        ShikimoriAnime? shikiAnime = null,
+        ShikimoriManga? shikiMangas = null,
         Waifu? waifu = null
     )
     {

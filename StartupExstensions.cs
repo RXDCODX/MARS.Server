@@ -542,6 +542,16 @@ public static class StartupEstensions
 
         internal IServiceCollection AddShikimoriServices()
         {
+            services.AddHttpClient(
+                ShikimoriApiClient.HttpClientName,
+                (sp, client) =>
+                {
+                    var shikimoriOptions = sp.GetConfiguration<ShikimoriClientOptions>();
+                    client.BaseAddress = new Uri("https://shikimori.io");
+                    client.DefaultRequestHeaders.UserAgent.ParseAdd(shikimoriOptions.ClientName);
+                }
+            );
+            services.AddSingleton<IShikimoriApiClient, ShikimoriApiClient>();
             services.AddSingleton<IShikimoriRateLimiter, ShikimoriShikimoriRateLimiter>();
             services.AddSingleton<ShikimoriService>();
             return services;

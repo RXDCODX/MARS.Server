@@ -3,6 +3,7 @@ using MARS.Server.ApplicationState;
 using MARS.Server.Configuration;
 using MARS.Server.DataBaseContext;
 using MARS.Server.Exstensions;
+using MARS.Server.Services.Shikimori.Entitys;
 using MARS.Server.Services.Twitch;
 using MARS.Server.Services.Twitch.Rewards;
 using MARS.Server.Services.Twitch.WeddingAnniversary;
@@ -12,7 +13,6 @@ using MARS.Server.Services.WaifuRoll.Interfaces;
 using MARS.Server.Services.WaifuRoll.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using ShikimoriSharp.Classes;
 
 namespace MARS.Server.Services.WaifuRoll;
 
@@ -327,7 +327,9 @@ public class WaifuRollService(
         return result;
     }
 
-    public async Task<OperationResult<AddNewWaifuResponse>> AddNewWaifu(FullCharacter? character)
+    public async Task<OperationResult<AddNewWaifuResponse>> AddNewWaifu(
+        ShikimoriCharacter? character
+    )
     {
         var result = OperationResult<AddNewWaifuResponse>.Bad(
             "ошибка при добавлении нового персонажа"
@@ -351,13 +353,19 @@ public class WaifuRollService(
                     {
                         ShikiId = character.Id.ToString(),
                         Name = character.Name ?? character.Russian ?? "Unknown",
-                        ImageUrl = character.Image?.Original ?? string.Empty,
+                        ImageUrl = character.ImageUrl ?? string.Empty,
                         WhenAdded = DateTime.Now,
                         LastOrder = DateTime.Now,
                         OrderCount = 0,
                         IsPrivated = false,
-                        Manga = character.Mangas.MinBy(e => e.Russian.Length)?.Russian,
-                        Anime = character.Animes.MinBy(e => e.Russian.Length)?.Russian,
+                        Manga = character
+                            .Mangas.Select(m => m.Russian ?? m.Name)
+                            .Where(title => !string.IsNullOrWhiteSpace(title))
+                            .MinBy(title => title!.Length),
+                        Anime = character
+                            .Animes.Select(a => a.Russian ?? a.Name)
+                            .Where(title => !string.IsNullOrWhiteSpace(title))
+                            .MinBy(title => title!.Length),
                     };
 
                     waifu = await waifuDbHelper.EnsureWaifuHaveImageIrl(waifu);

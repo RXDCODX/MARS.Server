@@ -18,11 +18,11 @@ public class WaifuRollEnsurenceService(
     {
         if (string.IsNullOrWhiteSpace(waifu.ImageUrl))
         {
-            var character = await shikiService.GetShikiCharacterById(long.Parse(waifu.ShikiId)); // FullCharacter
+            var character = await shikiService.GetShikiCharacterById(long.Parse(waifu.ShikiId));
             if (character != null)
             {
                 await using var dbContext = await appDbContextFactory.CreateDbContextAsync();
-                waifu.ImageUrl = character.Image.Original;
+                waifu.ImageUrl = character.ImageUrl ?? string.Empty;
             }
         }
 

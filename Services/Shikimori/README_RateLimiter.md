@@ -48,14 +48,13 @@ Services/Shikimori/
 Все методы API автоматически используют рейт лимитер:
 
 ```csharp
-public async Task<Anime?> GetRandomAnime()
+public async Task<ShikimoriAnime?> GetRandomAnime()
 {
     // Автоматически ожидает доступный слот
     await _rateLimiter.WaitForSlotAsync();
     
     // Выполняет запрос к API
-    var animes = await _client.Animes.GetAnime(...);
-    return animes?.FirstOrDefault();
+    return await _apiClient.GetRandomAnimeAsync();
 }
 ```
 
