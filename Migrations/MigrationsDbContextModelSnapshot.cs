@@ -329,94 +329,6 @@ namespace MARS.Server.Migrations
                     b.ToTable("CinemaQueue");
                 });
 
-            modelBuilder.Entity("MARS.Server.Services.DanbooruAutoPost.Entities.DanbooruAutoPostConfig", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("CronExpression")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<int?>("DanbooruPostId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("DiscordChannelId")
-                        .IsRequired()
-                        .HasColumnType("character varying(64)");
-
-                    b.Property<bool>("IsEnabled")
-                        .HasColumnType("boolean");
-
-                    b.Property<DateTime?>("LastExecutedAtUtc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Message")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<int>("PlanningHorizonDays")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Tags")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<int>("TargetPlatform")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("TargetPostCount")
-                        .HasColumnType("integer");
-
-                    b.Property<long?>("TelegramChannelId")
-                        .HasColumnType("bigint");
-
-                    b.Property<int>("TelegramParseMode")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("UpdatedAtUtc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("DanbooruAutoPostConfigs");
-                });
-
-            modelBuilder.Entity("MARS.Server.Services.DanbooruAutoPost.Entities.DanbooruScheduledPost", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("ConfigId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("ErrorMessage")
-                        .HasColumnType("text");
-
-                    b.Property<DateTime?>("PostedAtUtc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime>("ScheduledAtUtc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ConfigId");
-
-                    b.ToTable("DanbooruScheduledPosts");
-                });
-
             modelBuilder.Entity("MARS.Server.Services.EnvironmentVariable.Entitys.EnvironmentVariable", b =>
                 {
                     b.Property<string>("Key")
@@ -440,45 +352,6 @@ namespace MARS.Server.Migrations
                         .IsUnique();
 
                     b.ToTable("EnvironmentVariables");
-                });
-
-            modelBuilder.Entity("MARS.Server.Services.NSFWBooru.Entities.NSFWBooruAutoPostConfig", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("CronExpression")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("DiscordChannelId")
-                        .IsRequired()
-                        .HasColumnType("character varying(64)");
-
-                    b.Property<bool>("IsEnabled")
-                        .HasColumnType("boolean");
-
-                    b.Property<DateTime?>("LastExecutedAtUtc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Message")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Tags")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("UpdatedAtUtc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("NSFWBooruAutoPostConfigs");
                 });
 
             modelBuilder.Entity("MARS.Server.Services.PyroAlerts.Entitys.MediaInfo", b =>
@@ -2018,17 +1891,6 @@ namespace MARS.Server.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("TwitchUser");
-                });
-
-            modelBuilder.Entity("MARS.Server.Services.DanbooruAutoPost.Entities.DanbooruScheduledPost", b =>
-                {
-                    b.HasOne("MARS.Server.Services.DanbooruAutoPost.Entities.DanbooruAutoPostConfig", "Config")
-                        .WithMany()
-                        .HasForeignKey("ConfigId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Config");
                 });
 
             modelBuilder.Entity("MARS.Server.Services.PyroAlerts.Entitys.MediaInfo", b =>
