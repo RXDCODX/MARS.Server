@@ -32,7 +32,6 @@ public class ShikimoriApiClient(
         NumberHandling = JsonNumberHandling.AllowReadingFromString,
     };
 
-    private readonly IHttpClientFactory _httpClientFactory = httpClientFactory;
     private readonly ILogger _logger = logger;
 
     public async Task<ShikimoriAnime?> GetRandomAnimeAsync(
@@ -148,7 +147,7 @@ public class ShikimoriApiClient(
         {
             try
             {
-                using var httpClient = _httpClientFactory.CreateClient(HttpClientName);
+                using var httpClient = httpClientFactory.CreateClient(HttpClientName);
                 using var response = await httpClient.GetAsync(
                     $"api/characters/{id}",
                     cancellationToken
@@ -191,7 +190,7 @@ public class ShikimoriApiClient(
     {
         AnimeNode[]? result = null;
 
-        using var httpClient = _httpClientFactory.CreateClient(HttpClientName);
+        using var httpClient = httpClientFactory.CreateClient(HttpClientName);
         using var response = await httpClient.PostAsJsonAsync(
             "api/graphql",
             new GraphqlRequest(query),
@@ -235,7 +234,7 @@ public class ShikimoriApiClient(
     {
         MangaNode[]? result = null;
 
-        using var httpClient = _httpClientFactory.CreateClient(HttpClientName);
+        using var httpClient = httpClientFactory.CreateClient(HttpClientName);
         using var response = await httpClient.PostAsJsonAsync(
             "api/graphql",
             new GraphqlRequest(query),
@@ -359,101 +358,5 @@ public class ShikimoriApiClient(
         }
 
         return result;
-    }
-
-    private sealed class GraphqlRequest(string query)
-    {
-        public string Query { get; init; } = query;
-    }
-
-    private sealed class GraphqlEnvelope<TData>
-    {
-        public TData? Data { get; init; }
-
-        public GraphqlError[]? Errors { get; init; }
-    }
-
-    private sealed class GraphqlError
-    {
-        public string? Message { get; init; }
-    }
-
-    private sealed class AnimeListData
-    {
-        public AnimeNode[]? Animes { get; init; }
-    }
-
-    private sealed class MangaListData
-    {
-        public MangaNode[]? Mangas { get; init; }
-    }
-
-    private sealed class AnimeNode
-    {
-        public long Id { get; init; }
-
-        public string? Name { get; init; }
-
-        public string? Russian { get; init; }
-
-        public string? Description { get; init; }
-
-        public AiredOnNode? AiredOn { get; init; }
-
-        public PosterNode? Poster { get; init; }
-    }
-
-    private sealed class MangaNode
-    {
-        public long Id { get; init; }
-
-        public string? Name { get; init; }
-
-        public string? Russian { get; init; }
-
-        public string? Description { get; init; }
-
-        public AiredOnNode? AiredOn { get; init; }
-
-        public PosterNode? Poster { get; init; }
-    }
-
-    private sealed class AiredOnNode
-    {
-        public int? Year { get; init; }
-    }
-
-    private sealed class PosterNode
-    {
-        public string? OriginalUrl { get; init; }
-    }
-
-    private sealed class CharacterNode
-    {
-        public long Id { get; init; }
-
-        public string? Name { get; init; }
-
-        public string? Russian { get; init; }
-
-        public string? Description { get; init; }
-
-        public CharacterImageNode? Image { get; init; }
-
-        public RelatedTitleNode[]? Animes { get; init; }
-
-        public RelatedTitleNode[]? Mangas { get; init; }
-    }
-
-    public sealed class CharacterImageNode
-    {
-        public string? Original { get; init; }
-    }
-
-    public sealed class RelatedTitleNode
-    {
-        public string? Name { get; init; }
-
-        public string? Russian { get; init; }
     }
 }
