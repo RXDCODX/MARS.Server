@@ -3,9 +3,7 @@ using MARS.Server.Services._365Genius.Entitys;
 using MARS.Server.Services.Adhd.Entities;
 using MARS.Server.Services.BooruAutoPost.Entities;
 using MARS.Server.Services.BooruShared.Entities;
-using MARS.Server.Services.DanbooruAutoPost.Entities;
 using MARS.Server.Services.EnvironmentVariable.Entitys;
-using MARS.Server.Services.NSFWBooru.Entities;
 using MARS.Server.Services.PyroAlerts.Entitys;
 using MARS.Server.Services.Scoreboard.Entitys;
 using MARS.Server.Services.ServiceManager.Entitys;
@@ -73,9 +71,6 @@ public partial class AppDbContext(DbContextOptions<AppDbContext> options) : DbCo
     public DbSet<TelegramDiscordChannelBinding> TelegramDiscordChannelBindings { get; set; } =
         null!;
     public DbSet<TelegramDiscordChannelState> TelegramDiscordChannelStates { get; set; } = null!;
-    public DbSet<DanbooruAutoPostConfig> DanbooruAutoPostConfigs { get; set; } = null!;
-    public DbSet<DanbooruScheduledPost> DanbooruScheduledPosts { get; set; } = null!;
-    public DbSet<NSFWBooruAutoPostConfig> NSFWBooruAutoPostConfigs { get; set; } = null!;
     public DbSet<PostedImageRecord> PostedImageRecords { get; set; } = null!;
     public DbSet<MARS.Server.Services.BooruAutoPost.Entities.BooruAutoPostConfig> BooruAutoPostConfigs { get; set; } =
         null!;
@@ -393,11 +388,6 @@ public partial class AppDbContext(DbContextOptions<AppDbContext> options) : DbCo
         modelBuilder.Entity<TelegramDiscordChannelState>().HasKey(e => e.TelegramChannelId);
 
         modelBuilder
-            .Entity<DanbooruAutoPostConfig>()
-            .Property(e => e.DiscordChannelId)
-            .HasConversion(new NumberToStringConverter<ulong>());
-
-        modelBuilder
             .Entity<PostedImageRecord>()
             .Property(e => e.DiscordChannelId)
             .HasConversion(new NumberToStringConverter<ulong>());
@@ -411,11 +401,6 @@ public partial class AppDbContext(DbContextOptions<AppDbContext> options) : DbCo
                 e.DiscordChannelId,
             })
             .IsUnique();
-
-        modelBuilder
-            .Entity<NSFWBooruAutoPostConfig>()
-            .Property(e => e.DiscordChannelId)
-            .HasConversion(new NumberToStringConverter<ulong>());
 
         modelBuilder
             .Entity<MARS.Server.Services.BooruAutoPost.Entities.BooruAutoPostConfig>()

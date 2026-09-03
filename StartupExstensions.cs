@@ -12,12 +12,10 @@ using MARS.Server.Services._365Genius;
 using MARS.Server.Services.Adhd;
 using MARS.Server.Services.AudioControllerHub;
 using MARS.Server.Services.BooruShared;
-using MARS.Server.Services.DanbooruAutoPost;
 using MARS.Server.Services.BooruAutoPost;
 using MARS.Server.Services.Discord.Gateway;
 using MARS.Server.Services.Discord.PlayRequest;
 using MARS.Server.Services.Discord.TtsVoiceRelay;
-using MARS.Server.Services.NSFWBooru;
 using MARS.Server.Services.Obs;
 using MARS.Server.Services.PyroAlerts;
 using MARS.Server.Services.Scoreboard;
@@ -717,24 +715,8 @@ public static class StartupEstensions
         internal IServiceCollection AddBooruServices()
         {
             services.AddSingleton<DanbooruRandomPostService>();
-            services.AddSingleton<IDanbooruDiscordPoster, DanbooruDiscordPoster>();
-            services.AddSingleton<IDanbooruTelegramPoster, DanbooruTelegramPoster>();
-            services.AddSingleton<DanbooruAutoPostService>();
-            services.AddSingleton<IDanbooruAutoPostService>(sp =>
-                sp.GetRequiredService<DanbooruAutoPostService>()
-            );
-            services.AddHostedService(sp => sp.GetRequiredService<DanbooruAutoPostService>());
-
             services.AddSingleton<IDeduplicationService, DeduplicationService>();
 
-            services.AddSingleton<NSFWBooruRandomPostService>();
-            services.AddSingleton<NsfwBooruAutoPostService>();
-            services.AddSingleton<INSFWBooruAutoPostService>(sp =>
-                sp.GetRequiredService<NsfwBooruAutoPostService>()
-            );
-            services.AddHostedService(sp => sp.GetRequiredService<NsfwBooruAutoPostService>());
-
-            // Unified BooruAutoPost service
             services.AddSingleton<Rule34RandomPostService>();
             services.AddSingleton<IBooruDiscordPoster, BooruDiscordPoster>();
             services.AddSingleton<IBooruTelegramPoster, BooruTelegramPoster>();
