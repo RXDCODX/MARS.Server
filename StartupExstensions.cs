@@ -1,3 +1,5 @@
+using System.Net;
+using System.Net.Sockets;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using MARS.Server.Configuration;
@@ -35,6 +37,7 @@ using MARS.Server.Services.Telegram.DiscordBridge;
 using MARS.Server.Services.Telegram.GooglePhotos;
 using MARS.Server.Services.Telegram.PrivateChannelsResender;
 using MARS.Server.Services.Telegram.WTelegram;
+using MARS.Server.Services.Telegram;
 using MARS.Server.Services.Twitch;
 using MARS.Server.Services.Twitch.AutoInfoFetch;
 using MARS.Server.Services.Twitch.BlackList;
@@ -75,6 +78,7 @@ using MARS.Server.Services.WaifuRoll.helpers;
 using MARS.Server.Services.YouTube;
 using MARS.Server.Swagger;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Options;
 using Microsoft.OpenApi;
 using Telegram.Bot;
 using TwitchLib.Api;
@@ -160,6 +164,66 @@ public static class StartupEstensions
 
         services
             .AddHttpClient("telegram_bot_client")
+            .ConfigurePrimaryHttpMessageHandler(sp =>
+            {
+                var handler = new SocketsHttpHandler
+                {
+                    PooledConnectionLifetime = TimeSpan.FromMinutes(10),
+                };
+
+                var logger = factory.CreateLogger("TelegramBotProxy");
+                var proxyConfig = sp.GetRequiredService<IOptions<TelegramProxyConfiguration>>().Value;
+                var proxyUri = TelegramProxyHelper.ReadBotProxyUri(proxyConfig, logger);
+
+                if (proxyUri is not null)
+                {
+                    if (proxyUri.Scheme.Equals("http", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var webProxy = new WebProxy(proxyUri);
+
+                        if (!string.IsNullOrWhiteSpace(proxyUri.UserInfo))
+                        {
+                            var decoded = Uri.UnescapeDataString(proxyUri.UserInfo);
+                            var separatorIndex = decoded.IndexOf(':');
+                            if (separatorIndex > 0)
+                            {
+                                var username = decoded[..separatorIndex];
+                                var password = decoded[(separatorIndex + 1)..];
+                                webProxy.Credentials = new NetworkCredential(username, password);
+                            }
+                        }
+
+                        handler.Proxy = webProxy;
+                        handler.UseProxy = true;
+                        logger.LogInformation(
+                            "Для Telegram Bot API включен HTTP прокси: {ProxyUri}",
+                            proxyUri
+                        );
+                    }
+                    else if (
+                        proxyUri.Scheme.Equals("socks5", StringComparison.OrdinalIgnoreCase)
+                    )
+                    {
+                        handler.ConnectCallback = async (context, cancellationToken) =>
+                        {
+                            var tcpClient =
+                                await TelegramProxyHelper.ConnectThroughSocks5ProxyAsync(
+                                    proxyUri,
+                                    context.DnsEndPoint.Host,
+                                    context.DnsEndPoint.Port,
+                                    cancellationToken
+                                );
+                            return new NetworkStream(tcpClient.Client, ownsSocket: true);
+                        };
+                        logger.LogInformation(
+                            "Для Telegram Bot API включен SOCKS5 прокси: {ProxyUri}",
+                            proxyUri
+                        );
+                    }
+                }
+
+                return handler;
+            })
             .AddTypedClient<ITelegramBotClient>(
                 (httpClient, sp) =>
                 {
@@ -434,6 +498,12 @@ public static class StartupEstensions
             configuration
                 .GetSection(AppBase.Base)
                 .GetSection(WTelegramClientConfiguration.TelegramSection)
+        );
+        services.Configure<TelegramProxyConfiguration>(
+            configuration
+                .GetSection(AppBase.Base)
+                .GetSection(TelegramConfiguration.TelegramSection)
+                .GetSection(TelegramProxyConfiguration.Configuration)
         );
         services.Configure<HoyolabConfiguration>(
             configuration.GetSection(AppBase.Base).GetSection(HoyolabConfiguration.Section)

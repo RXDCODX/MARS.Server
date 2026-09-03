@@ -38,6 +38,11 @@ public static class RootStateKeys
     public const string SoundRequestSpotifyOAuthState = "SoundRequestSpotifyOAuthState";
     public const string SoundRequestSpotifyRedirectUri = "SoundRequestSpotifyRedirectUri";
     public const string WTelegramProxyUrl = "WTelegramProxyUrl";
+    public const string WTelegramProxyType = "WTelegramProxyType";
+
+    // Telegram Bot API
+    public const string TelegramBotProxyUrl = "TelegramBotProxyUrl";
+    public const string TelegramBotProxyType = "TelegramBotProxyType";
 
     // Discord TTS Voice Relay
     public const string DiscordTtsRelayTargetUserId = "DiscordTtsRelayTargetUserId";
