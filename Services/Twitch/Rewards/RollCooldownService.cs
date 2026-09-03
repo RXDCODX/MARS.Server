@@ -15,6 +15,8 @@ public class RollCooldownService(IDbContextFactory<AppDbContext> factory)
         TimeSpan cooldown
     )
     {
+        var result = (allowed: true, remaining: TimeSpan.Zero);
+
         for (var attempt = 0; attempt <= MaxRetries; attempt++)
         {
             try
@@ -32,7 +34,8 @@ public class RollCooldownService(IDbContextFactory<AppDbContext> factory)
                     var elapsed = DateTime.Now - existing.LastRollTime;
                     if (elapsed < cooldown)
                     {
-                        return (false, cooldown - elapsed);
+                        result = (false, cooldown - elapsed);
+                        return result;
                     }
 
                     var tracked = await dbContext.RollCooldowns.FirstAsync(r =>
@@ -53,14 +56,30 @@ public class RollCooldownService(IDbContextFactory<AppDbContext> factory)
                 }
 
                 await dbContext.SaveChangesAsync();
-                return (true, TimeSpan.Zero);
+                result = (true, TimeSpan.Zero);
+                return result;
             }
-            catch (PostgresException ex) when (ex.SqlState == "23505" && attempt < MaxRetries)
+            catch (Exception ex) when (attempt < MaxRetries && IsDuplicateKey(ex))
             {
                 // Duplicate key — concurrent insert, retry
             }
         }
 
-        return (true, TimeSpan.Zero);
+        return result;
+    }
+
+    private static bool IsDuplicateKey(Exception ex)
+    {
+        if (ex is PostgresException postgres && postgres.SqlState == "23505")
+        {
+            return true;
+        }
+
+        if (ex is DbUpdateException dbUpdate && dbUpdate.InnerException is PostgresException inner)
+        {
+            return inner.SqlState == "23505";
+        }
+
+        return false;
     }
 }
