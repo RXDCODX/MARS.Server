@@ -148,7 +148,7 @@ public class ShikimoriApiClient(
         {
             try
             {
-                var httpClient = _httpClientFactory.CreateClient(HttpClientName);
+                using var httpClient = _httpClientFactory.CreateClient(HttpClientName);
                 using var response = await httpClient.GetAsync(
                     $"api/characters/{id}",
                     cancellationToken
@@ -191,7 +191,7 @@ public class ShikimoriApiClient(
     {
         AnimeNode[]? result = null;
 
-        var httpClient = _httpClientFactory.CreateClient(HttpClientName);
+        using var httpClient = _httpClientFactory.CreateClient(HttpClientName);
         using var response = await httpClient.PostAsJsonAsync(
             "api/graphql",
             new GraphqlRequest(query),
@@ -235,7 +235,7 @@ public class ShikimoriApiClient(
     {
         MangaNode[]? result = null;
 
-        var httpClient = _httpClientFactory.CreateClient(HttpClientName);
+        using var httpClient = _httpClientFactory.CreateClient(HttpClientName);
         using var response = await httpClient.PostAsJsonAsync(
             "api/graphql",
             new GraphqlRequest(query),
@@ -445,12 +445,12 @@ public class ShikimoriApiClient(
         public RelatedTitleNode[]? Mangas { get; init; }
     }
 
-    private sealed class CharacterImageNode
+    public sealed class CharacterImageNode
     {
         public string? Original { get; init; }
     }
 
-    private sealed class RelatedTitleNode
+    public sealed class RelatedTitleNode
     {
         public string? Name { get; init; }
 
