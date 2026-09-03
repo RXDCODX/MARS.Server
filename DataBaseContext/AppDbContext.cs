@@ -1,6 +1,7 @@
 using MARS.Server.ApplicationState;
 using MARS.Server.Services._365Genius.Entitys;
 using MARS.Server.Services.Adhd.Entities;
+using MARS.Server.Services.BooruAutoPost.Entities;
 using MARS.Server.Services.BooruShared.Entities;
 using MARS.Server.Services.DanbooruAutoPost.Entities;
 using MARS.Server.Services.EnvironmentVariable.Entitys;
@@ -76,6 +77,10 @@ public partial class AppDbContext(DbContextOptions<AppDbContext> options) : DbCo
     public DbSet<DanbooruScheduledPost> DanbooruScheduledPosts { get; set; } = null!;
     public DbSet<NSFWBooruAutoPostConfig> NSFWBooruAutoPostConfigs { get; set; } = null!;
     public DbSet<PostedImageRecord> PostedImageRecords { get; set; } = null!;
+    public DbSet<MARS.Server.Services.BooruAutoPost.Entities.BooruAutoPostConfig> BooruAutoPostConfigs { get; set; } =
+        null!;
+    public DbSet<MARS.Server.Services.BooruAutoPost.Entities.BooruScheduledPost> BooruScheduledPosts { get; set; } =
+        null!;
 
     // WaifuChat — facts о зрителях (embeddings хранятся в LM-Kit FileSystemVectorStore)
     public DbSet<WaifuChatFact> WaifuChatFacts { get; set; } = null!;
@@ -409,6 +414,11 @@ public partial class AppDbContext(DbContextOptions<AppDbContext> options) : DbCo
 
         modelBuilder
             .Entity<NSFWBooruAutoPostConfig>()
+            .Property(e => e.DiscordChannelId)
+            .HasConversion(new NumberToStringConverter<ulong>());
+
+        modelBuilder
+            .Entity<MARS.Server.Services.BooruAutoPost.Entities.BooruAutoPostConfig>()
             .Property(e => e.DiscordChannelId)
             .HasConversion(new NumberToStringConverter<ulong>());
 

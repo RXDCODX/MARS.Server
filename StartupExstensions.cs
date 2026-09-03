@@ -13,6 +13,7 @@ using MARS.Server.Services.Adhd;
 using MARS.Server.Services.AudioControllerHub;
 using MARS.Server.Services.BooruShared;
 using MARS.Server.Services.DanbooruAutoPost;
+using MARS.Server.Services.BooruAutoPost;
 using MARS.Server.Services.Discord.Gateway;
 using MARS.Server.Services.Discord.PlayRequest;
 using MARS.Server.Services.Discord.TtsVoiceRelay;
@@ -732,6 +733,16 @@ public static class StartupEstensions
                 sp.GetRequiredService<NsfwBooruAutoPostService>()
             );
             services.AddHostedService(sp => sp.GetRequiredService<NsfwBooruAutoPostService>());
+
+            // Unified BooruAutoPost service
+            services.AddSingleton<Rule34RandomPostService>();
+            services.AddSingleton<IBooruDiscordPoster, BooruDiscordPoster>();
+            services.AddSingleton<IBooruTelegramPoster, BooruTelegramPoster>();
+            services.AddSingleton<BooruAutoPostService>();
+            services.AddSingleton<IBooruAutoPostService>(sp =>
+                sp.GetRequiredService<BooruAutoPostService>()
+            );
+            services.AddHostedService(sp => sp.GetRequiredService<BooruAutoPostService>());
 
             return services;
         }
