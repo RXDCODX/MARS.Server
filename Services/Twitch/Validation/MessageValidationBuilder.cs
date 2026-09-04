@@ -75,7 +75,7 @@ public sealed class MessageValidationBuilder(
         return this;
     }
 
-    public IMessageValidationBuilder SkipBlacklisted(bool loud = true)
+    public IMessageValidationBuilder SkipBlacklisted(bool loud = false)
     {
         _checks.Add(
             (
@@ -170,7 +170,7 @@ public sealed class MessageValidationBuilder(
         return this;
     }
 
-    public IMessageValidationBuilder RequireFollower(bool loud = true)
+    public IMessageValidationBuilder RequireFollower(bool loud = false)
     {
         _checks.Add(
             (
@@ -216,7 +216,7 @@ public sealed class MessageValidationBuilder(
         return this;
     }
 
-    public IMessageValidationBuilder IsReplyToBot(bool loud = true)
+    public IMessageValidationBuilder IsReplyToBot(bool loud = false)
     {
         _checks.Add(
             (
