@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -11,6 +11,84 @@ namespace MARS.Server.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            // --- Migrate data from DanbooruAutoPostConfigs → BooruAutoPostConfigs ---
+            migrationBuilder.Sql(@"
+                INSERT INTO ""BooruAutoPostConfigs"" (
+                    ""Id"", ""Source"", ""TargetPlatform"", ""DiscordChannelId"",
+                    ""TelegramChannelId"", ""TargetPostCount"", ""SpecificPostId"",
+                    ""Tags"", ""CronExpression"", ""PlanningHorizonDays"",
+                    ""IsEnabled"", ""Message"", ""TelegramParseMode"",
+                    ""LastExecutedAtUtc"", ""CreatedAtUtc"", ""UpdatedAtUtc""
+                )
+                SELECT
+                    ""Id"",
+                    0,
+                    ""TargetPlatform"",
+                    ""DiscordChannelId"",
+                    ""TelegramChannelId"",
+                    ""TargetPostCount"",
+                    ""DanbooruPostId"",
+                    ""Tags"",
+                    ""CronExpression"",
+                    ""PlanningHorizonDays"",
+                    ""IsEnabled"",
+                    ""Message"",
+                    ""TelegramParseMode"",
+                    ""LastExecutedAtUtc"",
+                    ""CreatedAtUtc"",
+                    ""UpdatedAtUtc""
+                FROM ""DanbooruAutoPostConfigs""
+            ");
+
+            // --- Migrate data from NSFWBooruAutoPostConfigs → BooruAutoPostConfigs ---
+            migrationBuilder.Sql(@"
+                INSERT INTO ""BooruAutoPostConfigs"" (
+                    ""Id"", ""Source"", ""TargetPlatform"", ""DiscordChannelId"",
+                    ""TelegramChannelId"", ""TargetPostCount"", ""SpecificPostId"",
+                    ""Tags"", ""CronExpression"", ""PlanningHorizonDays"",
+                    ""IsEnabled"", ""Message"", ""TelegramParseMode"",
+                    ""LastExecutedAtUtc"", ""CreatedAtUtc"", ""UpdatedAtUtc""
+                )
+                SELECT
+                    ""Id"",
+                    1,
+                    0,
+                    ""DiscordChannelId"",
+                    NULL,
+                    1,
+                    NULL,
+                    ""Tags"",
+                    ""CronExpression"",
+                    60,
+                    ""IsEnabled"",
+                    ""Message"",
+                    0,
+                    ""LastExecutedAtUtc"",
+                    ""CreatedAtUtc"",
+                    ""UpdatedAtUtc""
+                FROM ""NSFWBooruAutoPostConfigs""
+            ");
+
+            // --- Migrate data from DanbooruScheduledPosts → BooruScheduledPosts ---
+            migrationBuilder.Sql(@"
+                INSERT INTO ""BooruScheduledPosts"" (
+                    ""Id"", ""ConfigId"", ""Source"", ""ScheduledAtUtc"",
+                    ""Status"", ""PostedAtUtc"", ""ErrorMessage"", ""CreatedAtUtc""
+                )
+                SELECT
+                    ds.""Id"",
+                    ds.""ConfigId"",
+                    0,
+                    ds.""ScheduledAtUtc"",
+                    ds.""Status"",
+                    ds.""PostedAtUtc"",
+                    ds.""ErrorMessage"",
+                    ds.""CreatedAtUtc""
+                FROM ""DanbooruScheduledPosts"" ds
+                INNER JOIN ""DanbooruAutoPostConfigs"" dc ON ds.""ConfigId"" = dc.""Id""
+            ");
+
+            // --- Drop old tables ---
             migrationBuilder.DropTable(
                 name: "DanbooruScheduledPosts");
 

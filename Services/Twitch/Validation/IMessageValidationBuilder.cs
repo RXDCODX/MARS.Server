@@ -12,8 +12,8 @@ public interface IMessageValidationBuilder
     IMessageValidationBuilder RequireRewardGuid(Guid? expected, bool loud = false);
     IMessageValidationBuilder RequireServiceActive(bool isActive, bool loud = false);
     IMessageValidationBuilder RequireUserId(bool loud = false);
-    IMessageValidationBuilder RequireFollower(bool loud = true);
-    IMessageValidationBuilder IsReplyToBot(bool loud = true);
+    IMessageValidationBuilder RequireFollower(bool loud = false);
+    IMessageValidationBuilder IsReplyToBot(bool loud = false);
     Task<ValidationResult> ValidateAsync();
     Task<ValidationResult> ValidateWithResponseAsync(string userName);
 }

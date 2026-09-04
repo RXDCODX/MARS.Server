@@ -35,7 +35,7 @@ public class TwitchMediaAlerts(
             .ForMessageReceived(args)
             .RequireChannel()
             .SkipBlacklisted()
-            .RequireFollower()
+            .RequireFollower(false)
             .RequireServiceActive(IsServiceActive)
             .ValidateWithResponseAsync(args.ChatMessage.Username);
 

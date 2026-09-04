@@ -109,6 +109,7 @@ public class FumoFridayNight_TwitchReward(
             .RequireBroadcasterUserId()
             .RequireCost(Cost)
             .RequireFollower()
+            .RequireRewardEnabled(IsRewardEnabled)
             .ValidateWithResponseAsync(args.Payload.Event.UserName);
 
         if (vr.IsInvalid)
