@@ -452,24 +452,26 @@ public class BooruAutoPostService(
 
             if (channelMessages.Success)
             {
-                var matchedCount = TelegramScheduleMatcher.CountMatches(
+                var staleMessages = await RemoveStaleTelegramMessagesAsync(
+                    config,
+                    channelId,
+                    scheduledTimes,
+                    channelMessages.Data,
+                    cancellationToken
+                );
+
+                var missingTimes = TelegramScheduleMatcher.FindMissingOccurrences(
                     channelMessages.Data,
                     scheduledTimes
                 );
 
-                if (matchedCount > 0)
+                if (missingTimes.Count > 0)
                 {
-                    logger.LogDebug(
-                        "Для конфига {ConfigId} найдено {Count} совпадающих отложенных сообщений в Telegram, планирование пропущено",
-                        config.Id,
-                        matchedCount
-                    );
-                }
-                else
-                {
-                    var maxNewPosts = MaxTelegramScheduledMessages - channelMessages.Data.Count;
+                    var maxNewPosts =
+                        MaxTelegramScheduledMessages
+                        - (channelMessages.Data.Count - staleMessages.Count);
                     var timesToSchedule =
-                        maxNewPosts > 0 ? scheduledTimes.Take(maxNewPosts).ToList() : [];
+                        maxNewPosts > 0 ? missingTimes.Take(maxNewPosts).ToList() : [];
 
                     if (timesToSchedule.Count > 0)
                     {
@@ -480,7 +482,7 @@ public class BooruAutoPostService(
                         );
 
                         logger.LogInformation(
-                            "Конфиг {ConfigId}: запланировано {Scheduled} из {Planned} постов в Telegram",
+                            "Конфиг {ConfigId}: запланировано {Scheduled} из {Planned} недостающих постов в Telegram",
                             config.Id,
                             scheduleResult.Data.Count,
                             timesToSchedule.Count
@@ -494,6 +496,13 @@ public class BooruAutoPostService(
                         );
                     }
                 }
+                else
+                {
+                    logger.LogDebug(
+                        "Для конфига {ConfigId} все планируемые времена уже покрыты отложенными сообщениями в Telegram",
+                        config.Id
+                    );
+                }
             }
             else
             {
@@ -504,6 +513,48 @@ public class BooruAutoPostService(
                 );
             }
         }
+    }
+
+    private async Task<List<TelegramScheduledMessageInfo>> RemoveStaleTelegramMessagesAsync(
+        BooruAutoPostConfig config,
+        long channelId,
+        List<DateTime> scheduledTimes,
+        List<TelegramScheduledMessageInfo> channelMessages,
+        CancellationToken cancellationToken
+    )
+    {
+        var staleMessages = TelegramScheduleMatcher.FindUnmatchedMessages(
+            channelMessages,
+            scheduledTimes
+        );
+
+        if (staleMessages.Count > 0)
+        {
+            var deleteResult = await telegramPoster.DeleteScheduledMessagesAsync(
+                channelId,
+                staleMessages.Select(m => m.MessageId).ToList(),
+                cancellationToken
+            );
+
+            if (deleteResult.Success)
+            {
+                logger.LogInformation(
+                    "Для конфига {ConfigId} перенесено {Count} отложенных сообщений Telegram за горизонт планирования",
+                    config.Id,
+                    staleMessages.Count
+                );
+            }
+            else
+            {
+                logger.LogWarning(
+                    "Не удалось перенести отложенные сообщения Telegram для канала {ChannelId}: {Error}",
+                    channelId,
+                    deleteResult.Message
+                );
+            }
+        }
+
+        return staleMessages;
     }
 
     private static List<DateTime> GetCronOccurrences(
@@ -1549,23 +1600,28 @@ public class BooruAutoPostService(
 
                     if (channelMessages.Success)
                     {
-                        var matchedCount = TelegramScheduleMatcher.CountMatches(
+                        var staleMessages = await RemoveStaleTelegramMessagesAsync(
+                            config,
+                            channelId,
+                            scheduledTimes,
+                            channelMessages.Data,
+                            cancellationToken
+                        );
+
+                        var missingTimes = TelegramScheduleMatcher.FindMissingOccurrences(
                             channelMessages.Data,
                             scheduledTimes
                         );
 
-                        if (matchedCount > 0)
-                        {
-                            result = OperationResult.Ok(
-                                "Уже запланированы отложенные посты в Telegram. Дождитесь доставки или отмените текущие."
-                            );
-                        }
-                        else
+                        if (missingTimes.Count > 0)
                         {
                             var maxNewPosts =
-                                MaxTelegramScheduledMessages - channelMessages.Data.Count;
+                                MaxTelegramScheduledMessages
+                                - (channelMessages.Data.Count - staleMessages.Count);
                             var timesToSchedule =
-                                maxNewPosts > 0 ? scheduledTimes.Take(maxNewPosts).ToList() : [];
+                                maxNewPosts > 0
+                                    ? missingTimes.Take(maxNewPosts).ToList()
+                                    : [];
 
                             if (timesToSchedule.Count > 0)
                             {
@@ -1583,6 +1639,12 @@ public class BooruAutoPostService(
                                     "Достигнут лимит отложенных сообщений Telegram для этого канала"
                                 );
                             }
+                        }
+                        else
+                        {
+                            result = OperationResult.Ok(
+                                "Все планируемые времена уже покрыты отложенными сообщениями в Telegram"
+                            );
                         }
                     }
                     else

@@ -103,6 +103,46 @@ public class BooruTelegramPoster(
         return result;
     }
 
+    public async Task<OperationResult> DeleteScheduledMessagesAsync(
+        long chatId,
+        IReadOnlyCollection<int> messageIds,
+        CancellationToken cancellationToken
+    )
+    {
+        var result = OperationResult.Bad("Не удалось удалить отложенные сообщения Telegram");
+
+        try
+        {
+            var client = await wTelegramClientService.GetClientAsync(cancellationToken);
+            if (client is not null && messageIds.Count > 0)
+            {
+                var inputPeer = await ResolveInputPeerAsync(client, chatId);
+                if (inputPeer is not null)
+                {
+                    await client.Messages_DeleteScheduledMessages(
+                        inputPeer,
+                        messageIds.ToArray()
+                    );
+
+                    result = OperationResult.Ok(
+                        $"Удалено {messageIds.Count} отложенных сообщений Telegram"
+                    );
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(
+                ex,
+                "Ошибка удаления отложенных сообщений Telegram канал {ChannelId}",
+                chatId
+            );
+            result = OperationResult.Bad($"Ошибка Telegram: {ex.Message}");
+        }
+
+        return result;
+    }
+
     private async Task<OperationResult> SendMediaAsync(
         long chatId,
         byte[] fileBytes,

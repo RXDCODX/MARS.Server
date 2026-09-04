@@ -28,4 +28,10 @@ public interface IBooruTelegramPoster
         long chatId,
         CancellationToken cancellationToken
     );
+
+    Task<OperationResult> DeleteScheduledMessagesAsync(
+        long chatId,
+        IReadOnlyCollection<int> messageIds,
+        CancellationToken cancellationToken
+    );
 }
