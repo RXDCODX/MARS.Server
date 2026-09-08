@@ -430,6 +430,73 @@ public class WaifuRollService(
         return result;
     }
 
+    public virtual async Task<bool> ToggleAutoHelloAsync(
+        string twitchId,
+        CancellationToken cancellationToken = default
+    )
+    {
+        var result = true;
+
+        if (!string.IsNullOrWhiteSpace(twitchId))
+        {
+            var semaphore = GetOrCreateSemaphore(twitchId);
+            await semaphore.WaitAsync(cancellationToken);
+
+            try
+            {
+                await using AppDbContext dbContext = await factory.CreateDbContextAsync(
+                    cancellationToken
+                );
+
+                var host = await dbContext.Husbands.FirstOrDefaultAsync(
+                    e => e.TwitchId == twitchId,
+                    cancellationToken
+                );
+
+                if (host is null)
+                {
+                    await twitchUserEnsureService.EnsureUserExistsAsync(
+                        twitchId,
+                        cancellationToken
+                    );
+
+                    host = new Husband
+                    {
+                        TwitchId = twitchId,
+                        HusbandCoolDown = new HusbandCoolDown { HusbandId = twitchId },
+                        HusbandGreetings = new HusbandAutoHello { HusbandId = twitchId },
+                        IsAutoHelloEnabled = false,
+                    };
+
+                    host.HusbandCoolDown.Husband = null;
+                    host.HusbandGreetings.Husband = null;
+
+                    dbContext.Husbands.Add(host);
+                    await dbContext.SaveChangesAsync(cancellationToken);
+
+                    result = false;
+                }
+                else
+                {
+                    result = !host.IsAutoHelloEnabled;
+
+                    await dbContext
+                        .Husbands.Where(e => e.TwitchId == twitchId)
+                        .ExecuteUpdateAsync(
+                            setters => setters.SetProperty(e => e.IsAutoHelloEnabled, result),
+                            cancellationToken
+                        );
+                }
+            }
+            finally
+            {
+                ReleaseSemaphore(twitchId, semaphore);
+            }
+        }
+
+        return result;
+    }
+
     public async Task<string?> AutoHello(string id, string displayName)
     {
         string? result = null;
@@ -449,7 +516,7 @@ public class WaifuRollService(
                     .AsNoTracking()
                     .FirstOrDefaultAsync(e => e.TwitchId == id);
 
-                if (host is { IsPrivated: true })
+                if (host is { IsPrivated: true, IsAutoHelloEnabled: true })
                 {
                     var isChecked = false;
                     var greet = host.HusbandGreetings;

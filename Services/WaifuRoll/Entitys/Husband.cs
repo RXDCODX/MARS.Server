@@ -19,6 +19,7 @@ public class Husband
     public DateTime WhenOrdered { get; set; }
     public string? WaifuBrideId { get; set; }
     public bool IsPrivated { get; set; }
+    public bool IsAutoHelloEnabled { get; set; } = true;
     public long OrderCount { get; set; }
     public string? WaifuRollId { get; set; }
     public DateTime? WhenPrivated { get; set; }

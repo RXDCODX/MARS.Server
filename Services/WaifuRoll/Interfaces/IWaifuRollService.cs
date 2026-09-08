@@ -49,4 +49,12 @@ public interface IWaifuRollService
     /// <param name="displayName">Отображаемое имя</param>
     /// <returns>Сообщение приветствия или null</returns>
     Task<string?> AutoHello(string id, string displayName);
+
+    /// <summary>
+    /// Включает или выключает автоматическое приветствие от супруга(и)
+    /// </summary>
+    /// <param name="twitchId">Twitch ID</param>
+    /// <param name="cancellationToken">Токен отмены</param>
+    /// <returns>Новое состояние приветствия (true — включено)</returns>
+    Task<bool> ToggleAutoHelloAsync(string twitchId, CancellationToken cancellationToken = default);
 }
