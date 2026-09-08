@@ -25,7 +25,7 @@ public class VanishCommand(ITwitchAPI twitchApi, TokenService tokenService) : Ba
         CancellationToken cancellationToken = default
     )
     {
-        var result = "Не удалось отправить пользователя в таймаут";
+        string result;
 
         if (parameters.TryGetValue("user", out var userObj) && userObj is TwitchUser user)
         {

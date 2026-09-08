@@ -4,11 +4,11 @@ using MARS.Server.Services.Twitch.MiniGamesStats;
 
 namespace MARS.Server.Services.CommandExecutor.Commands;
 
-public class LeadersCommand(ILeaderboardService leaderboardService) : BaseCommand
+public class MGLeadersCommand(ILeaderboardService leaderboardService) : BaseCommand
 {
     private const int TopCount = 3;
 
-    public override string CommandName => "leaders";
+    public override string CommandName => "mgleaders";
     public override string Description => "Показывает топ победителей мини-игр";
     public override bool IsAdminCommand => false;
 
