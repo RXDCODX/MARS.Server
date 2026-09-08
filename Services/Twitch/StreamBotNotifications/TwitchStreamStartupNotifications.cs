@@ -1,6 +1,5 @@
-﻿using MARS.Server.Configuration;
-using MARS.Server.Exstensions;
-using Microsoft.Extensions.Options;
+﻿using MARS.Server.Exstensions;
+using MARS.Server.Services.SoundBarService.Entitys;
 using TwitchLib.Client.Interfaces;
 using TwitchLib.EventSub.Core.EventArgs.Stream;
 using TwitchLib.EventSub.Websockets;
@@ -12,23 +11,20 @@ public class TwitchStreamStartupNotifications : IHostedService
     private readonly ILogger<TwitchStreamStartupNotifications> _logger;
     private readonly ITwitchClient _twitchClient;
     private readonly EventSubWebsocketClient _wsClient;
-    private readonly IOptions<HttpClientsConfiguration> _httpClientsConfiguration;
-    private readonly IHostEnvironment _environment;
+    private readonly ISoundBar _soundBar;
 
     public TwitchStreamStartupNotifications(
         ILogger<TwitchStreamStartupNotifications> logger,
         ITwitchClient twitchClient,
         IHostApplicationLifetime lifetime,
         EventSubWebsocketClient wsClient,
-        IOptions<HttpClientsConfiguration> httpClientsConfiguration,
-        IHostEnvironment environment
+        ISoundBar soundBar
     )
     {
         _logger = logger;
         _twitchClient = twitchClient;
         _wsClient = wsClient;
-        _httpClientsConfiguration = httpClientsConfiguration;
-        _environment = environment;
+        _soundBar = soundBar;
 
         lifetime.ApplicationStarted.Register(() =>
         {
@@ -74,26 +70,17 @@ public class TwitchStreamStartupNotifications : IHostedService
 
     private async Task<bool> IsAudioControllerAvailableAsync()
     {
+        var isAvailable = false;
+
         try
         {
-            var config = _httpClientsConfiguration.Value;
-            var port = _environment.IsProduction()
-                ? config.AudioControllerProdPort
-                : config.AudioControllerDevPort;
-            if (port <= 0)
-            {
-                port = _environment.IsProduction() ? 30695 : 30691;
-            }
-
-            using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(2) };
-            var healthUrl = $"http://127.0.0.1:{port}/api/health";
-            using var response = await httpClient.GetAsync(healthUrl);
-            return response.IsSuccessStatusCode;
+            isAvailable = await _soundBar.CheckHealthAsync();
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Audio controller health-check failed");
-            return false;
         }
+
+        return isAvailable;
     }
 }
