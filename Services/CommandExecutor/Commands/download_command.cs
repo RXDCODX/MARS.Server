@@ -40,7 +40,7 @@ public class DownloadCommand(
     public override string CommandName => "download";
     public override string Description => "Скачать трек/видео (YouTube, SoundCloud)";
     public override string[] Aliases => ["ytdownload", "dl"];
-    public override bool IsAdminCommand => false;
+    public override bool IsAdminCommand => true;
 
     public override Platform[] AvailablePlatforms => [Platform.Telegram, Platform.Discord];
 

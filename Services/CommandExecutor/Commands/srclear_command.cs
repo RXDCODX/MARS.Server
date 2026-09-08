@@ -9,7 +9,7 @@ public class SrClearCommand(SoundRequestCommandsService soundRequestCommandsServ
 {
     public override string CommandName => "srclear";
     public override string Description => "Очистить очередь звуковых запросов";
-    public override bool IsAdminCommand => false;
+    public override bool IsAdminCommand => true;
 
     public override Platform[] AvailablePlatforms => [Platform.Twitch];
 
