@@ -4,6 +4,7 @@ using MARS.Server.Services.Twitch.Entitys.Interfaces;
 using MARS.Server.Services.Twitch.Entitys.Subs;
 using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.Twitch.Management.Entitys;
+using MARS.Server.Services.Twitch.MiniGamesStats;
 using Microsoft.EntityFrameworkCore;
 using TwitchLib.Api.Helix.Models.Chat;
 using TwitchLib.Api.Interfaces;
@@ -16,7 +17,8 @@ public class TwitchRussianRoulete(
     ILogger<TwitchRussianRoulete> logger,
     ITwitchAPI api,
     IDbContextFactory<AppDbContext> dbContextFactory,
-    TokenService tokenService
+    TokenService tokenService,
+    ILeaderboardService leaderboardService
 ) : ITwitchMiniGame, ITwitchReward
 {
     public string Name => "russianroulete";
@@ -100,10 +102,9 @@ public class TwitchRussianRoulete(
 
             await WaitForPlayers();
 
-            listPlayers.AddRange([
-                .. _listOfPlayers,
-                new RouletePlayer { Name = name, TwitchId = userId },
-            ]);
+            listPlayers.AddRange(
+                [.. _listOfPlayers, new RouletePlayer { Name = name, TwitchId = userId }]
+            );
             _listOfPlayers.Clear();
 
             if (listPlayers.Count > MaxPlayers)
@@ -133,7 +134,8 @@ public class TwitchRussianRoulete(
                 logger,
                 dbContextFactory,
                 this,
-                _cancellationTokenSource.Token
+                _cancellationTokenSource.Token,
+                leaderboardService
             );
             IsGameRunning = true;
             await qwe.RussianRoulette();
@@ -178,11 +180,12 @@ public class TwitchRussianRoulete(
             _listOfPlayers.Add(new RouletePlayer { Name = userName, TwitchId = userId });
 
             // Уведомление о добавлении игрока в рулетку
-            await Task.Factory.StartNew(async () =>
-                await client.SendMessageToMainTwitchAsync(
-                    $"@{userName} присоединился к русской рулетке! Игроков в игре: {_listOfPlayers.Count + 1}",
-                    logger
-                )
+            await Task.Factory.StartNew(
+                async () =>
+                    await client.SendMessageToMainTwitchAsync(
+                        $"@{userName} присоединился к русской рулетке! Игроков в игре: {_listOfPlayers.Count + 1}",
+                        logger
+                    )
             );
 
             return true;

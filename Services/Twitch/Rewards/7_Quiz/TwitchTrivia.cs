@@ -3,6 +3,7 @@ using MARS.Server.Exstensions;
 using MARS.Server.Services.Twitch.Entitys.Interfaces;
 using MARS.Server.Services.Twitch.Entitys.Subs;
 using MARS.Server.Services.Twitch.Management.Entitys;
+using MARS.Server.Services.Twitch.MiniGamesStats;
 using MARS.Server.Services.WaifuRoll.Entitys;
 using Microsoft.EntityFrameworkCore;
 using TwitchLib.Client.Interfaces;
@@ -13,7 +14,8 @@ public class TwitchTrivia(
     ITwitchClient client,
     IWebHostEnvironment environment,
     ILogger<TwitchTrivia> logger,
-    IDbContextFactory<AppDbContext> dbContextFactory
+    IDbContextFactory<AppDbContext> dbContextFactory,
+    ILeaderboardService leaderboardService
 ) : ITwitchMiniGame, ITwitchReward
 {
     public string Name => "trivia";
@@ -80,6 +82,11 @@ public class TwitchTrivia(
                     );
                     IsGameRunning = false;
                     NoWaifuHelpUsers.Clear();
+                    await leaderboardService.RecordTriviaWinAsync(
+                        userId,
+                        withWaifu: false,
+                        TokenSource.Token
+                    );
                 }
 
                 if (!CurrentGame.AllLettersShowed && waifu != null)
@@ -93,6 +100,11 @@ public class TwitchTrivia(
                     );
                     IsGameRunning = false;
                     NoWaifuHelpUsers.Clear();
+                    await leaderboardService.RecordTriviaWinAsync(
+                        userId,
+                        withWaifu: true,
+                        TokenSource.Token
+                    );
                 }
 
                 SemaphoreSlim.Release();

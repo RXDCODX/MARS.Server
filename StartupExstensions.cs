@@ -47,6 +47,7 @@ using MARS.Server.Services.Twitch.ClientMessages.TwitchAutoHello;
 using MARS.Server.Services.Twitch.HelloVideos;
 using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.Twitch.Media;
+using MARS.Server.Services.Twitch.MiniGamesStats;
 using MARS.Server.Services.Twitch.PuntoSwitcher;
 using MARS.Server.Services.Twitch.Rewards;
 using MARS.Server.Services.Twitch.Rewards._11_RandomMemReward.Service;
@@ -412,6 +413,7 @@ public static class StartupEstensions
         services.AddScoped<TekkenVictorina>();
         services.AddScoped<TwitchTrivia>();
         services.AddScoped<AudioTriviaMiniGame>();
+        services.AddSingleton<ILeaderboardService, LeaderboardService>();
         services.AddSingleton<PuntoSwitcherService>();
         services.AddSingleton<IPuntoSwitcherService>(sp =>
             sp.GetRequiredService<PuntoSwitcherService>()

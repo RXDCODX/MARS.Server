@@ -1,5 +1,6 @@
 ﻿using MARS.Server.DataBaseContext;
 using MARS.Server.Exstensions;
+using MARS.Server.Services.Twitch.MiniGamesStats;
 using MARS.Server.Services.Twitch.Rewards._6_RussianRoulette;
 using MARS.Server.Services.WaifuRoll.Entitys;
 using Microsoft.EntityFrameworkCore;
@@ -14,7 +15,8 @@ public class RouleteGame(
     ILogger<TwitchRussianRoulete> logger,
     IDbContextFactory<AppDbContext> factory,
     TwitchRussianRoulete roulette,
-    CancellationToken token
+    CancellationToken token,
+    ILeaderboardService leaderboardService
 )
 {
     private const int ChanceToBeSaved = 40;
@@ -99,6 +101,12 @@ public class RouleteGame(
         }
 
         RouletePlayer winner = Players.First(e => e.IsAlive);
+        await leaderboardService.RecordRouletteWinAsync(
+            winner.TwitchId,
+            _noWaifuHelpUsers.Contains(winner.TwitchId),
+            token
+        );
+
         if (Type == GameType.MiniGame)
         {
             await client.SendMessageToMainTwitchAsync(
