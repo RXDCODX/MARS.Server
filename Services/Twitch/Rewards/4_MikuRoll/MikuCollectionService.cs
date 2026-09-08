@@ -119,6 +119,42 @@ public class MikuCollectionService(IDbContextFactory<AppDbContext> factory)
         }
     }
 
+    public virtual async Task<(int collected, int total, IReadOnlyList<(string Name, int Count)> items)> GetInventoryAsync(
+        string twitchUserId,
+        CancellationToken cancellationToken = default
+    )
+    {
+        (int collected, int total, IReadOnlyList<(string Name, int Count)> items) result =
+            (0, 0, []);
+        try
+        {
+            await using var dbContext = await factory.CreateDbContextAsync(cancellationToken);
+
+            var owned = await dbContext
+                .UserMikuCollections.AsNoTracking()
+                .Where(c => c.TwitchUserId == twitchUserId)
+                .Join(
+                    dbContext.Miku.AsNoTracking(),
+                    collection => collection.MikuPageId,
+                    module => module.PageId,
+                    (collection, module) => new { module.Title, collection.Count }
+                )
+                .OrderByDescending(x => x.Count)
+                .ToListAsync(cancellationToken);
+
+            var total = await dbContext.Miku.AsNoTracking().CountAsync(cancellationToken);
+            var items = owned.Select(x => (x.Title, x.Count)).ToList();
+
+            result = (owned.Count, total, items);
+        }
+        catch
+        {
+            // сохраняем пустой результат при ошибке
+        }
+
+        return result;
+    }
+
     private static async Task<int?> FindNewModuleAsync(AppDbContext dbContext, string twitchUserId)
     {
         var ownedIds = await dbContext
