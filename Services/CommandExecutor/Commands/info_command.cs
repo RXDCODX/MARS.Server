@@ -1,3 +1,4 @@
+using MARS.Server.Exstensions;
 using MARS.Server.Services.CommandExecutor.Entitys;
 using MARS.Server.Services.CommandExecutor.Entitys.Commands;
 
@@ -45,8 +46,8 @@ public class InfoCommand() : BaseCommand
 
     private static string GetGeneralHelp()
     {
-        const string result = """
-            Этот бот - проводник высокоинтерактивного контента на стриме https://twitch.tv/rxdcodx. 
+        const string result = $"""
+            Этот бот - проводник высокоинтерактивного контента на стриме https://twitch.tv/{TwitchExstension.Channel}. 
             Все что будет отправлено тут - будет показано на стриме (если ты есть в белом списке).
 
             Можно отправлять:
