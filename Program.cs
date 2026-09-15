@@ -328,6 +328,25 @@ public static class Program
             var appLifeTime = app.Services.GetRequiredService<IHostApplicationLifetime>();
             appLifeTime.ApplicationStopping.Register(MemoryStorage.ClearStorage);
 
+            AppDomain.CurrentDomain.UnhandledException += (sender, eventArgs) =>
+            {
+                if (eventArgs.ExceptionObject is Exception ex)
+                {
+                    logger.LogException(ex);
+                }
+                else
+                {
+                    logger.LogError("{messageObject}", eventArgs.ExceptionObject.ToString());
+                }
+                ;
+            };
+
+            TaskScheduler.UnobservedTaskException += (sender, eventArgs) =>
+            {
+                logger.LogException(eventArgs.Exception);
+                eventArgs.SetObserved();
+            };
+
             await app.RunAsync();
         }
         catch (Exception e)
