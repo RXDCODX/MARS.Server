@@ -12,7 +12,7 @@
 
 ## OnMessageReceived (17 сервисов)
 
-- [x] `MARS.Server.Services.Twitch` — `TwitchUserSyncService` ✅
+- [x] `MARS.Server.Services.Twitch` — `TwitchUserEnsureService` (бывш. `TwitchUserSyncService`, удалён) ✅
 - [x] `MARS.Server.Services.Twitch.PuntoSwitcher` — `PuntoSwitcherService` ✅
 - [x] `MARS.Server.Services.Twitch.StreamManagement` — `TwitchTitleChangeCommand` ✅
 - [x] `MARS.Server.Services.Twitch.HelloVideos` — `HelloVideoWorker` ✅

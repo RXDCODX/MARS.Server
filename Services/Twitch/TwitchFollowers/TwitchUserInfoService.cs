@@ -19,7 +19,7 @@ public class TwitchUserInfoService(
     /// </summary>
     /// <param name="userId">ID пользователя</param>
     /// <returns>Информация о пользователе или null</returns>
-    public async Task<User?> GetUserInfoAsync(string userId)
+    public virtual async Task<User?> GetUserInfoAsync(string userId)
     {
         if (string.IsNullOrWhiteSpace(userId) || tokenService.Token?.AccessToken == null)
         {

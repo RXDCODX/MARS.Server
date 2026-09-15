@@ -4,10 +4,13 @@ using MARS.Server.Exstensions;
 using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Management;
 using MARS.Server.Services.Twitch.TwitchFollowers;
+using MARS.Server.Services.Twitch.Validation;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using TwitchLib.Api.Interfaces;
 using TwitchLib.Client.Events;
+using TwitchLib.Client.Interfaces;
 using TwitchLib.Client.Models;
 using TwitchLib.EventSub.Core.EventArgs.Channel;
 
@@ -18,7 +21,7 @@ namespace MARS.Server.Services.Twitch;
 /// It follows a Get‑Or‑Create pattern and can enrich the user data via the Twitch API.
 /// All dependencies are optional so the class can be easily mocked in unit tests.
 /// </summary>
-public class TwitchUserEnsureService : ITwitchUserEnsureService
+public class TwitchUserEnsureService : BackgroundService, ITwitchUserEnsureService
 {
     // ----- Dependencies -----------------------------------------------------
     private readonly IDbContextFactory<AppDbContext>? _dbFactory;
@@ -26,6 +29,12 @@ public class TwitchUserEnsureService : ITwitchUserEnsureService
     private readonly TokenService? _tokenService;
     private readonly ITwitchAPI? _api;
     private readonly ILogger<TwitchUserEnsureService>? _logger;
+    private readonly ITwitchClient? _twitchClient;
+    private readonly IHostApplicationLifetime? _lifetime;
+    private readonly IServiceProvider? _serviceProvider;
+
+    private readonly Dictionary<string, DateTime> _lastUpdateTime = new();
+    private readonly TimeSpan _updateCooldown = TimeSpan.FromMinutes(5);
 
     /// <summary>
     /// Primary constructor used by production code. All parameters are optional
@@ -37,7 +46,10 @@ public class TwitchUserEnsureService : ITwitchUserEnsureService
         TwitchUserInfoService? userInfoService = null,
         TokenService? tokenService = null,
         ITwitchAPI? api = null,
-        ILogger<TwitchUserEnsureService>? logger = null
+        ILogger<TwitchUserEnsureService>? logger = null,
+        ITwitchClient? twitchClient = null,
+        IHostApplicationLifetime? lifetime = null,
+        IServiceProvider? serviceProvider = null
     )
     {
         _dbFactory = dbFactory;
@@ -45,6 +57,9 @@ public class TwitchUserEnsureService : ITwitchUserEnsureService
         _tokenService = tokenService;
         _api = api;
         _logger = logger;
+        _twitchClient = twitchClient;
+        _lifetime = lifetime;
+        _serviceProvider = serviceProvider;
     }
 
     /// <summary>
@@ -53,6 +68,83 @@ public class TwitchUserEnsureService : ITwitchUserEnsureService
     /// </summary>
     public TwitchUserEnsureService()
         : this(null) { }
+
+    // ----- BackgroundService lifecycle ------------------------------------
+
+    /// <summary>
+    /// Подписывается на сообщения чата Twitch после старта приложения,
+    /// чтобы синхронизировать пользователей из чата в базу данных.
+    /// </summary>
+    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        if (_lifetime != null && _twitchClient != null)
+        {
+            _lifetime.ApplicationStarted.Register(() =>
+            {
+                _twitchClient.OnMessageReceived += OnMessageReceived;
+                _logger?.LogInformation("TwitchUserEnsureService started");
+            });
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public override Task StopAsync(CancellationToken cancellationToken)
+    {
+        if (_twitchClient != null)
+        {
+            _twitchClient.OnMessageReceived -= OnMessageReceived;
+            _logger?.LogInformation("TwitchUserEnsureService stopped");
+        }
+
+        return base.StopAsync(cancellationToken);
+    }
+
+    private async Task OnMessageReceived(object? sender, OnMessageReceivedArgs e)
+    {
+        if (_serviceProvider is not null)
+        {
+            var validator = _serviceProvider.GetService<ITwitchEventValidationService>();
+            if (validator is not null)
+            {
+                var result = await validator
+                    .ForMessageReceived(e)
+                    .RequireChannel()
+                    .SkipBlacklisted()
+                    .ValidateWithResponseAsync(e.ChatMessage.Username);
+
+                if (result.IsValid)
+                {
+                    try
+                    {
+                        await ProcessUserAsync(e.ChatMessage);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger?.LogError(
+                            ex,
+                            "Ошибка при обработке пользователя {UserId} ({UserName})",
+                            e.ChatMessage.UserId,
+                            e.ChatMessage.Username
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    private async Task ProcessUserAsync(ChatMessage chatMessage)
+    {
+        var userId = chatMessage.UserId;
+        var cooldownExpired =
+            !_lastUpdateTime.TryGetValue(userId, out var lastUpdate)
+            || DateTime.Now - lastUpdate >= _updateCooldown;
+        if (cooldownExpired)
+        {
+            await EnsureUserExistsAsync(chatMessage, CancellationToken.None);
+            _lastUpdateTime[userId] = DateTime.Now;
+        }
+    }
 
     // ----- Public API ------------------------------------------------------
     // All public methods are virtual so that tests can override them with Moq.
@@ -218,6 +310,10 @@ public class TwitchUserEnsureService : ITwitchUserEnsureService
                 );
                 if (existing != null)
                 {
+                    var avatarNeedsRefresh =
+                        string.IsNullOrWhiteSpace(existing.ProfileImageUrl)
+                        || DateTime.Now - existing.LastUpdated > TimeSpan.FromDays(7);
+
                     // Update mutable fields.
                     existing.UserLogin = twitchUser.UserLogin;
                     existing.DisplayName = twitchUser.DisplayName;
@@ -226,6 +322,16 @@ public class TwitchUserEnsureService : ITwitchUserEnsureService
                     existing.ChatColor = twitchUser.ChatColor ?? existing.ChatColor;
                     existing.IsModerator = twitchUser.IsModerator;
                     existing.IsVip = twitchUser.IsVip;
+
+                    if (avatarNeedsRefresh)
+                    {
+                        var freshAvatar = await TryGetFreshAvatarAsync(existing.TwitchId);
+                        if (!string.IsNullOrWhiteSpace(freshAvatar))
+                        {
+                            existing.ProfileImageUrl = freshAvatar;
+                        }
+                    }
+
                     existing.LastUpdated = DateTime.Now;
                     await db.SaveChangesAsync(cancellationToken);
                     _logger?.LogInformation(
@@ -356,6 +462,32 @@ public class TwitchUserEnsureService : ITwitchUserEnsureService
         throw new InvalidOperationException(
             $"Не удалось получить пользователя {twitchUser.TwitchId} после constraint violation"
         );
+    }
+
+    private async Task<string?> TryGetFreshAvatarAsync(string twitchId)
+    {
+        if (_tokenService?.Token?.AccessToken == null)
+        {
+            return null;
+        }
+
+        try
+        {
+            var apiUser = await _userInfoService!.GetUserInfoAsync(twitchId);
+            if (apiUser != null && !string.IsNullOrWhiteSpace(apiUser.ProfileImageUrl))
+            {
+                return apiUser.ProfileImageUrl;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(
+                ex,
+                "Не удалось обновить аватарку для пользователя {TwitchId}",
+                twitchId
+            );
+        }
+        return null;
     }
 
     private async Task<TwitchUser> EnrichUserDataFromApiAsync(TwitchUser twitchUser)

@@ -374,6 +374,7 @@ public static class StartupEstensions
         services.AddSingleton<ITwitchUserEnsureService>(sp =>
             sp.GetRequiredService<TwitchUserEnsureService>()
         );
+        services.AddHostedService(sp => sp.GetRequiredService<TwitchUserEnsureService>());
 
         services.AddSingleton<RickRollerService>();
 

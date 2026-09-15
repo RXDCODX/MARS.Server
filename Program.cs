@@ -203,7 +203,6 @@ public static class Program
 
         services
             .AddTwitchServices(configuration)
-            .AddHostedService<TwitchUserSyncService>()
             .AddCommandExecutorServices()
             .AddTelegramThings(loggerFactory)
             .AddConfiguration(configuration)
