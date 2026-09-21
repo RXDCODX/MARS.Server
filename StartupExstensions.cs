@@ -392,8 +392,8 @@ public static class StartupEstensions
 
         services.AddSingleton<TwitchStreamStartupNotifications>();
         services.AddHostedService(sp => sp.GetRequiredService<TwitchStreamStartupNotifications>());
-        services.AddSingleton<TwitchMediaAlerts>();
-        services.AddHostedService(sp => sp.GetRequiredService<TwitchMediaAlerts>());
+        services.AddSingleton<TwitchEventSubAlertsAwaker>();
+        services.AddHostedService(sp => sp.GetRequiredService<TwitchEventSubAlertsAwaker>());
         services.AddSingleton<AutoMessagesHandler>();
         services.AddHostedService(sp => sp.GetRequiredService<AutoMessagesHandler>());
 

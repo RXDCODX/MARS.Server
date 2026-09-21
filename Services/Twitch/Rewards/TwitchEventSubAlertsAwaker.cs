@@ -1,3 +1,7 @@
+using System;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using MARS.Server.DataBaseContext;
 using MARS.Server.Exstensions;
 using MARS.Server.Hubs;
@@ -7,6 +11,7 @@ using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Validation;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Hosting;
 using TwitchLib.Client.Events;
 using TwitchLib.Client.Interfaces;
 using TwitchLib.EventSub.Core.EventArgs.Channel;
@@ -14,7 +19,7 @@ using TwitchLib.EventSub.Websockets;
 
 namespace MARS.Server.Services.Twitch.Rewards;
 
-public class TwitchMediaAlerts(
+public class TwitchEventSubAlertsAwaker(
     IHubContext<TelegramusHub, ITelegramusHub> hubContext,
     IDbContextFactory<AppDbContext> dbContextFactory,
     ITwitchClient client,

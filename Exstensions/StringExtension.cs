@@ -1,5 +1,8 @@
+using System;
+using System.Collections.Generic;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using MARS.Server.Services.PyroAlerts.Entitys;
 
 namespace MARS.Server.Exstensions;
@@ -14,14 +17,8 @@ public static class StringExtension
             {
                 if (!string.IsNullOrWhiteSpace(text))
                 {
-                    var isMatch = Regex.IsMatch("", text);
-                    if (isMatch)
-                    {
-                        if (text == Regex.Escape(text))
-                        {
-                            return true;
-                        }
-                    }
+                    _ = new Regex(text);
+                    return true;
                 }
             }
             catch

@@ -1,4 +1,9 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
 using MARS.Server.DataBaseContext;
 using MARS.Server.Exstensions;
 using MARS.Server.Hubs;
@@ -8,6 +13,8 @@ using MARS.Server.Services.Twitch.Entitys;
 using MARS.Server.Services.Twitch.Validation;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using TwitchLib.Client.Events;
 using TwitchLib.Client.Interfaces;
 
@@ -116,10 +123,17 @@ public class TwitchMessagesHubAwaker(
                     {
                         var regexWord = tempRegexWord;
 
-                        if (!regexWord.StartsWith("\b") && !regexWord.EndsWith("\b"))
+                        if (!regexWord.StartsWith("\\b") && !regexWord.StartsWith("^"))
                         {
-                            regexWord = "\b" + regexWord + "\b";
+                            regexWord = "\\b" + regexWord;
                         }
+
+                        if (!regexWord.EndsWith("\\b") && !regexWord.EndsWith("$"))
+                        {
+                            regexWord += "\\b";
+                        }
+
+                        var isAnchored = regexWord.StartsWith("^") || regexWord.EndsWith("$");
 
                         if (
                             Regex.IsMatch(
@@ -129,13 +143,16 @@ public class TwitchMessagesHubAwaker(
                                     | RegexOptions.Singleline
                                     | RegexOptions.NonBacktracking
                             )
-                            || chatMessageWords.Any(t =>
-                                Regex.IsMatch(
-                                    t,
-                                    regexWord,
-                                    RegexOptions.IgnoreCase
-                                        | RegexOptions.Singleline
-                                        | RegexOptions.NonBacktracking
+                            || (
+                                !isAnchored
+                                && chatMessageWords.Any(t =>
+                                    Regex.IsMatch(
+                                        t,
+                                        regexWord,
+                                        RegexOptions.IgnoreCase
+                                            | RegexOptions.Singleline
+                                            | RegexOptions.NonBacktracking
+                                    )
                                 )
                             )
                         )
