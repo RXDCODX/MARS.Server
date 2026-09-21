@@ -170,83 +170,85 @@ public class RollCooldownNotificationService(
             return;
         }
 
+        var lockTaken = false;
+
         try
         {
             await _semaphore.WaitAsync();
+            lockTaken = true;
 
             // Find all pending notifications for this user
             var userKeys = _pendingNotifications
                 .Keys.Where(k => k.UserId == e.ChatMessage.UserId)
                 .ToList();
 
-            if (userKeys.Count == 0)
+            if (userKeys.Count > 0)
             {
-                _semaphore.Release();
-                return;
-            }
+                var now = DateTime.Now;
+                var expiredKeys = new List<(string UserId, string RollType)>();
 
-            var now = DateTime.Now;
-            var expiredKeys = new List<(string UserId, string RollType)>();
-
-            foreach (var key in userKeys)
-            {
-                if (now >= _pendingNotifications[key])
+                foreach (var key in userKeys)
                 {
-                    expiredKeys.Add(key);
-                }
-            }
-
-            if (expiredKeys.Count == 0)
-            {
-                _semaphore.Release();
-                return;
-            }
-
-            // Verify cooldowns are actually expired in DB
-            await using var dbContext = await dbContextFactory.CreateDbContextAsync();
-
-            foreach (var key in expiredKeys)
-            {
-                var cooldownRecord = await dbContext
-                    .RollCooldowns.AsNoTracking()
-                    .FirstOrDefaultAsync(r =>
-                        r.TwitchUserId == key.UserId && r.RollType == key.RollType
-                    );
-
-                if (cooldownRecord is null)
-                {
-                    _pendingNotifications.Remove(key);
-                    continue;
+                    if (now >= _pendingNotifications[key])
+                    {
+                        expiredKeys.Add(key);
+                    }
                 }
 
-                var cooldown = await GetCooldownForRollType(key.RollType);
-                var cooldownEnd = cooldownRecord.LastRollTime.Add(cooldown);
-
-                if (now < cooldownEnd)
+                if (expiredKeys.Count > 0)
                 {
-                    // Cooldown not actually expired yet, update pending time
-                    _pendingNotifications[key] = cooldownEnd;
-                    continue;
+                    // Verify cooldowns are actually expired in DB
+                    await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+
+                    foreach (var key in expiredKeys)
+                    {
+                        var cooldownRecord = await dbContext
+                            .RollCooldowns.AsNoTracking()
+                            .FirstOrDefaultAsync(r =>
+                                r.TwitchUserId == key.UserId && r.RollType == key.RollType
+                            );
+
+                        if (cooldownRecord is not null)
+                        {
+                            var cooldown = await GetCooldownForRollType(key.RollType);
+                            var cooldownEnd = cooldownRecord.LastRollTime.Add(cooldown);
+
+                            if (now >= cooldownEnd)
+                            {
+                                _pendingNotifications.Remove(key);
+                                _notifiedUsers.Add(key);
+
+                                if (_notifiedUsers.Count > 1000)
+                                {
+                                    _notifiedUsers.Clear();
+                                }
+
+                                var rollName = RollTypeNames.GetValueOrDefault(
+                                    key.RollType,
+                                    key.RollType
+                                );
+                                var message =
+                                    $"@{e.ChatMessage.Username}, кулдаун на {rollName} прошел! Можешь использовать снова! 🎉";
+                                await twitchClient.SendMessageToMainTwitchAsync(message, logger);
+                                logger.LogInformation(
+                                    "Отправлено уведомление о завершении кулдауна {RollType} для {Username} ({UserId})",
+                                    key.RollType,
+                                    e.ChatMessage.Username,
+                                    e.ChatMessage.UserId
+                                );
+                            }
+                            else
+                            {
+                                // Cooldown not actually expired yet, update pending time
+                                _pendingNotifications[key] = cooldownEnd;
+                            }
+                        }
+                        else
+                        {
+                            _pendingNotifications.Remove(key);
+                        }
+                    }
                 }
-
-                _pendingNotifications.Remove(key);
-                _notifiedUsers.Add(key);
-
-                if (_notifiedUsers.Count > 1000)
-                {
-                    _notifiedUsers.Clear();
-                }
-
-                var rollName = RollTypeNames.GetValueOrDefault(key.RollType, key.RollType);
-                var message =
-                    $"@{e.ChatMessage.Username}, кулдаун на {rollName} прошел! Можешь использовать снова! 🎉";
-                await twitchClient.SendMessageToMainTwitchAsync(message, logger);
-                logger.LogInformation(
-                    "Отправлено уведомление о завершении кулдауна {RollType} для {Username} ({UserId})",
-                    key.RollType,
-                    e.ChatMessage.Username,
-                    e.ChatMessage.UserId
-                );
             }
         }
         catch (Exception ex)
@@ -260,7 +262,10 @@ public class RollCooldownNotificationService(
         }
         finally
         {
-            _semaphore.Release();
+            if (lockTaken)
+            {
+                _semaphore.Release();
+            }
         }
     }
 
