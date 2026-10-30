@@ -7,6 +7,9 @@
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
     <DockerfileContext>..\..</DockerfileContext>
     <WarningsAsErrors>CS0618</WarningsAsErrors>
+    <WarningsNotAsErrors>
+      $(WarningsNotAsErrors);NU1901;NU1902;NU1903;NU1904
+    </WarningsNotAsErrors>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <!-- Suppress analyzer errors from external dependencies -->
     <NoWarn>$(NoWarn);AD0001;CS9113</NoWarn>

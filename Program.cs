@@ -10,7 +10,6 @@ using MARS.Server.Hubs.AudioControllerHub;
 using MARS.Server.Services.CinemaQueue;
 using MARS.Server.Services.CommandExecutor;
 using MARS.Server.Services.Configuration;
-using MARS.Server.Services.KeyboardHook_UNUSED;
 using MARS.Server.Services.Logs.Interfaces;
 using MARS.Server.Services.Logs.Services;
 using MARS.Server.Services.Media;
@@ -238,9 +237,6 @@ public static class Program
         //services.AddSingleton<IStreamArchiveService, StreamArchiveService>();
         //services.AddHostedService<StreamArchiveWorker>();
 
-        // Добавляем сервис перехвата клавиатуры
-        services.AddKeyboardHookService();
-
         // Добавляем сервис для работы с логами
         services.AddScoped<LoggerDbContext>(sp =>
         {
@@ -291,7 +287,21 @@ public static class Program
             });
         }
 
-        app.UseCors("CorsPolicy");
+        app.UseRouting();
+
+        app.UseCors(policyBuilder =>
+        {
+            policyBuilder
+                .WithOrigins(
+                    "http://localhost:9159",
+                    "http://localhost:9155",
+                    "http://localhost:9255"
+                )
+                .AllowAnyHeader()
+                .AllowAnyMethod()
+                .AllowCredentials();
+        });
+
         app.MapHub<TelegramusHub>("/hubs/telegramus");
         app.MapHub<TunaHub>("/hubs/tuna");
         //app.MapHub<SoundBarHub>("/hubs/soundbar");
@@ -303,8 +313,6 @@ public static class Program
         {
             app.MapHub<SoundRequestHub>("/hubs/soundrequest");
         }
-
-        app.UseRouting();
 
         app.MapControllers();
 

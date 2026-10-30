@@ -8,6 +8,7 @@ using MARS.Server.Services.Twitch.Management.Entitys;
 using Microsoft.Extensions.Logging;
 using TwitchLib.Api.Auth;
 using TwitchLib.Api.Helix.Models.Chat;
+using TwitchLib.Api.Helix.Models.Chat.Announcement;
 using TwitchLib.Api.Interfaces;
 using TwitchLib.Client.Interfaces;
 using TwitchLib.Client.Models;
@@ -134,8 +135,7 @@ public static class TwitchExstension
                     await client.Helix.Chat.SendChatAnnouncementAsync(
                         ChannelId,
                         ChannelId,
-                        chunk,
-                        color,
+                        new SendChatAnnouncementRequest() { Color = color, Message = chunk },
                         userToken?.AccessToken
                     );
                 }

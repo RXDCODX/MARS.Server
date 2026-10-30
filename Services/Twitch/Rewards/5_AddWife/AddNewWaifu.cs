@@ -14,6 +14,7 @@ using MARS.Server.Services.WaifuRoll.helpers;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Options;
 using TwitchLib.Api.Helix.Models.Chat;
+using TwitchLib.Api.Helix.Models.Chat.Announcement;
 using TwitchLib.Api.Interfaces;
 using TwitchLib.Client.Events;
 using TwitchLib.Client.Interfaces;
@@ -152,8 +153,11 @@ public class AddNewWaifu(
                             await api.Helix.Chat.SendChatAnnouncementAsync(
                                 TwitchExstension.ChannelId,
                                 TwitchExstension.ChannelId,
-                                message,
-                                AnnouncementColors.Primary,
+                                new SendChatAnnouncementRequest()
+                                {
+                                    Color = AnnouncementColors.Primary,
+                                    Message = message,
+                                },
                                 tokenService.Token.AccessToken
                             );
                             await api.Helix.Channels.AddChannelVIPAsync(

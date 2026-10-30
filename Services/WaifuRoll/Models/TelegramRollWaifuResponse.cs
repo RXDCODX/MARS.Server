@@ -13,11 +13,6 @@ public class TelegramRollWaifuResponse
     public Waifu? Waifu { get; set; }
 
     /// <summary>
-    /// Хост, который заказал вайфу
-    /// </summary>
-    public Husband? Host { get; set; }
-
-    /// <summary>
     /// Муж/жена вайфу (если вайфу приватизирована)
     /// </summary>
     public Husband? Husband { get; set; }

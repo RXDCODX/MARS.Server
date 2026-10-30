@@ -147,7 +147,11 @@ public static class StartupEstensions
                 "CorsPolicy",
                 builder =>
                 {
-                    builder.AllowAnyHeader().AllowAnyMethod().AllowAnyOrigin();
+                    builder
+                        .WithOrigins("http://localhost:9159", "http://localhost:9155", "http://localhost:9255")
+                        .AllowAnyHeader()
+                        .AllowAnyMethod()
+                        .AllowCredentials();
                 }
             )
         );

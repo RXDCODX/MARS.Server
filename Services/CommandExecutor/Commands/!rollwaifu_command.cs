@@ -60,14 +60,14 @@ public class RollWaifuCommand(
         {
             var resultRoll = await waifoRollService.TelegramRollWaifu(username);
 
-            if (resultRoll.Data is { Host: not null, Waifu: not null })
+            if (resultRoll.Data is { Husband: not null, Waifu: not null })
             {
                 var waifu = await waifuDbHelper.EnsureMangaAndAnimeTitleExists(
                     resultRoll.Data.Waifu
                 );
 
                 var result =
-                    $"Вайфу ролл для {resultRoll.Data.Host.TwitchUser?.DisplayName} выполнен!";
+                    $"Вайфу ролл для {resultRoll.Data.Husband.TwitchUser?.DisplayName} выполнен!";
 
                 await alertsHub.Clients.All.WaifuRoll(waifu, resultRoll.Data.Husband);
 

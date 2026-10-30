@@ -15,6 +15,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using TwitchLib.Api.Helix.Models.Chat;
+using TwitchLib.Api.Helix.Models.Chat.Announcement;
 using TwitchLib.Api.Interfaces;
 using TwitchLib.Client.Interfaces;
 using TwitchLib.EventSub.Core.EventArgs.Channel;
@@ -179,8 +180,11 @@ public class MergeWaifu(
                                 await api.Helix.Chat.SendChatAnnouncementAsync(
                                     TwitchExstension.ChannelId,
                                     TwitchExstension.ChannelId,
-                                    message,
-                                    AnnouncementColors.Primary,
+                                    new SendChatAnnouncementRequest()
+                                    {
+                                        Color = AnnouncementColors.Primary,
+                                        Message = message,
+                                    },
                                     tokenService.Token.AccessToken
                                 );
                             }

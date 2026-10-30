@@ -274,18 +274,13 @@ public class WaifuRollService(
                         true
                     );
 
-                    var response = new TelegramRollWaifuResponse
-                    {
-                        Waifu = waifu,
-                        Host = host,
-                        Husband = null,
-                    };
+                    var response = new TelegramRollWaifuResponse { Waifu = waifu, Husband = host };
 
                     if (waifu is { IsPrivated: true })
                     {
-                        var husband = await dbContext.Husbands.FirstAsync(e =>
-                            e.WaifuBrideId == waifu.ShikiId
-                        );
+                        var husband = await dbContext
+                            .Husbands.Include(e => e.TwitchUser)
+                            .FirstAsync(e => e.WaifuBrideId == waifu.ShikiId);
                         response.Husband = husband;
                     }
 
@@ -295,9 +290,9 @@ public class WaifuRollService(
                         && !string.IsNullOrWhiteSpace(host.WaifuBrideId)
                     )
                     {
-                        response.Husband = await dbContext.Husbands.FirstOrDefaultAsync(e =>
-                            e.WaifuBrideId == host.WaifuBrideId
-                        );
+                        response.Husband = await dbContext
+                            .Husbands.Include(e => e.TwitchUser)
+                            .FirstOrDefaultAsync(e => e.WaifuBrideId == host.WaifuBrideId);
                     }
 
                     result = OperationResult<TelegramRollWaifuResponse>.Ok(
@@ -448,10 +443,11 @@ public class WaifuRollService(
                     cancellationToken
                 );
 
-                var host = await dbContext.Husbands.FirstOrDefaultAsync(
-                    e => e.TwitchId == twitchId,
-                    cancellationToken
-                );
+                var host = await dbContext
+                    .Husbands.Include(husband => husband.HusbandCoolDown)
+                    .Include(husband => husband.HusbandGreetings)
+                    .Include(e => e.TwitchUser)
+                    .FirstOrDefaultAsync(e => e.TwitchId == twitchId, cancellationToken);
 
                 if (host is null)
                 {
