@@ -265,6 +265,8 @@ public static class Program
         var app = builder.Build();
         var logger = app.Logger;
 
+        app.DisableFileCaching();
+
         app.AddDiSchemaRoute(services);
 
         if (shouldGenerateOpenApi)
@@ -293,6 +295,7 @@ public static class Program
         {
             policyBuilder
                 .WithOrigins(
+                    "http://localhost:4173",
                     "http://localhost:9159",
                     "http://localhost:9155",
                     "http://localhost:9255"

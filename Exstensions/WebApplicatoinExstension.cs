@@ -56,11 +56,32 @@ public static class WebApplicatoinExstension
 
     public static WebApplicationBuilder AddStaticFilesBrowserOptions(this WebApplicationBuilder app)
     {
+        var webRootPath = app.Environment.WebRootPath;
+
+        if (string.IsNullOrWhiteSpace(webRootPath))
+        {
+            webRootPath = "wwwroot";
+        }
+
+        // При запуске Windows Service текущая директория может отличаться
+        // от директории опубликованного приложения.
+        if (!Path.IsPathRooted(webRootPath))
+        {
+            webRootPath = Path.Combine(AppContext.BaseDirectory, webRootPath);
+        }
+
+        webRootPath = Path.GetFullPath(webRootPath);
+
+        if (!Directory.Exists(webRootPath))
+        {
+            throw new DirectoryNotFoundException($"WebRoot directory not found: {webRootPath}");
+        }
+
         var sharedOptions = new SharedOptions
         {
             RequestPath = "/static",
             RedirectToAppendTrailingSlash = true,
-            FileProvider = new StaticAssetsFileProvider(app.Environment.WebRootPath),
+            FileProvider = new StaticAssetsFileProvider(webRootPath),
         };
 
         app.Services.AddSingleton(sharedOptions);
@@ -68,135 +89,159 @@ public static class WebApplicatoinExstension
         return app;
     }
 
-    public static IApplicationBuilder AddStaticFilesBrowser(this WebApplication app)
+    extension(WebApplication app)
     {
-        var sharedOptions = app.Services.GetRequiredService<SharedOptions>();
-
-        var fileOptions = new StaticFileOptions
+        public IApplicationBuilder AddStaticFilesBrowser()
         {
-            ServeUnknownFileTypes = true,
-            OnPrepareResponse = context =>
+            var sharedOptions = app.Services.GetRequiredService<SharedOptions>();
+
+            var fileOptions = new StaticFileOptions
             {
-                var path = context.File.PhysicalPath;
-                var exst = Path.GetExtension(path);
-                if (exst == ".tgs")
+                ServeUnknownFileTypes = true,
+                OnPrepareResponse = context =>
                 {
-                    context.Context.Response.ContentType = string.Empty;
-                }
-            },
-            FileProvider = sharedOptions.FileProvider,
-            RedirectToAppendTrailingSlash = true,
-        };
-
-        app.UseDirectoryBrowser(new DirectoryBrowserOptions(sharedOptions) { });
-
-        app.UseStaticFiles(fileOptions);
-        return app;
-    }
-
-    public static IApplicationBuilder AddDiSchemaRoute(
-        this WebApplication app,
-        IServiceCollection services
-    )
-    {
-        app.Map(
-            "/allservices",
-            builder =>
-                builder.Run(async context =>
-                {
-                    var sb = new StringBuilder();
-                    var dependencies = new Dictionary<string, string>();
-                    sb.AppendLine("<pre>");
-                    sb.AppendLine("digraph Services {");
-                    var servicesDi = services.Select(svc => svc.ServiceType.ToString()).ToHashSet();
-
-                    foreach (var svc in services)
+                    var path = context.File.PhysicalPath;
+                    var exst = Path.GetExtension(path);
+                    if (exst == ".tgs")
                     {
-                        var implementationName = svc.ImplementationType?.ToString();
-                        if (implementationName != null)
-                        {
-                            var implDependencies = svc
-                                .ImplementationType?.GetConstructors()
-                                .SelectMany(cons => cons.GetParameters())
-                                .Select(p => p.ParameterType.ToString())
-                                .Distinct()
-                                .Where(servicesDi.Contains)
-                                .ToList();
+                        context.Context.Response.ContentType = string.Empty;
+                    }
+                },
+                FileProvider = sharedOptions.FileProvider,
+                RedirectToAppendTrailingSlash = true,
+            };
 
-                            if (implDependencies is { Count: > 0 })
+            app.UseDirectoryBrowser(new DirectoryBrowserOptions(sharedOptions) { });
+
+            app.UseStaticFiles(fileOptions);
+            return app;
+        }
+
+        public IApplicationBuilder AddDiSchemaRoute(IServiceCollection services)
+        {
+            app.Map(
+                "/allservices",
+                builder =>
+                    builder.Run(async context =>
+                    {
+                        var sb = new StringBuilder();
+                        var dependencies = new Dictionary<string, string>();
+                        sb.AppendLine("<pre>");
+                        sb.AppendLine("digraph Services {");
+                        var servicesDi = services
+                            .Select(svc => svc.ServiceType.ToString())
+                            .ToHashSet();
+
+                        foreach (var svc in services)
+                        {
+                            var implementationName = svc.ImplementationType?.ToString();
+                            if (implementationName != null)
                             {
-                                // Register Constructor dependendencies
-                                foreach (var d in implDependencies)
+                                var implDependencies = svc
+                                    .ImplementationType?.GetConstructors()
+                                    .SelectMany(cons => cons.GetParameters())
+                                    .Select(p => p.ParameterType.ToString())
+                                    .Distinct()
+                                    .Where(servicesDi.Contains)
+                                    .ToList();
+
+                                if (implDependencies is { Count: > 0 })
                                 {
-                                    dependencies.TryAdd(implementationName, d);
+                                    // Register Constructor dependendencies
+                                    foreach (var d in implDependencies)
+                                    {
+                                        dependencies.TryAdd(implementationName, d);
+                                    }
                                 }
                             }
                         }
-                    }
 
-                    void PrintGroup(
-                        string label,
-                        string cluster,
-                        string color,
-                        IEnumerable<string> group
-                    )
-                    {
-                        if (group.Count() > 0)
+                        void PrintGroup(
+                            string label,
+                            string cluster,
+                            string color,
+                            IEnumerable<string> group
+                        )
                         {
-                            sb.AppendLine($"  subgraph cluster_{cluster} {{");
-                            sb.AppendLine("      style = filled;");
-                            sb.AppendLine($"     color = {color};");
-                            sb.AppendLine("      node[style = filled, color = white];");
-                            sb.AppendLine($"     label = \"{label}\";");
-                            foreach (var item in group)
+                            if (group.Count() > 0)
                             {
-                                sb.AppendLine($"     \"{item}\"");
+                                sb.AppendLine($"  subgraph cluster_{cluster} {{");
+                                sb.AppendLine("      style = filled;");
+                                sb.AppendLine($"     color = {color};");
+                                sb.AppendLine("      node[style = filled, color = white];");
+                                sb.AppendLine($"     label = \"{label}\";");
+                                foreach (var item in group)
+                                {
+                                    sb.AppendLine($"     \"{item}\"");
+                                }
+
+                                sb.AppendLine("  }");
                             }
-
-                            sb.AppendLine("  }");
                         }
-                    }
 
-                    var scopedGroup = services
-                        .Where(s => s.Lifetime == ServiceLifetime.Scoped)
-                        .Select(s => s.ServiceType.ToString());
-                    var transientGroup = services
-                        .Where(s => s.Lifetime == ServiceLifetime.Transient)
-                        .Select(s => s.ServiceType.ToString());
-                    PrintGroup("scoped", "0", "blue", scopedGroup);
-                    PrintGroup("transient", "1", "lightgrey", transientGroup);
-                    // Make interfaces different
-                    sb.AppendLine();
-                    sb.AppendLine();
-                    sb.AppendLine("     node [color=green]");
-                    var interfacesGroup = services
-                        .Where(s => s.ServiceType.IsInterface)
-                        .Select(s => s.ServiceType.ToString());
-                    foreach (var @interface in interfacesGroup)
-                    {
-                        sb.AppendLine($"     \"{@interface}\"");
-                    }
-                    sb.AppendLine();
-                    sb.AppendLine("    node [color=black]");
-                    var noninterfacesGroup = services
-                        .Where(s => !s.ServiceType.IsInterface)
-                        .Select(s => s.ServiceType.ToString());
-                    foreach (var nonInterface in noninterfacesGroup)
-                    {
-                        sb.AppendLine($"     \"{nonInterface}\"");
-                    }
-                    //Now print dependencies
-                    foreach (var d in dependencies)
-                    {
-                        sb.AppendLine($"     \"{d.Key}\" -> \"{d.Value}\"");
-                    }
-                    sb.AppendLine("}");
-                    sb.AppendLine("</pre>");
-                    // Ok ready. Now return all the graph
-                    await context.Response.WriteAsync(sb.ToString());
-                })
-        );
+                        var scopedGroup = services
+                            .Where(s => s.Lifetime == ServiceLifetime.Scoped)
+                            .Select(s => s.ServiceType.ToString());
+                        var transientGroup = services
+                            .Where(s => s.Lifetime == ServiceLifetime.Transient)
+                            .Select(s => s.ServiceType.ToString());
+                        PrintGroup("scoped", "0", "blue", scopedGroup);
+                        PrintGroup("transient", "1", "lightgrey", transientGroup);
+                        // Make interfaces different
+                        sb.AppendLine();
+                        sb.AppendLine();
+                        sb.AppendLine("     node [color=green]");
+                        var interfacesGroup = services
+                            .Where(s => s.ServiceType.IsInterface)
+                            .Select(s => s.ServiceType.ToString());
+                        foreach (var @interface in interfacesGroup)
+                        {
+                            sb.AppendLine($"     \"{@interface}\"");
+                        }
+                        sb.AppendLine();
+                        sb.AppendLine("    node [color=black]");
+                        var noninterfacesGroup = services
+                            .Where(s => !s.ServiceType.IsInterface)
+                            .Select(s => s.ServiceType.ToString());
+                        foreach (var nonInterface in noninterfacesGroup)
+                        {
+                            sb.AppendLine($"     \"{nonInterface}\"");
+                        }
+                        //Now print dependencies
+                        foreach (var d in dependencies)
+                        {
+                            sb.AppendLine($"     \"{d.Key}\" -> \"{d.Value}\"");
+                        }
+                        sb.AppendLine("}");
+                        sb.AppendLine("</pre>");
+                        // Ok ready. Now return all the graph
+                        await context.Response.WriteAsync(sb.ToString());
+                    })
+            );
 
-        return app;
+            return app;
+        }
+
+        public void DisableFileCaching()
+        {
+            // Отключаем кеширование всех HTTP-ответов
+            app.Use(
+                async (context, next) =>
+                {
+                    context.Response.OnStarting(() =>
+                    {
+                        context.Response.Headers["Cache-Control"] =
+                            "no-store, no-cache, must-revalidate, max-age=0";
+
+                        context.Response.Headers["Pragma"] = "no-cache";
+                        context.Response.Headers["Expires"] = "0";
+
+                        return Task.CompletedTask;
+                    });
+
+                    await next();
+                }
+            );
+        }
     }
 }
